@@ -1,0 +1,345 @@
+name: Backend CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+    paths:
+      - 'src/backend/**'
+      - '.github/workflows/ci-backend.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/backend/**'
+      - '.github/workflows/ci-backend.yml'
+
+env:
+  REGISTRY: gcr.io
+  PROJECT_ID: alphintra-prod
+  
+jobs:
+  test:
+    name: Test Backend Services
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth-service, trading-api, strategy-engine, broker-connector, broker-simulator]
+        python-version: [3.11]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.service }}-${{ hashFiles('src/backend/${{ matrix.service }}/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.service }}-
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        cd src/backend/${{ matrix.service }}
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio black isort flake8 mypy
+        
+    - name: Code formatting check
+      run: |
+        cd src/backend/${{ matrix.service }}
+        black --check --diff .
+        isort --check-only --diff .
+        
+    - name: Lint code
+      run: |
+        cd src/backend/${{ matrix.service }}
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+        
+    - name: Type checking
+      run: |
+        cd src/backend/${{ matrix.service }}
+        mypy . --ignore-missing-imports || true
+        
+    - name: Run unit tests
+      run: |
+        cd src/backend/${{ matrix.service }}
+        pytest tests/ -v --cov=. --cov-report=xml --cov-report=html
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: src/backend/${{ matrix.service }}/coverage.xml
+        flags: ${{ matrix.service }}
+        name: ${{ matrix.service }}-coverage
+        fail_ci_if_error: false
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+          
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-asyncio requests docker-compose
+        
+    - name: Start services with Docker Compose
+      run: |
+        cd infra/docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.test up -d --build
+        
+    - name: Wait for services to be ready
+      run: |
+        # Wait for services to start
+        sleep 60
+        
+        # Health check services
+        curl -f http://localhost:8001/health || exit 1
+        curl -f http://localhost:8002/health || exit 1
+        curl -f http://localhost:8003/health || exit 1
+        
+    - name: Run integration tests
+      run: |
+        cd tests/integration
+        pytest -v --maxfail=5
+        
+    - name: Stop services
+      if: always()
+      run: |
+        cd infra/docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Install security tools
+      run: |
+        pip install bandit safety semgrep
+        
+    - name: Run Bandit security scan
+      run: |
+        bandit -r src/backend/ -f json -o bandit-report.json || true
+        bandit -r src/backend/ -f txt
+        
+    - name: Run Safety dependency scan
+      run: |
+        for service in auth-service trading-api strategy-engine broker-connector broker-simulator; do
+          echo "Scanning $service dependencies..."
+          safety check -r src/backend/$service/requirements.txt --json --output safety-$service.json || true
+        done
+        
+    - name: Run Semgrep SAST scan
+      run: |
+        semgrep --config=auto src/backend/ --json --output=semgrep-report.json || true
+        semgrep --config=auto src/backend/
+        
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-scan-results
+        path: |
+          bandit-report.json
+          safety-*.json
+          semgrep-report.json
+
+  build-images:
+    name: Build Container Images
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, security-scan]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    strategy:
+      matrix:
+        service: [auth-service, trading-api, strategy-engine, broker-connector, broker-simulator]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Configure Docker for GCR
+      run: gcloud auth configure-docker
+      
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push container image
+      uses: docker/build-push-action@v5
+      with:
+        context: src/backend/${{ matrix.service }}
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Run container security scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-${{ matrix.service }}.sarif'
+        
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-${{ matrix.service }}.sarif'
+
+  performance-test:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Install performance testing tools
+      run: |
+        pip install locust pytest-benchmark
+        
+    - name: Start test environment
+      run: |
+        cd infra/docker
+        docker-compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.test up -d
+        sleep 60
+        
+    - name: Run load tests
+      run: |
+        cd tests/performance
+        locust -f locustfile.py --headless -u 100 -r 10 -t 60s --host http://localhost:8080
+        
+    - name: Run benchmark tests
+      run: |
+        cd tests/benchmarks
+        pytest test_api_performance.py --benchmark-json=benchmark-results.json
+        
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-test-results
+        path: |
+          tests/performance/locust_*.html
+          tests/benchmarks/benchmark-results.json
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, security-scan, performance-test]
+    if: always()
+    
+    steps:
+    - name: Check job results
+      run: |
+        echo "Test result: ${{ needs.test.result }}"
+        echo "Integration test result: ${{ needs.integration-test.result }}"
+        echo "Security scan result: ${{ needs.security-scan.result }}"
+        echo "Performance test result: ${{ needs.performance-test.result }}"
+        
+        if [[ "${{ needs.test.result }}" != "success" ]]; then
+          echo "Unit tests failed"
+          exit 1
+        fi
+        
+        if [[ "${{ needs.integration-test.result }}" != "success" ]]; then
+          echo "Integration tests failed"
+          exit 1
+        fi
+        
+        if [[ "${{ needs.security-scan.result }}" != "success" ]]; then
+          echo "Security scan failed"
+          exit 1
+        fi
+        
+        echo "All quality gates passed!"
+
+  notify:
+    name: Notify Teams
+    runs-on: ubuntu-latest
+    needs: [quality-gate]
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: needs.quality-gate.result == 'success'
+      run: |
+        echo "🎉 Backend CI pipeline completed successfully!"
+        # Add Slack/Teams notification here
+        
+    - name: Notify on failure
+      if: needs.quality-gate.result != 'success'
+      run: |
+        echo "❌ Backend CI pipeline failed!"
+        # Add Slack/Teams notification here

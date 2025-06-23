@@ -1,0 +1,546 @@
+# Development Environment Override for Alphintra Trading Platform
+# This file extends the base configuration with development-specific settings
+
+# Remove this line: version: '3.8'
+
+services:
+  # ===============================
+  # DEVELOPMENT INFRASTRUCTURE
+  # ===============================
+
+  # Enhanced PostgreSQL for development with additional tools
+  postgres:
+    image: postgres:15-alpine
+    container_name: alphintra-postgres-dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/dev/init-dev-data.sql:/docker-entrypoint-initdb.d/99-dev-data.sql
+    environment:
+      POSTGRES_DB: alphintra_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password123
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command: 
+      - postgres
+      - -c
+      - log_statement=all
+      - -c
+      - log_destination=stderr
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+
+  # TimescaleDB for development - time-series market data
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: alphintra-timescaledb-dev
+    environment:
+      POSTGRES_DB: timescaledb_dev
+      POSTGRES_USER: timescale_dev
+      POSTGRES_PASSWORD: timescale123
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./databases/timescaledb:/docker-entrypoint-initdb.d
+    command: ["-c", "shared_preload_libraries=timescaledb"]
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timescale_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Development Redis with debugging enabled
+  redis-master:
+    image: redis:7-alpine
+    container_name: alphintra-redis-master-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data:/data
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis123 --maxmemory 256mb --maxmemory-policy allkeys-lru --loglevel debug
+
+  # Zookeeper - For Kafka coordination
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: alphintra-zookeeper-dev
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Kafka with development-friendly settings
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: alphintra-kafka-dev
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_BYTES: 1073741824
+      KAFKA_NUM_NETWORK_THREADS: 3
+      KAFKA_NUM_IO_THREADS: 8
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 102400
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 102400
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 104857600
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ===============================
+  # DEVELOPMENT TOOLS & SERVICES
+  # ===============================
+
+  # Apache Flink - For stream processing development
+  flink-jobmanager:
+    image: apache/flink:1.18-scala_2.12
+    container_name: alphintra-flink-jobmanager
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+        jobmanager.memory.process.size: 1600m
+        taskmanager.memory.process.size: 1728m
+        taskmanager.memory.flink.size: 1280m
+    volumes:
+      - ./src/streaming/flink-jobs:/opt/flink/jobs
+      - flink_data:/opt/flink/data
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  flink-taskmanager:
+    image: apache/flink:1.18-scala_2.12
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    scale: 2
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 2
+        taskmanager.memory.process.size: 1728m
+        taskmanager.memory.flink.size: 1280m
+    volumes:
+      - flink_data:/opt/flink/data
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Apache Spark - For batch processing development
+  spark-master:
+    image: bitnami/spark:3.4
+    container_name: alphintra-spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    environment:
+      SPARK_MODE: master
+      SPARK_RPC_AUTHENTICATION_ENABLED: no
+      SPARK_RPC_ENCRYPTION_ENABLED: no
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
+      SPARK_SSL_ENABLED: no
+    volumes:
+      - ./src/analytics/spark-jobs:/opt/spark-jobs
+      - spark_data:/opt/bitnami/spark/data
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  spark-worker:
+    image: bitnami/spark:3.4
+    container_name: alphintra-spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 1G
+      SPARK_WORKER_CORES: 1
+      SPARK_RPC_AUTHENTICATION_ENABLED: no
+      SPARK_RPC_ENCRYPTION_ENABLED: no
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: no
+      SPARK_SSL_ENABLED: no
+    volumes:
+      - spark_data:/opt/bitnami/spark/data
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Schema Registry - For Kafka schema management
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.4.0
+    container_name: alphintra-schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8082:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Kafka Connect - For data integration
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.4.0
+    container_name: alphintra-kafka-connect
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:29092
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: compose-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+    volumes:
+      - ./config/kafka-connect:/etc/kafka-connect/configs
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ===============================
+  # DEVELOPMENT MONITORING
+  # ===============================
+
+  # Kafka UI - For Kafka management and monitoring
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: alphintra-kafka-ui
+    depends_on:
+      - kafka
+      - schema-registry
+      - kafka-connect
+    ports:
+      - "8084:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: first
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://kafka-connect:8083
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Redis Commander - Redis GUI
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: alphintra-redis-commander
+    depends_on:
+      - redis-master
+    ports:
+      - "8087:8081"
+    environment:
+      REDIS_HOSTS: "master:redis-master:6379:0:redis123,replica:redis-replica:6379:0:redis123"
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # pgAdmin - PostgreSQL administration
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: alphintra-pgadmin
+    depends_on:
+      - postgres
+      - timescaledb
+    ports:
+      - "8086:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@alphintra.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./config/pgadmin/servers.json:/pgadmin4/servers.json
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # ===============================
+  # APPLICATION SERVICES (DEV MODE)
+  # ===============================
+
+  # Gateway with development configuration
+  gateway:
+    build:
+      context: ../../src/backend/gateway
+      dockerfile: Dockerfile  # Changed from Dockerfile.dev
+    container_name: alphintra-gateway-dev
+    ports:
+      - "8088:8080"
+      - "5005:5005"  # Debug port
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      REDIS_HOST: redis-master
+      REDIS_PASSWORD: redis123
+      JWT_SECRET: dev-super-secret-jwt-key-that-should-be-at-least-256-bits-long
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8080,http://localhost:3001
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      LOGGING_LEVEL_COM_alphintra: DEBUG
+      SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED: true
+    volumes:
+      - ../../src/backend/gateway/src:/app/src
+      - ../../src/backend/gateway/target:/app/target
+    networks:
+      - alphintra-network
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Auth Service with hot reloading
+  auth-service:
+    build:
+      context: ../../src/backend/auth-service
+      dockerfile: Dockerfile  # Changed from Dockerfile.dev
+    container_name: alphintra-auth-service-dev
+    ports:
+      - "8001:8001"
+      - "5001:5001"  # Debug port
+    environment:
+      DATABASE_URL: postgresql://dev_user:dev_password123@postgres:5432/alphintra_dev
+      REDIS_URL: redis://:redis123@redis-master:6379/0
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: dev-super-secret-jwt-key-that-should-be-at-least-256-bits-long
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+      PYTHONPATH: /app
+    volumes:
+      - ../../src/backend/auth-service:/app
+      - /app/__pycache__
+    networks:
+      - alphintra-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Trading API with hot reloading
+  trading-api:
+    build:
+      context: ../../src/backend/trading-api
+      dockerfile: Dockerfile  # Changed from Dockerfile.dev
+    container_name: alphintra-trading-api-dev
+    ports:
+      - "8002:8002"
+      - "5002:5002"  # Debug port
+    environment:
+      DATABASE_URL: postgresql://dev_user:dev_password123@postgres:5432/alphintra_dev
+      TIMESCALEDB_URL: postgresql://timescale:timescale123@timescaledb:5432/timescaledb
+      REDIS_URL: redis://:redis123@redis-master:6379/1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+      PYTHONPATH: /app
+    volumes:
+      - ../../src/backend/trading-api:/app
+      - /app/__pycache__
+    networks:
+      - alphintra-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # MLflow - Model registry for development
+  mlflow:
+    image: python:3.11-slim
+    container_name: alphintra-mlflow-dev
+    working_dir: /mlflow
+    command: >
+      bash -c "
+        pip install mlflow[extras] psycopg2-binary boto3 google-cloud-storage &&
+        mlflow server 
+          --backend-store-uri postgresql://dev_user:dev_password123@postgres:5432/alphintra_dev
+          --default-artifact-root /mlflow/artifacts
+          --host 0.0.0.0 
+          --port 5000
+          --serve-artifacts
+      "
+    ports:
+      - "5001:5000"
+    volumes:
+      - mlflow_data:/mlflow/mlruns
+      - mlflow_artifacts:/mlflow/artifacts
+    networks:
+      - alphintra-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===============================
+  # DEVELOPMENT UTILITIES
+  # ===============================
+
+  # MailHog - Email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: alphintra-mailhog
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Nginx - Local reverse proxy and static file serving
+  nginx-dev:
+    image: nginx:alpine
+    container_name: alphintra-nginx-dev
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/dev.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+      - ../../src/frontend/build:/usr/share/nginx/html
+    networks:
+      - alphintra-network
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+# ===============================
+# ADDITIONAL VOLUMES FOR DEV
+# ===============================
+volumes:
+  flink_data:
+    driver: local
+  spark_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  mlflow_data:
+    driver: local
+  mlflow_artifacts:
+    driver: local
+  kafka_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_master_data:
+    driver: local
+  timescaledb_data:
+    driver: local
+
+# ===============================
+# NETWORKS
+# ===============================
+networks:
+  alphintra-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+          gateway: 172.25.0.1

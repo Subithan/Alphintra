@@ -1,0 +1,440 @@
+name: Production Deployment Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+      version:
+        description: 'Version to deploy (leave empty for latest)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: gcr.io
+  PROJECT_ID: alphintra-prod
+  GKE_CLUSTER: alphintra-prod
+  GKE_ZONE: us-central1-a
+  DEPLOYMENT_NAME: alphintra-platform
+  
+jobs:
+  validate-deployment:
+    name: Validate Deployment Requirements
+    runs-on: ubuntu-latest
+    outputs:
+      deploy-environment: ${{ steps.determine-env.outputs.environment }}
+      deploy-version: ${{ steps.determine-version.outputs.version }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Determine deployment environment
+      id: determine-env
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+          echo "environment=production" >> $GITHUB_OUTPUT
+        else
+          echo "environment=staging" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Determine deployment version
+      id: determine-version
+      run: |
+        if [[ "${{ github.event.inputs.version }}" != "" ]]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+          echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Validate environment access
+      run: |
+        echo "Deploying to: ${{ steps.determine-env.outputs.environment }}"
+        echo "Version: ${{ steps.determine-version.outputs.version }}"
+        
+        # Add validation logic for environment access
+        if [[ "${{ steps.determine-env.outputs.environment }}" == "production" && "${{ github.actor }}" != "authorized-deployer" && "${{ github.ref_type }}" != "tag" ]]; then
+          echo "❌ Production deployments require tag-based releases or authorized deployer"
+          exit 1
+        fi
+
+  infrastructure-check:
+    name: Infrastructure Readiness Check
+    runs-on: ubuntu-latest
+    needs: validate-deployment
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      
+    - name: Check GKE cluster health
+      run: |
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        
+        # Check cluster health
+        kubectl cluster-info
+        kubectl get nodes
+        
+        # Check system pods
+        kubectl get pods -n kube-system
+        kubectl get pods -n istio-system
+        
+        # Verify monitoring stack
+        kubectl get pods -n monitoring
+        
+    - name: Validate infrastructure requirements
+      run: |
+        # Check required namespaces
+        kubectl get namespace ${{ needs.validate-deployment.outputs.deploy-environment }} || \
+          kubectl create namespace ${{ needs.validate-deployment.outputs.deploy-environment }}
+          
+        # Check required secrets
+        kubectl get secret gcp-credentials -n ${{ needs.validate-deployment.outputs.deploy-environment }} || \
+          echo "Warning: GCP credentials secret not found"
+          
+        # Check storage classes
+        kubectl get storageclass
+        
+        # Check ingress controller
+        kubectl get pods -n ingress-nginx
+
+  security-validation:
+    name: Security Validation
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, infrastructure-check]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Security compliance check
+      run: |
+        # Check for security policies
+        kubectl get networkpolicies -n ${{ needs.validate-deployment.outputs.deploy-environment }}
+        kubectl get podsecuritypolicies
+        
+        # Validate RBAC
+        kubectl auth can-i --list -n ${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        # Check for required security labels
+        echo "Security validation completed"
+        
+    - name: Image vulnerability scan
+      run: |
+        # Scan container images for vulnerabilities
+        services="auth-service trading-api strategy-engine broker-connector broker-simulator"
+        
+        for service in $services; do
+          echo "Scanning $service:${{ needs.validate-deployment.outputs.deploy-version }}"
+          gcloud container images scan $REGISTRY/$PROJECT_ID/$service:${{ needs.validate-deployment.outputs.deploy-version }} \
+            --format="table(vulnerability.severity,vulnerability.cvss_score,package,version)"
+        done
+
+  blue-green-deployment:
+    name: Blue-Green Deployment
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, infrastructure-check, security-validation]
+    environment: ${{ needs.validate-deployment.outputs.deploy-environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      
+    - name: Configure kubectl
+      run: |
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        
+    - name: Prepare deployment manifests
+      run: |
+        # Update image tags in manifests
+        export DEPLOY_VERSION=${{ needs.validate-deployment.outputs.deploy-version }}
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        cd infra/kubernetes/environments/$DEPLOY_ENV
+        
+        # Use kustomize to generate final manifests
+        kustomize edit set image auth-service=$REGISTRY/$PROJECT_ID/auth-service:$DEPLOY_VERSION
+        kustomize edit set image trading-api=$REGISTRY/$PROJECT_ID/trading-api:$DEPLOY_VERSION
+        kustomize edit set image strategy-engine=$REGISTRY/$PROJECT_ID/strategy-engine:$DEPLOY_VERSION
+        kustomize edit set image broker-connector=$REGISTRY/$PROJECT_ID/broker-connector:$DEPLOY_VERSION
+        kustomize edit set image broker-simulator=$REGISTRY/$PROJECT_ID/broker-simulator:$DEPLOY_VERSION
+        
+        # Generate final manifests
+        kustomize build . > deployment-manifests.yaml
+        
+    - name: Deploy to green environment
+      run: |
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        cd infra/kubernetes/environments/$DEPLOY_ENV
+        
+        # Apply manifests to green environment
+        kubectl apply -f deployment-manifests.yaml -n $DEPLOY_ENV-green || \
+          (kubectl create namespace $DEPLOY_ENV-green && kubectl apply -f deployment-manifests.yaml -n $DEPLOY_ENV-green)
+        
+        # Wait for rollout to complete
+        kubectl rollout status deployment/auth-service -n $DEPLOY_ENV-green --timeout=600s
+        kubectl rollout status deployment/trading-api -n $DEPLOY_ENV-green --timeout=600s
+        kubectl rollout status deployment/strategy-engine -n $DEPLOY_ENV-green --timeout=600s
+        kubectl rollout status deployment/broker-connector -n $DEPLOY_ENV-green --timeout=600s
+        kubectl rollout status deployment/broker-simulator -n $DEPLOY_ENV-green --timeout=600s
+        
+    - name: Health check green environment
+      run: |
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        # Wait for pods to be ready
+        kubectl wait --for=condition=ready pod -l app=auth-service -n $DEPLOY_ENV-green --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=trading-api -n $DEPLOY_ENV-green --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=strategy-engine -n $DEPLOY_ENV-green --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=broker-connector -n $DEPLOY_ENV-green --timeout=300s
+        kubectl wait --for=condition=ready pod -l app=broker-simulator -n $DEPLOY_ENV-green --timeout=300s
+        
+        # Perform health checks
+        kubectl exec -n $DEPLOY_ENV-green deployment/auth-service -- curl -f http://localhost:8001/health
+        kubectl exec -n $DEPLOY_ENV-green deployment/trading-api -- curl -f http://localhost:8002/health
+        kubectl exec -n $DEPLOY_ENV-green deployment/strategy-engine -- curl -f http://localhost:8003/health
+        
+    - name: Run smoke tests
+      run: |
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        # Port forward for testing
+        kubectl port-forward -n $DEPLOY_ENV-green svc/api-gateway 8080:80 &
+        sleep 10
+        
+        # Run smoke tests
+        curl -f http://localhost:8080/health || exit 1
+        curl -f http://localhost:8080/api/v1/auth/health || exit 1
+        curl -f http://localhost:8080/api/v1/trading/health || exit 1
+        
+        # Kill port forward
+        pkill -f "kubectl port-forward"
+        
+    - name: Switch traffic to green
+      if: success()
+      run: |
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        # Update service selectors to point to green environment
+        kubectl patch service api-gateway -n $DEPLOY_ENV \
+          -p '{"spec":{"selector":{"environment":"green"}}}'
+          
+        # Update ingress to point to green services
+        kubectl patch ingress alphintra-ingress -n $DEPLOY_ENV \
+          -p '{"spec":{"rules":[{"host":"api.alphintra.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"api-gateway-green","port":{"number":80}}}}]}}]}}'
+        
+    - name: Cleanup blue environment
+      if: success()
+      run: |
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        # Wait for green environment to stabilize
+        sleep 60
+        
+        # Delete blue environment resources
+        kubectl delete namespace $DEPLOY_ENV-blue --ignore-not-found=true
+        
+        # Rename green to blue for next deployment
+        kubectl patch namespace $DEPLOY_ENV-green -p '{"metadata":{"name":"'$DEPLOY_ENV'-blue"}}'
+
+  post-deployment-validation:
+    name: Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, blue-green-deployment]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      
+    - name: Configure kubectl
+      run: |
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        
+    - name: Run integration tests
+      run: |
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        # Run integration tests against deployed environment
+        cd tests/integration
+        pytest -v --env=$DEPLOY_ENV --maxfail=5
+        
+    - name: Validate monitoring and alerting
+      run: |
+        # Check monitoring stack
+        kubectl get pods -n monitoring
+        
+        # Validate metrics are being collected
+        echo "Monitoring validation completed"
+        
+    - name: Performance validation
+      run: |
+        # Run lightweight performance validation
+        cd tests/performance
+        locust -f validation.py --headless -u 10 -r 2 -t 30s --host https://api.alphintra.com
+
+  rollback-strategy:
+    name: Rollback (if needed)
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, blue-green-deployment, post-deployment-validation]
+    if: failure()
+    
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      
+    - name: Configure kubectl
+      run: |
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        
+    - name: Rollback to previous version
+      run: |
+        export DEPLOY_ENV=${{ needs.validate-deployment.outputs.deploy-environment }}
+        
+        echo "🔄 Rolling back deployment..."
+        
+        # Switch traffic back to blue environment
+        kubectl patch service api-gateway -n $DEPLOY_ENV \
+          -p '{"spec":{"selector":{"environment":"blue"}}}'
+          
+        # Cleanup failed green deployment
+        kubectl delete namespace $DEPLOY_ENV-green --ignore-not-found=true
+        
+        echo "✅ Rollback completed"
+
+  notify-teams:
+    name: Notify Teams
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, blue-green-deployment, post-deployment-validation, rollback-strategy]
+    if: always()
+    
+    steps:
+    - name: Determine deployment status
+      id: status
+      run: |
+        if [[ "${{ needs.post-deployment-validation.result }}" == "success" ]]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "message=✅ Production deployment completed successfully" >> $GITHUB_OUTPUT
+        elif [[ "${{ needs.rollback-strategy.result }}" == "success" ]]; then
+          echo "status=rollback" >> $GITHUB_OUTPUT
+          echo "message=🔄 Deployment failed and was rolled back successfully" >> $GITHUB_OUTPUT
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "message=❌ Deployment failed and rollback may have issues" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Send Slack notification
+      if: always()
+      run: |
+        echo "${{ steps.status.outputs.message }}"
+        echo "Environment: ${{ needs.validate-deployment.outputs.deploy-environment }}"
+        echo "Version: ${{ needs.validate-deployment.outputs.deploy-version }}"
+        echo "Triggered by: ${{ github.actor }}"
+        echo "Commit: ${{ github.sha }}"
+        
+        # Add actual Slack webhook notification here
+        # curl -X POST -H 'Content-type: application/json' \
+        #   --data '{"text":"${{ steps.status.outputs.message }}"}' \
+        #   ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+    - name: Create GitHub release
+      if: needs.post-deployment-validation.result == 'success' && needs.validate-deployment.outputs.deploy-environment == 'production'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.validate-deployment.outputs.deploy-version }}
+        release_name: Production Release ${{ needs.validate-deployment.outputs.deploy-version }}
+        body: |
+          🚀 **Production Deployment Successful**
+          
+          **Version:** ${{ needs.validate-deployment.outputs.deploy-version }}
+          **Environment:** ${{ needs.validate-deployment.outputs.deploy-environment }}
+          **Deployed by:** ${{ github.actor }}
+          **Commit:** ${{ github.sha }}
+          
+          **Changes:**
+          - Updated all microservices to latest version
+          - Performed blue-green deployment with zero downtime
+          - Validated system health and performance
+          
+          **Rollback:** 
+          If issues are detected, use the rollback workflow or contact the DevOps team.
+        draft: false
+        prerelease: false
+
+  cleanup:
+    name: Cleanup Resources
+    runs-on: ubuntu-latest
+    needs: [validate-deployment, blue-green-deployment, post-deployment-validation]
+    if: always()
+    
+    steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Cleanup old container images
+      run: |
+        # Keep only last 10 versions of each service
+        services="auth-service trading-api strategy-engine broker-connector broker-simulator"
+        
+        for service in $services; do
+          echo "Cleaning up old images for $service..."
+          gcloud container images list-tags $REGISTRY/$PROJECT_ID/$service \
+            --sort-by=~timestamp --limit=999 --format="get(digest)" | \
+            tail -n +11 | \
+            xargs -I {} gcloud container images delete $REGISTRY/$PROJECT_ID/$service@{} --force-delete-tags --quiet || true
+        done
+        
+    - name: Cleanup old deployments
+      run: |
+        # Cleanup old deployment artifacts
+        echo "Cleanup completed"

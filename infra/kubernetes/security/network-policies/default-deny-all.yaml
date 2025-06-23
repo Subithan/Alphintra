@@ -1,0 +1,397 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: default-deny-all
+    app.kubernetes.io/component: security
+  annotations:
+    kubernetes.io/description: "Default deny all ingress and egress traffic"
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-dns
+    app.kubernetes.io/component: security
+  annotations:
+    kubernetes.io/description: "Allow DNS resolution for all pods"
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow access to metadata server
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-gateway-ingress
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-api-gateway-ingress
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow ingress from load balancer
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow ingress from istio gateway
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-auth-service-traffic
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-auth-service-traffic
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: auth-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from API gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8001
+  # Allow traffic from other services for authentication
+  - from:
+    - podSelector:
+        matchLabels:
+          app: trading-api
+    - podSelector:
+        matchLabels:
+          app: strategy-engine
+    - podSelector:
+        matchLabels:
+          app: broker-connector
+    ports:
+    - protocol: TCP
+      port: 8001
+  egress:
+  # Allow access to database
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow access to Redis
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow HTTPS for external authentication providers
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trading-api-traffic
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-trading-api-traffic
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: trading-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from API gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8002
+  # Allow traffic from strategy engine
+  - from:
+    - podSelector:
+        matchLabels:
+          app: strategy-engine
+    ports:
+    - protocol: TCP
+      port: 8002
+  egress:
+  # Allow access to auth service
+  - to:
+    - podSelector:
+        matchLabels:
+          app: auth-service
+    ports:
+    - protocol: TCP
+      port: 8001
+  # Allow access to broker connector
+  - to:
+    - podSelector:
+        matchLabels:
+          app: broker-connector
+    ports:
+    - protocol: TCP
+      port: 8005
+  # Allow access to database
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 5433  # TimescaleDB
+  # Allow access to Redis
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow access to Kafka
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 9092
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-strategy-engine-traffic
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-strategy-engine-traffic
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: strategy-engine
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from API gateway for management
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8003
+  egress:
+  # Allow access to auth service
+  - to:
+    - podSelector:
+        matchLabels:
+          app: auth-service
+    ports:
+    - protocol: TCP
+      port: 8001
+  # Allow access to trading API
+  - to:
+    - podSelector:
+        matchLabels:
+          app: trading-api
+    ports:
+    - protocol: TCP
+      port: 8002
+  # Allow access to database
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 5433  # TimescaleDB
+  # Allow access to Redis
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow access to Kafka
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow access to MLflow
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-broker-connector-traffic
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-broker-connector-traffic
+    app.kubernetes.io/component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: broker-connector
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from trading API
+  - from:
+    - podSelector:
+        matchLabels:
+          app: trading-api
+    ports:
+    - protocol: TCP
+      port: 8005
+  # Allow traffic from API gateway for management
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8005
+  egress:
+  # Allow access to auth service
+  - to:
+    - podSelector:
+        matchLabels:
+          app: auth-service
+    ports:
+    - protocol: TCP
+      port: 8001
+  # Allow access to database
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow access to Redis
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow access to Kafka
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 9092
+  # Allow HTTPS for external broker APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow WebSocket connections to brokers
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 9001
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring-traffic
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-monitoring-traffic
+    app.kubernetes.io/component: security
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow Prometheus to scrape metrics
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080  # Default metrics port
+    - protocol: TCP
+      port: 9090  # Prometheus metrics
+  egress:
+  # Allow services to send metrics to monitoring
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090  # Prometheus
+    - protocol: TCP
+      port: 3000  # Grafana
+    - protocol: TCP
+      port: 14250 # Jaeger collector
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-istio-system-traffic
+  namespace: alphintra-production
+  labels:
+    app.kubernetes.io/name: allow-istio-system-traffic
+    app.kubernetes.io/component: security
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow Istio sidecar traffic
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+  egress:
+  # Allow traffic to Istio system
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system

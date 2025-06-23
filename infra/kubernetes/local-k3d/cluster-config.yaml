@@ -1,0 +1,86 @@
+# k3d cluster configuration for Alphintra Trading Platform
+# This creates a local Kubernetes cluster that simulates GKE
+
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: alphintra-dev
+servers: 1
+agents: 3
+kubeAPI:
+  host: "127.0.0.1"
+  hostIP: "127.0.0.1"
+  hostPort: "6443"
+image: rancher/k3s:v1.28.5-k3s1
+network: alphintra-network
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+  - port: 8443:443
+    nodeFilters:
+      - loadbalancer
+  - port: 9090:9090
+    nodeFilters:
+      - loadbalancer
+  - port: 3000:3000
+    nodeFilters:
+      - loadbalancer
+  - port: 5000:5000
+    nodeFilters:
+      - loadbalancer
+env:
+  - envVar: K3S_KUBECONFIG_OUTPUT
+    nodeFilters:
+      - server:*
+  - envVar: K3S_KUBECONFIG_MODE
+    nodeFilters:
+      - server:*
+registries:
+  create:
+    name: alphintra-registry
+    host: "0.0.0.0"
+    hostPort: "5555"
+  config: |
+    mirrors:
+      "localhost:5555":
+        endpoint:
+          - http://alphintra-registry:5000
+options:
+  k3d:
+    wait: true
+    timeout: "300s"
+    disableLoadbalancer: false
+    disableImageVolume: false
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+      - arg: --disable=servicelb
+        nodeFilters:
+          - server:*
+      - arg: --disable=metrics-server
+        nodeFilters:
+          - server:*
+      - arg: --kube-proxy-arg=metrics-bind-address=0.0.0.0
+        nodeFilters:
+          - server:*
+      - arg: --kubelet-arg=config=/etc/rancher/k3s/kubelet.config
+        nodeFilters:
+          - agent:*
+    nodeLabels:
+      - label: node-type=general
+        nodeFilters:
+          - agent:0
+          - agent:1
+      - label: node-type=analytics
+        nodeFilters:
+          - agent:2
+    extraServerArgs:
+      - --cluster-init
+      - --datastore-endpoint=etcd
+volumes:
+  - volume: /tmp/k3d-alphintra-storage:/var/lib/rancher/k3s/storage
+    nodeFilters:
+      - all

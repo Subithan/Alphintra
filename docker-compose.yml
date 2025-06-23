@@ -1,0 +1,391 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: alphintra-postgres
+    environment:
+      POSTGRES_DB: alphintra
+      POSTGRES_USER: alphintra
+      POSTGRES_PASSWORD: alphintra123
+      POSTGRES_MULTIPLE_DATABASES: "auth_db,trading_db,strategy_db"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./databases/postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alphintra"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: alphintra-timescaledb
+    environment:
+      POSTGRES_DB: timescaledb
+      POSTGRES_USER: timescale
+      POSTGRES_PASSWORD: timescale123
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./databases/timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timescale"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: alphintra-redis
+    command: redis-server --appendonly yes --requirepass redis123
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: alphintra-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - alphintra-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: alphintra-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===============================
+  # ML/AI SERVICES (Vertex AI Simulation)
+  # ===============================
+
+  # MLflow - Model Registry and Experiment Tracking
+  mlflow:
+    image: python:3.11-slim
+    container_name: alphintra-mlflow
+    ports:
+      - "5001:5001"
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: s3://mlflow-artifacts/
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    command: >
+      bash -c "pip install mlflow psycopg2-binary boto3 &&
+               mlflow server --host 0.0.0.0 --port 5001 --backend-store-uri postgresql://alphintra:alphintra123@postgres:5432/alphintra --default-artifact-root s3://mlflow-artifacts/"
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - alphintra-network
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MinIO - Object Storage (Cloud Storage Simulation)
+  minio:
+    image: minio/minio:latest
+    container_name: alphintra-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===============================
+  # MONITORING & OBSERVABILITY
+  # ===============================
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: alphintra-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana - Visualization and Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: alphintra-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - alphintra-network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Jaeger - Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: alphintra-jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:16686/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===============================
+  # APPLICATION SERVICES
+  # ===============================
+
+  # API Gateway (Spring Cloud Gateway)
+  gateway:
+    build:
+      context: ./src/backend/gateway
+      dockerfile: Dockerfile
+    container_name: alphintra-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: development
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics,prometheus
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./src/backend/auth-service
+      dockerfile: Dockerfile
+    container_name: alphintra-auth-service
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Trading API (FastAPI)
+  trading-api:
+    build:
+      context: ./src/backend/trading-api
+      dockerfile: Dockerfile
+    container_name: alphintra-trading-api
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+      TIMESCALE_URL: postgresql://timescale:timescale123@timescaledb:5432/timescaledb
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MLFLOW_TRACKING_URI: http://mlflow:5001
+    depends_on:
+      - postgres
+      - timescaledb
+      - redis
+      - kafka
+      - mlflow
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Strategy Engine
+  strategy-engine:
+    build:
+      context: ./src/backend/strategy-engine
+      dockerfile: Dockerfile
+    container_name: alphintra-strategy-engine
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MLFLOW_TRACKING_URI: http://mlflow:5001
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - mlflow
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Broker Connector/Simulator
+  broker-simulator:
+    build:
+      context: ./src/backend/broker-simulator
+      dockerfile: Dockerfile
+    container_name: alphintra-broker-simulator
+    ports:
+      - "8004:8004"
+    environment:
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - redis
+      - kafka
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ===============================
+# VOLUMES
+# ===============================
+volumes:
+  postgres_data:
+    driver: local
+  timescaledb_data:
+    driver: local
+  redis_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_logs:
+    driver: local
+  kafka_data:
+    driver: local
+  mlflow_data:
+    driver: local
+  minio_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ===============================
+# NETWORKS
+# ===============================
+networks:
+  alphintra-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16

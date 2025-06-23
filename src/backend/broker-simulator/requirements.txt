@@ -1,0 +1,90 @@
+# Web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database drivers
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis[hiredis]==5.0.1
+
+# Message queue
+kafka-python==2.0.2
+aiokafka==0.10.0
+
+# Data processing and analysis
+numpy==1.25.2
+pandas==2.1.4
+scipy==1.11.4
+
+# Data models and validation
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# Environment and configuration
+python-dotenv==1.0.0
+
+# Logging and monitoring
+structlog==23.2.0
+prometheus-client==0.19.0
+loguru==0.7.2
+
+# HTTP client
+requests==2.31.0
+httpx==0.25.2
+
+# Date and time handling
+python-dateutil==2.8.2
+pytz==2023.3
+
+# JSON and data serialization
+orjson==3.9.10
+msgpack==1.0.7
+
+# Background tasks and scheduling
+celery==5.3.4
+apscheduler==3.10.4
+
+# Utilities
+click==8.1.7
+rich==13.7.0
+tqdm==4.66.1
+
+# Financial calculations
+quantlib==1.32
+empyrical==0.5.5
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+
+# Type hints
+typing-extensions==4.8.0
+
+# Async utilities
+aiofiles==23.2.1
+aioredis==2.0.1
+
+# Technical analysis (for price simulation)
+ta==0.10.2
+
+# Performance monitoring
+psutil==5.9.6
+
+# Caching
+cachetools==5.3.2
+
+# Validation
+jsonschema==4.20.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# CORS middleware - using built-in FastAPI CORS
+# fastapi-cors==0.0.6  # Use fastapi.middleware.cors instead
+
+# Development tools
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1

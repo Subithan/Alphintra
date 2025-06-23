@@ -1,0 +1,346 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: alphintra-gateway
+  
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 100
+            redis-rate-limiter.burstCapacity: 200
+            redis-rate-limiter.requestedTokens: 1
+        - name: CircuitBreaker
+          args:
+            name: defaultCircuitBreaker
+            fallbackUri: forward:/fallback
+      
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+        pool:
+          type: elastic
+          max-idle-time: 15s
+          max-life-time: 60s
+      
+      routes:
+        # Auth Service
+        - id: auth-service
+          uri: http://auth-service:8001
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: auth-service
+                fallbackUri: forward:/fallback/auth
+        
+        # Trading API
+        - id: trading-api
+          uri: http://trading-api:8002
+          predicates:
+            - Path=/api/trading/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: trading-api
+                fallbackUri: forward:/fallback/trading
+        
+        # Strategy Engine
+        - id: strategy-engine
+          uri: http://strategy-engine:8003
+          predicates:
+            - Path=/api/strategies/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: strategy-engine
+                fallbackUri: forward:/fallback/strategies
+        
+        # Broker Connector
+        - id: broker-connector
+          uri: http://broker-connector:8005
+          predicates:
+            - Path=/api/broker/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: broker-connector
+                fallbackUri: forward:/fallback/broker
+        
+        # Broker Simulator
+        - id: broker-simulator
+          uri: http://broker-simulator:8006
+          predicates:
+            - Path=/api/simulator/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: broker-simulator
+                fallbackUri: forward:/fallback/simulator
+        
+        # MLflow
+        - id: mlflow
+          uri: http://mlflow:5000
+          predicates:
+            - Path=/api/mlflow/**
+          filters:
+            - StripPrefix=2
+        
+        # WebSocket routes
+        - id: websocket-trading
+          uri: ws://trading-api:8002
+          predicates:
+            - Path=/ws/**
+        
+        # Health checks
+        - id: health
+          uri: http://localhost:8080
+          predicates:
+            - Path=/health
+      
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+  
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://auth-service:8001}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-service:8001/.well-known/jwks.json}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    gateway:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    reactor.netty: INFO
+    io.netty: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
+  file:
+    name: logs/gateway.log
+    max-size: 100MB
+    max-history: 30
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      defaultCircuitBreaker:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+      auth-service:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      trading-api:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      strategy-engine:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      broker-connector:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      broker-simulator:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+  
+  retry:
+    instances:
+      default:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - org.springframework.web.client.ResourceAccessException
+  
+  ratelimiter:
+    instances:
+      default:
+        limitForPeriod: 100
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0s
+
+# Custom application properties
+alphintra:
+  gateway:
+    security:
+      jwt:
+        secret: ${JWT_SECRET:your-secret-key-here-make-it-long-and-secure}
+        expiration: 86400 # 24 hours
+      cors:
+        allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+        allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+        allowed-headers: "*"
+        allow-credentials: true
+        max-age: 3600
+    
+    rate-limiting:
+      enabled: true
+      default-rate: 100 # requests per minute
+      burst-capacity: 200
+      authenticated-rate: 1000 # higher rate for authenticated users
+    
+    circuit-breaker:
+      enabled: true
+      failure-threshold: 50 # percentage
+      timeout: 5s
+      reset-timeout: 30s
+    
+    monitoring:
+      metrics-enabled: true
+      tracing-enabled: true
+      health-check-interval: 30s
+    
+    fallback:
+      enabled: true
+      default-message: "Service temporarily unavailable. Please try again later."
+
+---
+# Development profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+  
+  cloud:
+    gateway:
+      httpclient:
+        wiretap: true
+      httpserver:
+        wiretap: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.security: DEBUG
+    reactor.netty.http.client: DEBUG
+    reactor.netty.http.server: DEBUG
+
+---
+# Production profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: WARN
+    reactor.netty: WARN
+    io.netty: WARN
+  file:
+    name: /var/log/alphintra/gateway.log
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+alphintra:
+  gateway:
+    security:
+      jwt:
+        secret: ${JWT_SECRET}
+    monitoring:
+      health-check-interval: 60s

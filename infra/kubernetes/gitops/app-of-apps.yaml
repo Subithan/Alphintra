@@ -1,0 +1,281 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alphintra-app-of-apps
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: alphintra-app-of-apps
+    app.kubernetes.io/part-of: alphintra-platform
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/alphintra/platform
+    targetRevision: HEAD
+    path: infra/kubernetes/gitops/argocd-apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+---
+# Production Environment Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alphintra-production
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: alphintra-production
+    app.kubernetes.io/part-of: alphintra-platform
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: alphintra-production
+  source:
+    repoURL: https://github.com/alphintra/platform
+    targetRevision: HEAD
+    path: infra/kubernetes/environments/production
+    kustomize:
+      images:
+        - auth-service=gcr.io/alphintra-prod/auth-service:v1.0.0
+        - trading-api=gcr.io/alphintra-prod/trading-api:v1.0.0
+        - strategy-engine=gcr.io/alphintra-prod/strategy-engine:v1.0.0
+        - broker-connector=gcr.io/alphintra-prod/broker-connector:v1.0.0
+        - broker-simulator=gcr.io/alphintra-prod/broker-simulator:v1.0.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: alphintra-production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false  # Manual approval for production
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+    managedNamespaceMetadata:
+      labels:
+        environment: production
+        managed-by: argocd
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  revisionHistoryLimit: 10
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /spec/clusterIP
+---
+# Staging Environment Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alphintra-staging
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: alphintra-staging
+    app.kubernetes.io/part-of: alphintra-platform
+    environment: staging
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: alphintra-staging
+  source:
+    repoURL: https://github.com/alphintra/platform
+    targetRevision: develop
+    path: infra/kubernetes/environments/staging
+    kustomize:
+      images:
+        - auth-service=gcr.io/alphintra-prod/auth-service:develop
+        - trading-api=gcr.io/alphintra-prod/trading-api:develop
+        - strategy-engine=gcr.io/alphintra-prod/strategy-engine:develop
+        - broker-connector=gcr.io/alphintra-prod/broker-connector:develop
+        - broker-simulator=gcr.io/alphintra-prod/broker-simulator:develop
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: alphintra-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    managedNamespaceMetadata:
+      labels:
+        environment: staging
+        managed-by: argocd
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 5
+---
+# Development Environment Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alphintra-development
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: alphintra-development
+    app.kubernetes.io/part-of: alphintra-platform
+    environment: development
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: alphintra-development
+  source:
+    repoURL: https://github.com/alphintra/platform
+    targetRevision: develop
+    path: infra/kubernetes/environments/development
+    kustomize:
+      images:
+        - auth-service=gcr.io/alphintra-prod/auth-service:latest
+        - trading-api=gcr.io/alphintra-prod/trading-api:latest
+        - strategy-engine=gcr.io/alphintra-prod/strategy-engine:latest
+        - broker-connector=gcr.io/alphintra-prod/broker-connector:latest
+        - broker-simulator=gcr.io/alphintra-prod/broker-simulator:latest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: alphintra-development
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    managedNamespaceMetadata:
+      labels:
+        environment: development
+        managed-by: argocd
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 3
+---
+# Monitoring Stack Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alphintra-monitoring
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: alphintra-monitoring
+    app.kubernetes.io/part-of: alphintra-platform
+    component: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: alphintra-infrastructure
+  source:
+    repoURL: https://github.com/alphintra/platform
+    targetRevision: HEAD
+    path: infra/kubernetes/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    managedNamespaceMetadata:
+      labels:
+        component: monitoring
+        managed-by: argocd
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 5
+---
+# Security Policies Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alphintra-security
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: alphintra-security
+    app.kubernetes.io/part-of: alphintra-platform
+    component: security
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: alphintra-infrastructure
+  source:
+    repoURL: https://github.com/alphintra/platform
+    targetRevision: HEAD
+    path: infra/kubernetes/security
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=false
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  revisionHistoryLimit: 10

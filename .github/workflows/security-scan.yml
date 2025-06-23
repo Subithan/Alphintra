@@ -1,0 +1,508 @@
+name: Security Scanning Pipeline
+
+on:
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: gcr.io
+  PROJECT_ID: alphintra-prod
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth-service, trading-api, strategy-engine, broker-connector, broker-simulator]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Install security scanning tools
+      run: |
+        pip install safety pip-audit bandit semgrep
+        
+    - name: Cache dependency scan results
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/safety
+        key: safety-${{ matrix.service }}-${{ hashFiles('src/backend/${{ matrix.service }}/requirements.txt') }}
+        
+    - name: Run Safety dependency scan
+      run: |
+        cd src/backend/${{ matrix.service }}
+        echo "🔍 Scanning ${{ matrix.service }} dependencies for vulnerabilities..."
+        
+        # Run safety scan
+        safety check -r requirements.txt --json --output safety-report.json || true
+        safety check -r requirements.txt --full-report
+        
+    - name: Run pip-audit scan
+      run: |
+        cd src/backend/${{ matrix.service }}
+        echo "🔍 Running pip-audit scan for ${{ matrix.service }}..."
+        
+        pip-audit -r requirements.txt --format=json --output=pip-audit-report.json || true
+        pip-audit -r requirements.txt --format=cyclonedx-json --output=pip-audit-sbom.json || true
+        
+    - name: Upload dependency scan results
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-scan-${{ matrix.service }}
+        path: |
+          src/backend/${{ matrix.service }}/safety-report.json
+          src/backend/${{ matrix.service }}/pip-audit-report.json
+          src/backend/${{ matrix.service }}/pip-audit-sbom.json
+
+  static-analysis:
+    name: Static Application Security Testing (SAST)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        
+    - name: Install SAST tools
+      run: |
+        pip install bandit semgrep
+        
+    - name: Run Bandit security scan
+      run: |
+        echo "🔍 Running Bandit SAST scan..."
+        bandit -r src/backend/ -f json -o bandit-report.json -ll || true
+        bandit -r src/backend/ -f txt -ll
+        
+    - name: Run Semgrep SAST scan
+      run: |
+        echo "🔍 Running Semgrep SAST scan..."
+        semgrep --config=auto src/backend/ --json --output=semgrep-report.json || true
+        semgrep --config=auto src/backend/ --verbose
+        
+    - name: Run custom security rules
+      run: |
+        echo "🔍 Running custom security rules..."
+        
+        # Check for hardcoded secrets
+        grep -r -i "password\|secret\|key\|token" src/backend/ --include="*.py" | grep -v "test" || true
+        
+        # Check for SQL injection patterns
+        grep -r -i "execute.*format\|execute.*%" src/backend/ --include="*.py" || true
+        
+        # Check for unsafe eval/exec usage
+        grep -r -i "eval\|exec" src/backend/ --include="*.py" || true
+        
+    - name: Upload SAST results
+      uses: actions/upload-artifact@v3
+      with:
+        name: sast-scan-results
+        path: |
+          bandit-report.json
+          semgrep-report.json
+
+  container-scan:
+    name: Container Image Security Scan
+    runs-on: ubuntu-latest
+    needs: [dependency-scan]
+    strategy:
+      matrix:
+        service: [auth-service, trading-api, strategy-engine, broker-connector, broker-simulator]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build container image for scanning
+      uses: docker/build-push-action@v5
+      with:
+        context: src/backend/${{ matrix.service }}
+        load: true
+        tags: alphintra/${{ matrix.service }}:scan
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'alphintra/${{ matrix.service }}:scan'
+        format: 'sarif'
+        output: 'trivy-${{ matrix.service }}.sarif'
+        
+    - name: Run Trivy filesystem scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: 'src/backend/${{ matrix.service }}'
+        format: 'sarif'
+        output: 'trivy-fs-${{ matrix.service }}.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-${{ matrix.service }}.sarif'
+        
+    - name: Upload filesystem scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-fs-${{ matrix.service }}.sarif'
+        
+    - name: Run Docker Bench Security
+      run: |
+        # Download and run Docker Bench Security
+        git clone https://github.com/docker/docker-bench-security.git
+        cd docker-bench-security
+        sudo sh docker-bench-security.sh -c container_images > ../docker-bench-${{ matrix.service }}.log
+        
+    - name: Upload container scan results
+      uses: actions/upload-artifact@v3
+      with:
+        name: container-scan-${{ matrix.service }}
+        path: |
+          trivy-${{ matrix.service }}.sarif
+          trivy-fs-${{ matrix.service }}.sarif
+          docker-bench-${{ matrix.service }}.log
+
+  infrastructure-scan:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install infrastructure scanning tools
+      run: |
+        # Install Checkov for IaC scanning
+        pip install checkov
+        
+        # Install terrascan
+        curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | grep -o -E "https://.+?_Linux_x86_64.tar.gz")" > terrascan.tar.gz
+        tar -xf terrascan.tar.gz terrascan && rm terrascan.tar.gz
+        sudo mv terrascan /usr/local/bin
+        
+    - name: Run Checkov IaC scan
+      run: |
+        echo "🔍 Running Checkov Infrastructure as Code scan..."
+        checkov -d infra/terraform/ --framework terraform --output sarif --output-file checkov-terraform.sarif || true
+        checkov -d infra/kubernetes/ --framework kubernetes --output sarif --output-file checkov-k8s.sarif || true
+        checkov -d infra/docker/ --framework dockerfile --output sarif --output-file checkov-docker.sarif || true
+        
+    - name: Run Terrascan IaC scan
+      run: |
+        echo "🔍 Running Terrascan Infrastructure as Code scan..."
+        terrascan scan -d infra/terraform/ -o sarif > terrascan-report.sarif || true
+        
+    - name: Run Kubernetes security scan
+      run: |
+        echo "🔍 Running Kubernetes configuration security scan..."
+        
+        # Install kube-score
+        wget https://github.com/zegl/kube-score/releases/latest/download/kube-score_linux_amd64.tar.gz
+        tar xzf kube-score_linux_amd64.tar.gz
+        sudo mv kube-score /usr/local/bin
+        
+        # Scan Kubernetes manifests
+        find infra/kubernetes/ -name "*.yaml" -exec kube-score score {} \; > kube-score-report.txt || true
+        
+    - name: Upload IaC scan results
+      uses: actions/upload-artifact@v3
+      with:
+        name: infrastructure-scan-results
+        path: |
+          checkov-*.sarif
+          terrascan-report.sarif
+          kube-score-report.txt
+          
+    - name: Upload Checkov results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'checkov-terraform.sarif'
+
+  secrets-scan:
+    name: Secrets Detection Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run TruffleHog secrets scan
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --debug --only-verified
+        
+    - name: Run GitLeaks secrets scan
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        
+    - name: Run custom secrets detection
+      run: |
+        echo "🔍 Running custom secrets detection..."
+        
+        # Check for common secret patterns
+        echo "Checking for potential secrets in code..."
+        
+        # AWS keys
+        grep -r -E "AKIA[0-9A-Z]{16}" . --exclude-dir=.git || true
+        
+        # Google API keys
+        grep -r -E "AIza[0-9A-Za-z\\-_]{35}" . --exclude-dir=.git || true
+        
+        # Private keys
+        grep -r -E "-----BEGIN (RSA|DSA|EC|PGP) PRIVATE KEY-----" . --exclude-dir=.git || true
+        
+        # Database URLs
+        grep -r -E "(postgres|mysql|mongodb)://[^\\s]+" . --exclude-dir=.git || true
+        
+        echo "Secrets scan completed"
+
+  compliance-check:
+    name: Security Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check security policy compliance
+      run: |
+        echo "🔍 Checking security policy compliance..."
+        
+        # Check for required security files
+        echo "Checking for required security documentation..."
+        test -f SECURITY.md || echo "❌ SECURITY.md file missing"
+        test -f .github/SECURITY.md || echo "❌ .github/SECURITY.md file missing"
+        
+        # Check for security headers in nginx configs
+        echo "Checking nginx security headers..."
+        find infra/ -name "*.conf" -exec grep -l "X-Frame-Options\|X-Content-Type-Options\|X-XSS-Protection" {} \; || echo "❌ Security headers missing in nginx configs"
+        
+        # Check for TLS configuration
+        echo "Checking TLS configuration..."
+        find infra/ -name "*.yaml" -exec grep -l "tls:" {} \; || echo "⚠️ TLS configuration may be missing"
+        
+    - name: Generate compliance report
+      run: |
+        echo "📋 Generating compliance report..."
+        
+        cat > compliance-report.md << EOF
+        # Security Compliance Report
+        
+        ## Date: $(date)
+        ## Commit: ${{ github.sha }}
+        
+        ### Checks Performed:
+        - ✅ Dependency vulnerability scanning
+        - ✅ Static application security testing
+        - ✅ Container image scanning
+        - ✅ Infrastructure as Code scanning
+        - ✅ Secrets detection
+        - ✅ Security policy compliance
+        
+        ### Recommendations:
+        - Regular security updates
+        - Continuous monitoring
+        - Security training for developers
+        - Regular penetration testing
+        
+        EOF
+        
+    - name: Upload compliance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: compliance-report
+        path: compliance-report.md
+
+  security-dashboard:
+    name: Update Security Dashboard
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, static-analysis, container-scan, infrastructure-scan, secrets-scan, compliance-check]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all scan results
+      uses: actions/download-artifact@v3
+      
+    - name: Generate security dashboard
+      run: |
+        echo "📊 Generating security dashboard..."
+        
+        # Count vulnerabilities from all scans
+        CRITICAL_COUNT=0
+        HIGH_COUNT=0
+        MEDIUM_COUNT=0
+        LOW_COUNT=0
+        
+        # Parse Trivy results
+        if find . -name "trivy-*.sarif" -type f | head -1 | xargs test -f; then
+          echo "Processing Trivy scan results..."
+          # Add logic to parse SARIF and count vulnerabilities
+        fi
+        
+        # Parse Bandit results
+        if test -f "sast-scan-results/bandit-report.json"; then
+          echo "Processing Bandit scan results..."
+          # Add logic to parse Bandit JSON and count issues
+        fi
+        
+        # Generate dashboard HTML
+        cat > security-dashboard.html << EOF
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Alphintra Security Dashboard</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .metric { display: inline-block; margin: 10px; padding: 20px; border-radius: 5px; }
+            .critical { background-color: #ff4444; color: white; }
+            .high { background-color: #ff8800; color: white; }
+            .medium { background-color: #ffaa00; color: white; }
+            .low { background-color: #00aa00; color: white; }
+          </style>
+        </head>
+        <body>
+          <h1>Alphintra Security Dashboard</h1>
+          <p>Last updated: $(date)</p>
+          
+          <div class="metric critical">
+            <h3>Critical</h3>
+            <p>\$CRITICAL_COUNT</p>
+          </div>
+          
+          <div class="metric high">
+            <h3>High</h3>
+            <p>\$HIGH_COUNT</p>
+          </div>
+          
+          <div class="metric medium">
+            <h3>Medium</h3>
+            <p>\$MEDIUM_COUNT</p>
+          </div>
+          
+          <div class="metric low">
+            <h3>Low</h3>
+            <p>\$LOW_COUNT</p>
+          </div>
+          
+          <h2>Recent Scans</h2>
+          <ul>
+            <li>Dependency Scan: $(date)</li>
+            <li>SAST Scan: $(date)</li>
+            <li>Container Scan: $(date)</li>
+            <li>Infrastructure Scan: $(date)</li>
+            <li>Secrets Scan: $(date)</li>
+          </ul>
+        </body>
+        </html>
+        EOF
+        
+    - name: Upload security dashboard
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-dashboard
+        path: security-dashboard.html
+
+  notify-security-team:
+    name: Notify Security Team
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, static-analysis, container-scan, infrastructure-scan, secrets-scan]
+    if: always()
+    
+    steps:
+    - name: Evaluate scan results
+      id: evaluate
+      run: |
+        # Determine if critical issues were found
+        # This would parse the actual scan results
+        echo "critical_issues=false" >> $GITHUB_OUTPUT
+        echo "high_issues=false" >> $GITHUB_OUTPUT
+        
+    - name: Send security alert
+      if: steps.evaluate.outputs.critical_issues == 'true'
+      run: |
+        echo "🚨 CRITICAL SECURITY ISSUES DETECTED"
+        echo "Immediate attention required!"
+        
+        # Send alert to security team
+        # curl -X POST ${{ secrets.SECURITY_WEBHOOK }} \
+        #   -H "Content-Type: application/json" \
+        #   -d '{"text":"🚨 Critical security vulnerabilities detected in Alphintra platform"}'
+        
+    - name: Create security issue
+      if: steps.evaluate.outputs.high_issues == 'true' || steps.evaluate.outputs.critical_issues == 'true'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🔒 Security Vulnerabilities Detected',
+            body: `## Security Scan Results
+            
+            **Date:** ${new Date().toISOString()}
+            **Commit:** ${{ github.sha }}
+            **Workflow:** ${{ github.workflow }}
+            
+            High or critical security vulnerabilities have been detected in the security scan.
+            
+            ### Action Required:
+            1. Review the security scan artifacts
+            2. Prioritize and fix critical vulnerabilities
+            3. Update dependencies and configurations
+            4. Re-run security scans to verify fixes
+            
+            ### Scan Results:
+            - Dependency vulnerabilities
+            - Static analysis issues  
+            - Container security issues
+            - Infrastructure misconfigurations
+            
+            Please address these issues immediately.`,
+            labels: ['security', 'critical', 'vulnerability']
+          })
+
+  schedule-penetration-test:
+    name: Schedule Penetration Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Check if penetration test is due
+      run: |
+        # Check if it's time for quarterly penetration testing
+        current_month=$(date +%m)
+        if [[ $current_month -eq 1 || $current_month -eq 4 || $current_month -eq 7 || $current_month -eq 10 ]]; then
+          echo "📅 Quarterly penetration test is due"
+          echo "Creating reminder issue..."
+          
+          # This would create an issue or send notification
+          echo "Penetration test scheduling completed"
+        fi

@@ -1,0 +1,42 @@
+# Namespaces for Alphintra Trading Platform
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: alphintra
+  labels:
+    name: alphintra
+    istio-injection: enabled
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    scheduler.alpha.kubernetes.io/preferred-duplication: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    istio-injection: enabled
+  annotations:
+    scheduler.alpha.kubernetes.io/preferred-duplication: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infrastructure
+  labels:
+    name: infrastructure
+  annotations:
+    scheduler.alpha.kubernetes.io/preferred-duplication: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stream-processing
+  labels:
+    name: stream-processing
+    istio-injection: enabled
+  annotations:
+    scheduler.alpha.kubernetes.io/preferred-duplication: "true"
