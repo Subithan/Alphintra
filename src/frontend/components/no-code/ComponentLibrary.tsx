@@ -50,14 +50,14 @@ const componentLibrary: ComponentItem[] = [
     tags: ['data', 'custom', 'upload', 'csv', 'excel']
   },
 
-  // Technical Indicators
+  // Technical Indicators - Trend
   {
     id: 'sma',
     name: 'Simple Moving Average',
     description: 'Calculate simple moving average',
     icon: <TrendingUp className="h-4 w-4" />,
     type: 'technicalIndicator',
-    category: 'Technical Indicators',
+    category: 'Trend Indicators',
     tags: ['sma', 'trend', 'moving average']
   },
   {
@@ -66,35 +66,46 @@ const componentLibrary: ComponentItem[] = [
     description: 'Calculate exponential moving average',
     icon: <TrendingUp className="h-4 w-4" />,
     type: 'technicalIndicator',
-    category: 'Technical Indicators',
+    category: 'Trend Indicators',
     tags: ['ema', 'trend', 'moving average']
   },
+  {
+    id: 'wma',
+    name: 'Weighted Moving Average',
+    description: 'Weighted moving average',
+    icon: <TrendingUp className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Trend Indicators',
+    tags: ['wma', 'trend', 'weighted']
+  },
+  {
+    id: 'vwma',
+    name: 'Volume Weighted MA',
+    description: 'Volume weighted moving average',
+    icon: <TrendingUp className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Trend Indicators',
+    tags: ['vwma', 'trend', 'volume']
+  },
+  {
+    id: 'hma',
+    name: 'Hull Moving Average',
+    description: 'Hull moving average',
+    icon: <TrendingUp className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Trend Indicators',
+    tags: ['hma', 'trend', 'hull']
+  },
+
+  // Technical Indicators - Momentum
   {
     id: 'rsi',
     name: 'RSI',
     description: 'Relative Strength Index oscillator',
     icon: <BarChart3 className="h-4 w-4" />,
     type: 'technicalIndicator',
-    category: 'Technical Indicators',
+    category: 'Momentum Indicators',
     tags: ['rsi', 'oscillator', 'momentum']
-  },
-  {
-    id: 'macd',
-    name: 'MACD',
-    description: 'Moving Average Convergence Divergence',
-    icon: <BarChart3 className="h-4 w-4" />,
-    type: 'technicalIndicator',
-    category: 'Technical Indicators',
-    tags: ['macd', 'momentum', 'divergence']
-  },
-  {
-    id: 'bollinger',
-    name: 'Bollinger Bands',
-    description: 'Volatility bands around moving average',
-    icon: <BarChart3 className="h-4 w-4" />,
-    type: 'technicalIndicator',
-    category: 'Technical Indicators',
-    tags: ['bollinger', 'volatility', 'bands']
   },
   {
     id: 'stochastic',
@@ -102,66 +113,298 @@ const componentLibrary: ComponentItem[] = [
     description: 'Stochastic momentum oscillator',
     icon: <BarChart3 className="h-4 w-4" />,
     type: 'technicalIndicator',
-    category: 'Technical Indicators',
+    category: 'Momentum Indicators',
     tags: ['stochastic', 'momentum', 'oscillator']
   },
+  {
+    id: 'williams-r',
+    name: 'Williams %R',
+    description: 'Williams percent range',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Momentum Indicators',
+    tags: ['williams', 'momentum', 'oscillator']
+  },
+  {
+    id: 'cci',
+    name: 'CCI',
+    description: 'Commodity Channel Index',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Momentum Indicators',
+    tags: ['cci', 'momentum', 'channel']
+  },
+  {
+    id: 'roc',
+    name: 'Rate of Change',
+    description: 'Price rate of change',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Momentum Indicators',
+    tags: ['roc', 'momentum', 'change']
+  },
 
-  // Conditions
+  // Technical Indicators - Volatility
   {
-    id: 'price-condition',
-    name: 'Price Condition',
-    description: 'Compare price values',
-    icon: <Target className="h-4 w-4" />,
-    type: 'condition',
-    category: 'Conditions',
-    tags: ['price', 'comparison', 'condition']
+    id: 'bollinger',
+    name: 'Bollinger Bands',
+    description: 'Volatility bands around moving average',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Volatility Indicators',
+    tags: ['bollinger', 'volatility', 'bands']
   },
   {
-    id: 'indicator-condition',
-    name: 'Indicator Condition',
-    description: 'Compare indicator values',
+    id: 'atr',
+    name: 'ATR',
+    description: 'Average True Range',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Volatility Indicators',
+    tags: ['atr', 'volatility', 'range']
+  },
+  {
+    id: 'keltner',
+    name: 'Keltner Channels',
+    description: 'Keltner channel bands',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Volatility Indicators',
+    tags: ['keltner', 'volatility', 'channels']
+  },
+  {
+    id: 'donchian',
+    name: 'Donchian Channels',
+    description: 'Donchian channel breakouts',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Volatility Indicators',
+    tags: ['donchian', 'volatility', 'breakout']
+  },
+
+  // Technical Indicators - Volume
+  {
+    id: 'obv',
+    name: 'On Balance Volume',
+    description: 'On balance volume indicator',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Volume Indicators',
+    tags: ['obv', 'volume', 'balance']
+  },
+  {
+    id: 'vwap',
+    name: 'VWAP',
+    description: 'Volume weighted average price',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Volume Indicators',
+    tags: ['vwap', 'volume', 'price']
+  },
+  {
+    id: 'mfi',
+    name: 'Money Flow Index',
+    description: 'Money flow index oscillator',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Volume Indicators',
+    tags: ['mfi', 'volume', 'money flow']
+  },
+
+  // Technical Indicators - Oscillators  
+  {
+    id: 'macd',
+    name: 'MACD',
+    description: 'Moving Average Convergence Divergence',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Oscillators',
+    tags: ['macd', 'momentum', 'divergence']
+  },
+  {
+    id: 'ao',
+    name: 'Awesome Oscillator',
+    description: 'Awesome oscillator momentum',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Oscillators',
+    tags: ['ao', 'awesome', 'oscillator']
+  },
+  {
+    id: 'adx',
+    name: 'ADX',
+    description: 'Average Directional Index',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'technicalIndicator',
+    category: 'Oscillators',
+    tags: ['adx', 'directional', 'trend']
+  },
+
+  // Conditions - Comparison
+  {
+    id: 'value-comparison',
+    name: 'Value Comparison',
+    description: 'Compare values with operators',
     icon: <Target className="h-4 w-4" />,
     type: 'condition',
-    category: 'Conditions',
-    tags: ['indicator', 'comparison', 'condition']
+    category: 'Comparison Conditions',
+    tags: ['comparison', 'value', 'operator']
   },
+  {
+    id: 'range-condition',
+    name: 'Range Condition',
+    description: 'Check if value is within range',
+    icon: <Target className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Comparison Conditions',
+    tags: ['range', 'boundary', 'condition']
+  },
+  {
+    id: 'percentage-change',
+    name: 'Percentage Change',
+    description: 'Monitor percentage changes',
+    icon: <Target className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Comparison Conditions',
+    tags: ['percentage', 'change', 'threshold']
+  },
+
+  // Conditions - Crossover
   {
     id: 'crossover',
     name: 'Crossover',
     description: 'Detect line crossovers',
     icon: <GitBranch className="h-4 w-4" />,
     type: 'condition',
-    category: 'Conditions',
+    category: 'Crossover Conditions',
     tags: ['crossover', 'intersection', 'signal']
   },
   {
-    id: 'time-condition',
-    name: 'Time Condition',
-    description: 'Time-based conditions',
-    icon: <Timer className="h-4 w-4" />,
+    id: 'golden-cross',
+    name: 'Golden Cross',
+    description: 'Detect golden cross pattern',
+    icon: <GitBranch className="h-4 w-4" />,
     type: 'condition',
-    category: 'Conditions',
-    tags: ['time', 'schedule', 'condition']
+    category: 'Crossover Conditions',
+    tags: ['golden', 'cross', 'bullish']
+  },
+  {
+    id: 'divergence',
+    name: 'Divergence',
+    description: 'Detect price-indicator divergence',
+    icon: <GitBranch className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Crossover Conditions',
+    tags: ['divergence', 'indicator', 'signal']
   },
 
-  // Actions
+  // Conditions - Trend
+  {
+    id: 'trend-direction',
+    name: 'Trend Direction',
+    description: 'Analyze trend direction',
+    icon: <TrendingUp className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Trend Conditions',
+    tags: ['trend', 'direction', 'rising', 'falling']
+  },
+  {
+    id: 'trend-strength',
+    name: 'Trend Strength',
+    description: 'Measure trend strength',
+    icon: <TrendingUp className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Trend Conditions',
+    tags: ['trend', 'strength', 'momentum']
+  },
+
+  // Conditions - Pattern
+  {
+    id: 'support-resistance',
+    name: 'Support/Resistance',
+    description: 'Detect support and resistance levels',
+    icon: <Target className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Pattern Conditions',
+    tags: ['support', 'resistance', 'level']
+  },
+  {
+    id: 'breakout',
+    name: 'Breakout',
+    description: 'Detect breakout patterns',
+    icon: <Target className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Pattern Conditions',
+    tags: ['breakout', 'pattern', 'volatility']
+  },
+  {
+    id: 'overbought-oversold',
+    name: 'Overbought/Oversold',
+    description: 'Detect extreme conditions',
+    icon: <Target className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Pattern Conditions',
+    tags: ['overbought', 'oversold', 'extreme']
+  },
+
+  // Conditions - Multi-Timeframe
+  {
+    id: 'multi-timeframe',
+    name: 'Multi-Timeframe',
+    description: 'Multi-timeframe analysis',
+    icon: <Timer className="h-4 w-4" />,
+    type: 'condition',
+    category: 'Multi-Timeframe Conditions',
+    tags: ['timeframe', 'alignment', 'bias']
+  },
+
+  // Actions - Entry
   {
     id: 'buy-order',
     name: 'Buy Order',
-    description: 'Execute buy order',
+    description: 'Execute buy/long entry order',
     icon: <Zap className="h-4 w-4 text-green-600" />,
     type: 'action',
-    category: 'Trading Actions',
-    tags: ['buy', 'order', 'long']
+    category: 'Entry Actions',
+    tags: ['buy', 'order', 'long', 'entry']
   },
   {
     id: 'sell-order',
     name: 'Sell Order',
-    description: 'Execute sell order',
+    description: 'Execute sell/short entry order',
     icon: <Zap className="h-4 w-4 text-red-600" />,
     type: 'action',
-    category: 'Trading Actions',
-    tags: ['sell', 'order', 'short']
+    category: 'Entry Actions',
+    tags: ['sell', 'order', 'short', 'entry']
+  },
+  {
+    id: 'limit-entry',
+    name: 'Limit Entry',
+    description: 'Place limit entry order',
+    icon: <Zap className="h-4 w-4 text-blue-600" />,
+    type: 'action',
+    category: 'Entry Actions',
+    tags: ['limit', 'entry', 'order']
+  },
+  {
+    id: 'stop-entry',
+    name: 'Stop Entry',
+    description: 'Place stop entry order',
+    icon: <Zap className="h-4 w-4 text-orange-600" />,
+    type: 'action',
+    category: 'Entry Actions',
+    tags: ['stop', 'entry', 'breakout']
+  },
+
+  // Actions - Exit
+  {
+    id: 'close-position',
+    name: 'Close Position',
+    description: 'Close open position',
+    icon: <Zap className="h-4 w-4 text-gray-600" />,
+    type: 'action',
+    category: 'Exit Actions',
+    tags: ['close', 'position', 'exit']
   },
   {
     id: 'stop-loss',
@@ -169,8 +412,8 @@ const componentLibrary: ComponentItem[] = [
     description: 'Set stop loss order',
     icon: <Shield className="h-4 w-4" />,
     type: 'action',
-    category: 'Risk Management',
-    tags: ['stop', 'loss', 'risk']
+    category: 'Exit Actions',
+    tags: ['stop', 'loss', 'risk', 'exit']
   },
   {
     id: 'take-profit',
@@ -178,8 +421,66 @@ const componentLibrary: ComponentItem[] = [
     description: 'Set take profit order',
     icon: <DollarSign className="h-4 w-4" />,
     type: 'action',
-    category: 'Risk Management',
-    tags: ['take', 'profit', 'target']
+    category: 'Exit Actions',
+    tags: ['take', 'profit', 'target', 'exit']
+  },
+  {
+    id: 'trailing-stop',
+    name: 'Trailing Stop',
+    description: 'Set trailing stop order',
+    icon: <TrendingUp className="h-4 w-4" />,
+    type: 'action',
+    category: 'Exit Actions',
+    tags: ['trailing', 'stop', 'dynamic']
+  },
+
+  // Actions - Management
+  {
+    id: 'scale-in',
+    name: 'Scale In',
+    description: 'Scale into position',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'action',
+    category: 'Management Actions',
+    tags: ['scale', 'in', 'position', 'management']
+  },
+  {
+    id: 'scale-out',
+    name: 'Scale Out',
+    description: 'Scale out of position',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'action',
+    category: 'Management Actions',
+    tags: ['scale', 'out', 'position', 'management']
+  },
+  {
+    id: 'modify-order',
+    name: 'Modify Order',
+    description: 'Modify existing order',
+    icon: <Settings className="h-4 w-4" />,
+    type: 'action',
+    category: 'Management Actions',
+    tags: ['modify', 'order', 'adjustment']
+  },
+
+  // Actions - Portfolio
+  {
+    id: 'rebalance',
+    name: 'Rebalance',
+    description: 'Rebalance portfolio',
+    icon: <Activity className="h-4 w-4" />,
+    type: 'action',
+    category: 'Portfolio Actions',
+    tags: ['rebalance', 'portfolio', 'allocation']
+  },
+  {
+    id: 'risk-off',
+    name: 'Risk Off',
+    description: 'Reduce portfolio risk',
+    icon: <AlertTriangle className="h-4 w-4" />,
+    type: 'action',
+    category: 'Portfolio Actions',
+    tags: ['risk', 'off', 'protection']
   },
 
   // Logic
@@ -211,34 +512,114 @@ const componentLibrary: ComponentItem[] = [
     tags: ['not', 'logic', 'gate']
   },
 
-  // Risk Management
+  // Risk Management - Position Level
   {
-    id: 'position-size',
+    id: 'position-sizing',
     name: 'Position Sizing',
-    description: 'Calculate position size',
+    description: 'Calculate optimal position size',
     icon: <Settings className="h-4 w-4" />,
     type: 'risk',
-    category: 'Risk Management',
-    tags: ['position', 'size', 'risk']
+    category: 'Position Risk',
+    tags: ['position', 'size', 'calculation']
   },
   {
-    id: 'risk-limit',
-    name: 'Risk Limit',
-    description: 'Set risk limits',
-    icon: <AlertTriangle className="h-4 w-4" />,
+    id: 'stop-loss-management',
+    name: 'Stop Loss Management',
+    description: 'Advanced stop loss controls',
+    icon: <Shield className="h-4 w-4" />,
     type: 'risk',
-    category: 'Risk Management',
-    tags: ['risk', 'limit', 'protection']
+    category: 'Position Risk',
+    tags: ['stop', 'loss', 'management']
   },
+  {
+    id: 'position-limits',
+    name: 'Position Limits',
+    description: 'Set position time and size limits',
+    icon: <Timer className="h-4 w-4" />,
+    type: 'risk',
+    category: 'Position Risk',
+    tags: ['position', 'limits', 'time']
+  },
+
+  // Risk Management - Portfolio Level
   {
     id: 'portfolio-heat',
     name: 'Portfolio Heat',
     description: 'Monitor portfolio risk exposure',
     icon: <Activity className="h-4 w-4" />,
     type: 'risk',
-    category: 'Risk Management',
+    category: 'Portfolio Risk',
     tags: ['portfolio', 'heat', 'exposure']
   },
+  {
+    id: 'correlation-control',
+    name: 'Correlation Control',
+    description: 'Manage position correlations',
+    icon: <GitBranch className="h-4 w-4" />,
+    type: 'risk',
+    category: 'Portfolio Risk',
+    tags: ['correlation', 'diversification']
+  },
+  {
+    id: 'concentration-limits',
+    name: 'Concentration Limits',
+    description: 'Prevent over-concentration',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'risk',
+    category: 'Portfolio Risk',
+    tags: ['concentration', 'limits', 'diversification']
+  },
+
+  // Risk Management - Market Risk
+  {
+    id: 'volatility-filter',
+    name: 'Volatility Filter',
+    description: 'Filter trades by volatility',
+    icon: <Activity className="h-4 w-4" />,
+    type: 'risk',
+    category: 'Market Risk',
+    tags: ['volatility', 'filter', 'market']
+  },
+  {
+    id: 'liquidity-check',
+    name: 'Liquidity Check',
+    description: 'Ensure adequate liquidity',
+    icon: <Activity className="h-4 w-4" />,
+    type: 'risk',
+    category: 'Market Risk',
+    tags: ['liquidity', 'check', 'volume']
+  },
+
+  // Risk Management - Drawdown Protection
+  {
+    id: 'drawdown-protection',
+    name: 'Drawdown Protection',
+    description: 'Protect against large drawdowns',
+    icon: <Shield className="h-4 w-4" />,
+    type: 'risk',
+    category: 'Drawdown Protection',
+    tags: ['drawdown', 'protection', 'limits']
+  },
+  {
+    id: 'emergency-controls',
+    name: 'Emergency Controls',
+    description: 'Emergency risk management',
+    icon: <AlertTriangle className="h-4 w-4" />,
+    type: 'risk',
+    category: 'Drawdown Protection',
+    tags: ['emergency', 'controls', 'protection']
+  },
+
+  // Output Nodes
+  {
+    id: 'output-display',
+    name: 'Output Display',
+    description: 'Display strategy results',
+    icon: <BarChart3 className="h-4 w-4" />,
+    type: 'output',
+    category: 'Output',
+    tags: ['output', 'display', 'results']
+  }
 ];
 
 const groupedComponents = componentLibrary.reduce((acc, component) => {

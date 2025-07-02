@@ -114,7 +114,7 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
           </div>
         </div>
 
-        {/* Input Handles */}
+        {/* Input Handles with Labels */}
         <Handle
           type="target"
           position={Position.Left}
@@ -122,6 +122,17 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
           className="w-3 h-3 bg-gray-400"
           style={{ left: -6, top: '30%' }}
         />
+        <div
+          className="absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none"
+          style={{
+            left: -50,
+            top: 'calc(30% - 8px)',
+            fontSize: '10px'
+          }}
+        >
+          Data
+        </div>
+
         <Handle
           type="target"
           position={Position.Left}
@@ -129,8 +140,18 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
           className="w-3 h-3 bg-blue-500"
           style={{ left: -6, top: '70%' }}
         />
+        <div
+          className="absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none"
+          style={{
+            left: -50,
+            top: 'calc(70% - 8px)',
+            fontSize: '10px'
+          }}
+        >
+          {conditionType === 'crossover' ? 'Threshold' : 'Value'}
+        </div>
 
-        {/* Output Handle */}
+        {/* Output Handle with Label */}
         <Handle
           type="source"
           position={Position.Right}
@@ -138,6 +159,16 @@ export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) 
           className="w-3 h-3 bg-green-500"
           style={{ right: -6 }}
         />
+        <div
+          className="absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none"
+          style={{
+            right: -45,
+            top: 'calc(50% - 8px)',
+            fontSize: '10px'
+          }}
+        >
+          Signal
+        </div>
       </CardContent>
     </Card>
   );

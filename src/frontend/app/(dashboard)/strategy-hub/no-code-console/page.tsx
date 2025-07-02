@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { NoCodeWorkflowEditorWrapper } from '@/components/no-code/NoCodeWorkflowEditor';
 import { ComponentLibrary } from '@/components/no-code/ComponentLibrary';
+import { TemplateLibrary } from '@/components/no-code/TemplateLibrary';
 import { ConfigurationPanel } from '@/components/no-code/ConfigurationPanel';
 import { WorkflowToolbar } from '@/components/no-code/WorkflowToolbar';
 import { ClientOnly } from '@/components/no-code/ClientOnly';
@@ -12,13 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Save, Download, Upload, Settings, Database, Zap } from 'lucide-react';
+import { Play, Save, Download, Upload, Settings, Database, Zap, FileText } from 'lucide-react';
 
 export default function NoCodeConsolePage() {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [workflowName, setWorkflowName] = useState('Untitled Strategy');
   const [isTraining, setIsTraining] = useState(false);
   const [currentStep, setCurrentStep] = useState<'design' | 'dataset' | 'training' | 'testing'>('design');
+  const [leftSidebar, setLeftSidebar] = useState<'components' | 'templates'>('components');
 
   const handleStepChange = (step: 'design' | 'dataset' | 'training' | 'testing') => {
     setCurrentStep(step);
@@ -76,11 +78,37 @@ export default function NoCodeConsolePage() {
       <div className="flex-1 flex min-h-0">
         {currentStep === 'design' && (
           <>
-            {/* Component Library Sidebar */}
+            {/* Left Sidebar - Components/Templates */}
             <div className="w-80 border-r bg-background/50 dark:border-border dark:bg-background/50 flex flex-col">
-              <ClientOnly fallback={<div className="p-4">Loading components...</div>}>
-                <ComponentLibrary />
-              </ClientOnly>
+              {/* Sidebar Tabs */}
+              <div className="border-b dark:border-border">
+                <Tabs value={leftSidebar} onValueChange={(value) => setLeftSidebar(value as 'components' | 'templates')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 rounded-none">
+                    <TabsTrigger value="components" className="flex items-center space-x-2">
+                      <Database className="h-4 w-4" />
+                      <span>Components</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="templates" className="flex items-center space-x-2">
+                      <FileText className="h-4 w-4" />
+                      <span>Templates</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Sidebar Content */}
+              <div className="flex-1 overflow-hidden">
+                {leftSidebar === 'components' && (
+                  <ClientOnly fallback={<div className="p-4">Loading components...</div>}>
+                    <ComponentLibrary />
+                  </ClientOnly>
+                )}
+                {leftSidebar === 'templates' && (
+                  <ClientOnly fallback={<div className="p-4">Loading templates...</div>}>
+                    <TemplateLibrary onTemplateSelect={() => setLeftSidebar('components')} />
+                  </ClientOnly>
+                )}
+              </div>
             </div>
 
             {/* Main Workflow Editor */}
@@ -106,7 +134,10 @@ export default function NoCodeConsolePage() {
             {/* Configuration Panel */}
             <div className="w-80 border-l bg-background/50 dark:border-border dark:bg-background/50 flex flex-col">
               <ClientOnly fallback={<div className="p-4">Loading settings...</div>}>
-                <ConfigurationPanel selectedNode={selectedNode} />
+                <ConfigurationPanel 
+                  selectedNode={selectedNode} 
+                  onNodeSelect={setSelectedNode}
+                />
               </ClientOnly>
             </div>
           </>

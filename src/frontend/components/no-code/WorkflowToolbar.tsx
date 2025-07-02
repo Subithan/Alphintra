@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -13,21 +13,105 @@ import {
   Maximize, 
   Eye,
   Code,
+  Code2,
   TestTube,
   Save,
   Sun,
   Moon,
-  HelpCircle
+  HelpCircle,
+  Download,
+  Upload,
+  Share,
+  Copy
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { WorkflowExporter } from '@/lib/workflow-export';
+import { CodeViewer } from './CodeViewer';
 
 export function WorkflowToolbar() {
   const { theme, setTheme } = useTheme();
-  const { currentWorkflow } = useNoCodeStore();
+  const { currentWorkflow, loadWorkflow } = useNoCodeStore();
+  const [mounted, setMounted] = useState(false);
+  const [showCodeViewer, setShowCodeViewer] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleExportWorkflow = () => {
+    if (!currentWorkflow) return;
+    
+    try {
+      WorkflowExporter.downloadWorkflow(currentWorkflow, {
+        author: 'User',
+        tags: ['exported']
+      });
+      console.log('Workflow exported successfully');
+    } catch (error) {
+      console.error('Failed to export workflow:', error);
+    }
+  };
+
+  const handleImportWorkflow = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      WorkflowExporter.importWorkflowFromFile(file)
+        .then(workflow => {
+          loadWorkflow(workflow);
+          console.log('Workflow imported successfully');
+        })
+        .catch(error => {
+          console.error('Failed to import workflow:', error);
+        });
+    };
+    input.click();
+  };
+
+  const handleShareWorkflow = () => {
+    if (!currentWorkflow) return;
+    
+    try {
+      const shareUrl = WorkflowExporter.workflowToShareableUrl(currentWorkflow);
+      navigator.clipboard.writeText(shareUrl);
+      console.log('Share URL copied to clipboard');
+    } catch (error) {
+      console.error('Failed to create share URL:', error);
+    }
+  };
+
+  const handleCopyWorkflow = () => {
+    if (!currentWorkflow) return;
+    
+    try {
+      WorkflowExporter.copyWorkflowToClipboard(currentWorkflow);
+      console.log('Workflow copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy workflow:', error);
+    }
+  };
+
+  const handleGenerateCode = () => {
+    if (!currentWorkflow) {
+      console.log('No workflow available for code generation');
+      return;
+    }
+    
+    if (currentWorkflow.nodes.length === 0) {
+      console.log('Workflow is empty - add nodes to generate code');
+      return;
+    }
+    
+    setShowCodeViewer(true);
   };
 
   return (
@@ -67,9 +151,21 @@ export function WorkflowToolbar() {
           <Eye className="h-4 w-4 mr-1" />
           Visual
         </Button>
-        <Button size="sm" variant="outline">
-          <Code className="h-4 w-4 mr-1" />
-          Code
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={handleGenerateCode}
+          disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
+          title={
+            !currentWorkflow 
+              ? 'No workflow loaded' 
+              : currentWorkflow.nodes.length === 0 
+                ? 'Add nodes to generate code'
+                : 'Generate Python trading strategy code'
+          }
+        >
+          <Code2 className="h-4 w-4 mr-1" />
+          Generate Code
         </Button>
       </div>
 
@@ -96,6 +192,22 @@ export function WorkflowToolbar() {
         
         <Separator orientation="vertical" className="h-6" />
         
+        {/* Export/Import Actions */}
+        <Button size="sm" variant="ghost" onClick={handleExportWorkflow} title="Export workflow">
+          <Download className="h-4 w-4" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={handleImportWorkflow} title="Import workflow">
+          <Upload className="h-4 w-4" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={handleShareWorkflow} title="Share workflow">
+          <Share className="h-4 w-4" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={handleCopyWorkflow} title="Copy workflow">
+          <Copy className="h-4 w-4" />
+        </Button>
+        
+        <Separator orientation="vertical" className="h-6" />
+        
         {/* Help */}
         <Button 
           size="sm" 
@@ -106,14 +218,22 @@ export function WorkflowToolbar() {
         </Button>
         
         {/* Theme Toggle */}
-        <Button size="sm" variant="ghost" onClick={toggleTheme}>
-          {theme === 'dark' ? (
+        <Button size="sm" variant="ghost" onClick={toggleTheme} suppressHydrationWarning>
+          {!mounted ? (
+            <Sun className="h-4 w-4" />
+          ) : theme === 'dark' ? (
             <Sun className="h-4 w-4" />
           ) : (
             <Moon className="h-4 w-4" />
           )}
         </Button>
       </div>
+
+      {/* Code Viewer Modal */}
+      <CodeViewer
+        isOpen={showCodeViewer}
+        onClose={() => setShowCodeViewer(false)}
+      />
     </div>
   );
 }

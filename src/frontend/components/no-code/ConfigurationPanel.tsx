@@ -20,16 +20,31 @@ import {
   Info,
   Trash2,
   Copy,
-  Play
+  Play,
+  CheckCircle
 } from 'lucide-react';
+import { ValidationPanel } from './ValidationPanel';
+import { useWorkflowValidation } from '@/hooks/useWorkflowValidation';
 
 interface ConfigurationPanelProps {
   selectedNode: string | null;
+  onNodeSelect?: (nodeId: string | null) => void;
 }
 
-export function ConfigurationPanel({ selectedNode }: ConfigurationPanelProps) {
+export function ConfigurationPanel({ selectedNode, onNodeSelect }: ConfigurationPanelProps) {
   const { currentWorkflow, updateNodeParameters, removeNode, duplicateNode } = useNoCodeStore();
   const [localParameters, setLocalParameters] = useState<Record<string, any>>({});
+  
+  // Add workflow validation
+  const validation = useWorkflowValidation(
+    currentWorkflow?.nodes || [],
+    currentWorkflow?.edges || [],
+    {
+      autoValidate: true,
+      debounceMs: 300,
+      enableRealTime: true
+    }
+  );
 
   // Get the selected node data from both the store and the current workflow
   const selectedNodeData = currentWorkflow?.nodes.find(node => node.id === selectedNode);
@@ -1416,7 +1431,7 @@ export function ConfigurationPanel({ selectedNode }: ConfigurationPanelProps) {
 
         {/* Configuration Tabs */}
         <Tabs defaultValue="parameters" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="parameters" data-value="parameters">
               <Settings className="h-4 w-4 mr-1" />
               Parameters
@@ -1428,6 +1443,24 @@ export function ConfigurationPanel({ selectedNode }: ConfigurationPanelProps) {
             <TabsTrigger value="outputs" data-value="outputs">
               <ArrowRight className="h-4 w-4 mr-1" />
               Outputs
+            </TabsTrigger>
+            <TabsTrigger value="validation" data-value="validation">
+              <CheckCircle className={`h-4 w-4 mr-1 ${
+                validation.validation.isValid 
+                  ? 'text-green-500' 
+                  : validation.hasErrors 
+                    ? 'text-red-500' 
+                    : 'text-yellow-500'
+              }`} />
+              Validation
+              {(validation.hasErrors || validation.hasWarnings) && (
+                <Badge 
+                  variant={validation.hasErrors ? "destructive" : "secondary"} 
+                  className="ml-1 text-xs px-1 py-0"
+                >
+                  {validation.validation.errors.length + validation.validation.warnings.length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -1518,6 +1551,22 @@ export function ConfigurationPanel({ selectedNode }: ConfigurationPanelProps) {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="validation" className="space-y-4">
+            <ValidationPanel 
+              validation={validation}
+              onNodeSelect={(nodeId) => {
+                // Focus on the node when validation error is clicked
+                console.log('Validation panel requesting focus on node:', nodeId);
+                if (onNodeSelect && nodeId) {
+                  onNodeSelect(nodeId);
+                }
+              }}
+              nodes={currentWorkflow?.nodes || []}
+              edges={currentWorkflow?.edges || []}
+              className="border-0 shadow-none p-0"
+            />
           </TabsContent>
         </Tabs>
 

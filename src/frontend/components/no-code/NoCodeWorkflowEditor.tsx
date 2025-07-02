@@ -27,7 +27,9 @@ import { CustomDatasetNode } from './nodes/CustomDatasetNode';
 import { OutputNode } from './nodes/OutputNode';
 import { LogicNode } from './nodes/LogicNode';
 import { RiskManagementNode } from './nodes/RiskManagementNode';
+import { SmartEdge } from './edges/SmartEdge';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { connectionManager } from '@/lib/connection-manager';
 
 const nodeTypes = {
   technicalIndicator: TechnicalIndicatorNode,
@@ -38,6 +40,10 @@ const nodeTypes = {
   output: OutputNode,
   logic: LogicNode,
   risk: RiskManagementNode,
+};
+
+const edgeTypes = {
+  smart: SmartEdge,
 };
 
 const initialNodes: Node[] = [];
@@ -69,10 +75,54 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
     (params: Connection) => {
       console.log('🔗 Creating connection:', params);
       
-      // Use ReactFlow's built-in addEdge function
-      setEdges((eds) => addEdge(params, eds));
+      // Find source and target nodes for validation
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find(n => n.id === params.target);
+      
+      if (!sourceNode || !targetNode) {
+        console.warn('Source or target node not found');
+        return;
+      }
+
+      // Validate connection using connection manager
+      const validation = connectionManager.validateConnection(
+        sourceNode,
+        params.sourceHandle || 'default',
+        targetNode,
+        params.targetHandle || 'default'
+      );
+
+      if (!validation.valid) {
+        console.warn('Invalid connection:', validation.reason);
+        // You could show a toast notification here
+        return;
+      }
+
+      // Create the edge with enhanced styling
+      const newEdge: Edge = {
+        id: `${params.source}-${params.target}-${Date.now()}`,
+        source: params.source!,
+        target: params.target!,
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle,
+        type: 'smart', // Use our custom smart edge
+        markerEnd: { type: MarkerType.ArrowClosed },
+        ...connectionManager.getConnectionStyle(validation.rule),
+        animated: validation.rule?.dataType === 'signal',
+        data: {
+          rule: validation.rule,
+          sourceNode,
+          targetNode
+        }
+      };
+
+      // Create connection config and add to manager
+      connectionManager.createConnection(newEdge, validation.rule);
+      
+      // Add edge to ReactFlow state
+      setEdges((eds) => [...eds, newEdge]);
     },
-    [setEdges]
+    [setEdges, nodes]
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -348,6 +398,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
           onPaneClick={onPaneClick}
           onEdgeClick={onEdgeClick}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           className="bg-background dark:bg-background"
           minZoom={0.1}
