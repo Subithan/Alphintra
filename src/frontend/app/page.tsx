@@ -1,10 +1,20 @@
-import { redirect } from 'next/navigation';
-import { LandingPage } from '@/components/landing/landing-page';
+import { Navbar } from "../components/landing/Navbar";
+import { Hero } from "../components/landing/Hero";
+import { Features } from "../components/landing/Features";
+import { FAQ } from "../components/landing/FAQ";
+import { CallToAction } from "../components/landing/CallToAction";
+import { Footer } from "../components/landing/Footer";
+import React from "react";
 
 export default function HomePage() {
-  // For now, show landing page. In production, you might want to redirect authenticated users
-  // Uncomment the line below when authentication is implemented
-  // redirect('/dashboard');
-  
-  return <LandingPage />;
+  return (
+    <>
+      <Navbar />
+      <Hero />
+      <Features />
+      <FAQ />
+      <CallToAction />
+      <Footer />
+    </>
+  );
 }

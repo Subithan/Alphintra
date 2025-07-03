@@ -2,6 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom animations and styles for the Alphintra brand */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Container utility */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Trading card component */
+.trading-card {
+  @apply bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-6;
+}
+
+/* Gradient text utilities */
+.gradient-text {
+  background: linear-gradient(to right, #F87AFF, #FB93D0, #FFDD00, #C3F0B2, #2FD8FE);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 221, 0, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 221, 0, 0.5);
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

@@ -6,27 +6,27 @@ kind: Simple
 metadata:
   name: alphintra-dev
 servers: 1
-agents: 3
+agents: 0
 kubeAPI:
   host: "127.0.0.1"
   hostIP: "127.0.0.1"
   hostPort: "6443"
 image: rancher/k3s:v1.28.5-k3s1
-network: alphintra-network
+network: alphintra-k3d-network
 ports:
-  - port: 8080:80
+  - port: 8085:80
     nodeFilters:
       - loadbalancer
   - port: 8443:443
     nodeFilters:
       - loadbalancer
-  - port: 9090:9090
+  - port: 9091:9090
     nodeFilters:
       - loadbalancer
-  - port: 3000:3000
+  - port: 3002:3000
     nodeFilters:
       - loadbalancer
-  - port: 5000:5000
+  - port: 5001:5000
     nodeFilters:
       - loadbalancer
 env:
@@ -36,16 +36,16 @@ env:
   - envVar: K3S_KUBECONFIG_MODE
     nodeFilters:
       - server:*
-registries:
-  create:
-    name: alphintra-registry
-    host: "0.0.0.0"
-    hostPort: "5555"
-  config: |
-    mirrors:
-      "localhost:5555":
-        endpoint:
-          - http://alphintra-registry:5000
+# registries:
+#   create:
+#     name: alphintra-registry
+#     host: "0.0.0.0"
+#     hostPort: "5555"
+#   config: |
+#     mirrors:
+#       "localhost:5555":
+#         endpoint:
+#           - http://alphintra-registry:5000
 options:
   k3d:
     wait: true
@@ -69,17 +69,11 @@ options:
       - arg: --kubelet-arg=config=/etc/rancher/k3s/kubelet.config
         nodeFilters:
           - agent:*
-    nodeLabels:
-      - label: node-type=general
-        nodeFilters:
-          - agent:0
-          - agent:1
-      - label: node-type=analytics
-        nodeFilters:
-          - agent:2
-    extraServerArgs:
-      - --cluster-init
-      - --datastore-endpoint=etcd
+
+    # nodeLabels:
+    #   - label: node-type=general
+    #     nodeFilters:
+    #       - agent:0
 volumes:
   - volume: /tmp/k3d-alphintra-storage:/var/lib/rancher/k3s/storage
     nodeFilters:

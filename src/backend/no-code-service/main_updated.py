@@ -11,9 +11,9 @@ from datetime import datetime
 import asyncio
 import os
 
-from models import Base, User, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate
-from schemas_updated import *
-from workflow_compiler_updated import WorkflowCompiler
+from .models import Base, User, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate
+from .schemas import *
+from .workflow_compiler import WorkflowCompiler
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://alphintra_user:alphintra_password@localhost:5432/alphintra_db")

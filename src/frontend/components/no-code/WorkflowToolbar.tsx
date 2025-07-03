@@ -1,239 +1,170 @@
-'use client';
+// Workflow Builder Toolbar
+// Main toolbar with save, compile, execute, and view controls
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Play, 
-  Square, 
-  RotateCcw, 
-  ZoomIn, 
-  ZoomOut, 
-  Maximize, 
-  Eye,
-  Code,
-  Code2,
-  TestTube,
-  Save,
-  Sun,
-  Moon,
-  HelpCircle,
-  Download,
-  Upload,
-  Share,
-  Copy
-} from 'lucide-react';
-import { useTheme } from 'next-themes';
-import { useNoCodeStore } from '@/lib/stores/no-code-store';
-import { WorkflowExporter } from '@/lib/workflow-export';
-import { CodeViewer } from './CodeViewer';
+import React from 'react';
+import { NoCodeWorkflow } from '../../lib/stores/no-code-store';
 
-export function WorkflowToolbar() {
-  const { theme, setTheme } = useTheme();
-  const { currentWorkflow, loadWorkflow } = useNoCodeStore();
-  const [mounted, setMounted] = useState(false);
-  const [showCodeViewer, setShowCodeViewer] = useState(false);
+interface WorkflowToolbarProps {
+  workflow: NoCodeWorkflow | null;
+  onSave: () => void;
+  onCompile: () => void;
+  onExecute: () => void;
+  isSaving: boolean;
+  isCompiling: boolean;
+  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  readOnly: boolean;
+  onTogglePalette: () => void;
+  onToggleProperties: () => void;
+}
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
-  const handleExportWorkflow = () => {
-    if (!currentWorkflow) return;
-    
-    try {
-      WorkflowExporter.downloadWorkflow(currentWorkflow, {
-        author: 'User',
-        tags: ['exported']
-      });
-      console.log('Workflow exported successfully');
-    } catch (error) {
-      console.error('Failed to export workflow:', error);
+export const WorkflowToolbar: React.FC<WorkflowToolbarProps> = ({
+  workflow,
+  onSave,
+  onCompile,
+  onExecute,
+  isSaving,
+  isCompiling,
+  saveStatus,
+  readOnly,
+  onTogglePalette,
+  onToggleProperties,
+}) => {
+  const getSaveButtonText = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return 'Saving...';
+      case 'saved':
+        return 'Saved!';
+      case 'error':
+        return 'Save Failed';
+      default:
+        return workflow?.id === 'default' ? 'Save As...' : 'Save';
     }
   };
 
-  const handleImportWorkflow = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      WorkflowExporter.importWorkflowFromFile(file)
-        .then(workflow => {
-          loadWorkflow(workflow);
-          console.log('Workflow imported successfully');
-        })
-        .catch(error => {
-          console.error('Failed to import workflow:', error);
-        });
-    };
-    input.click();
-  };
-
-  const handleShareWorkflow = () => {
-    if (!currentWorkflow) return;
-    
-    try {
-      const shareUrl = WorkflowExporter.workflowToShareableUrl(currentWorkflow);
-      navigator.clipboard.writeText(shareUrl);
-      console.log('Share URL copied to clipboard');
-    } catch (error) {
-      console.error('Failed to create share URL:', error);
+  const getSaveButtonStyle = () => {
+    switch (saveStatus) {
+      case 'saving':
+        return 'bg-blue-400 cursor-not-allowed';
+      case 'saved':
+        return 'bg-green-500 hover:bg-green-600';
+      case 'error':
+        return 'bg-red-500 hover:bg-red-600';
+      default:
+        return 'bg-blue-600 hover:bg-blue-700';
     }
-  };
-
-  const handleCopyWorkflow = () => {
-    if (!currentWorkflow) return;
-    
-    try {
-      WorkflowExporter.copyWorkflowToClipboard(currentWorkflow);
-      console.log('Workflow copied to clipboard');
-    } catch (error) {
-      console.error('Failed to copy workflow:', error);
-    }
-  };
-
-  const handleGenerateCode = () => {
-    if (!currentWorkflow) {
-      console.log('No workflow available for code generation');
-      return;
-    }
-    
-    if (currentWorkflow.nodes.length === 0) {
-      console.log('Workflow is empty - add nodes to generate code');
-      return;
-    }
-    
-    setShowCodeViewer(true);
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur border-b dark:border-border dark:bg-background/95">
-      <div className="flex items-center space-x-2">
-        {/* Execution Controls */}
-        <Button size="sm" variant="outline">
-          <Play className="h-4 w-4 mr-1" />
-          Run
-        </Button>
-        <Button size="sm" variant="outline">
-          <Square className="h-4 w-4 mr-1" />
-          Stop
-        </Button>
-        <Button size="sm" variant="outline">
-          <RotateCcw className="h-4 w-4 mr-1" />
-          Reset
-        </Button>
-        
-        <Separator orientation="vertical" className="h-6" />
-        
+    <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+      {/* Left Section - Workflow Info */}
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">
+              {workflow?.name || 'Untitled Workflow'}
+            </h1>
+            {workflow?.description && (
+              <p className="text-sm text-gray-500">{workflow.description}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Center Section - Actions */}
+      <div className="flex items-center space-x-3">
+        {!readOnly && (
+          <>
+            {/* Save Button */}
+            <button
+              onClick={onSave}
+              disabled={isSaving}
+              className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors ${getSaveButtonStyle()}`}
+            >
+              {getSaveButtonText()}
+            </button>
+
+            {/* Compile Button */}
+            <button
+              onClick={onCompile}
+              disabled={isCompiling || !workflow}
+              className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                isCompiling
+                  ? 'bg-yellow-400 text-yellow-900 border-yellow-500 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {isCompiling ? 'Compiling...' : 'Compile'}
+            </button>
+          </>
+        )}
+
+        {/* Execute Button */}
+        <button
+          onClick={onExecute}
+          disabled={!workflow}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          Execute
+        </button>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-gray-300"></div>
+
         {/* View Controls */}
-        <Button size="sm" variant="ghost">
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button size="sm" variant="ghost">
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        <Button size="sm" variant="ghost">
-          <Maximize className="h-4 w-4" />
-        </Button>
-        
-        <Separator orientation="vertical" className="h-6" />
-        
-        {/* Mode Toggle */}
-        <Button size="sm" variant="ghost">
-          <Eye className="h-4 w-4 mr-1" />
-          Visual
-        </Button>
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={handleGenerateCode}
-          disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
-          title={
-            !currentWorkflow 
-              ? 'No workflow loaded' 
-              : currentWorkflow.nodes.length === 0 
-                ? 'Add nodes to generate code'
-                : 'Generate Python trading strategy code'
-          }
-        >
-          <Code2 className="h-4 w-4 mr-1" />
-          Generate Code
-        </Button>
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={onTogglePalette}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Toggle Component Palette"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={onToggleProperties}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Toggle Properties Panel"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        {/* Status Indicators */}
-        <Badge variant="secondary" className="text-xs">
-          {currentWorkflow?.nodes?.length || 0} nodes
-        </Badge>
-        <Badge variant="secondary" className="text-xs">
-          {currentWorkflow?.edges?.length || 0} connections
-        </Badge>
-        
-        <Separator orientation="vertical" className="h-6" />
-        
-        {/* Action Buttons */}
-        <Button size="sm" variant="outline">
-          <TestTube className="h-4 w-4 mr-1" />
-          Test
-        </Button>
-        <Button size="sm" variant="outline">
-          <Save className="h-4 w-4 mr-1" />
-          Save
-        </Button>
-        
-        <Separator orientation="vertical" className="h-6" />
-        
-        {/* Export/Import Actions */}
-        <Button size="sm" variant="ghost" onClick={handleExportWorkflow} title="Export workflow">
-          <Download className="h-4 w-4" />
-        </Button>
-        <Button size="sm" variant="ghost" onClick={handleImportWorkflow} title="Import workflow">
-          <Upload className="h-4 w-4" />
-        </Button>
-        <Button size="sm" variant="ghost" onClick={handleShareWorkflow} title="Share workflow">
-          <Share className="h-4 w-4" />
-        </Button>
-        <Button size="sm" variant="ghost" onClick={handleCopyWorkflow} title="Copy workflow">
-          <Copy className="h-4 w-4" />
-        </Button>
-        
-        <Separator orientation="vertical" className="h-6" />
-        
-        {/* Help */}
-        <Button 
-          size="sm" 
-          variant="ghost" 
-          title="Help: Select edges and press Delete/Backspace to remove connections"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
-        
-        {/* Theme Toggle */}
-        <Button size="sm" variant="ghost" onClick={toggleTheme} suppressHydrationWarning>
-          {!mounted ? (
-            <Sun className="h-4 w-4" />
-          ) : theme === 'dark' ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Moon className="h-4 w-4" />
+      {/* Right Section - Status */}
+      <div className="flex items-center space-x-4">
+        {/* Workflow Status */}
+        <div className="flex items-center space-x-2 text-sm">
+          <div className="flex items-center space-x-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-gray-600">Connected</span>
+          </div>
+          
+          {workflow && (
+            <div className="text-gray-400">
+              • Last saved {new Date(workflow.updatedAt || workflow.createdAt).toLocaleTimeString()}
+            </div>
           )}
-        </Button>
-      </div>
+        </div>
 
-      {/* Code Viewer Modal */}
-      <CodeViewer
-        isOpen={showCodeViewer}
-        onClose={() => setShowCodeViewer(false)}
-      />
+        {/* Help Button */}
+        <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
-}
+};
+
+export default WorkflowToolbar;
