@@ -103,7 +103,7 @@ export function ValidationPanel({ validation, onNodeSelect, className, nodes = [
 
   const renderValidationList = (items: ValidationError[], title: string) => (
     <div className="space-y-2">
-      <h4 className="text-sm font-medium text-muted-foreground">{title}</h4>
+      <h4 className="text-sm font-medium text-foreground">{title}</h4>
       {items.length === 0 ? (
         <div className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
           <CheckCircle className="h-4 w-4 text-green-600" />

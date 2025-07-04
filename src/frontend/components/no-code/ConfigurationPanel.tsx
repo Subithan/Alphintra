@@ -87,7 +87,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
         <div className="space-y-3">
           <Settings className="h-12 w-12 mx-auto text-muted-foreground" />
           <div>
-            <h3 className="font-medium">No Node Selected</h3>
+            <h3 className="font-medium text-foreground">No Node Selected</h3>
             <p className="text-sm text-muted-foreground">
               Select a node to configure its parameters
             </p>
@@ -1405,7 +1405,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
         {/* Node Header */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Node Configuration</h2>
+            <h2 className="text-lg font-semibold text-foreground">Node Configuration</h2>
             <div className="flex space-x-1">
               <Button size="sm" variant="outline" onClick={handleDuplicateNode}>
                 <Copy className="h-4 w-4" />
@@ -1419,7 +1419,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Badge variant="secondary">{selectedNodeData.type}</Badge>
-              <span className="text-sm font-medium">{selectedNodeData.data.label}</span>
+              <span className="text-sm font-medium text-foreground">{selectedNodeData.data.label}</span>
             </div>
             <p className="text-xs text-muted-foreground">
               ID: {selectedNode}
@@ -1467,7 +1467,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
           <TabsContent value="parameters" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Node Parameters</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">Node Parameters</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {Object.entries(nodeConfig).map(([key, config]) => {
@@ -1505,7 +1505,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
           <TabsContent value="inputs" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Input Connections</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">Input Connections</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -1533,7 +1533,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
           <TabsContent value="outputs" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Output Connections</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">Output Connections</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
