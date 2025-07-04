@@ -419,7 +419,6 @@ mlflow.db
 
 # Data files
 *.csv
-*.json
 *.parquet
 *.h5
 *.hdf5
