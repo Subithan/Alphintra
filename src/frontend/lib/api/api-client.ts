@@ -1,0 +1,172 @@
+// Central API client configuration
+// This handles authentication, error handling, and common request logic
+
+export interface ApiConfig {
+  baseUrl: string;
+  timeout: number;
+  retries: number;
+  authToken?: string;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+  message?: string;
+  errors?: string[];
+  metadata?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    timestamp: string;
+  };
+}
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public statusText: string,
+    public response?: any
+  ) {
+    super(`API Error: ${status} ${statusText}`);
+    this.name = 'ApiError';
+  }
+}
+
+class BaseApiClient {
+  protected config: ApiConfig;
+
+  constructor(config: Partial<ApiConfig> = {}) {
+    this.config = {
+      baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+      timeout: 30000, // 30 seconds
+      retries: 3,
+      ...config,
+    };
+  }
+
+  protected async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.config.baseUrl}${endpoint}`;
+    const controller = new AbortController();
+    
+    // Set timeout
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string> || {}),
+      };
+
+      // Add authentication if available
+      if (this.config.authToken) {
+        headers['Authorization'] = `Bearer ${this.config.authToken}`;
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, response.statusText, errorData);
+      }
+
+      const data = await response.json();
+      
+      // Handle wrapped API responses
+      if (data.success !== undefined) {
+        if (!data.success) {
+          throw new Error(data.message || 'API request failed');
+        }
+        return data.data;
+      }
+
+      return data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Network error: ${errorMessage}`);
+    }
+  }
+
+  protected async requestWithRetry<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    retryCount = 0
+  ): Promise<T> {
+    try {
+      return await this.request<T>(endpoint, options);
+    } catch (error) {
+      if (retryCount < this.config.retries && this.shouldRetry(error)) {
+        // Exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.requestWithRetry<T>(endpoint, options, retryCount + 1);
+      }
+      throw error;
+    }
+  }
+
+  private shouldRetry(error: any): boolean {
+    // Retry on network errors or 5xx server errors
+    if (error instanceof ApiError) {
+      return error.status >= 500 && error.status < 600;
+    }
+    
+    return error.message.includes('Network error') || 
+           error.message.includes('Request timeout');
+  }
+
+  // Utility methods
+  protected buildQueryString(params: Record<string, any>): string {
+    const searchParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          value.forEach(item => searchParams.append(key, item.toString()));
+        } else {
+          searchParams.set(key, value.toString());
+        }
+      }
+    });
+
+    return searchParams.toString();
+  }
+
+  // Authentication methods
+  setAuthToken(token: string): void {
+    this.config.authToken = token;
+  }
+
+  clearAuthToken(): void {
+    this.config.authToken = undefined;
+  }
+
+  // Health check
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    timestamp: string;
+    services: Record<string, 'up' | 'down'>;
+  }> {
+    return this.request('/api/health');
+  }
+}
+
+export { BaseApiClient };
