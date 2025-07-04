@@ -144,14 +144,14 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
         <div className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold">Strategy Templates</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Choose from {workflowTemplates.length} pre-built trading strategies
             </p>
           </div>
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
             <Input
               placeholder="Search templates..."
               value={searchQuery}
@@ -165,7 +165,7 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
+              className="flex-1 px-3 py-2 text-sm border rounded-md bg-background text-gray-900 dark:text-gray-100"
             >
               {categories.map(cat => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -175,7 +175,7 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
             <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
+              className="flex-1 px-3 py-2 text-sm border rounded-md bg-background text-gray-900 dark:text-gray-100"
             >
               {difficulties.map(diff => (
                 <option key={diff.value} value={diff.value}>{diff.label}</option>
@@ -190,9 +190,9 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
         <div className="grid gap-4">
           {filteredTemplates.length === 0 ? (
             <div className="text-center py-8">
-              <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <Filter className="h-12 w-12 mx-auto text-gray-500 dark:text-gray-400 mb-4" />
               <h3 className="text-lg font-medium mb-2">No templates found</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Try adjusting your search or filters
               </p>
             </div>
@@ -243,7 +243,7 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
                                   <h4 className="text-sm font-medium mb-2">Performance Metrics</h4>
-                                  <div className="space-y-1 text-sm">
+                                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                                     {selectedTemplate.expectedReturn && (
                                       <div>Expected Return: <span className="font-medium">{selectedTemplate.expectedReturn}</span></div>
                                     )}
@@ -261,7 +261,7 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
                                 
                                 <div>
                                   <h4 className="text-sm font-medium mb-2">Specifications</h4>
-                                  <div className="space-y-1 text-sm">
+                                  <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                                     <div>Timeframes: <span className="font-medium">{selectedTemplate.timeframe.join(', ')}</span></div>
                                     <div>Assets: <span className="font-medium">{selectedTemplate.assetClasses.join(', ')}</span></div>
                                     <div>Nodes: <span className="font-medium">{selectedTemplate.nodes.length}</span></div>
@@ -301,23 +301,23 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
                 </CardHeader>
                 
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-3">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
                     {template.description}
                   </p>
                   
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Timeframes:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Timeframes:</span>
                       <span className="font-medium">{template.timeframe.join(', ')}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Assets:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Assets:</span>
                       <span className="font-medium">{template.assetClasses.join(', ')}</span>
                     </div>
                     {template.expectedReturn && (
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Expected Return:</span>
-                        <span className="font-medium text-green-600">{template.expectedReturn}</span>
+                        <span className="text-gray-600 dark:text-gray-400">Expected Return:</span>
+                        <span className="font-medium text-green-600 dark:text-green-400">{template.expectedReturn}</span>
                       </div>
                     )}
                   </div>
@@ -325,7 +325,7 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
                   <Separator className="my-3" />
 
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                    <div className="flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400">
                       <span>{template.nodes.length} nodes</span>
                       <span>•</span>
                       <span>{template.edges.length} connections</span>

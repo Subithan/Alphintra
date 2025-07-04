@@ -5,4 +5,5 @@ export interface SidebarItemType {
   name: string;
   icon: string;
   url: string;
+  external?: boolean; // Opens in new tab if true
 }

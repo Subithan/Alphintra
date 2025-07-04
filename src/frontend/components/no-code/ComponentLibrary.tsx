@@ -653,10 +653,10 @@ export function ComponentLibrary() {
   };
 
   return (
-    <div className="h-full overflow-y-auto p-4 space-y-4 dark:bg-background">
+    <div className="h-full overflow-y-auto p-4 space-y-4 bg-white dark:bg-gray-900">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold dark:text-foreground">Component Library</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Component Library</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
           Drag components to the canvas to build your strategy
         </p>
       </div>
@@ -664,7 +664,7 @@ export function ComponentLibrary() {
       <Accordion type="multiple" defaultValue={Object.keys(groupedComponents)} className="w-full">
         {Object.entries(groupedComponents).map(([category, components]) => (
           <AccordionItem key={category} value={category}>
-            <AccordionTrigger className="text-sm font-medium">
+            <AccordionTrigger className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400">
               {category} ({components.length})
             </AccordionTrigger>
             <AccordionContent>
@@ -672,7 +672,7 @@ export function ComponentLibrary() {
                 {components.map((component) => (
                   <Card
                     key={component.id}
-                    className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all dark:bg-card dark:border-border ${
+                    className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 ${
                       draggedItem === component.type ? 'opacity-50 scale-95' : 'hover:scale-[1.02]'
                     }`}
                     draggable={true}
@@ -685,10 +685,10 @@ export function ComponentLibrary() {
                           {component.icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium truncate">
+                          <h4 className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
                             {component.name}
                           </h4>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                             {component.description}
                           </p>
                           <div className="flex flex-wrap gap-1 mt-2">
