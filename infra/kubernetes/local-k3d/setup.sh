@@ -95,12 +95,12 @@ check_docker() {
 # Create Docker network
 create_network() {
     log_info "Creating Docker network..."
-    
-    if docker network ls | grep -q alphintra-network; then
-        log_warning "Network 'alphintra-network' already exists"
-    else
+    if ! docker network inspect alphintra-network >/dev/null 2>&1; then
+        log_info "Network 'alphintra-network' not found, creating it..."
         docker network create alphintra-network
         log_success "Created Docker network 'alphintra-network'"
+    else
+        log_warning "Network 'alphintra-network' already exists. Skipping creation."
     fi
 }
 
@@ -222,10 +222,11 @@ install_ingress_controller() {
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/cloud/deploy.yaml
     
     # Wait for ingress controller to be ready
+    sleep 5
     kubectl wait --namespace ingress-nginx \
         --for=condition=ready pod \
         --selector=app.kubernetes.io/component=controller \
-        --timeout=300s
+        --timeout=600s
     
     log_success "NGINX Ingress Controller installed"
 }

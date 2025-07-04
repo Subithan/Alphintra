@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -315,7 +314,6 @@ dist
 
 # Gatsby files
 .cache/
-public
 
 # Storybook build outputs
 .out
@@ -421,7 +419,6 @@ mlflow.db
 
 # Data files
 *.csv
-*.json
 *.parquet
 *.h5
 *.hdf5

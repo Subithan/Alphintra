@@ -299,3 +299,31 @@
     @apply px-2 py-2 text-xs;
   }
 }
+
+/* Bot-specific styles for trading dashboard */
+:root {
+  --white: #ffffff;
+  --radius: 0.625rem;
+  --bot-background: #060819;
+  --bot-foreground: #ffffff;
+  --bot-border: #262739;
+  --bot-accent: #FFD700;
+}
+
+body {
+  color: var(--white);
+  overflow-x: hidden;
+}
+
+/* Dashboard specific background */
+.dashboard-container {
+  background-color: var(--bot-background);
+  min-height: 100vh;
+}
+
+/* Gradient borders for bot cards */
+.bot-gradient-border {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--bot-background), var(--bot-background)) padding-box,
+              conic-gradient(from 45deg, rgba(71, 85, 105, 0.48) 80%, #FFD700 86%, #FFE4B5 90%, #FFD700 94%, rgba(71, 85, 105, 0.48)) border-box;
+}
