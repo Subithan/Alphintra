@@ -4,15 +4,27 @@ server:
 
 spring:
   application:
-    name: alphintra-gateway
+    name: api-gateway
   
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   
+  config:
+    import: optional:configserver:http://config-server.alphintra.svc.cluster.local:8888
+  
   cloud:
+    config:
+      enabled: true
+      discovery:
+        enabled: true
+        service-id: config-server
+  
     gateway:
       default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - name: DedupeResponseHeader
+          args:
+            name: Access-Control-Allow-Credentials,Access-Control-Allow-Origin
+            strategy: RETAIN_FIRST
         - name: RequestRateLimiter
           args:
             redis-rate-limiter.replenishRate: 100
@@ -22,6 +34,19 @@ spring:
           args:
             name: defaultCircuitBreaker
             fallbackUri: forward:/fallback
+        - name: Retry
+          args:
+            retries: 3
+            series: SERVER_ERROR
+            methods: GET,POST,PUT,DELETE
+            backoff:
+              firstBackoff: 50ms
+              maxBackoff: 500ms
+      
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
       
       httpclient:
         connect-timeout: 5000
@@ -32,85 +57,143 @@ spring:
           max-life-time: 60s
       
       routes:
-        # Auth Service
-        - id: auth-service
-          uri: http://auth-service:8001
+        # Trading API Routes - High priority financial operations
+        - id: trading-service
+          uri: lb://trading-service
           predicates:
-            - Path=/api/auth/**
+            - Path=/api/v1/trading/**
           filters:
             - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, trading
+            - name: CircuitBreaker
+              args:
+                name: trading-service
+                fallbackUri: forward:/fallback/trading
+          metadata:
+            priority: 100
+            
+        # Risk Management Routes - Critical security
+        - id: risk-service
+          uri: lb://risk-service
+          predicates:
+            - Path=/api/v1/risk/**
+          filters:
+            - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, risk
+            - name: CircuitBreaker
+              args:
+                name: risk-service
+                fallbackUri: forward:/fallback/risk
+          metadata:
+            priority: 90
+            
+        # User Management Routes
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, user
+            - name: CircuitBreaker
+              args:
+                name: user-service
+                fallbackUri: forward:/fallback/user
+            
+        # No-Code Service Routes
+        - id: no-code-service
+          uri: lb://no-code-service
+          predicates:
+            - Path=/api/v1/no-code/**
+          filters:
+            - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, nocode
+            - name: CircuitBreaker
+              args:
+                name: no-code-service
+                fallbackUri: forward:/fallback/nocode
+            
+        # Strategy Engine Routes
+        - id: strategy-service
+          uri: lb://strategy-service
+          predicates:
+            - Path=/api/v1/strategy/**
+          filters:
+            - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, strategy
+            - name: CircuitBreaker
+              args:
+                name: strategy-service
+                fallbackUri: forward:/fallback/strategy
+            
+        # Auth Service Routes - No auth required for login/register
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, auth
             - name: CircuitBreaker
               args:
                 name: auth-service
                 fallbackUri: forward:/fallback/auth
-        
-        # Trading API
-        - id: trading-api
-          uri: http://trading-api:8002
+            
+        # Broker Connector Routes
+        - id: broker-service
+          uri: lb://broker-service
           predicates:
-            - Path=/api/trading/**
+            - Path=/api/v1/broker/**
           filters:
             - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, broker
             - name: CircuitBreaker
               args:
-                name: trading-api
-                fallbackUri: forward:/fallback/trading
-        
-        # Strategy Engine
-        - id: strategy-engine
-          uri: http://strategy-engine:8003
-          predicates:
-            - Path=/api/strategies/**
-          filters:
-            - StripPrefix=2
-            - name: CircuitBreaker
-              args:
-                name: strategy-engine
-                fallbackUri: forward:/fallback/strategies
-        
-        # Broker Connector
-        - id: broker-connector
-          uri: http://broker-connector:8005
-          predicates:
-            - Path=/api/broker/**
-          filters:
-            - StripPrefix=2
-            - name: CircuitBreaker
-              args:
-                name: broker-connector
+                name: broker-service
                 fallbackUri: forward:/fallback/broker
-        
-        # Broker Simulator
-        - id: broker-simulator
-          uri: http://broker-simulator:8006
+            
+        # Notification Service Routes
+        - id: notification-service
+          uri: lb://notification-service
           predicates:
-            - Path=/api/simulator/**
+            - Path=/api/v1/notifications/**
           filters:
             - StripPrefix=2
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, notification
             - name: CircuitBreaker
               args:
-                name: broker-simulator
-                fallbackUri: forward:/fallback/simulator
-        
-        # MLflow
-        - id: mlflow
-          uri: http://mlflow:5000
+                name: notification-service
+                fallbackUri: forward:/fallback/notification
+            
+        # GraphQL Unified Endpoint
+        - id: graphql-service
+          uri: lb://graphql-service
           predicates:
-            - Path=/api/mlflow/**
+            - Path=/graphql/**
           filters:
-            - StripPrefix=2
-        
-        # WebSocket routes
-        - id: websocket-trading
-          uri: ws://trading-api:8002
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, graphql
+            - name: CircuitBreaker
+              args:
+                name: graphql-service
+                fallbackUri: forward:/fallback/graphql
+            
+        # WebSocket Support for real-time updates
+        - id: websocket-service
+          uri: lb://websocket-service
           predicates:
             - Path=/ws/**
-        
-        # Health checks
-        - id: health
-          uri: http://localhost:8080
-          predicates:
-            - Path=/health
+          filters:
+            - AddRequestHeader=X-Request-Source, gateway
+            - AddRequestHeader=X-Service-Type, websocket
       
       globalcors:
         cors-configurations:
@@ -129,24 +212,46 @@ spring:
   
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:redis-primary.alphintra.svc.cluster.local}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD:alphintra_redis_pass}
       database: 0
       timeout: 2000ms
       lettuce:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
+          max-active: 50
+          max-idle: 20
+          min-idle: 5
+          max-wait: 2000ms
   
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI:http://auth-service:8001}
-          jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-service:8001/.well-known/jwks.json}
+          issuer-uri: ${JWT_ISSUER_URI:http://auth-service.alphintra.svc.cluster.local:8080}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-service.alphintra.svc.cluster.local:8080/.well-known/jwks.json}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server.alphintra.svc.cluster.local:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    healthcheck:
+      enabled: true
+    registry-fetch-interval-seconds: 10
+  instance:
+    prefer-ip-address: true
+    ip-address: ${POD_IP:127.0.0.1}
+    instance-id: ${spring.application.name}:${POD_IP}:${server.port}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    health-check-url-path: /actuator/health
+    status-page-url-path: /actuator/info
+    metadata-map:
+      zone: alphintra-cluster
+      profile: ${spring.profiles.active}
+      version: ${project.version:1.0.0}
 
 management:
   endpoints:
@@ -160,10 +265,11 @@ management:
       show-components: always
     gateway:
       enabled: true
-  metrics:
-    export:
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
+  metrics:
     distribution:
       percentiles-histogram:
         http.server.requests: true
@@ -207,7 +313,7 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 5s
         failureRateThreshold: 50
-      trading-api:
+      trading-service:
         registerHealthIndicator: true
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
@@ -215,7 +321,7 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 5s
         failureRateThreshold: 50
-      strategy-engine:
+      risk-service:
         registerHealthIndicator: true
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
@@ -223,7 +329,7 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 5s
         failureRateThreshold: 50
-      broker-connector:
+      user-service:
         registerHealthIndicator: true
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
@@ -231,7 +337,31 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 5s
         failureRateThreshold: 50
-      broker-simulator:
+      no-code-service:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      strategy-service:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      broker-service:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      notification-service:
         registerHealthIndicator: true
         slidingWindowSize: 10
         minimumNumberOfCalls: 5

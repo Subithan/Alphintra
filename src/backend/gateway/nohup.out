@@ -1,0 +1,520 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+[32m :: Spring Boot :: [39m              [2m (v3.2.0)[0;39m
+
+2025-07-07 20:00:03 [main] INFO  [,] c.a.g.StandaloneGatewayApplication - Starting StandaloneGatewayApplication v1.0.0 using Java 23.0.2 with PID 89962 (/Users/usubithan/Documents/Alphintra/src/backend/gateway/target/gateway-1.0.0.jar started by usubithan in /Users/usubithan/Documents/Alphintra/src/backend/gateway)
+2025-07-07 20:00:03 [main] DEBUG [,] c.a.g.StandaloneGatewayApplication - Running with Spring Boot v3.2.0, Spring v6.1.1
+2025-07-07 20:00:03 [main] INFO  [,] c.a.g.StandaloneGatewayApplication - The following 1 profile is active: "standalone"
+2025-07-07 20:00:03 [main] WARN  [,] o.s.c.c.c.ConfigServerConfigDataLocationResolver - Could not locate configserver via discovery
+org.springframework.web.client.ResourceAccessException: I/O error on GET request for "http://eureka-server.alphintra.svc.cluster.local:8761/eureka/apps/": eureka-server.alphintra.svc.cluster.local: nodename nor servname provided, or not known
+	at org.springframework.web.client.RestTemplate.createResourceAccessException(RestTemplate.java:905)
+	at org.springframework.web.client.RestTemplate.doExecute(RestTemplate.java:885)
+	at org.springframework.web.client.RestTemplate.execute(RestTemplate.java:781)
+	at org.springframework.web.client.RestTemplate.exchange(RestTemplate.java:663)
+	at org.springframework.cloud.netflix.eureka.http.RestTemplateEurekaHttpClient.getApplicationsInternal(RestTemplateEurekaHttpClient.java:145)
+	at org.springframework.cloud.netflix.eureka.http.RestTemplateEurekaHttpClient.getApplications(RestTemplateEurekaHttpClient.java:135)
+	at org.springframework.cloud.netflix.eureka.config.EurekaConfigServerInstanceProvider.getInstances(EurekaConfigServerInstanceProvider.java:56)
+	at org.springframework.cloud.netflix.eureka.config.EurekaConfigServerBootstrapper$EurekaFunction.apply(EurekaConfigServerBootstrapper.java:84)
+	at org.springframework.cloud.config.client.ConfigServerInstanceProvider.getConfigServerInstances(ConfigServerInstanceProvider.java:74)
+	at org.springframework.cloud.config.client.ConfigServerInstanceMonitor.refresh(ConfigServerInstanceMonitor.java:90)
+	at org.springframework.cloud.config.client.ConfigServerConfigDataLocationResolver.lambda$resolveProfileSpecific$8(ConfigServerConfigDataLocationResolver.java:249)
+	at org.springframework.boot.DefaultBootstrapContext.getInstance(DefaultBootstrapContext.java:119)
+	at org.springframework.boot.DefaultBootstrapContext.getOrElseThrow(DefaultBootstrapContext.java:111)
+	at org.springframework.boot.DefaultBootstrapContext.get(DefaultBootstrapContext.java:88)
+	at org.springframework.cloud.config.client.ConfigServerConfigDataLoader.load(ConfigServerConfigDataLoader.java:85)
+	at org.springframework.cloud.config.client.ConfigServerConfigDataLoader.load(ConfigServerConfigDataLoader.java:61)
+	at org.springframework.boot.context.config.ConfigDataLoaders.load(ConfigDataLoaders.java:96)
+	at org.springframework.boot.context.config.ConfigDataImporter.load(ConfigDataImporter.java:132)
+	at org.springframework.boot.context.config.ConfigDataImporter.resolveAndLoad(ConfigDataImporter.java:87)
+	at org.springframework.boot.context.config.ConfigDataEnvironmentContributors.withProcessedImports(ConfigDataEnvironmentContributors.java:115)
+	at org.springframework.boot.context.config.ConfigDataEnvironment.processInitial(ConfigDataEnvironment.java:242)
+	at org.springframework.boot.context.config.ConfigDataEnvironment.processAndApply(ConfigDataEnvironment.java:229)
+	at org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor.postProcessEnvironment(ConfigDataEnvironmentPostProcessor.java:96)
+	at org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor.postProcessEnvironment(ConfigDataEnvironmentPostProcessor.java:89)
+	at org.springframework.boot.env.EnvironmentPostProcessorApplicationListener.onApplicationEnvironmentPreparedEvent(EnvironmentPostProcessorApplicationListener.java:109)
+	at org.springframework.boot.env.EnvironmentPostProcessorApplicationListener.onApplicationEvent(EnvironmentPostProcessorApplicationListener.java:94)
+	at org.springframework.context.event.SimpleApplicationEventMulticaster.doInvokeListener(SimpleApplicationEventMulticaster.java:178)
+	at org.springframework.context.event.SimpleApplicationEventMulticaster.invokeListener(SimpleApplicationEventMulticaster.java:171)
+	at org.springframework.context.event.SimpleApplicationEventMulticaster.multicastEvent(SimpleApplicationEventMulticaster.java:149)
+	at org.springframework.context.event.SimpleApplicationEventMulticaster.multicastEvent(SimpleApplicationEventMulticaster.java:137)
+	at org.springframework.boot.context.event.EventPublishingRunListener.multicastInitialEvent(EventPublishingRunListener.java:136)
+	at org.springframework.boot.context.event.EventPublishingRunListener.environmentPrepared(EventPublishingRunListener.java:81)
+	at org.springframework.boot.SpringApplicationRunListeners.lambda$environmentPrepared$2(SpringApplicationRunListeners.java:64)
+	at java.base/java.lang.Iterable.forEach(Iterable.java:75)
+	at org.springframework.boot.SpringApplicationRunListeners.doWithListeners(SpringApplicationRunListeners.java:118)
+	at org.springframework.boot.SpringApplicationRunListeners.doWithListeners(SpringApplicationRunListeners.java:112)
+	at org.springframework.boot.SpringApplicationRunListeners.environmentPrepared(SpringApplicationRunListeners.java:63)
+	at org.springframework.boot.SpringApplication.prepareEnvironment(SpringApplication.java:366)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1342)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1331)
+	at com.alphintra.gateway.StandaloneGatewayApplication.main(StandaloneGatewayApplication.java:21)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:91)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:53)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:58)
+Caused by: java.net.UnknownHostException: eureka-server.alphintra.svc.cluster.local: nodename nor servname provided, or not known
+	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Inet6AddressImpl.java:52)
+	at java.base/java.net.InetAddress$PlatformResolver.lookupByName(InetAddress.java:1221)
+	at java.base/java.net.InetAddress.getAddressesFromNameService(InetAddress.java:1817)
+	at java.base/java.net.InetAddress$NameServiceAddresses.get(InetAddress.java:1149)
+	at java.base/java.net.InetAddress.getAllByName0(InetAddress.java:1807)
+	at java.base/java.net.InetAddress.getAllByName(InetAddress.java:1676)
+	at org.apache.hc.client5.http.SystemDefaultDnsResolver.resolve(SystemDefaultDnsResolver.java:43)
+	at org.apache.hc.client5.http.impl.io.DefaultHttpClientConnectionOperator.connect(DefaultHttpClientConnectionOperator.java:141)
+	at org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager.connect(PoolingHttpClientConnectionManager.java:447)
+	at org.apache.hc.client5.http.impl.classic.InternalExecRuntime.connectEndpoint(InternalExecRuntime.java:162)
+	at org.apache.hc.client5.http.impl.classic.InternalExecRuntime.connectEndpoint(InternalExecRuntime.java:172)
+	at org.apache.hc.client5.http.impl.classic.ConnectExec.execute(ConnectExec.java:142)
+	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
+	at org.apache.hc.client5.http.impl.classic.ProtocolExec.execute(ProtocolExec.java:192)
+	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
+	at org.apache.hc.client5.http.impl.classic.HttpRequestRetryExec.execute(HttpRequestRetryExec.java:96)
+	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
+	at org.apache.hc.client5.http.impl.classic.ContentCompressionExec.execute(ContentCompressionExec.java:152)
+	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
+	at org.apache.hc.client5.http.impl.classic.RedirectExec.execute(RedirectExec.java:115)
+	at org.apache.hc.client5.http.impl.classic.ExecChainElement.execute(ExecChainElement.java:51)
+	at org.apache.hc.client5.http.impl.classic.InternalHttpClient.doExecute(InternalHttpClient.java:170)
+	at org.apache.hc.client5.http.impl.classic.CloseableHttpClient.execute(CloseableHttpClient.java:87)
+	at org.apache.hc.client5.http.impl.classic.CloseableHttpClient.execute(CloseableHttpClient.java:55)
+	at org.apache.hc.client5.http.classic.HttpClient.executeOpen(HttpClient.java:183)
+	at org.springframework.http.client.HttpComponentsClientHttpRequest.executeInternal(HttpComponentsClientHttpRequest.java:95)
+	at org.springframework.http.client.AbstractStreamingClientHttpRequest.executeInternal(AbstractStreamingClientHttpRequest.java:70)
+	at org.springframework.http.client.AbstractClientHttpRequest.execute(AbstractClientHttpRequest.java:66)
+	at org.springframework.http.client.InterceptingClientHttpRequest$InterceptingRequestExecution.execute(InterceptingClientHttpRequest.java:101)
+	at org.springframework.cloud.netflix.eureka.http.RestTemplateTransportClientFactory.lambda$restTemplate$0(RestTemplateTransportClientFactory.java:143)
+	at org.springframework.http.client.InterceptingClientHttpRequest$InterceptingRequestExecution.execute(InterceptingClientHttpRequest.java:87)
+	at org.springframework.http.client.InterceptingClientHttpRequest.executeInternal(InterceptingClientHttpRequest.java:71)
+	at org.springframework.http.client.AbstractBufferingClientHttpRequest.executeInternal(AbstractBufferingClientHttpRequest.java:48)
+	at org.springframework.http.client.AbstractClientHttpRequest.execute(AbstractClientHttpRequest.java:66)
+	at org.springframework.web.client.RestTemplate.doExecute(RestTemplate.java:879)
+	... 45 common frames omitted
+2025-07-07 20:00:03 [main] INFO  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Fetching config from server at : http://config-server.alphintra.svc.cluster.local:8888
+2025-07-07 20:00:03 [main] INFO  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Exception on Url - http://config-server.alphintra.svc.cluster.local:8888:org.springframework.web.client.ResourceAccessException: I/O error on GET request for "http://config-server.alphintra.svc.cluster.local:8888/api-gateway/default": config-server.alphintra.svc.cluster.local. Will be trying the next url if available
+2025-07-07 20:00:03 [main] WARN  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Could not locate PropertySource ([ConfigServerConfigDataResource@71cb3139 uris = array<String>['http://config-server.alphintra.svc.cluster.local:8888'], optional = true, profiles = 'default']): I/O error on GET request for "http://config-server.alphintra.svc.cluster.local:8888/api-gateway/default": config-server.alphintra.svc.cluster.local
+2025-07-07 20:00:03 [main] INFO  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Fetching config from server at : http://config-server.alphintra.svc.cluster.local:8888
+2025-07-07 20:00:03 [main] INFO  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Exception on Url - http://config-server.alphintra.svc.cluster.local:8888:org.springframework.web.client.ResourceAccessException: I/O error on GET request for "http://config-server.alphintra.svc.cluster.local:8888/api-gateway/standalone": config-server.alphintra.svc.cluster.local. Will be trying the next url if available
+2025-07-07 20:00:03 [main] WARN  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Could not locate PropertySource ([ConfigServerConfigDataResource@1976f537 uris = array<String>['http://config-server.alphintra.svc.cluster.local:8888'], optional = true, profiles = 'standalone']): I/O error on GET request for "http://config-server.alphintra.svc.cluster.local:8888/api-gateway/standalone": config-server.alphintra.svc.cluster.local
+2025-07-07 20:00:03 [main] INFO  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Fetching config from server at : http://config-server.alphintra.svc.cluster.local:8888
+2025-07-07 20:00:03 [main] INFO  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Exception on Url - http://config-server.alphintra.svc.cluster.local:8888:org.springframework.web.client.ResourceAccessException: I/O error on GET request for "http://config-server.alphintra.svc.cluster.local:8888/api-gateway/default": config-server.alphintra.svc.cluster.local. Will be trying the next url if available
+2025-07-07 20:00:03 [main] WARN  [,] o.s.c.c.c.ConfigServerConfigDataLoader - Could not locate PropertySource ([ConfigServerConfigDataResource@45f421c uris = array<String>['http://config-server.alphintra.svc.cluster.local:8888'], optional = true, profiles = 'default']): I/O error on GET request for "http://config-server.alphintra.svc.cluster.local:8888/api-gateway/default": config-server.alphintra.svc.cluster.local
+2025-07-07 20:00:03 [main] INFO  [,] o.s.d.r.c.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-07 20:00:03 [main] INFO  [,] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-07-07 20:00:04 [main] INFO  [,] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 6 ms. Found 0 Redis repository interfaces.
+2025-07-07 20:00:04 [main] INFO  [,] o.s.cloud.context.scope.GenericScope - BeanFactory id=2089e013-d152-34c7-89ef-aee17c1f7fb1
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$LoadBalancerInterceptorConfig' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$LoadBalancerInterceptorConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). The currently created BeanPostProcessor [lbRestClientPostProcessor] is declared through a non-static factory method on that class; consider declaring it as static instead.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.loadbalancer.config.BlockingLoadBalancerClientAutoConfiguration' of type [org.springframework.cloud.loadbalancer.config.BlockingLoadBalancerClientAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration' of type [org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.commons.config.CommonsConfigAutoConfiguration' of type [org.springframework.cloud.commons.config.CommonsConfigAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.client.loadbalancer.LoadBalancerDefaultMappingsProviderAutoConfiguration' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerDefaultMappingsProviderAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'loadBalancerClientsDefaultsMappingsProvider' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerDefaultMappingsProviderAutoConfiguration$$Lambda/0x00000f00014c97e0] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'defaultsBindHandlerAdvisor' of type [org.springframework.cloud.commons.config.DefaultsBindHandlerAdvisor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'spring.cloud.loadbalancer-org.springframework.cloud.client.loadbalancer.LoadBalancerClientsProperties' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerClientsProperties] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'default.org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration.LoadBalancerClientSpecification' of type [org.springframework.cloud.loadbalancer.annotation.LoadBalancerClientSpecification] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'default.org.springframework.cloud.loadbalancer.config.BlockingLoadBalancerClientAutoConfiguration.LoadBalancerClientSpecification' of type [org.springframework.cloud.loadbalancer.annotation.LoadBalancerClientSpecification] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'loadBalancerClientFactory' of type [org.springframework.cloud.loadbalancer.support.LoadBalancerClientFactory] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'blockingLoadBalancerClient' of type [org.springframework.cloud.loadbalancer.blocking.client.BlockingLoadBalancerClient] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'loadBalancerServiceInstanceCookieTransformer' of type [org.springframework.cloud.loadbalancer.core.LoadBalancerServiceInstanceCookieTransformer] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'xForwarderHeadersTransformer' of type [org.springframework.cloud.loadbalancer.blocking.XForwardedHeadersTransformer] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'loadBalancerRequestFactory' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerRequestFactory] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'loadBalancerInterceptor' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerInterceptor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). The currently created BeanPostProcessor [loadBalancerWebClientBuilderBeanPostProcessor] is declared through a non-static factory method on that class; consider declaring it as static instead.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig' of type [org.springframework.cloud.client.loadbalancer.reactive.LoadBalancerBeanPostProcessorAutoConfiguration$ReactorDeferringLoadBalancerFilterConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [loadBalancerWebClientBuilderBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] WARN  [,] o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'reactorDeferringLoadBalancerExchangeFilterFunction' of type [org.springframework.cloud.client.loadbalancer.reactive.DeferringLoadBalancerExchangeFilterFunction] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [loadBalancerWebClientBuilderBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2025-07-07 20:00:04 [main] ERROR [,] i.n.r.d.DnsServerAddressStreamProviders - Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+2025-07-07 20:00:04 [main] DEBUG [,] o.s.c.g.config.GatewayProperties - Routes supplied from Gateway Properties: [RouteDefinition{id='health-check', predicates=[PredicateDefinition{name='Path', args={_genkey_0=/health}}], filters=[FilterDefinition{name='SetPath', args={_genkey_0=/status/200}}], uri=http://httpbin.org, order=0, metadata={}}, RouteDefinition{id='echo-test', predicates=[PredicateDefinition{name='Path', args={_genkey_0=/echo/**}}], filters=[FilterDefinition{name='StripPrefix', args={_genkey_0=1}}, FilterDefinition{name='SetPath', args={_genkey_0=/anything}}], uri=http://httpbin.org, order=0, metadata={}}, RouteDefinition{id='test-api', predicates=[PredicateDefinition{name='Path', args={_genkey_0=/api/**}}], filters=[FilterDefinition{name='StripPrefix', args={_genkey_0=1}}, FilterDefinition{name='SetPath', args={_genkey_0=/anything}}], uri=http://httpbin.org, order=0, metadata={}}]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [After]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Before]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Between]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Cookie]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Header]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Host]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Method]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Path]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Query]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [ReadBody]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [RemoteAddr]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [XForwardedRemoteAddr]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [Weight]
+2025-07-07 20:00:04 [main] INFO  [,] o.s.c.g.r.RouteDefinitionRouteLocator - Loaded RoutePredicateFactory [CloudFoundryRouteService]
+2025-07-07 20:00:04 [main] DEBUG [,] o.s.w.r.h.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
+2025-07-07 20:00:04 [main] INFO  [,] o.s.b.a.e.web.EndpointLinksResolver - Exposing 3 endpoint(s) beneath base path '/actuator'
+2025-07-07 20:00:04 [main] INFO  [,] o.s.b.a.s.r.ReactiveUserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 6fd73db4-b9a7-45f1-af13-0aaf846babe2
+
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.w.r.r.m.a.ControllerMethodResolver - ControllerAdvice beans: none
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - enableLoggingRequestDetails='false': form data and headers will be masked to prevent unsafe logging of potentially sensitive data
+2025-07-07 20:00:05 [main] INFO  [,] o.s.c.n.e.c.DiscoveryClientOptionalArgsConfiguration - Eureka HTTP Client uses RestTemplate.
+2025-07-07 20:00:05 [main] WARN  [,] o.s.c.l.c.LoadBalancerCacheAutoConfiguration$LoadBalancerCaffeineWarnLogger - Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2025-07-07 20:00:05 [main] INFO  [,] o.s.b.w.e.netty.NettyWebServer - Netty started on port 8083
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition health-check applying {_genkey_0=/health} to Path
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition health-check applying filter {name=Access-Control-Allow-Credentials,Access-Control-Allow-Origin, strategy=RETAIN_FIRST} to DedupeResponseHeader
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition health-check applying filter {redis-rate-limiter.replenishRate=100, redis-rate-limiter.burstCapacity=200, redis-rate-limiter.requestedTokens=1} to RequestRateLimiter
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition health-check applying filter {name=defaultCircuitBreaker, fallbackUri=forward:/fallback} to CircuitBreaker
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition health-check applying filter {retries=3, series=SERVER_ERROR, methods=GET,POST,PUT,DELETE, backoff.firstBackoff=50ms, backoff.maxBackoff=500ms} to Retry
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition health-check applying filter {_genkey_0=/status/200} to SetPath
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition matched: health-check
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition echo-test applying {_genkey_0=/echo/**} to Path
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition echo-test applying filter {name=Access-Control-Allow-Credentials,Access-Control-Allow-Origin, strategy=RETAIN_FIRST} to DedupeResponseHeader
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition echo-test applying filter {redis-rate-limiter.replenishRate=100, redis-rate-limiter.burstCapacity=200, redis-rate-limiter.requestedTokens=1} to RequestRateLimiter
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition echo-test applying filter {name=defaultCircuitBreaker, fallbackUri=forward:/fallback} to CircuitBreaker
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition echo-test applying filter {retries=3, series=SERVER_ERROR, methods=GET,POST,PUT,DELETE, backoff.firstBackoff=50ms, backoff.maxBackoff=500ms} to Retry
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition echo-test applying filter {_genkey_0=1} to StripPrefix
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition echo-test applying filter {_genkey_0=/anything} to SetPath
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition matched: echo-test
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition test-api applying {_genkey_0=/api/**} to Path
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition test-api applying filter {name=Access-Control-Allow-Credentials,Access-Control-Allow-Origin, strategy=RETAIN_FIRST} to DedupeResponseHeader
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition test-api applying filter {redis-rate-limiter.replenishRate=100, redis-rate-limiter.burstCapacity=200, redis-rate-limiter.requestedTokens=1} to RequestRateLimiter
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition test-api applying filter {name=defaultCircuitBreaker, fallbackUri=forward:/fallback} to CircuitBreaker
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition test-api applying filter {retries=3, series=SERVER_ERROR, methods=GET,POST,PUT,DELETE, backoff.firstBackoff=50ms, backoff.maxBackoff=500ms} to Retry
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition test-api applying filter {_genkey_0=1} to StripPrefix
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition test-api applying filter {_genkey_0=/anything} to SetPath
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.r.RouteDefinitionRouteLocator - RouteDefinition matched: test-api
+2025-07-07 20:00:05 [main] DEBUG [,] o.s.c.g.filter.GatewayMetricsFilter - New routes count: 3
+2025-07-07 20:00:05 [main] INFO  [,] c.a.g.StandaloneGatewayApplication - Started StandaloneGatewayApplication in 13.043 seconds (process running for 13.508)
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - [f0b37358-1] HTTP GET "/actuator/health"
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/login', method=POST}
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'POST /login'
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/login', method=GET}
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'GET /login'
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/logout', method=GET}
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'GET /logout'
+2025-07-07 20:00:19 [reactor-http-nio-2] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.w.s.s.DefaultWebSessionManager - Created new WebSession.
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/logout', method=POST}
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'POST /logout'
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using EndpointRequestMatcher includes=[health], excludes=[], includeLinks=false
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/actuator/health/**', method=null}
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Checking match of request : '/actuator/health'; against '/actuator/health/**'
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - matched
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - matched
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.a.DelegatingReactiveAuthorizationManager - Checking authorization on '/actuator/health' using org.springframework.security.config.web.server.ServerHttpSecurity$AuthorizeExchangeSpec$Access$$Lambda/0x00000f000174ee58@6257b666
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.a.AuthorizationWebFilter - Authorization successful
+2025-07-07 20:00:20 [parallel-1] DEBUG [,] o.s.s.w.s.c.WebSessionServerSecurityContextRepository - No SecurityContext found in WebSession: 'org.springframework.web.server.session.InMemoryWebSessionStore$InMemoryWebSession@4f65ec11'
+2025-07-07 20:00:20 [boundedElastic-1] WARN  [,] o.s.b.a.d.r.RedisReactiveHealthIndicator - Redis health check failed
+org.springframework.data.redis.RedisConnectionFailureException: Unable to connect to Redis
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.translateException(LettuceConnectionFactory.java:1805)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1736)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getNativeConnection(LettuceConnectionFactory.java:1538)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.lambda$getConnection$0(LettuceConnectionFactory.java:1518)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.doInLock(LettuceConnectionFactory.java:1478)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getConnection(LettuceConnectionFactory.java:1515)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getSharedReactiveConnection(LettuceConnectionFactory.java:1224)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getReactiveConnection(LettuceConnectionFactory.java:1099)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getReactiveConnection(LettuceConnectionFactory.java:130)
+	at reactor.core.publisher.MonoSupplier.call(MonoSupplier.java:67)
+	at reactor.core.publisher.FluxSubscribeOnCallable$CallableSubscribeOnSubscription.run(FluxSubscribeOnCallable.java:228)
+	at reactor.core.scheduler.SchedulerTask.call(SchedulerTask.java:68)
+	at reactor.core.scheduler.SchedulerTask.call(SchedulerTask.java:28)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1575)
+Caused by: io.lettuce.core.RedisConnectionException: Unable to connect to redis-primary.alphintra.svc.cluster.local/<unresolved>:6379
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:78)
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:56)
+	at io.lettuce.core.AbstractRedisClient.getConnection(AbstractRedisClient.java:350)
+	at io.lettuce.core.RedisClient.connect(RedisClient.java:215)
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.lambda$getConnection$1(StandaloneConnectionProvider.java:112)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.getConnection(StandaloneConnectionProvider.java:112)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1734)
+	... 16 common frames omitted
+Caused by: java.net.UnknownHostException: Failed to resolve 'redis-primary.alphintra.svc.cluster.local' [A(1), AAAA(28)] after 6 queries 
+	at io.netty.resolver.dns.DnsResolveContext.finishResolve(DnsResolveContext.java:1097)
+	at io.netty.resolver.dns.DnsResolveContext.tryToFinishResolve(DnsResolveContext.java:1044)
+	at io.netty.resolver.dns.DnsResolveContext.query(DnsResolveContext.java:432)
+	at io.netty.resolver.dns.DnsResolveContext.onResponse(DnsResolveContext.java:662)
+	at io.netty.resolver.dns.DnsResolveContext.access$500(DnsResolveContext.java:66)
+	at io.netty.resolver.dns.DnsResolveContext$2.operationComplete(DnsResolveContext.java:489)
+	at io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:590)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners0(DefaultPromise.java:583)
+	at io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:559)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:492)
+	at io.netty.util.concurrent.DefaultPromise.setValue0(DefaultPromise.java:636)
+	at io.netty.util.concurrent.DefaultPromise.setSuccess0(DefaultPromise.java:625)
+	at io.netty.util.concurrent.DefaultPromise.trySuccess(DefaultPromise.java:105)
+	at io.netty.resolver.dns.DnsQueryContext.trySuccess(DnsQueryContext.java:317)
+	at io.netty.resolver.dns.DnsQueryContext.finishSuccess(DnsQueryContext.java:309)
+	at io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler.channelRead(DnsNameResolver.java:1400)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioMessageChannel$NioMessageUnsafe.read(AbstractNioMessageChannel.java:97)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	... 1 common frames omitted
+2025-07-07 20:00:20 [boundedElastic-1] DEBUG [,] o.s.w.r.r.m.a.ResponseEntityResultHandler - [f0b37358-1] Using 'application/vnd.spring-boot.actuator.v3+json' given [*/*] and supported [application/vnd.spring-boot.actuator.v3+json, application/vnd.spring-boot.actuator.v2+json, application/json]
+2025-07-07 20:00:20 [boundedElastic-1] DEBUG [,] o.s.w.r.r.m.a.ResponseEntityResultHandler - [f0b37358-1] 0..1 [org.springframework.boot.actuate.health.SystemHealth]
+2025-07-07 20:00:20 [boundedElastic-1] DEBUG [,] org.springframework.web.HttpLogging - [f0b37358-1] Encoding [org.springframework.boot.actuate.health.SystemHealth@3e9dfeae]
+2025-07-07 20:00:20 [reactor-http-nio-2] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - [f0b37358-1] Completed 503 SERVICE_UNAVAILABLE
+2025-07-07 20:00:21 [AsyncReporter{org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender@4e66c602}] DEBUG [,] o.s.w.r.f.client.ExchangeFunctions - [79e57b02] HTTP POST http://localhost:9411/api/v2/spans
+2025-07-07 20:00:21 [AsyncReporter{org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender@4e66c602}] WARN  [,] z.r.AsyncReporter$BoundedAsyncReporter - Spans were dropped due to exceptions. All subsequent errors will be logged at FINE level.
+2025-07-07 20:00:21 [AsyncReporter{org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender@4e66c602}] WARN  [,] z.r.AsyncReporter$BoundedAsyncReporter - Dropped 5 spans due to WebClientRequestException(Connection refused: localhost/[0:0:0:0:0:0:0:1]:9411)
+org.springframework.web.reactive.function.client.WebClientRequestException: Connection refused: localhost/[0:0:0:0:0:0:0:1]:9411
+	at org.springframework.web.reactive.function.client.ExchangeFunctions$DefaultExchangeFunction.lambda$wrapException$9(ExchangeFunctions.java:136)
+	Suppressed: reactor.core.publisher.FluxOnAssembly$OnAssemblyException: 
+Error has been observed at the following site(s):
+	*__checkpoint ⇢ Request to POST http://localhost:9411/api/v2/spans [DefaultWebClient]
+Original Stack Trace:
+		at org.springframework.web.reactive.function.client.ExchangeFunctions$DefaultExchangeFunction.lambda$wrapException$9(ExchangeFunctions.java:136)
+		at reactor.core.publisher.MonoErrorSupplied.subscribe(MonoErrorSupplied.java:55)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4512)
+		at reactor.core.publisher.FluxOnErrorResume$ResumeSubscriber.onError(FluxOnErrorResume.java:103)
+		at reactor.core.publisher.FluxPeek$PeekSubscriber.onError(FluxPeek.java:222)
+		at reactor.core.publisher.FluxPeek$PeekSubscriber.onError(FluxPeek.java:222)
+		at reactor.core.publisher.FluxPeek$PeekSubscriber.onError(FluxPeek.java:222)
+		at reactor.core.publisher.MonoNext$NextSubscriber.onError(MonoNext.java:93)
+		at reactor.core.publisher.MonoFlatMapMany$FlatMapManyMain.onError(MonoFlatMapMany.java:204)
+		at reactor.core.publisher.SerializedSubscriber.onError(SerializedSubscriber.java:124)
+		at reactor.core.publisher.FluxRetryWhen$RetryWhenMainSubscriber.whenError(FluxRetryWhen.java:228)
+		at reactor.core.publisher.FluxRetryWhen$RetryWhenOtherSubscriber.onError(FluxRetryWhen.java:278)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onError(FluxContextWrite.java:121)
+		at reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber.maybeOnError(FluxConcatMapNoPrefetch.java:326)
+		at reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber.onNext(FluxConcatMapNoPrefetch.java:211)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onNext(FluxContextWrite.java:107)
+		at reactor.core.publisher.SinkManyEmitterProcessor.drain(SinkManyEmitterProcessor.java:476)
+		at reactor.core.publisher.SinkManyEmitterProcessor$EmitterInner.drainParent(SinkManyEmitterProcessor.java:620)
+		at reactor.core.publisher.FluxPublish$PubSubInner.request(FluxPublish.java:874)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.request(FluxContextWrite.java:136)
+		at reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber.request(FluxConcatMapNoPrefetch.java:336)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.request(FluxContextWrite.java:136)
+		at reactor.core.publisher.Operators$DeferredSubscription.request(Operators.java:1743)
+		at reactor.core.publisher.FluxRetryWhen$RetryWhenMainSubscriber.onError(FluxRetryWhen.java:195)
+		at reactor.core.publisher.MonoCreate$DefaultMonoSink.error(MonoCreate.java:205)
+		at reactor.netty.http.client.HttpClientConnect$MonoHttpConnect$ClientTransportSubscriber.onError(HttpClientConnect.java:311)
+		at reactor.core.publisher.MonoCreate$DefaultMonoSink.error(MonoCreate.java:205)
+		at reactor.netty.resources.DefaultPooledConnectionProvider$DisposableAcquire.onError(DefaultPooledConnectionProvider.java:162)
+		at reactor.netty.internal.shaded.reactor.pool.AbstractPool$Borrower.fail(AbstractPool.java:475)
+		at reactor.netty.internal.shaded.reactor.pool.SimpleDequePool.lambda$drainLoop$9(SimpleDequePool.java:433)
+		at reactor.core.publisher.FluxDoOnEach$DoOnEachSubscriber.onError(FluxDoOnEach.java:186)
+		at reactor.core.publisher.MonoCreate$DefaultMonoSink.error(MonoCreate.java:205)
+		at reactor.netty.resources.DefaultPooledConnectionProvider$PooledConnectionAllocator$PooledConnectionInitializer.onError(DefaultPooledConnectionProvider.java:560)
+		at reactor.core.publisher.MonoFlatMap$FlatMapMain.secondError(MonoFlatMap.java:241)
+		at reactor.core.publisher.MonoFlatMap$FlatMapInner.onError(MonoFlatMap.java:315)
+		at reactor.core.publisher.FluxOnErrorResume$ResumeSubscriber.onError(FluxOnErrorResume.java:106)
+		at reactor.core.publisher.SerializedSubscriber.onError(SerializedSubscriber.java:124)
+		at reactor.core.publisher.FluxRetryWhen$RetryWhenMainSubscriber.whenError(FluxRetryWhen.java:228)
+		at reactor.core.publisher.FluxRetryWhen$RetryWhenOtherSubscriber.onError(FluxRetryWhen.java:278)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onError(FluxContextWrite.java:121)
+		at reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber.maybeOnError(FluxConcatMapNoPrefetch.java:326)
+		at reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber.onNext(FluxConcatMapNoPrefetch.java:211)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onNext(FluxContextWrite.java:107)
+		at reactor.core.publisher.SinkManyEmitterProcessor.drain(SinkManyEmitterProcessor.java:476)
+		at reactor.core.publisher.SinkManyEmitterProcessor$EmitterInner.drainParent(SinkManyEmitterProcessor.java:620)
+		at reactor.core.publisher.FluxPublish$PubSubInner.request(FluxPublish.java:874)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.request(FluxContextWrite.java:136)
+		at reactor.core.publisher.FluxConcatMapNoPrefetch$FluxConcatMapNoPrefetchSubscriber.request(FluxConcatMapNoPrefetch.java:336)
+		at reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.request(FluxContextWrite.java:136)
+		at reactor.core.publisher.Operators$DeferredSubscription.request(Operators.java:1743)
+		at reactor.core.publisher.FluxRetryWhen$RetryWhenMainSubscriber.onError(FluxRetryWhen.java:195)
+		at reactor.core.publisher.MonoFlatMap$FlatMapMain.secondError(MonoFlatMap.java:241)
+		at reactor.core.publisher.MonoFlatMap$FlatMapInner.onError(MonoFlatMap.java:315)
+		at reactor.netty.transport.TransportConnector$MonoChannelPromise.tryFailure(TransportConnector.java:576)
+		at reactor.netty.transport.TransportConnector$MonoChannelPromise.setFailure(TransportConnector.java:522)
+		at reactor.netty.transport.TransportConnector.lambda$doConnect$7(TransportConnector.java:261)
+		at io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:590)
+		at io.netty.util.concurrent.DefaultPromise.notifyListeners0(DefaultPromise.java:583)
+		at io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:559)
+		at io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:492)
+		at io.netty.util.concurrent.DefaultPromise.setValue0(DefaultPromise.java:636)
+		at io.netty.util.concurrent.DefaultPromise.setFailure0(DefaultPromise.java:629)
+		at io.netty.util.concurrent.DefaultPromise.tryFailure(DefaultPromise.java:118)
+		at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.fulfillConnectPromise(AbstractNioChannel.java:321)
+		at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:337)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+		at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+		at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+		at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+		at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+		at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+		at java.base/java.lang.Thread.run(Thread.java:1575)
+	Suppressed: java.lang.Exception: #block terminated with an error
+		at reactor.core.publisher.BlockingSingleSubscriber.blockingGet(BlockingSingleSubscriber.java:103)
+		at reactor.core.publisher.Mono.block(Mono.java:1728)
+		at org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender$WebClientHttpPostCall.doExecute(ZipkinWebClientSender.java:76)
+		at org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender$WebClientHttpPostCall.doExecute(ZipkinWebClientSender.java:54)
+		at zipkin2.Call$Base.execute(Call.java:391)
+		at zipkin2.reporter.AsyncReporter$BoundedAsyncReporter.flush(AsyncReporter.java:299)
+		at zipkin2.reporter.AsyncReporter$Flusher.run(AsyncReporter.java:378)
+		at java.base/java.lang.Thread.run(Thread.java:1575)
+Caused by: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: localhost/[0:0:0:0:0:0:0:1]:9411
+Caused by: java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.pollConnect(Native Method)
+	at java.base/sun.nio.ch.Net.pollConnectNow(Net.java:682)
+	at java.base/sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:1062)
+	at io.netty.channel.socket.nio.NioSocketChannel.doFinishConnect(NioSocketChannel.java:337)
+	at io.netty.channel.nio.AbstractNioChannel$AbstractNioUnsafe.finishConnect(AbstractNioChannel.java:334)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:776)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	at java.base/java.lang.Thread.run(Thread.java:1575)
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - [2e14d245-2] HTTP GET "/actuator/health"
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/login', method=POST}
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'POST /login'
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/login', method=GET}
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'GET /login'
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/logout', method=GET}
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'GET /logout'
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.w.s.s.DefaultWebSessionManager - Created new WebSession.
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/logout', method=POST}
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /actuator/health' doesn't match 'POST /logout'
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using EndpointRequestMatcher includes=[health], excludes=[], includeLinks=false
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/actuator/health/**', method=null}
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Checking match of request : '/actuator/health'; against '/actuator/health/**'
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - matched
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - matched
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.a.DelegatingReactiveAuthorizationManager - Checking authorization on '/actuator/health' using org.springframework.security.config.web.server.ServerHttpSecurity$AuthorizeExchangeSpec$Access$$Lambda/0x00000f000174ee58@6257b666
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.a.AuthorizationWebFilter - Authorization successful
+2025-07-07 20:00:31 [parallel-3] DEBUG [,] o.s.s.w.s.c.WebSessionServerSecurityContextRepository - No SecurityContext found in WebSession: 'org.springframework.web.server.session.InMemoryWebSessionStore$InMemoryWebSession@2975fc94'
+2025-07-07 20:00:31 [boundedElastic-1] WARN  [,] o.s.b.a.d.r.RedisReactiveHealthIndicator - Redis health check failed
+org.springframework.data.redis.RedisConnectionFailureException: Unable to connect to Redis
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.translateException(LettuceConnectionFactory.java:1805)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1736)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getNativeConnection(LettuceConnectionFactory.java:1538)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.lambda$getConnection$0(LettuceConnectionFactory.java:1518)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.doInLock(LettuceConnectionFactory.java:1478)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$SharedConnection.getConnection(LettuceConnectionFactory.java:1515)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getSharedReactiveConnection(LettuceConnectionFactory.java:1224)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getReactiveConnection(LettuceConnectionFactory.java:1099)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getReactiveConnection(LettuceConnectionFactory.java:130)
+	at reactor.core.publisher.MonoSupplier.call(MonoSupplier.java:67)
+	at reactor.core.publisher.FluxSubscribeOnCallable$CallableSubscribeOnSubscription.run(FluxSubscribeOnCallable.java:228)
+	at reactor.core.scheduler.SchedulerTask.call(SchedulerTask.java:68)
+	at reactor.core.scheduler.SchedulerTask.call(SchedulerTask.java:28)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1575)
+Caused by: io.lettuce.core.RedisConnectionException: Unable to connect to redis-primary.alphintra.svc.cluster.local/<unresolved>:6379
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:78)
+	at io.lettuce.core.RedisConnectionException.create(RedisConnectionException.java:56)
+	at io.lettuce.core.AbstractRedisClient.getConnection(AbstractRedisClient.java:350)
+	at io.lettuce.core.RedisClient.connect(RedisClient.java:215)
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.lambda$getConnection$1(StandaloneConnectionProvider.java:112)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at org.springframework.data.redis.connection.lettuce.StandaloneConnectionProvider.getConnection(StandaloneConnectionProvider.java:112)
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory$ExceptionTranslatingConnectionProvider.getConnection(LettuceConnectionFactory.java:1734)
+	... 16 common frames omitted
+Caused by: java.net.UnknownHostException: Failed to resolve 'redis-primary.alphintra.svc.cluster.local' [A(1), AAAA(28)] after 6 queries 
+	at io.netty.resolver.dns.DnsResolveContext.finishResolve(DnsResolveContext.java:1097)
+	at io.netty.resolver.dns.DnsResolveContext.tryToFinishResolve(DnsResolveContext.java:1044)
+	at io.netty.resolver.dns.DnsResolveContext.query(DnsResolveContext.java:432)
+	at io.netty.resolver.dns.DnsResolveContext.onResponse(DnsResolveContext.java:662)
+	at io.netty.resolver.dns.DnsResolveContext.access$500(DnsResolveContext.java:66)
+	at io.netty.resolver.dns.DnsResolveContext$2.operationComplete(DnsResolveContext.java:489)
+	at io.netty.util.concurrent.DefaultPromise.notifyListener0(DefaultPromise.java:590)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners0(DefaultPromise.java:583)
+	at io.netty.util.concurrent.DefaultPromise.notifyListenersNow(DefaultPromise.java:559)
+	at io.netty.util.concurrent.DefaultPromise.notifyListeners(DefaultPromise.java:492)
+	at io.netty.util.concurrent.DefaultPromise.setValue0(DefaultPromise.java:636)
+	at io.netty.util.concurrent.DefaultPromise.setSuccess0(DefaultPromise.java:625)
+	at io.netty.util.concurrent.DefaultPromise.trySuccess(DefaultPromise.java:105)
+	at io.netty.resolver.dns.DnsQueryContext.trySuccess(DnsQueryContext.java:317)
+	at io.netty.resolver.dns.DnsQueryContext.finishSuccess(DnsQueryContext.java:309)
+	at io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler.channelRead(DnsNameResolver.java:1400)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:444)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412)
+	at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440)
+	at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420)
+	at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)
+	at io.netty.channel.nio.AbstractNioMessageChannel$NioMessageUnsafe.read(AbstractNioMessageChannel.java:97)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724)
+	at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650)
+	at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562)
+	at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+	at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+	at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+	... 1 common frames omitted
+2025-07-07 20:00:31 [boundedElastic-1] DEBUG [,] o.s.w.r.r.m.a.ResponseEntityResultHandler - [2e14d245-2] Using 'application/vnd.spring-boot.actuator.v3+json' given [*/*] and supported [application/vnd.spring-boot.actuator.v3+json, application/vnd.spring-boot.actuator.v2+json, application/json]
+2025-07-07 20:00:31 [boundedElastic-1] DEBUG [,] o.s.w.r.r.m.a.ResponseEntityResultHandler - [2e14d245-2] 0..1 [org.springframework.boot.actuate.health.SystemHealth]
+2025-07-07 20:00:31 [boundedElastic-1] DEBUG [,] org.springframework.web.HttpLogging - [2e14d245-2] Encoding [org.springframework.boot.actuate.health.SystemHealth@2ed1775]
+2025-07-07 20:00:31 [reactor-http-nio-5] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - [2e14d245-2] Completed 503 SERVICE_UNAVAILABLE
+2025-07-07 20:00:32 [AsyncReporter{org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender@4e66c602}] DEBUG [,] o.s.w.r.f.client.ExchangeFunctions - [21d97f74] HTTP POST http://localhost:9411/api/v2/spans
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - [fa04707b-3] HTTP GET "/health"
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/login', method=POST}
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /health' doesn't match 'POST /login'
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/login', method=GET}
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /health' doesn't match 'GET /login'
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/logout', method=GET}
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /health' doesn't match 'GET /logout'
+2025-07-07 20:00:42 [reactor-http-nio-7] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.w.s.s.DefaultWebSessionManager - Created new WebSession.
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/logout', method=POST}
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /health' doesn't match 'POST /logout'
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using EndpointRequestMatcher includes=[health], excludes=[], includeLinks=false
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using PathMatcherServerWebExchangeMatcher{pattern='/actuator/health/**', method=null}
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.PathPatternParserServerWebExchangeMatcher - Request 'GET /health' doesn't match 'null /actuator/health/**'
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.a.DelegatingReactiveAuthorizationManager - Checking authorization on '/health' using org.springframework.security.authorization.AuthenticatedReactiveAuthorizationManager@31e84cb5
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.c.WebSessionServerSecurityContextRepository - No SecurityContext found in WebSession: 'org.springframework.web.server.session.InMemoryWebSessionStore$InMemoryWebSession@b8b1ab0'
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.a.AuthorizationWebFilter - Authorization failed: Access Denied
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.c.WebSessionServerSecurityContextRepository - No SecurityContext found in WebSession: 'org.springframework.web.server.session.InMemoryWebSessionStore$InMemoryWebSession@b8b1ab0'
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.DelegatingServerAuthenticationEntryPoint - Trying to match using MediaTypeRequestMatcher [matchingMediaTypes=[text/html], useEquals=false, ignoredMediaTypes=[*/*]]
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.MediaTypeServerWebExchangeMatcher - httpRequestMediaTypes=[*/*]
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.MediaTypeServerWebExchangeMatcher - Processing */*
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.MediaTypeServerWebExchangeMatcher - Ignoring
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.MediaTypeServerWebExchangeMatcher - Did not match any media types
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.DelegatingServerAuthenticationEntryPoint - Trying to match using OrServerWebExchangeMatcher{matchers=[org.springframework.security.config.web.server.ServerHttpSecurity$HttpBasicSpec$$Lambda/0x00000f0001750868@2909d2fa, AndServerWebExchangeMatcher{matchers=[NegatedServerWebExchangeMatcher{matcher=MediaTypeRequestMatcher [matchingMediaTypes=[text/html], useEquals=false, ignoredMediaTypes=[]]}, MediaTypeRequestMatcher [matchingMediaTypes=[application/atom+xml, application/x-www-form-urlencoded, application/json, application/octet-stream, application/xml, multipart/form-data, text/xml], useEquals=false, ignoredMediaTypes=[*/*]]]}]}
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using org.springframework.security.config.web.server.ServerHttpSecurity$HttpBasicSpec$$Lambda/0x00000f0001750868@2909d2fa
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - Trying to match using AndServerWebExchangeMatcher{matchers=[NegatedServerWebExchangeMatcher{matcher=MediaTypeRequestMatcher [matchingMediaTypes=[text/html], useEquals=false, ignoredMediaTypes=[]]}, MediaTypeRequestMatcher [matchingMediaTypes=[application/atom+xml, application/x-www-form-urlencoded, application/json, application/octet-stream, application/xml, multipart/form-data, text/xml], useEquals=false, ignoredMediaTypes=[*/*]]]}
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.AndServerWebExchangeMatcher - Trying to match using NegatedServerWebExchangeMatcher{matcher=MediaTypeRequestMatcher [matchingMediaTypes=[text/html], useEquals=false, ignoredMediaTypes=[]]}
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.MediaTypeServerWebExchangeMatcher - httpRequestMediaTypes=[*/*]
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.MediaTypeServerWebExchangeMatcher - Processing */*
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.MediaTypeServerWebExchangeMatcher - text/html .isCompatibleWith */* = true
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.NegatedServerWebExchangeMatcher - matches = false
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.AndServerWebExchangeMatcher - Did not match
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.u.m.OrServerWebExchangeMatcher - No matches found
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.DelegatingServerAuthenticationEntryPoint - No match found. Using default entry point org.springframework.security.web.server.DelegatingServerAuthenticationEntryPoint@1b2de7ff
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.DelegatingServerAuthenticationEntryPoint - Trying to match using org.springframework.security.config.web.server.ServerHttpSecurity$HttpBasicSpec$$Lambda/0x00000f0001750868@2909d2fa
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.DelegatingServerAuthenticationEntryPoint - No match found. Using default entry point org.springframework.security.web.server.authentication.HttpBasicServerAuthenticationEntryPoint@4b435518
+2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - [fa04707b-3] Completed 401 UNAUTHORIZED
+2025-07-07 20:00:43 [AsyncReporter{org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender@4e66c602}] DEBUG [,] o.s.w.r.f.client.ExchangeFunctions - [6d1f731c] HTTP POST http://localhost:9411/api/v2/spans

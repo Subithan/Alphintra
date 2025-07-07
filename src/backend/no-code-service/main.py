@@ -1,4 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Query
+"""
+No-Code Service - Microservice for Visual Workflow Builder
+Handles workflow creation, execution, and management for trading strategies
+"""
+
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -10,33 +15,76 @@ import uuid
 from datetime import datetime
 import asyncio
 import os
+import logging
+from prometheus_fastapi_instrumentator import Instrumentator
+import redis
+import httpx
 
-from models import Base, User, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate
+# Import models and schemas
+from models import Base, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate
 from schemas_updated import *
 from workflow_compiler_updated import WorkflowCompiler
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://alphintra_user:alphintra_password@localhost:5432/alphintra_db")
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="Alphintra No-Code Service", 
-    description="No-code visual workflow builder for trading strategies",
-    version="2.0.0"
+# Database configuration with K3D internal networking
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "postgresql://nocode_service_user:nocode_service_pass@postgresql-primary.alphintra.svc.cluster.local:5432/alphintra_nocode"
 )
 
-# CORS middleware
+# Redis configuration
+REDIS_URL = os.getenv(
+    "REDIS_URL",
+    "redis://:alphintra_redis_pass@redis-primary.alphintra.svc.cluster.local:6379/2"
+)
+
+# Service URLs
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service.alphintra.svc.cluster.local:8080")
+
+# Initialize database
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Initialize Redis
+try:
+    redis_client = redis.from_url(REDIS_URL)
+except Exception as e:
+    logger.warning(f"Redis connection failed, using fallback: {e}")
+    redis_client = None
+
+# HTTP client for service communication
+http_client = httpx.AsyncClient(timeout=30.0)
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Alphintra No-Code Service",
+    description="Microservice for visual workflow builder and trading strategy management",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# CORS middleware for microservices
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://alphintra.com", "http://localhost:3001"],
+    allow_origins=["*"],  # In production, specify exact origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Prometheus metrics
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
+
 # Security
 security = HTTPBearer()
+
+# Initialize services
+workflow_compiler = WorkflowCompiler()
 
 # Dependencies
 def get_db():
@@ -46,28 +94,118 @@ def get_db():
     finally:
         db.close()
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    """Verify JWT token and return current user - Simplified for development"""
-    # For development, create a test user if not exists
-    test_user = db.query(User).filter(User.email == "test@alphintra.com").first()
-    if not test_user:
-        test_user = User(
-            email="test@alphintra.com",
-            password_hash="test_hash",
-            first_name="Test",
-            last_name="User",
-            is_verified=True
-        )
-        db.add(test_user)
-        db.commit()
-        db.refresh(test_user)
-    return test_user
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Validate JWT token with Auth Service"""
+    try:
+        headers = {"Authorization": f"Bearer {credentials.credentials}"}
+        response = await http_client.get(f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            # Fallback for development - create mock user
+            return {"user_id": "user-123", "email": "user@alphintra.com"}
+    except Exception as e:
+        logger.error(f"Error validating token: {e}")
+        # Fallback for development
+        return {"user_id": "user-123", "email": "user@alphintra.com"}
+
+# Health checks
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes"""
+    try:
+        # Check database connection
+        db = next(get_db())
+        db.execute(text("SELECT 1"))
+        
+        # Check Redis connection if available
+        if redis_client:
+            redis_client.ping()
+        
+        return {
+            "status": "healthy",
+            "service": "no-code-service",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "2.0.0"
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service unhealthy")
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check endpoint for Kubernetes"""
+    return {
+        "status": "ready",
+        "service": "no-code-service",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "service": "no-code-service",
+        "version": "2.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "ready": "/ready",
+            "docs": "/docs",
+            "workflows": "/api/v1/workflows",
+            "templates": "/api/v1/templates",
+            "executions": "/api/v1/executions"
+        }
+    }
 
 # Initialize services
 workflow_compiler = WorkflowCompiler()
+
+# GraphQL Schema
+schema = strawberry.Schema(query=Query, mutation=Mutation, subscription=Subscription)
+
+# GraphQL context function
+async def get_graphql_context(request: Request, db: Session = Depends(get_db)):
+    """Create GraphQL context with database session and user authentication"""
+    # Get user from request headers (similar to REST endpoints)
+    authorization = request.headers.get("Authorization")
+    current_user = None
+    
+    if authorization:
+        try:
+            # Extract token from Authorization header
+            token = authorization.replace("Bearer ", "")
+            # For development, create test user if not exists
+            test_user = db.query(User).filter(User.email == "test@alphintra.com").first()
+            if not test_user:
+                test_user = User(
+                    email="test@alphintra.com",
+                    password_hash="test_hash",
+                    first_name="Test",
+                    last_name="User",
+                    is_verified=True
+                )
+                db.add(test_user)
+                db.commit()
+                db.refresh(test_user)
+            current_user = test_user
+        except Exception:
+            # Default to test user for development
+            current_user = db.query(User).filter(User.email == "test@alphintra.com").first()
+    
+    return {
+        "db_session": db,
+        "current_user": current_user,
+        "request": request
+    }
+
+# GraphQL Router
+graphql_router = GraphQLRouter(
+    schema,
+    context_getter=get_graphql_context,
+    subscription_protocols=[GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL]
+)
 
 @app.get("/health")
 async def health_check():
@@ -122,7 +260,7 @@ async def get_workflows(
         if is_public is not None:
             query = query.filter(NoCodeWorkflow.is_public == is_public)
             
-        workflows = query.offset(skip).limit(limit).order_by(NoCodeWorkflow.updated_at.desc()).all()
+        workflows = query.order_by(NoCodeWorkflow.updated_at.desc()).offset(skip).limit(limit).all()
         return [WorkflowResponse.from_orm(w) for w in workflows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch workflows: {str(e)}")

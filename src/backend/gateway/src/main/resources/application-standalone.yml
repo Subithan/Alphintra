@@ -1,0 +1,64 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+    gateway:
+      routes:
+        - id: health-check
+          uri: http://httpbin.org
+          predicates:
+            - Path=/health
+          filters:
+            - SetPath=/status/200
+        - id: echo-test
+          uri: http://httpbin.org
+          predicates:
+            - Path=/echo/**
+          filters:
+            - StripPrefix=1
+            - SetPath=/anything
+        - id: test-api
+          uri: http://httpbin.org
+          predicates:
+            - Path=/api/**
+          filters:
+            - StripPrefix=1
+            - SetPath=/anything
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+
+eureka:
+  client:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: DEBUG
+    com.alphintra: DEBUG

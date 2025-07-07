@@ -16,8 +16,11 @@ RUN ./mvnw dependency:go-offline -B
 # Copy source code
 COPY src ./src
 
+# Add build argument for Maven profile
+ARG MAVEN_PROFILE=standalone
+
 # Build the application
-RUN ./mvnw clean package -DskipTests
+RUN ./mvnw clean package -DskipTests -P${MAVEN_PROFILE}
 
 # Create logs directory
 RUN mkdir -p /var/log/alphintra

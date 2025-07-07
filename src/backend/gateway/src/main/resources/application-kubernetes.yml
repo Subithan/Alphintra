@@ -1,0 +1,38 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: trading-api
+          uri: lb://trading-api-service
+          predicates:
+            - Path=/api/trading/**
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+        - id: risk-service
+          uri: lb://risk-service
+          predicates:
+            - Path=/api/risk/**
+        - id: broker-service
+          uri: lb://broker-service
+          predicates:
+            - Path=/api/broker/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+eureka:
+  client:
+    enabled: false

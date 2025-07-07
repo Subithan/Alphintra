@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-api
+  labels:
+    app: trading-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trading-api
+  template:
+    metadata:
+      labels:
+        app: trading-api
+    spec:
+      containers:
+      - name: trading-api
+        image: trading-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://trading_service_user:trading_service_pass@postgresql-primary.alphintra:5432/alphintra_trading"
+        - name: REDIS_URL
+          value: "redis://:alphintra_redis_pass@host.k3d.internal:6379/1"
+        - name: RISK_SERVICE_URL
+          value: "http://risk-service.default.svc.cluster.local:8080"
+        - name: BROKER_SERVICE_URL
+          value: "http://broker-service.default.svc.cluster.local:8080"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service.alphintra.svc.cluster.local:8080"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka-service.alphintra.svc.cluster.local:9092"
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow-service.alphintra.svc.cluster.local:5000"
+        - name: TIMESCALE_URL
+          value: "postgresql://timescale_user:timescale_pass@timescaledb-service.alphintra.svc.cluster.local:5432/alphintra_timescale"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: trading-api-service
+spec:
+  selector:
+    app: trading-api
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: NodePort

@@ -46,6 +46,7 @@ export interface Workflow {
   deployment_status: string;
   execution_mode: 'backtest' | 'paper_trade' | 'live_trade';
   version: number;
+  parent_workflow_id?: number;
   is_template: boolean;
   is_public: boolean;
   total_executions: number;
@@ -55,6 +56,23 @@ export interface Workflow {
   created_at: string;
   updated_at: string;
   published_at?: string;
+}
+
+export interface WorkflowVersion {
+  id: number;
+  uuid: string;
+  name: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  changes_summary?: string;
+  parent_workflow_id?: number;
+}
+
+export interface WorkflowVersionDetails extends Workflow {
+  parent_workflow?: Workflow;
+  child_versions?: WorkflowVersion[];
 }
 
 export interface WorkflowCreate {
@@ -190,14 +208,58 @@ export interface TemplateFilters {
 }
 
 export class NoCodeApiClient extends BaseApiClient {
+  private mockMode: boolean;
+
   constructor() {
     super({
       baseUrl: process.env.NEXT_PUBLIC_NOCODE_API_URL || 'http://localhost:8004',
     });
+    // Enable mock mode only if explicitly set to true
+    this.mockMode = process.env.NEXT_PUBLIC_MOCK_API === 'true';
+    
+    // Debug logging only in development mode and when explicitly enabled
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEBUG_API === 'true') {
+      console.log('🔧 NoCodeApiClient Debug:', {
+        mockMode: this.mockMode,
+        baseUrl: this.config.baseUrl
+      });
+    }
   }
 
   // Workflow Management
   async createWorkflow(workflow: WorkflowCreate): Promise<Workflow> {
+    console.log('📝 createWorkflow called:', { mockMode: this.mockMode, workflow });
+    
+    if (this.mockMode) {
+      console.log('🎭 Using mock mode for createWorkflow');
+      // Return mock workflow for development
+      return {
+        id: Date.now(),
+        uuid: `mock-${Date.now()}`,
+        name: workflow.name,
+        description: workflow.description || '',
+        category: workflow.category || 'custom',
+        tags: workflow.tags || [],
+        workflow_data: workflow.workflow_data || { nodes: [], edges: [] },
+        generated_code: '',
+        generated_code_language: 'python',
+        generated_requirements: [],
+        compilation_status: 'pending',
+        compilation_errors: [],
+        validation_status: 'pending',
+        validation_errors: [],
+        deployment_status: 'draft',
+        execution_mode: workflow.execution_mode || 'backtest',
+        version: 1,
+        is_template: false,
+        is_public: false,
+        total_executions: 0,
+        successful_executions: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+
     return this.requestWithRetry<Workflow>('/api/workflows', {
       method: 'POST',
       body: JSON.stringify(workflow),
@@ -264,6 +326,412 @@ export class NoCodeApiClient extends BaseApiClient {
     return this.requestWithRetry<Workflow>(`/api/templates/${templateId}/use`, {
       method: 'POST',
       body: JSON.stringify({ workflow_name: workflowName }),
+    });
+  }
+
+  // Workflow Import/Export
+  async exportWorkflow(workflowId: string, format: 'json' | 'yaml' = 'json'): Promise<string> {
+    return this.requestWithRetry<string>(`/api/workflows/${workflowId}/export?format=${format}`);
+  }
+
+  async importWorkflow(data: string, format: 'json' | 'yaml' = 'json'): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>('/api/workflows/import', {
+      method: 'POST',
+      body: JSON.stringify({ data, format }),
+    });
+  }
+
+  // Workflow Execution Control
+  async stopExecution(executionId: string): Promise<{ message: string }> {
+    return this.requestWithRetry<{ message: string }>(`/api/executions/${executionId}/stop`, {
+      method: 'POST',
+    });
+  }
+
+  async resetWorkflow(workflowId: string): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/reset`, {
+      method: 'POST',
+    });
+  }
+
+  // Code Generation
+  async generateCode(workflowId: string, options: {
+    language: 'python' | 'javascript';
+    framework?: 'backtesting.py' | 'zipline' | 'custom';
+    includeComments?: boolean;
+  } = { language: 'python' }): Promise<{
+    code: string;
+    dependencies: string[];
+    documentation: string;
+  }> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/generate-code`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    });
+  }
+
+  // Workflow Testing
+  async testWorkflow(workflowId: string, testConfig: {
+    testType: 'validation' | 'backtest' | 'paper_trade';
+    parameters?: Record<string, any>;
+  }): Promise<{
+    testId: string;
+    status: 'running' | 'completed' | 'failed';
+    results?: any;
+  }> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/test`, {
+      method: 'POST',
+      body: JSON.stringify(testConfig),
+    });
+  }
+
+  // Search functionality
+  async searchWorkflows(query: string, filters: {
+    category?: string;
+    tags?: string[];
+    isPublic?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<{
+    workflows: Workflow[];
+    total: number;
+    hasMore: boolean;
+  }> {
+    const params = new URLSearchParams({ query });
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          value.forEach(v => params.append(key, v));
+        } else {
+          params.append(key, value.toString());
+        }
+      }
+    });
+
+    return this.requestWithRetry(`/api/workflows/search?${params.toString()}`);
+  }
+
+  async searchNodes(workflowId: string, query: string): Promise<{
+    nodes: WorkflowNode[];
+    matches: Array<{
+      nodeId: string;
+      field: string;
+      value: string;
+    }>;
+  }> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/search-nodes?query=${encodeURIComponent(query)}`);
+  }
+
+  // Workflow Validation
+  async validateWorkflow(workflowId: string): Promise<{
+    valid: boolean;
+    errors: Array<{
+      nodeId?: string;
+      message: string;
+      severity: 'error' | 'warning' | 'info';
+    }>;
+    warnings: Array<{
+      nodeId?: string;
+      message: string;
+    }>;
+  }> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/validate`, {
+      method: 'POST',
+    });
+  }
+
+  // Workflow Duplication
+  async duplicateWorkflow(workflowId: string, newName: string): Promise<Workflow> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ name: newName }),
+    });
+  }
+
+  // Auto-save functionality
+  async autoSaveWorkflow(workflowId: string, workflowData: WorkflowData): Promise<{ saved: boolean; timestamp: string }> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/auto-save`, {
+      method: 'PUT',
+      body: JSON.stringify({ workflow_data: workflowData }),
+    });
+  }
+
+  // Execution Logs
+  async getExecutionLogs(executionId: string, options: {
+    limit?: number;
+    offset?: number;
+    level?: 'error' | 'warning' | 'info' | 'debug';
+  } = {}): Promise<{
+    logs: Array<{
+      timestamp: string;
+      level: string;
+      message: string;
+      nodeId?: string;
+    }>;
+    total: number;
+    hasMore: boolean;
+  }> {
+    const params = new URLSearchParams();
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, value.toString());
+      }
+    });
+
+    const query = params.toString();
+    const endpoint = query ? `/api/executions/${executionId}/logs?${query}` : `/api/executions/${executionId}/logs`;
+    return this.requestWithRetry(endpoint);
+  }
+
+  // Real-time execution updates via Server-Sent Events
+  createExecutionEventSource(executionId: string): EventSource {
+    const url = `${this.config.baseUrl}/api/executions/${executionId}/events`;
+    return new EventSource(url);
+  }
+
+  // Settings management
+  async getUserSettings(): Promise<{
+    preferences: Record<string, any>;
+    theme: string;
+    autoSave: boolean;
+    notifications: boolean;
+  }> {
+    return this.requestWithRetry('/api/user/settings');
+  }
+
+  async updateUserSettings(settings: {
+    preferences?: Record<string, any>;
+    theme?: string;
+    autoSave?: boolean;
+    notifications?: boolean;
+  }): Promise<{ updated: boolean }> {
+    return this.requestWithRetry('/api/user/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  // Workflow Versioning
+  async createVersion(workflowId: string, options: {
+    name?: string;
+    changes_summary?: string;
+    workflow_data?: WorkflowData;
+  } = {}): Promise<Workflow> {
+    if (this.mockMode) {
+      // Return mock version for development
+      return {
+        id: Date.now(),
+        uuid: `mock-version-${Date.now()}`,
+        name: options.name || `Version ${Math.floor(Math.random() * 10) + 1}`,
+        description: options.changes_summary || 'Mock version created',
+        category: 'custom',
+        tags: [],
+        workflow_data: options.workflow_data || { nodes: [], edges: [] },
+        generated_code: '',
+        generated_code_language: 'python',
+        generated_requirements: [],
+        compilation_status: 'pending',
+        compilation_errors: [],
+        validation_status: 'pending',
+        validation_errors: [],
+        deployment_status: 'draft',
+        execution_mode: 'backtest',
+        version: Math.floor(Math.random() * 10) + 1,
+        is_template: false,
+        is_public: false,
+        total_executions: 0,
+        successful_executions: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+
+    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/versions`, {
+      method: 'POST',
+      body: JSON.stringify(options),
+    });
+  }
+
+  async getVersions(workflowId: string): Promise<WorkflowVersion[]> {
+    if (this.mockMode) {
+      // Return mock versions for development
+      return [
+        {
+          id: 1,
+          uuid: 'mock-version-1',
+          name: 'Initial Version',
+          version: 1,
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          updated_at: new Date(Date.now() - 86400000).toISOString(),
+          created_by: 'Demo User',
+          changes_summary: 'Initial model creation'
+        },
+        {
+          id: 2,
+          uuid: 'mock-version-2',
+          name: 'Enhanced Strategy',
+          version: 2,
+          created_at: new Date(Date.now() - 43200000).toISOString(),
+          updated_at: new Date(Date.now() - 43200000).toISOString(),
+          created_by: 'Demo User',
+          changes_summary: 'Added RSI indicator and improved risk management'
+        },
+        {
+          id: 3,
+          uuid: 'mock-version-3',
+          name: 'Current Version',
+          version: 3,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          created_by: 'Demo User',
+          changes_summary: 'Latest improvements and optimizations'
+        }
+      ];
+    }
+
+    return this.requestWithRetry<WorkflowVersion[]>(`/api/workflows/${workflowId}/versions`);
+  }
+
+  async getVersion(workflowId: string, version: number): Promise<WorkflowVersionDetails> {
+    return this.requestWithRetry<WorkflowVersionDetails>(`/api/workflows/${workflowId}/versions/${version}`);
+  }
+
+  async restoreVersion(workflowId: string, version: number): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/versions/${version}/restore`, {
+      method: 'POST',
+    });
+  }
+
+  async compareVersions(workflowId: string, fromVersion: number, toVersion: number): Promise<{
+    added_nodes: WorkflowNode[];
+    removed_nodes: WorkflowNode[];
+    modified_nodes: Array<{
+      node_id: string;
+      changes: Record<string, any>;
+    }>;
+    added_edges: WorkflowEdge[];
+    removed_edges: WorkflowEdge[];
+    metadata_changes: Record<string, any>;
+  }> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/versions/compare?from=${fromVersion}&to=${toVersion}`);
+  }
+
+  async deleteVersion(workflowId: string, version: number): Promise<{ message: string }> {
+    return this.requestWithRetry<{ message: string }>(`/api/workflows/${workflowId}/versions/${version}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Workflow History and Activity
+  async getWorkflowHistory(workflowId: string, options: {
+    limit?: number;
+    offset?: number;
+    action_type?: 'created' | 'updated' | 'executed' | 'shared' | 'versioned';
+  } = {}): Promise<{
+    activities: Array<{
+      id: string;
+      action_type: string;
+      description: string;
+      user_name?: string;
+      version?: number;
+      timestamp: string;
+      metadata?: Record<string, any>;
+    }>;
+    total: number;
+    hasMore: boolean;
+  }> {
+    if (this.mockMode) {
+      // Return mock activity history for development
+      return {
+        activities: [
+          {
+            id: '1',
+            action_type: 'created',
+            description: 'Model created',
+            user_name: 'Demo User',
+            version: 1,
+            timestamp: new Date(Date.now() - 86400000).toISOString(),
+            metadata: { nodes: 2, edges: 1 }
+          },
+          {
+            id: '2',
+            action_type: 'updated',
+            description: 'Added RSI indicator',
+            user_name: 'Demo User',
+            version: 2,
+            timestamp: new Date(Date.now() - 43200000).toISOString(),
+            metadata: { nodes: 4, edges: 3 }
+          },
+          {
+            id: '3',
+            action_type: 'versioned',
+            description: 'Created version snapshot',
+            user_name: 'Demo User',
+            version: 2,
+            timestamp: new Date(Date.now() - 21600000).toISOString(),
+            metadata: {}
+          },
+          {
+            id: '4',
+            action_type: 'executed',
+            description: 'Backtesting completed',
+            user_name: 'Demo User',
+            version: 2,
+            timestamp: new Date(Date.now() - 10800000).toISOString(),
+            metadata: { return: 12.5, trades: 45 }
+          },
+          {
+            id: '5',
+            action_type: 'updated',
+            description: 'Optimized parameters',
+            user_name: 'Demo User',
+            version: 3,
+            timestamp: new Date().toISOString(),
+            metadata: { nodes: 4, edges: 3 }
+          }
+        ],
+        total: 5,
+        hasMore: false
+      };
+    }
+
+    const params = new URLSearchParams();
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, value.toString());
+      }
+    });
+
+    const query = params.toString();
+    const endpoint = query ? `/api/workflows/${workflowId}/history?${query}` : `/api/workflows/${workflowId}/history`;
+    return this.requestWithRetry(endpoint);
+  }
+
+  // Workflow Branching
+  async createBranch(workflowId: string, branchName: string, fromVersion?: number): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/branch`, {
+      method: 'POST',
+      body: JSON.stringify({ 
+        branch_name: branchName,
+        from_version: fromVersion 
+      }),
+    });
+  }
+
+  async getBranches(workflowId: string): Promise<Array<{
+    id: number;
+    name: string;
+    version: number;
+    created_at: string;
+    created_by?: string;
+  }>> {
+    return this.requestWithRetry(`/api/workflows/${workflowId}/branches`);
+  }
+
+  async mergeBranch(workflowId: string, branchId: number, strategy: 'replace' | 'merge' = 'merge'): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/branches/${branchId}/merge`, {
+      method: 'POST',
+      body: JSON.stringify({ strategy }),
     });
   }
 

@@ -235,12 +235,12 @@ services:
   gateway:
     build:
       context: ./src/backend/gateway
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.simple
     container_name: alphintra-gateway
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: development
+      SPRING_PROFILES_ACTIVE: kubernetes
       REDIS_HOST: redis
       REDIS_PASSWORD: redis123
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics,prometheus
