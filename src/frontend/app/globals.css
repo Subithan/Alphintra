@@ -312,7 +312,6 @@
 
 body {
   color: var(--white);
-  overflow-x: hidden;
 }
 
 /* Dashboard specific background */
@@ -326,4 +325,37 @@ body {
   border: 1px solid transparent;
   background: linear-gradient(var(--bot-background), var(--bot-background)) padding-box,
               conic-gradient(from 45deg, rgba(71, 85, 105, 0.48) 80%, #FFD700 86%, #FFE4B5 90%, #FFD700 94%, rgba(71, 85, 105, 0.48)) border-box;
+}
+
+/* Style <option> globally */
+select option {
+  background-color: #e5e7eb; /* Tailwind gray-200 */
+  color: #111827;            /* Tailwind gray-900 (for text) */
+}
+
+.dark select option {
+  background-color: #1e293b; /* Tailwind slate-800 (dark bg) */
+  color: #f1f5f9;            /* Tailwind slate-100 (light text) */
+}
+
+/* styles/global.css or a dedicated CSS file */
+.tradingview-widget-container {
+  border: none !important; /* Remove any borders */
+  background-color: transparent; /* Let widget control its background */
+}
+
+.tradingview-widget-container__widget {
+  border: none !important; /* Ensure inner widget has no border */
+}
+
+/* Ensure the widget’s iframe or canvas doesn’t inherit unwanted styles */
+.tradingview-widget-container iframe,
+.tradingview-widget-container canvas {
+  border: none !important;
+  background-color: transparent !important; /* Let widget’s theme control background */
+}
+
+/* Override any potential yellow tint from parent components */
+.tradingview-widget-container * {
+  background: transparent !important; /* Reset any inherited backgrounds */
 }

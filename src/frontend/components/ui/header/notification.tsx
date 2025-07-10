@@ -17,7 +17,6 @@ const Notification = () => {
     { id: 6, title: "Event Today", message: "Just a reminder that you have...", time: "9:15 AM" },
   ];
 
-  // Close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -33,15 +32,15 @@ const Notification = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
-        className="relative p-2 hover:bg-[#262739] dark:hover:bg-gray-700 hover:text-yellow-500 rounded-full cursor-pointer"
+        className="relative p-2 hover:bg-gray-100 dark:hover:bg-[#262739] hover:text-yellow-500 rounded-full cursor-pointer"
       >
         <Icon icon="solar:bell-linear" width={20} />
         <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-yellow-500"></span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-gray-900 rounded-lg shadow-lg z-50 border border-gray-800">
-          <div className="p-4 text-white text-lg font-semibold border-b border-gray-800 flex justify-between items-center">
+        <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-lg shadow-lg z-50 border border-gray-200 dark:border-gray-800">
+          <div className="p-4 text-gray-900 dark:text-white text-lg font-semibold border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
             Notifications
             <span className="px-2 py-1 bg-yellow-500 text-white text-xs rounded-full">
               {notifications.length} new
@@ -51,12 +50,11 @@ const Notification = () => {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className="flex items-center px-4 py-2 text-white hover:bg-[#262739] transition-colors"
+                className="flex items-center px-4 py-2 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-[#262739] transition-colors"
               >
-               
                 <div className="flex-1">
                   <div className="text-sm font-medium">{notification.title}</div>
-                  <div className="text-xs text-gray-400">{notification.message}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{notification.message}</div>
                 </div>
                 <div className="text-xs text-gray-500">{notification.time}</div>
               </div>
@@ -64,7 +62,7 @@ const Notification = () => {
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="w-full px-4 py-2 text-yellow-500 hover:bg-[#262739] rounded-b-lg text-sm font-medium"
+            className="w-full px-4 py-2 text-yellow-500 hover:bg-gray-100 dark:hover:bg-[#262739] rounded-b-lg text-sm font-medium"
           >
             See All Notifications
           </button>

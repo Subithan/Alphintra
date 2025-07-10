@@ -1,4 +1,7 @@
-// Dashboard.tsx
+"use client";
+
+import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
 import BalanceCard from "@/components/ui/dashboard/BalanceCard";
 import CryptoTable from "@/components/ui/dashboard/cryptoTable";
 import NewsCard from "@/components/ui/dashboard/newsCard";
@@ -7,12 +10,21 @@ import GradientBorder from '@/components/ui/GradientBorder';
 import { MoreHorizontal } from 'lucide-react';
 
 export default function Dashboard() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true); // ensures client-side rendering only
+  }, []);
+
+  if (!mounted) return null; // prevent rendering until after hydration
+
   return (
-    <>
+    <div className="min-h-screen bg-background text-foreground">
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 overflow-x-hidden">
-        <div className="col-span-5 lg:col-start-1 lg:col-end-4  flex flex-col gap-8">
+        <div className="col-span-5 lg:col-start-1 lg:col-end-4 flex flex-col gap-8">
           <GradientBorder gradientAngle="275deg" className="p-5">
-            <BalanceCard  />
+            <BalanceCard />
           </GradientBorder>
           <GradientBorder gradientAngle="275deg" className="p-5">
             <CryptoTable />
@@ -21,32 +33,29 @@ export default function Dashboard() {
         <div className="col-span-5 lg:col-start-4 lg:col-end-6 flex flex-col gap-8">
           <GradientBorder gradientAngle="315deg" className="p-5">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-white text-xl font-bold">BREAKING NEWS</h2>
-              <div className="text-gray-400 hover:text-white cursor-pointer">
+              <h2
+                className="text-xl font-bold"
+                style={{
+                  color: resolvedTheme === "dark" ? "white" : "black",
+                }}
+              >
+                BREAKING NEWS
+              </h2>
+              <div
+                className={`text-gray-400 hover:${
+                  resolvedTheme === "dark" ? "text-white" : "text-black"
+                } cursor-pointer`}
+              >
                 <MoreHorizontal className="w-6 h-6" />
               </div>
             </div>
-            <NewsCard 
-              title="Metaverse already needs competition scrutiny, says EU antitrust chief:"
-              source="Cointelegraph"
-              time="30 min ago"
-            />
-            <NewsCard 
-              title="New AI Regulations Proposed in EU Parliament:"
-              source="TechCrunch"
-              time="1 hour ago"
-            />
-            <NewsCard 
-              title="SpaceX Successfully Launches Latest Satellite:"
-              source="SpaceNews"
-              time="2 hours ago"
-            />
+            <NewsCard />
           </GradientBorder>
           <GradientBorder gradientAngle="315deg" className="p-5">
-            <PriceChart price={31928} />
+            <PriceChart />
           </GradientBorder>
         </div>
       </div>
-    </>
+    </div>
   );
 }
