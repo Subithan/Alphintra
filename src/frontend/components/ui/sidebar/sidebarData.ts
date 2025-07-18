@@ -53,6 +53,6 @@ export const footerSidebarItems: SidebarItemType[] = [
     id: "logout",
     name: "Logout",
     icon: "solar:logout-line-duotone",
-    url: "/logout",
+    url: "/",
   },
 ];

@@ -2,10 +2,10 @@
 
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
-import BalanceCard from "@/components/ui/dashboard/BalanceCard";
-import CryptoTable from "@/components/ui/dashboard/cryptoTable";
-import NewsCard from "@/components/ui/dashboard/newsCard";
-import PriceChart from "@/components/ui/dashboard/PriceChart";
+import BalanceCard from "@/components/ui/user/dashboard/BalanceCard";
+import CryptoTable from "@/components/ui/user/dashboard/cryptoTable";
+import NewsCard from "@/components/ui/user/dashboard/newsCard";
+import PriceChart from "@/components/ui/user/dashboard/PriceChart";
 import GradientBorder from '@/components/ui/GradientBorder';
 import { MoreHorizontal } from 'lucide-react';
 

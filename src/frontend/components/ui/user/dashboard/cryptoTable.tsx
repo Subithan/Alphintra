@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { coinfetcher } from "../../../lib/api/fetcher";
-import { Coin } from "../../../lib/api/types";
+import { coinfetcher } from "@/lib/api/fetcher";
+import { Coin } from "@/lib/api/types";
 import { useTheme } from "next-themes";
 
 const rowsPerPage = 7;

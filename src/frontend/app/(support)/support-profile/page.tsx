@@ -1,6 +1,6 @@
-import BalanceCard from "@/components/ui/dashboard/BalanceCard";
-import ProfileCard from "@/components/ui/profile/profileCard";
-import { VerifyStepper } from "@/components/ui/profile/verifyStepper";
+import BalanceCard from "@/components/ui/user/dashboard/BalanceCard";
+import ProfileCard from "@/components/ui/user/profile/profileCard";
+import { VerifyStepper } from "@/components/ui/user/profile/verifyStepper";
 
 export default function Profile() {
   return (

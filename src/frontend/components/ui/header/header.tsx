@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Notification from "./notification";
-import ThemeToggle from "./themeToggle"; 
-import SearchBar from "./searchBar";    
+import ThemeToggle from "./themeToggle";     
 import Profile from "./profile"; 
 
 const Header = () => {
@@ -16,7 +15,6 @@ const Header = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
-          <SearchBar /> 
           <Notification />
           <ThemeToggle />
           <Profile />

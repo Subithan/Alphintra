@@ -3,8 +3,8 @@
 import React from "react";
 import useSWR from "swr";
 import { Megaphone } from "lucide-react";
-import { newsFetcher } from "../../../lib/api/fetcher";
-import { NewsItem } from "../../../lib/api/types";
+import { newsFetcher } from "@/lib/api/fetcher";
+import { NewsItem } from "@/lib/api/types";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils"; // your classnames helper
 

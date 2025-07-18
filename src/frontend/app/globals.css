@@ -359,3 +359,35 @@ select option {
 .tradingview-widget-container * {
   background: transparent !important; /* Reset any inherited backgrounds */
 }
+
+@layer utilities {
+  .shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(34, 44, 62, 1), 0 2px 4px -1px rgba(34, 44, 62, 1); /* Adjusted for dark theme */
+  }
+
+  .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(34, 44, 62, 1), 0 4px 6px -2px rgba(34, 44, 62, 1);
+  }
+
+  .hover:shadow-lg:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .hover:shadow-lg:hover {
+    box-shadow: 0 10px 15px -3px rgba(34, 44, 62, 1), 0 4px 6px -2px rgba(34, 44, 62, 1);
+  }
+
+  .transition-shadow {
+    transition-property: box-shadow;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+}
