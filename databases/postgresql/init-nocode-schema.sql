@@ -230,6 +230,131 @@ CREATE TABLE nocode_data_sources (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Compilation results for workflow code generation
+CREATE TABLE compilation_results (
+    id SERIAL PRIMARY KEY,
+    workflow_id INTEGER REFERENCES nocode_workflows(id) ON DELETE CASCADE,
+    compiled_code TEXT,
+    compilation_status VARCHAR(20) DEFAULT 'pending' CHECK (compilation_status IN ('pending', 'success', 'failed')),
+    compilation_errors JSONB DEFAULT '[]',
+    compilation_warnings JSONB DEFAULT '[]',
+    dependencies TEXT[] DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Training jobs for ML model training
+CREATE TABLE training_jobs (
+    id SERIAL PRIMARY KEY,
+    workflow_id INTEGER REFERENCES nocode_workflows(id) ON DELETE CASCADE,
+    compilation_id INTEGER REFERENCES compilation_results(id) ON DELETE CASCADE,
+    dataset_id INTEGER,
+    config JSONB DEFAULT '{}',
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+    progress INTEGER DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+    current_epoch INTEGER DEFAULT 0,
+    total_epochs INTEGER DEFAULT 100,
+    metrics JSONB DEFAULT '{}',
+    model_artifacts JSONB DEFAULT '{}',
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP
+);
+
+-- Datasets for training and backtesting
+CREATE TABLE datasets (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    dataset_type VARCHAR(50) NOT NULL CHECK (dataset_type IN ('market_data', 'fundamental', 'alternative', 'custom')),
+    file_path VARCHAR(500),
+    file_size BIGINT,
+    schema_info JSONB DEFAULT '{}',
+    metadata JSONB DEFAULT '{}',
+    is_public BOOLEAN DEFAULT false,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Component library for custom components
+CREATE TABLE component_library (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    version VARCHAR(50) DEFAULT '1.0.0',
+    description TEXT,
+    component_code TEXT NOT NULL,
+    component_schema JSONB DEFAULT '{}',
+    dependencies TEXT[] DEFAULT '{}',
+    is_public BOOLEAN DEFAULT false,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Testing results for workflow validation
+CREATE TABLE testing_results (
+    id SERIAL PRIMARY KEY,
+    workflow_id INTEGER REFERENCES nocode_workflows(id) ON DELETE CASCADE,
+    test_type VARCHAR(50) NOT NULL CHECK (test_type IN ('unit', 'integration', 'backtest', 'validation')),
+    test_status VARCHAR(20) DEFAULT 'pending' CHECK (test_status IN ('pending', 'running', 'passed', 'failed')),
+    test_results JSONB DEFAULT '{}',
+    error_details JSONB DEFAULT '[]',
+    execution_time_ms INTEGER,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Marketplace strategies
+CREATE TABLE marketplace_strategies (
+    id SERIAL PRIMARY KEY,
+    workflow_id INTEGER REFERENCES nocode_workflows(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) DEFAULT 0.00,
+    category VARCHAR(50) NOT NULL,
+    tags TEXT[] DEFAULT '{}',
+    performance_metrics JSONB DEFAULT '{}',
+    is_featured BOOLEAN DEFAULT false,
+    is_approved BOOLEAN DEFAULT false,
+    download_count INTEGER DEFAULT 0,
+    rating DECIMAL(2,1) DEFAULT 0.0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Strategy ratings and reviews
+CREATE TABLE strategy_ratings (
+    id SERIAL PRIMARY KEY,
+    strategy_id INTEGER REFERENCES marketplace_strategies(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(strategy_id, user_id)
+);
+
+-- Workflow executions tracking
+CREATE TABLE workflow_executions (
+    id SERIAL PRIMARY KEY,
+    workflow_id INTEGER REFERENCES nocode_workflows(id) ON DELETE CASCADE,
+    execution_id INTEGER REFERENCES nocode_executions(id) ON DELETE CASCADE,
+    execution_data JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Audit log for tracking changes
+CREATE TABLE audit_log (
+    id SERIAL PRIMARY KEY,
+    table_name VARCHAR(100) NOT NULL,
+    record_id INTEGER NOT NULL,
+    action VARCHAR(20) NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+    old_values JSONB,
+    new_values JSONB,
+    changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    changed_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX idx_nocode_workflows_user_id ON nocode_workflows(user_id);
 CREATE INDEX idx_nocode_workflows_category ON nocode_workflows(category);
@@ -261,11 +386,51 @@ CREATE INDEX idx_nocode_data_sources_user_id ON nocode_data_sources(user_id);
 CREATE INDEX idx_nocode_data_sources_type ON nocode_data_sources(type);
 CREATE INDEX idx_nocode_data_sources_status ON nocode_data_sources(status);
 
+CREATE INDEX idx_compilation_results_workflow_id ON compilation_results(workflow_id);
+CREATE INDEX idx_compilation_results_status ON compilation_results(compilation_status);
+CREATE INDEX idx_compilation_results_created_at ON compilation_results(created_at);
+
+CREATE INDEX idx_training_jobs_workflow_id ON training_jobs(workflow_id);
+CREATE INDEX idx_training_jobs_compilation_id ON training_jobs(compilation_id);
+CREATE INDEX idx_training_jobs_status ON training_jobs(status);
+CREATE INDEX idx_training_jobs_created_at ON training_jobs(created_at);
+
+CREATE INDEX idx_datasets_type ON datasets(dataset_type);
+CREATE INDEX idx_datasets_public ON datasets(is_public) WHERE is_public = true;
+CREATE INDEX idx_datasets_created_by ON datasets(created_by);
+
+CREATE INDEX idx_component_library_public ON component_library(is_public) WHERE is_public = true;
+CREATE INDEX idx_component_library_created_by ON component_library(created_by);
+
+CREATE INDEX idx_testing_results_workflow_id ON testing_results(workflow_id);
+CREATE INDEX idx_testing_results_type ON testing_results(test_type);
+CREATE INDEX idx_testing_results_status ON testing_results(test_status);
+
+CREATE INDEX idx_marketplace_strategies_workflow_id ON marketplace_strategies(workflow_id);
+CREATE INDEX idx_marketplace_strategies_category ON marketplace_strategies(category);
+CREATE INDEX idx_marketplace_strategies_featured ON marketplace_strategies(is_featured) WHERE is_featured = true;
+CREATE INDEX idx_marketplace_strategies_approved ON marketplace_strategies(is_approved) WHERE is_approved = true;
+CREATE INDEX idx_marketplace_strategies_rating ON marketplace_strategies(rating DESC);
+
+CREATE INDEX idx_strategy_ratings_strategy_id ON strategy_ratings(strategy_id);
+CREATE INDEX idx_strategy_ratings_user_id ON strategy_ratings(user_id);
+
+CREATE INDEX idx_workflow_executions_workflow_id ON workflow_executions(workflow_id);
+CREATE INDEX idx_workflow_executions_execution_id ON workflow_executions(execution_id);
+
+CREATE INDEX idx_audit_log_table_record ON audit_log(table_name, record_id);
+CREATE INDEX idx_audit_log_changed_by ON audit_log(changed_by);
+CREATE INDEX idx_audit_log_changed_at ON audit_log(changed_at);
+
 -- Create triggers for updated_at timestamps
 CREATE TRIGGER update_nocode_workflows_updated_at BEFORE UPDATE ON nocode_workflows FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_nocode_components_updated_at BEFORE UPDATE ON nocode_components FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_nocode_templates_updated_at BEFORE UPDATE ON nocode_templates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_nocode_data_sources_updated_at BEFORE UPDATE ON nocode_data_sources FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_compilation_results_updated_at BEFORE UPDATE ON compilation_results FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_datasets_updated_at BEFORE UPDATE ON datasets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_component_library_updated_at BEFORE UPDATE ON component_library FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_marketplace_strategies_updated_at BEFORE UPDATE ON marketplace_strategies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert built-in components
 INSERT INTO nocode_components (name, display_name, description, category, component_type, input_schema, output_schema, parameters_schema, default_parameters, code_template, imports_required, ui_config, is_builtin, is_public) VALUES

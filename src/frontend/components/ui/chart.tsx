@@ -56,11 +56,23 @@ function ChartContainer({
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
-type TooltipPayload = RechartsPrimitive.TooltipPayload;
+// type TooltipPayload = RechartsPrimitive.TooltipPayload;
 
-interface CustomTooltipProps extends Omit<RechartsPrimitive.TooltipProps, "content"> {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  className?: string;
   content?: React.ReactNode;
   indicator?: "line" | "dot" | "dashed";
+  hideLabel?: boolean;
+  hideIndicator?: boolean;
+  label?: React.ReactNode;
+  labelFormatter?: (value: any, payload: any[]) => React.ReactNode;
+  labelClassName?: string;
+  formatter?: (value: any, name: string) => React.ReactNode;
+  color?: string;
+  nameKey?: string;
+  labelKey?: string;
 }
 
 function ChartTooltipContent({
@@ -113,7 +125,7 @@ function ChartTooltipContent({
               className={cn("flex w-full flex-wrap items-stretch gap-2", indicator === "dot" && "items-center")}
             >
               {formatter && item.value !== undefined && item.name ? (
-                formatter(item.value, item.name, item, index, item.payload)
+                formatter(item.value, item.name)
               ) : (
                 <>
                   {!hideIndicator && (
@@ -149,7 +161,7 @@ function ChartTooltipContent({
 
 const ChartLegend = RechartsPrimitive.Legend;
 
-type LegendPayload = RechartsPrimitive.LegendPayload;
+// type LegendPayload = RechartsPrimitive.LegendPayload;
 
 interface CustomLegendProps extends Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> {
   hideIcon?: boolean;

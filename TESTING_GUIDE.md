@@ -1,386 +1,180 @@
-# No-Code Environment Testing Guide
+# Production-Ready K3D Optimization Testing Guide
 
-## 🎯 Testing Overview
+## 🎯 **Phase 1 & 2 Complete - Ready for Testing**
 
-This guide walks you through testing the complete no-code trading strategy environment. The system consists of:
-- PostgreSQL database with no-code schema
-- FastAPI backend service with workflow compiler  
-- React frontend with visual workflow builder
-- Real-time execution monitoring
-- Template gallery system
+I've completed the container optimization and resource right-sizing phases. Here's your comprehensive testing guide:
 
----
+## 📋 **Pre-Testing Setup**
 
-## 📋 Prerequisites
-
-Before testing, ensure you have:
-- [ ] Python 3.8+ installed
-- [ ] Node.js 16+ installed  
-- [ ] PostgreSQL 13+ installed
-- [ ] Git repository cloned
-
----
-
-## Phase 1: Database Setup & Testing
-
-### 1.1 Setup PostgreSQL Database
-
+### 1. Clean Environment Setup
 ```bash
-# Create database
-createdb alphintra_db
+# Remove any existing cluster
+k3d cluster delete alphintra-cluster
 
-# Create user and grant permissions
-psql alphintra_db -c "CREATE USER alphintra_user WITH PASSWORD 'alphintra_password';"
-psql alphintra_db -c "GRANT ALL PRIVILEGES ON DATABASE alphintra_db TO alphintra_user;"
+# Set up optimized cluster
+cd /Users/usubithan/Documents/Alphintra/infra/scripts
+./setup-k8s-cluster.sh
 ```
 
-### 1.2 Initialize Database Schema
-
+### 2. Build with Direct Docker Build (Recommended)
 ```bash
-# Navigate to database directory
-cd databases/postgresql
+# Build all services with direct Docker builds (NO Google Cloud project required)
+# Note: Replaces deprecated cloud-build-local package
+./scripts/build-with-cloud-build-local.sh
 
-# Apply schema
-psql -U alphintra_user -d alphintra_db -f init-nocode-schema.sql
+# OR use Google Cloud Build (requires Google Cloud Project)
+./scripts/build-with-cloud-build.sh
+
+# OR use pre-built optimized images
+./k8s/deploy-optimized.sh
 ```
 
-### 1.3 Verify Database Setup
-
+### 3. Deploy with Direct Docker Build Images
 ```bash
-# Check tables were created
-psql -U alphintra_user -d alphintra_db -c "\dt"
+# Deploy with direct Docker build images (Recommended)
+./k8s/deploy-with-cloud-build-local.sh
 
-# Expected output should show:
-# - users
-# - nocode_workflows  
-# - nocode_components
-# - nocode_executions
-# - nocode_templates
-# - nocode_analytics
+# OR deploy with Google Cloud Build images
+./k8s/deploy-with-cloud-build.sh
 ```
 
-**✅ Checkpoint 1:** Database tables created successfully
+## 🧪 **Testing Phases**
 
----
+### **Phase 1 Testing: Container Optimization Validation**
 
-## Phase 2: Backend Service Testing
-
-### 2.1 Setup Backend Environment
-
+#### A. Image Size Validation
 ```bash
-# Navigate to backend service
-cd src/backend/no-code-service
+# Check optimized image sizes (should be 70% smaller)
+docker images localhost:5001/alphintra/*
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+# Expected results with direct Docker build:
+# - API Gateway: ~150MB (Google Distroless)
+# - Auth Service: ~140MB (Google Distroless)
+# - Trading API: ~120MB (Alpine Python)
+# - GraphQL Gateway: ~125MB (Alpine Python)
+# - Strategy Engine: ~115MB (Alpine Python)
 ```
 
-### 2.2 Run Backend Integration Tests
-
+#### B. Container Startup Time
 ```bash
-# Test backend structure
-python test_integration.py
+# Monitor pod startup times
+kubectl get pods -n alphintra -w
 
-# Expected output: All 5 tests should pass
+# Expected results:
+# - All pods should start within 60-90 seconds
+# - No more than 3 minutes for complete deployment
 ```
 
-### 2.3 Start Backend Service
+### **Phase 2 Testing: Resource Right-Sizing Validation**
 
+#### A. Memory Usage Check
 ```bash
-# Set environment variables
-export DATABASE_URL="postgresql://alphintra_user:alphintra_password@localhost:5432/alphintra_db"
+# Monitor memory usage (should be <3GB total)
+kubectl top pods -n alphintra
+kubectl top nodes
 
-# Start the service
-python main.py
+# Calculate total memory usage
+kubectl top pods -n alphintra --no-headers | awk '{sum += $3} END {print "Total Memory: " sum "Mi"}'
 
-# Expected output: Server running on http://0.0.0.0:8004
+# Expected: <3000Mi total
 ```
 
-### 2.4 Test Backend Endpoints
+#### B. CPU Usage Check
+```bash
+# Monitor CPU usage (should be <1500m total)
+kubectl top pods -n alphintra --no-headers | awk '{sum += $4} END {print "Total CPU: " sum "m"}'
 
-Open a new terminal and test the API:
+# Expected: <1500m total
+```
 
+## 🔧 **Functionality Testing**
+
+### **API Gateway Testing**
 ```bash
 # Health check
-curl http://localhost:8004/health
+curl http://localhost:8080/actuator/health
 
-# Expected: {"status":"healthy","service":"no-code-service","version":"2.0.0"}
-
-# Test workflow creation (with auth header)
-curl -X POST http://localhost:8004/api/workflows \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer test-token" \
-  -d '{
-    "name": "Test Strategy",
-    "description": "Simple test workflow",
-    "workflow_data": {"nodes": [], "edges": []}
-  }'
-
-# Expected: New workflow JSON response
+# Expected: {"status":"UP",...}
 ```
 
-**✅ Checkpoint 2:** Backend service running and responding
-
----
-
-## Phase 3: Frontend Integration Testing
-
-### 3.1 Setup Frontend Environment
-
+### **Trading API Testing**
 ```bash
-# Navigate to frontend
-cd src/frontend
+# Portfolio endpoint
+curl http://localhost:8080/api/trading/portfolio
 
-# Install dependencies (if not already done)
-npm install
-
-# Add React Flow dependencies
-npm install reactflow @tanstack/react-query
+# Expected: JSON array with portfolio data
 ```
 
-### 3.2 Test Frontend Integration
-
+### **GraphQL Gateway Testing**
 ```bash
-# Run frontend integration tests
-cd ../../../
-node test_frontend_integration.js
+# GraphQL query
+curl -X POST http://localhost:8080/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ portfolio { symbol quantity } }"}'
 
-# Expected: 10/10 tests should pass
+# Expected: JSON response with portfolio data
 ```
 
-### 3.3 Start Frontend Development Server
+## 📊 **Performance Testing**
 
+### **Load Testing**
 ```bash
-cd src/frontend
+# Install hey (if not already installed)
+# brew install hey  # macOS
 
-# Start development server
-npm run dev
+# Test API Gateway under load
+hey -n 1000 -c 10 http://localhost:8080/actuator/health
 
-# Expected: Server running on http://localhost:3000
+# Expected:
+# - Response time: <200ms average
+# - Success rate: >99%
+# - No memory spikes above limits
 ```
 
-**✅ Checkpoint 3:** Frontend tests pass and server starts
+## 📋 **Success Criteria**
 
----
+### **Performance Targets**
+- ✅ Total memory usage: <3GB
+- ✅ Total CPU usage: <1.5 cores
+- ✅ Container image sizes: 70% reduction
+- ✅ Startup time: <4 minutes
+- ✅ Response time: <200ms average
 
-## Phase 4: End-to-End Workflow Testing
+### **Functionality Targets**
+- ✅ All endpoints responding correctly
+- ✅ Service-to-service communication working
+- ✅ Database connectivity stable
+- ✅ Monitoring stack operational
 
-### 4.1 Open Workflow Builder
+## 📊 **Reporting Results**
 
-1. Navigate to `http://localhost:3000`
-2. Open the no-code workflow builder page
-3. Verify you can see:
-   - Component palette on the left
-   - Main canvas in the center  
-   - Properties panel on the right
-   - Toolbar at the top
+After testing, please provide:
 
-### 4.2 Test Drag-and-Drop Functionality
+1. **Resource Usage Report**
+   - Memory usage screenshot
+   - CPU usage screenshot
+   - Node resource utilization
 
-1. **Drag Technical Indicator:**
-   - From palette, drag "Simple Moving Average" to canvas
-   - Verify node appears on canvas
-   - Click node to select it
-   - Check properties panel shows SMA configuration
+2. **Performance Results**
+   - API response times
+   - Load test results
+   - Startup time measurements
 
-2. **Drag Condition:**
-   - Drag "Price Above" condition to canvas
-   - Verify it appears below the SMA node
+3. **Functionality Validation**
+   - All endpoint test results
+   - Service health status
+   - Database connectivity
 
-3. **Drag Action:**
-   - Drag "Buy Order" action to canvas
-   - Verify it appears below the condition
+4. **Issues Found**
+   - Any errors or warnings
+   - Performance bottlenecks
+   - Resource limit violations
 
-4. **Connect Components:**
-   - Draw connection from SMA output to Condition input
-   - Draw connection from Condition output to Action input
-   - Verify edges appear between nodes
+## 🚀 **Next Steps**
 
-### 4.3 Test Component Configuration
+Once Phase 1 & 2 testing is complete and successful, we'll proceed to:
+- Phase 3: Istio optimization
+- Phase 4: Database optimization
+- Phase 5: Final integration testing
 
-1. **Select SMA Node:**
-   - Click the SMA node
-   - In properties panel, change:
-     - Period: 20 → 50
-     - Source: close → high
-   - Verify changes reflect in the node
-
-2. **Select Condition:**
-   - Click the condition node
-   - Change threshold value
-   - Verify updates appear
-
-### 4.4 Test Workflow Compilation
-
-1. **Save Workflow:**
-   - Click "Save As..." in toolbar
-   - Enter name: "Test SMA Strategy"
-   - Verify workflow is saved
-
-2. **Compile Workflow:**
-   - Click "Compile" button
-   - Wait for compilation to complete
-   - Verify Python code is generated
-   - Check for no compilation errors
-
-**✅ Checkpoint 4:** Visual workflow creation works end-to-end
-
----
-
-## Phase 5: Execution Testing
-
-### 5.1 Test Strategy Execution
-
-1. **Execute Workflow:**
-   - Click "Execute" button
-   - Fill execution form:
-     - Type: Backtest
-     - Symbol: BTCUSDT
-     - Timeframe: 1h
-     - Start Date: 30 days ago
-     - End Date: Today
-     - Capital: $10,000
-   - Click "Start Execution"
-
-2. **Monitor Execution:**
-   - Verify execution dashboard opens
-   - Watch progress bar advance
-   - Check real-time status updates
-   - Verify completion with results
-
-### 5.2 Test Results Display
-
-1. **Check Performance Metrics:**
-   - Verify final capital is calculated
-   - Check return percentage
-   - Review trade count
-   - Examine performance metrics (Sharpe ratio, etc.)
-
-2. **Test Execution History:**
-   - Navigate back to workflow list
-   - Verify execution count updated
-   - Check execution status indicators
-
-**✅ Checkpoint 5:** Strategy execution and monitoring works
-
----
-
-## Phase 6: Template System Testing
-
-### 6.1 Test Template Gallery
-
-1. **Open Template Gallery:**
-   - Navigate to templates section
-   - Verify templates load
-   - Test category filtering
-   - Try search functionality
-
-2. **Create from Template:**
-   - Select a template
-   - Click "Use Template"
-   - Enter workflow name
-   - Verify new workflow created from template
-
-### 6.2 Test Template Features
-
-1. **Browse Templates:**
-   - Check different categories
-   - Verify difficulty levels
-   - Test featured templates
-   - Review template ratings
-
-**✅ Checkpoint 6:** Template system fully functional
-
----
-
-## 🎯 Success Criteria
-
-Your no-code environment is successfully tested if:
-
-- [ ] ✅ Database schema created with all tables
-- [ ] ✅ Backend service starts and responds to API calls  
-- [ ] ✅ Frontend loads and shows workflow builder
-- [ ] ✅ Drag-and-drop components work smoothly
-- [ ] ✅ Component configuration updates properly
-- [ ] ✅ Workflow compilation generates Python code
-- [ ] ✅ Strategy execution runs and shows results
-- [ ] ✅ Template gallery loads and functions
-- [ ] ✅ Real-time monitoring displays progress
-- [ ] ✅ End-to-end workflow creation → execution → results works
-
----
-
-## 🚨 Troubleshooting
-
-### Common Issues:
-
-**Database Connection Errors:**
-```bash
-# Check PostgreSQL is running
-sudo systemctl status postgresql
-
-# Verify connection
-psql -U alphintra_user -d alphintra_db -c "SELECT 1;"
-```
-
-**Backend Import Errors:**
-```bash
-# Check Python environment
-python -c "import fastapi; print('FastAPI installed')"
-
-# Reinstall dependencies
-pip install -r requirements.txt --force-reinstall
-```
-
-**Frontend Component Errors:**
-```bash
-# Clear and reinstall
-rm -rf node_modules package-lock.json
-npm install
-
-# Check React Flow
-npm list reactflow
-```
-
-**CORS Issues:**
-- Ensure backend CORS settings include frontend URL
-- Check browser console for CORS errors
-- Verify API endpoints are accessible
-
----
-
-## 🎉 Next Steps After Testing
-
-Once testing is complete:
-
-1. **Production Deployment:**
-   - Deploy backend to cloud (AWS/GCP/Azure)
-   - Set up production PostgreSQL instance
-   - Configure frontend build and CDN
-
-2. **Enhanced Features:**
-   - Add real market data connections
-   - Implement user authentication
-   - Add advanced analytics
-   - Create more template strategies
-
-3. **Monitoring & Scaling:**
-   - Set up application monitoring
-   - Configure logging and alerts
-   - Plan for horizontal scaling
-
----
-
-## 📞 Support
-
-If you encounter issues during testing:
-1. Check the troubleshooting section above
-2. Review error logs in browser console and terminal
-3. Verify all prerequisites are installed
-4. Ensure all services are running on correct ports
-
-The no-code environment is production-ready and should handle all standard workflow creation, compilation, and execution scenarios successfully!
+This optimized configuration should give you a production-ready platform with significantly reduced resource usage while maintaining all functionality!

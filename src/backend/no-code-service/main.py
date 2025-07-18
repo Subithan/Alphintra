@@ -1,4 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Query
+"""
+No-Code Service - Microservice for Visual Workflow Builder
+Handles workflow creation, execution, and management for trading strategies
+"""
+
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -10,33 +15,93 @@ import uuid
 from datetime import datetime
 import asyncio
 import os
+import logging
+from prometheus_fastapi_instrumentator import Instrumentator
+import redis
+import httpx
+import strawberry
+from strawberry.fastapi import GraphQLRouter
+from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL
+from graphql_resolvers import Query, Mutation, Subscription
+from fastapi import Query as FastAPIQuery
+from pydantic import BaseModel
 
-from models import Base, User, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate
+# Import models and schemas
+from models import Base, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate, User
 from schemas_updated import *
 from workflow_compiler_updated import WorkflowCompiler
+from code_generator import CodeGenerator
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://alphintra_user:alphintra_password@localhost:5432/alphintra_db")
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="Alphintra No-Code Service", 
-    description="No-code visual workflow builder for trading strategies",
-    version="2.0.0"
+# Database configuration with K3D internal networking
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "postgresql://nocode_service_user:nocode_service_pass@postgresql-primary.alphintra.svc.cluster.local:5432/alphintra_nocode"
 )
 
-# CORS middleware
+# Redis configuration
+REDIS_URL = os.getenv(
+    "REDIS_URL",
+    "redis://:alphintra_redis_pass@redis-primary.alphintra.svc.cluster.local:6379/2"
+)
+
+# Service URLs
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service.alphintra.svc.cluster.local:8080")
+
+# Development mode flag
+DEV_MODE = os.getenv("DEV_MODE", "true").lower() == "true"
+
+# Initialize database
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Initialize Redis
+try:
+    redis_client = redis.from_url(REDIS_URL)
+except Exception as e:
+    logger.warning(f"Redis connection failed, using fallback: {e}")
+    redis_client = None
+
+# HTTP client for service communication
+http_client = httpx.AsyncClient(timeout=30.0)
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Alphintra No-Code Service",
+    description="Microservice for visual workflow builder and trading strategy management",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# CORS middleware for microservices
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://alphintra.com", "http://localhost:3001"],
+    allow_origins=["*"],  # In production, specify exact origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Prometheus metrics
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
+
 # Security
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # Don't auto-error for missing auth in dev mode
+
+# Initialize services
+workflow_compiler = WorkflowCompiler()
+code_generator = CodeGenerator()
+
+# Request models
+class CodeGenerationRequest(BaseModel):
+    language: str = "python"
+    framework: str = "backtesting.py"
+    includeComments: bool = True
 
 # Dependencies
 def get_db():
@@ -47,34 +112,374 @@ def get_db():
         db.close()
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)  # Add db dependency
 ):
-    """Verify JWT token and return current user - Simplified for development"""
-    # For development, create a test user if not exists
-    test_user = db.query(User).filter(User.email == "test@alphintra.com").first()
-    if not test_user:
-        test_user = User(
-            email="test@alphintra.com",
-            password_hash="test_hash",
-            first_name="Test",
-            last_name="User",
-            is_verified=True
-        )
-        db.add(test_user)
-        db.commit()
-        db.refresh(test_user)
-    return test_user
+    """Validate JWT token with Auth Service or return mock user in dev mode"""
+    if DEV_MODE:
+        # In development mode, create/get test user
+        logger.info("Development mode: using test user")
+        test_user = db.query(User).filter(User.email == "dev@alphintra.com").first()
+        if not test_user:
+            test_user = User(
+                email="dev@alphintra.com",
+                password_hash="dev_hash",
+                first_name="Development",
+                last_name="User",
+                is_verified=True
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+        return test_user
+    
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        headers = {"Authorization": f"Bearer {credentials.credentials}"}
+        response = await http_client.get(f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise HTTPException(status_code=401, detail="Invalid authentication token")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error validating token: {e}")
+        raise HTTPException(status_code=401, detail="Authentication service unavailable")
+
+# Health checks
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes"""
+    try:
+        # Check database connection
+        db = next(get_db())
+        db.execute(text("SELECT 1"))
+        
+        # Check Redis connection if available
+        if redis_client:
+            redis_client.ping()
+        
+        return {
+            "status": "healthy",
+            "service": "no-code-service",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "2.0.0"
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service unhealthy")
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check endpoint for Kubernetes"""
+    return {
+        "status": "ready",
+        "service": "no-code-service",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "service": "no-code-service",
+        "version": "2.0.0",
+        "status": "running",
+        "dev_mode": DEV_MODE,
+        "endpoints": {
+            "health": "/health",
+            "ready": "/ready",
+            "docs": "/docs",
+            "graphql": "/graphql",
+            "workflows": "/api/workflows",
+            "templates": "/api/templates",
+            "executions": "/api/executions",
+            "generate_code": "/api/workflows/{workflow_id}/generate-code",
+            "get_generated_code": "/api/workflows/{workflow_id}/generated-code",
+            "create_sample_workflow": "/api/workflows/create-sample",
+            "list_workflows": "/api/workflows/debug/list"
+        }
+    }
 
 # Initialize services
 workflow_compiler = WorkflowCompiler()
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "no-code-service", "version": "2.0.0"}
+# GraphQL Schema
+schema = strawberry.Schema(query=Query, mutation=Mutation, subscription=Subscription)
 
-# Workflow Management Endpoints
+# GraphQL context function
+async def get_graphql_context(request: Request, db: Session = Depends(get_db)):
+    """Create GraphQL context with database session and user authentication"""
+    current_user = None
+    
+    if DEV_MODE:
+        # Development mode: create/get test user
+        test_user = db.query(User).filter(User.email == "dev@alphintra.com").first()
+        if not test_user:
+            test_user = User(
+                email="dev@alphintra.com",
+                password_hash="dev_hash",
+                first_name="Development",
+                last_name="User",
+                is_verified=True
+            )
+            db.add(test_user)
+            db.commit()
+            db.refresh(test_user)
+        current_user = test_user
+    else:
+        # Production mode: get user from authorization header
+        authorization = request.headers.get("Authorization")
+        if authorization:
+            try:
+                # Extract token from Authorization header
+                token = authorization.replace("Bearer ", "")
+                # In production, validate token with auth service
+                # For now, create test user for development
+                test_user = db.query(User).filter(User.email == "test@alphintra.com").first()
+                if not test_user:
+                    test_user = User(
+                        email="test@alphintra.com",
+                        password_hash="test_hash",
+                        first_name="Test",
+                        last_name="User",
+                        is_verified=True
+                    )
+                    db.add(test_user)
+                    db.commit()
+                    db.refresh(test_user)
+                current_user = test_user
+            except Exception:
+                # Default to test user for development
+                current_user = db.query(User).filter(User.email == "test@alphintra.com").first()
+    
+    return {
+        "db_session": db,
+        "current_user": current_user,
+        "request": request
+    }
+
+# GraphQL Router
+graphql_router = GraphQLRouter(
+    schema,
+    context_getter=get_graphql_context,
+    subscription_protocols=[GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL]
+)
+
+# Add GraphQL router to the app
+app.include_router(graphql_router, prefix="/graphql")
+
+# --- Specific routes first (must be before parameterized routes) ---
+
+@app.post("/api/workflows/create-sample")
+async def create_sample_workflow(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a sample workflow for testing"""
+    try:
+        sample_workflow_data = {
+            "nodes": [
+                {
+                    "id": "data_source_1",
+                    "type": "data_source",
+                    "position": {"x": 100, "y": 100},
+                    "data": {"symbol": "AAPL", "timeframe": "1d"}
+                },
+                {
+                    "id": "indicator_1",
+                    "type": "indicator",
+                    "position": {"x": 300, "y": 100},
+                    "data": {"indicator_type": "sma", "period": 20}
+                },
+                {
+                    "id": "condition_1",
+                    "type": "condition",
+                    "position": {"x": 500, "y": 100},
+                    "data": {"condition_type": "greater_than", "value": 150}
+                },
+                {
+                    "id": "signal_1",
+                    "type": "signal",
+                    "position": {"x": 700, "y": 100},
+                    "data": {"signal_type": "buy"}
+                }
+            ],
+            "edges": [
+                {"id": "edge_1", "source": "data_source_1", "target": "indicator_1"},
+                {"id": "edge_2", "source": "indicator_1", "target": "condition_1"},
+                {"id": "edge_3", "source": "condition_1", "target": "signal_1"}
+            ]
+        }
+        
+        workflow = NoCodeWorkflow(
+            name="Sample Trading Strategy",
+            description="A sample workflow for testing code generation",
+            category="sample",
+            tags=["sample", "test"],
+            user_id=current_user.id,
+            workflow_data=sample_workflow_data,
+            execution_mode="backtest"
+        )
+        
+        db.add(workflow)
+        db.commit()
+        db.refresh(workflow)
+        
+        return {
+            "message": "Sample workflow created successfully",
+            "workflow_id": str(workflow.uuid),
+            "workflow_data": workflow.workflow_data
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating sample workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create sample workflow: {str(e)}")
+
+@app.get("/api/workflows/debug/list")
+async def list_all_workflows(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to list all workflows"""
+    try:
+        workflows = db.query(NoCodeWorkflow).all()
+        return {
+            "total_workflows": len(workflows),
+            "workflows": [
+                {
+                    "id": w.id,
+                    "uuid": str(w.uuid),
+                    "name": w.name,
+                    "user_id": w.user_id,
+                    "created_at": w.created_at.isoformat() if w.created_at else None,
+                    "has_workflow_data": bool(w.workflow_data)
+                }
+                for w in workflows
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error listing workflows: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list workflows: {str(e)}")
+
+# Code Generation Endpoints (must be before general workflow/{workflow_id} routes)
+@app.post("/api/workflows/{workflow_id}/generate-code")
+async def generate_code(
+    workflow_id: str,
+    request: CodeGenerationRequest = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate Python code from workflow data"""
+    try:
+        # Debug: Log the request
+        logger.info(f"Generate code request for workflow_id: {workflow_id}")
+        logger.info(f"Current user: {current_user}")
+        logger.info(f"Generation options: {request.dict()}")
+        
+        # Check if workflow exists (with more detailed logging)
+        workflow = db.query(NoCodeWorkflow).filter(
+            NoCodeWorkflow.uuid == workflow_id
+        ).first()
+        
+        if not workflow:
+            all_workflows = db.query(NoCodeWorkflow).all()
+            logger.error(f"Workflow not found with ID: {workflow_id}")
+            logger.info(f"Available workflows: {[str(w.uuid) for w in all_workflows]}")
+            return {
+                "workflow_id": workflow_id,
+                "generated_code": "",
+                "requirements": [],
+                "success": False,
+                "errors": [f"Workflow not found with ID: {workflow_id}"],
+                "message": "Workflow not found"
+            }
+        
+        # Generate code using the code generator
+        generation_result = code_generator.generate_strategy_code(
+            workflow.workflow_data or {"nodes": [], "edges": []},
+            workflow.name
+        )
+        
+        if generation_result['success']:
+            # Update workflow with generated code
+            workflow.generated_code = generation_result['code']
+            workflow.generated_requirements = generation_result['requirements']
+            workflow.compilation_status = 'generated'
+            workflow.updated_at = datetime.utcnow()
+            
+            db.commit()
+            db.refresh(workflow)
+            
+            return {
+                "workflow_id": str(workflow.uuid),
+                "generated_code": generation_result['code'],
+                "requirements": generation_result['requirements'],
+                "metadata": generation_result['metadata'],
+                "success": True,
+                "message": "Code generated successfully"
+            }
+        else:
+            # Update workflow with error status
+            workflow.compilation_status = 'generation_failed'
+            workflow.compilation_errors = generation_result['errors']
+            workflow.updated_at = datetime.utcnow()
+            
+            db.commit()
+            
+            return {
+                "workflow_id": str(workflow.uuid),
+                "generated_code": "",
+                "requirements": [],
+                "success": False,
+                "errors": generation_result['errors'],
+                "message": "Code generation failed"
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Code generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate code: {str(e)}")
+
+@app.get("/api/workflows/{workflow_id}/generated-code")
+async def get_generated_code(
+    workflow_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get the generated code for a workflow"""
+    try:
+        workflow = db.query(NoCodeWorkflow).filter(
+            NoCodeWorkflow.uuid == workflow_id,
+            NoCodeWorkflow.user_id == current_user.id
+        ).first()
+        
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+        
+        return {
+            "workflow_id": str(workflow.uuid),
+            "workflow_name": workflow.name,
+            "generated_code": workflow.generated_code or "",
+            "requirements": workflow.generated_requirements or [],
+            "compilation_status": workflow.compilation_status,
+            "compilation_errors": workflow.compilation_errors or [],
+            "last_updated": workflow.updated_at.isoformat() if workflow.updated_at else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving generated code: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve generated code: {str(e)}")
+
+# --- General workflow routes (after specific routes) ---
+
 @app.post("/api/workflows", response_model=WorkflowResponse)
 async def create_workflow(
     workflow: WorkflowCreate,
@@ -105,8 +510,8 @@ async def create_workflow(
 async def get_workflows(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, le=1000),
+    skip: int = FastAPIQuery(0, ge=0),
+    limit: int = FastAPIQuery(100, le=1000),
     category: Optional[str] = None,
     is_public: Optional[bool] = None
 ):
@@ -122,7 +527,7 @@ async def get_workflows(
         if is_public is not None:
             query = query.filter(NoCodeWorkflow.is_public == is_public)
             
-        workflows = query.offset(skip).limit(limit).order_by(NoCodeWorkflow.updated_at.desc()).all()
+        workflows = query.order_by(NoCodeWorkflow.updated_at.desc()).offset(skip).limit(limit).all()
         return [WorkflowResponse.from_orm(w) for w in workflows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch workflows: {str(e)}")
@@ -133,16 +538,17 @@ async def get_workflow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get a specific workflow"""
+    """Get a specific workflow by ID"""
     try:
         workflow = db.query(NoCodeWorkflow).filter(
             NoCodeWorkflow.uuid == workflow_id,
-            (NoCodeWorkflow.user_id == current_user.id) | (NoCodeWorkflow.is_public == True)
+            (NoCodeWorkflow.user_id == current_user.id) | 
+            (NoCodeWorkflow.is_public == True)
         ).first()
         
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
-            
+        
         return WorkflowResponse.from_orm(workflow)
     except HTTPException:
         raise
@@ -156,7 +562,7 @@ async def update_workflow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update a workflow"""
+    """Update an existing workflow"""
     try:
         workflow = db.query(NoCodeWorkflow).filter(
             NoCodeWorkflow.uuid == workflow_id,
@@ -166,10 +572,11 @@ async def update_workflow(
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
         
+        # Update fields that are provided
         update_data = workflow_update.dict(exclude_unset=True)
-        for field, value in update_data.items():
-            if hasattr(workflow, field):
-                setattr(workflow, field, value)
+        for key, value in update_data.items():
+            if hasattr(workflow, key):
+                setattr(workflow, key, value)
         
         workflow.updated_at = datetime.utcnow()
         db.commit()
@@ -179,6 +586,7 @@ async def update_workflow(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error updating workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update workflow: {str(e)}")
 
 @app.delete("/api/workflows/{workflow_id}")
@@ -204,9 +612,10 @@ async def delete_workflow(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error deleting workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete workflow: {str(e)}")
 
-# Code Generation Endpoints
+# Existing Code Generation Endpoints
 @app.post("/api/workflows/{workflow_id}/compile", response_model=CompilationResponse)
 async def compile_workflow(
     workflow_id: str,
@@ -484,4 +893,4 @@ async def execute_strategy_background(execution_id: str, strategy_code: str, con
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8004)  # Use port 8004 for no-code service
+    uvicorn.run(app, host="0.0.0.0", port=8006)  # Use port 8006 for no-code service

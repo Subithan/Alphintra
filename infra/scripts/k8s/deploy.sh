@@ -1,11 +1,14 @@
 #!/bin/bash
 
 # Kubernetes Deployment Script for Alphintra Trading Platform
-# This script deploys all Alphintra services to Kubernetes
+# This script deploys all Alphintra services using our standardized YAML manifests
 
 set -e
 
 ENV=${1:-dev}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+KUSTOMIZE_DIR="$BASE_DIR/kubernetes/base"
 
 echo "🚀 Deploying Alphintra Trading Platform to Kubernetes (${ENV} environment)..."
 
@@ -16,360 +19,193 @@ kubectl config use-context k3d-alphintra-cluster
 # Verify cluster is ready
 echo "🔍 Verifying cluster status..."
 kubectl cluster-info
+echo ""
+echo "📊 Node Status:"
 kubectl get nodes
+echo ""
 
 # Check if Istio is installed
 echo "🕸️  Checking Istio installation..."
 if ! kubectl get namespace istio-system > /dev/null 2>&1; then
-    echo "⚠️  Istio is not installed. Installing Istio first..."
-    cd "$(dirname "$0")/../.."
-    ./scripts/install-istio.sh
+    echo "⚠️  Istio is not installed. Please run '../install-istio.sh' first."
+    echo "   This is required for service mesh functionality."
+    exit 1
+else
+    echo "✅ Istio is installed and ready"
 fi
 
-# Deploy infrastructure services first
-echo "📦 Deploying infrastructure services..."
+# Verify namespaces exist
+echo "📁 Verifying namespaces..."
+if ! kubectl get namespace alphintra > /dev/null 2>&1; then
+    echo "⚠️  Alphintra namespace not found. Please run '../setup-k8s-cluster.sh' first."
+    exit 1
+fi
 
-# PostgreSQL
-echo "  - Deploying PostgreSQL..."
-cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-  namespace: alphintra-dev
-  labels:
-    app: postgres
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        ports:
-        - containerPort: 5432
-        env:
-        - name: POSTGRES_DB
-          value: "alphintra_dev"
-        - name: POSTGRES_USER
-          value: "dev_user"
-        - name: POSTGRES_PASSWORD
-          value: "dev_password123"
-        volumeMounts:
-        - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
-      volumes:
-      - name: postgres-storage
-        emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: alphintra-dev
-spec:
-  selector:
-    app: postgres
-  ports:
-  - port: 5432
-    targetPort: 5432
-  type: ClusterIP
-EOF
+if ! kubectl get namespace monitoring > /dev/null 2>&1; then
+    echo "⚠️  Monitoring namespace not found. Please run '../setup-k8s-cluster.sh' first."
+    exit 1
+fi
 
-# Redis
-echo "  - Deploying Redis..."
-cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redis
-  namespace: alphintra-dev
-  labels:
-    app: redis
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: redis
-  template:
-    metadata:
-      labels:
-        app: redis
-    spec:
-      containers:
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        command: ["redis-server", "--requirepass", "redis123"]
-        volumeMounts:
-        - name: redis-storage
-          mountPath: /data
-      volumes:
-      - name: redis-storage
-        emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-  namespace: alphintra-dev
-spec:
-  selector:
-    app: redis
-  ports:
-  - port: 6379
-    targetPort: 6379
-  type: ClusterIP
-EOF
-
-# Wait for infrastructure services to be ready
-echo "⏳ Waiting for infrastructure services to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/postgres -n alphintra-dev
-kubectl wait --for=condition=available --timeout=300s deployment/redis -n alphintra-dev
-
-# Deploy application services
-echo "🏗️  Deploying application services..."
-
-# Gateway Service
-echo "  - Deploying Gateway Service..."
-cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: gateway
-  namespace: alphintra-dev
-  labels:
-    app: gateway
-    version: v1
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: gateway
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: gateway
-        version: v1
-    spec:
-      containers:
-      - name: gateway
-        image: openjdk:17-jdk-slim
-        ports:
-        - containerPort: 8080
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: "k8s"
-        - name: REDIS_HOST
-          value: "redis"
-        - name: REDIS_PASSWORD
-          value: "redis123"
-        command: ["sh", "-c", "echo 'Gateway service running on Kubernetes' && sleep 3600"]
-        readinessProbe:
-          exec:
-            command: ["sh", "-c", "echo 'ready'"]
-          initialDelaySeconds: 10
-          periodSeconds: 5
-        livenessProbe:
-          exec:
-            command: ["sh", "-c", "echo 'alive'"]
-          initialDelaySeconds: 30
-          periodSeconds: 10
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: gateway
-  namespace: alphintra-dev
-  labels:
-    app: gateway
-spec:
-  selector:
-    app: gateway
-  ports:
-  - port: 8080
-    targetPort: 8080
-    name: http
-  type: ClusterIP
-EOF
-
-# Auth Service
-echo "  - Deploying Auth Service..."
-cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: auth-service
-  namespace: alphintra-dev
-  labels:
-    app: auth-service
-    version: v1
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: auth-service
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: auth-service
-        version: v1
-    spec:
-      containers:
-      - name: auth-service
-        image: python:3.11-slim
-        ports:
-        - containerPort: 8001
-        env:
-        - name: DATABASE_URL
-          value: "postgresql://dev_user:dev_password123@postgres:5432/alphintra_dev"
-        - name: REDIS_URL
-          value: "redis://:redis123@redis:6379/0"
-        - name: ENVIRONMENT
-          value: "k8s"
-        command: ["sh", "-c", "echo 'Auth service running on Kubernetes' && sleep 3600"]
-        readinessProbe:
-          exec:
-            command: ["sh", "-c", "echo 'ready'"]
-          initialDelaySeconds: 10
-          periodSeconds: 5
-        livenessProbe:
-          exec:
-            command: ["sh", "-c", "echo 'alive'"]
-          initialDelaySeconds: 30
-          periodSeconds: 10
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: auth-service
-  namespace: alphintra-dev
-  labels:
-    app: auth-service
-spec:
-  selector:
-    app: auth-service
-  ports:
-  - port: 8001
-    targetPort: 8001
-    name: http
-  type: ClusterIP
-EOF
-
-# Trading API
-echo "  - Deploying Trading API..."
-cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: trading-api
-  namespace: alphintra-dev
-  labels:
-    app: trading-api
-    version: v1
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: trading-api
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: trading-api
-        version: v1
-    spec:
-      containers:
-      - name: trading-api
-        image: python:3.11-slim
-        ports:
-        - containerPort: 8002
-        env:
-        - name: DATABASE_URL
-          value: "postgresql://dev_user:dev_password123@postgres:5432/alphintra_dev"
-        - name: REDIS_URL
-          value: "redis://:redis123@redis:6379/1"
-        - name: ENVIRONMENT
-          value: "k8s"
-        command: ["sh", "-c", "echo 'Trading API running on Kubernetes' && sleep 3600"]
-        readinessProbe:
-          exec:
-            command: ["sh", "-c", "echo 'ready'"]
-          initialDelaySeconds: 10
-          periodSeconds: 5
-        livenessProbe:
-          exec:
-            command: ["sh", "-c", "echo 'alive'"]
-          initialDelaySeconds: 30
-          periodSeconds: 10
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: trading-api
-  namespace: alphintra-dev
-  labels:
-    app: trading-api
-spec:
-  selector:
-    app: trading-api
-  ports:
-  - port: 8002
-    targetPort: 8002
-    name: http
-  type: ClusterIP
-EOF
-
-# Wait for application services to be ready
-echo "⏳ Waiting for application services to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/gateway -n alphintra-dev
-kubectl wait --for=condition=available --timeout=300s deployment/auth-service -n alphintra-dev
-kubectl wait --for=condition=available --timeout=300s deployment/trading-api -n alphintra-dev
-
-# Verify deployment
-echo "🔍 Verifying deployment..."
+echo "✅ All required namespaces are present"
 echo ""
-echo "📊 Deployment Status:"
-kubectl get pods -n alphintra-dev
+
+# Build and push Docker images to local registry
+echo "🐳 Building and pushing Docker images..."
+
+# Build API Gateway
+if [ -f "$BASE_DIR/../src/backend/gateway/Dockerfile" ]; then
+    echo "  📦 Building API Gateway..."
+    cd "$BASE_DIR/../src/backend/gateway"
+    docker build -t localhost:5001/alphintra/api-gateway:latest .
+    docker push localhost:5001/alphintra/api-gateway:latest
+else
+    echo "  ⚠️  Gateway Dockerfile not found, skipping..."
+fi
+
+# Build GraphQL Gateway
+if [ -f "$BASE_DIR/../src/backend/graphql-gateway/Dockerfile" ]; then
+    echo "  📦 Building GraphQL Gateway..."
+    cd "$BASE_DIR/../src/backend/graphql-gateway"
+    docker build -t localhost:5001/alphintra/graphql-gateway:latest .
+    docker push localhost:5001/alphintra/graphql-gateway:latest
+else
+    echo "  ⚠️  GraphQL Gateway Dockerfile not found, skipping..."
+fi
+
+# Build Auth Service (if exists)
+if [ -f "$BASE_DIR/../src/backend/auth-service/Dockerfile" ]; then
+    echo "  📦 Building Auth Service..."
+    cd "$BASE_DIR/../src/backend/auth-service"
+    docker build -t localhost:5001/alphintra/auth-service:latest .
+    docker push localhost:5001/alphintra/auth-service:latest
+fi
+
+# Build Trading API
+if [ -f "$BASE_DIR/../src/backend/trading-api/Dockerfile" ]; then
+    echo "  📦 Building Trading API..."
+    cd "$BASE_DIR/../src/backend/trading-api"
+    docker build -t localhost:5001/alphintra/trading-api:latest .
+    docker push localhost:5001/alphintra/trading-api:latest
+fi
+
+echo "✅ Docker images built and pushed to local registry"
 echo ""
-echo "🌐 Services:"
-kubectl get services -n alphintra-dev
+
+# Deploy using our standardized Kustomization
+echo "🏗️  Deploying platform using standardized manifests..."
+cd "$KUSTOMIZE_DIR"
+
+echo "  📋 Validating manifests..."
+kubectl apply --dry-run=client -k . > /dev/null
+echo "  ✅ Manifest validation passed"
+
+echo "  🚀 Deploying all services..."
+kubectl apply -k .
+
+echo ""
+echo "⏳ Waiting for core services to be ready..."
+
+# Wait for infrastructure services
+echo "  💾 Waiting for Redis..."
+kubectl wait --for=condition=ready --timeout=5m pod/redis-0 -n alphintra || echo "Redis StatefulSet not found or not ready"
+
+echo "  🐘 Waiting for PostgreSQL..."
+kubectl wait --for=condition=ready --timeout=5m pod/postgresql-0 -n alphintra || echo "PostgreSQL StatefulSet not found or not ready"
+
+# Wait for core application services
+echo "  🌐 Waiting for API Gateway..."
+kubectl wait --for=condition=available --timeout=10m deployment/api-gateway -n alphintra || echo "API Gateway deployment not found or not ready"
+
+echo "  🔐 Waiting for Auth Service..."
+kubectl wait --for=condition=available --timeout=5m deployment/auth-service -n alphintra || echo "Auth Service deployment not found or not ready"
+
+echo "  📊 Waiting for GraphQL Gateway..."
+kubectl wait --for=condition=available --timeout=5m deployment/graphql-gateway -n alphintra || echo "GraphQL Gateway deployment not found or not ready"
+
+echo "  🔍 Waiting for Eureka Server..."
+kubectl wait --for=condition=available --timeout=5m deployment/eureka-server -n alphintra || echo "Eureka Server deployment not found or not ready"
+
+echo ""
+echo "🔍 Verifying deployment status..."
+echo ""
+echo "📊 Pod Status (alphintra namespace):"
+kubectl get pods -n alphintra -o wide
+echo ""
+echo "📊 Pod Status (monitoring namespace):"
+kubectl get pods -n monitoring -o wide
+echo ""
+echo "🌐 Service Status (alphintra namespace):"
+kubectl get services -n alphintra
+echo ""
+echo "🌐 Service Status (monitoring namespace):"
+kubectl get services -n monitoring
 echo ""
 
 # Check Istio sidecar injection
 echo "🕸️  Checking Istio sidecar injection..."
-SIDECAR_COUNT=$(kubectl get pods -n alphintra-dev -o jsonpath='{.items[*].spec.containers[*].name}' | grep -c istio-proxy || echo "0")
+SIDECAR_COUNT=$(kubectl get pods -n alphintra -o jsonpath='{.items[*].spec.containers[*].name}' | grep -c istio-proxy || echo "0")
 if [ "$SIDECAR_COUNT" -gt 0 ]; then
     echo "✅ Istio sidecars are injected (found $SIDECAR_COUNT sidecars)"
 else
-    echo "⚠️  No Istio sidecars found. Pods may need to be recreated after Istio installation."
+    echo "⚠️  No Istio sidecars found. Check namespace labels or restart pods."
 fi
+
+# Check ingress status
+echo ""
+echo "🌍 Ingress Status:"
+kubectl get ingress -n alphintra || echo "No ingress resources found"
 
 echo ""
 echo "✅ Deployment completed successfully!"
 echo ""
 echo "🔧 Access Information:"
-echo "  Gateway: http://localhost:8090"
-echo "  Auth Service: http://localhost:8090/api/auth"
-echo "  Trading API: http://localhost:8090/api/trading"
+echo "  🌐 API Gateway: http://localhost:8080"
+echo "  🔍 Eureka Dashboard: http://localhost:8762"
+echo "  ⚙️  Config Server: http://localhost:8889/actuator/health"
+echo "  📊 GraphQL Playground: http://localhost:8080/graphql (via Gateway)"
 echo ""
-echo "📊 Monitoring:"
-echo "  Prometheus: kubectl port-forward -n istio-system svc/prometheus 9090:9090"
-echo "  Grafana: kubectl port-forward -n istio-system svc/grafana 3000:3000"
-echo "  Jaeger: kubectl port-forward -n istio-system svc/jaeger 16686:16686"
-echo "  Kiali: kubectl port-forward -n istio-system svc/kiali 20001:20001"
+echo "📊 Monitoring & Observability:"
+echo "  📈 Prometheus: http://localhost:9091"
+echo "  📊 Grafana: http://localhost:3001 (admin/admin)"
+echo "  🔍 Jaeger: http://localhost:16687"
+echo "  🕸️  Kiali: kubectl port-forward -n istio-system svc/kiali 20001:20001"
 echo ""
-echo "🏷️  Useful Commands:"
-echo "  kubectl get pods -n alphintra-dev"
-echo "  kubectl logs -f deployment/gateway -n alphintra-dev"
-echo "  kubectl describe pod <pod-name> -n alphintra-dev"
+echo "🔧 API Endpoints:"
+echo "  🔐 Authentication: http://localhost:8080/api/auth/*"
+echo "  💹 Trading API: http://localhost:8080/api/trading/*"
+echo "  📊 GraphQL API: http://localhost:8080/graphql"
+echo "  ⚙️  Actuator (Gateway): http://localhost:8080/actuator/health"
 echo ""
+echo "📋 Useful Commands:"
+echo "  kubectl get pods -n alphintra -w                    # Watch pod status"
+echo "  kubectl logs -f deployment/api-gateway -n alphintra # Follow Gateway logs"
+echo "  kubectl logs -f deployment/graphql-gateway -n alphintra # Follow GraphQL logs"
+echo "  kubectl describe pod <pod-name> -n alphintra       # Debug pod issues"
+echo "  kubectl get events -n alphintra --sort-by='.lastTimestamp' # Check events"
+echo ""
+echo "🔄 To redeploy after changes:"
+echo "  kubectl rollout restart deployment/api-gateway -n alphintra"
+echo "  kubectl rollout restart deployment/graphql-gateway -n alphintra"
+echo ""
+
+# Final health check
+echo "🏥 Performing final health checks..."
+sleep 5
+
+# Check API Gateway health
+if kubectl get pods -n alphintra -l app=api-gateway --field-selector=status.phase=Running | grep -q "Running"; then
+    echo "✅ API Gateway is running"
+else
+    echo "⚠️  API Gateway may not be running properly"
+fi
+
+# Check GraphQL Gateway health
+if kubectl get pods -n alphintra -l app=graphql-gateway --field-selector=status.phase=Running | grep -q "Running"; then
+    echo "✅ GraphQL Gateway is running"
+else
+    echo "⚠️  GraphQL Gateway may not be running properly"
+fi
+
+echo ""
+echo "🎉 Alphintra Trading Platform deployment complete!"
+echo "   Access the platform at http://localhost:8080"

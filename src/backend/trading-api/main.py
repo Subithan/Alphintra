@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from security_middleware import GatewaySecurityMiddleware, init_microservice_security, require_gateway_routing
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import asyncio
@@ -21,12 +22,20 @@ from contextlib import asynccontextmanager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://alphintra:alphintra@localhost:5432/alphintra")
-TIMESCALE_URL = os.getenv("TIMESCALE_URL", "postgresql://tsuser:tspass@localhost:5433/alphintra_ts")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+# Configuration with K3D internal networking
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "postgresql://trading_service_user:trading_service_pass@postgresql-primary.alphintra.svc.cluster.local:5432/alphintra_trading"
+)
+REDIS_URL = os.getenv(
+    "REDIS_URL",
+    "redis://:alphintra_redis_pass@redis-primary.alphintra.svc.cluster.local:6379/1"
+)
+
+# Service URLs
+RISK_SERVICE_URL = os.getenv("RISK_SERVICE_URL", "http://risk-service.alphintra.svc.cluster.local:8080")
+BROKER_SERVICE_URL = os.getenv("BROKER_SERVICE_URL", "http://broker-service.alphintra.svc.cluster.local:8080")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service.alphintra.svc.cluster.local:8080")
 
 # Global connections
 db_pool = None
@@ -145,6 +154,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Gateway security middleware
+strict_mode = os.getenv('ENVIRONMENT', 'development') != 'development'
+app.add_middleware(GatewaySecurityMiddleware, strict_mode=strict_mode)
+
+# Initialize microservice security
+init_microservice_security(app)
 
 # Security
 security = HTTPBearer()

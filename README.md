@@ -1,6 +1,35 @@
-# 🚀 Alphintra Trading Platform
+# Alphintra Financial Platform
 
-**Next-Generation Algorithmic Trading Platform with Advanced AI/ML Capabilities**
+A secure, scalable microservices-based financial trading platform built with Spring Boot, Spring Cloud, and Kubernetes.
+
+## 🏗️ Architecture Overview
+
+The Alphintra platform follows a microservices architecture with the following components:
+
+### Infrastructure Services
+- **Eureka Server**: Service discovery and registration
+- **API Gateway**: Single entry point with routing, load balancing, and security
+- **Config Server**: Centralized configuration management
+
+### Business Services
+- **User Service**: User management, authentication, and profiles
+- **Trading Service**: Order management, execution, and portfolio tracking
+- **Strategy Service**: Trading strategy management and backtesting
+- **No-Code Service**: Visual strategy builder interface
+- **Audit Service**: Compliance logging and audit trails
+- **Notification Service**: Real-time notifications and alerts
+
+### Data Layer
+- **PostgreSQL**: Primary database for transactional data
+- **Redis**: Caching and session management
+- **Kafka**: Event streaming and messaging
+- **InfluxDB**: Time-series data for market data and metrics
+
+### Monitoring & Observability
+- **Prometheus**: Metrics collection and alerting
+- **Grafana**: Visualization and dashboards
+- **Jaeger**: Distributed tracing
+- **ELK Stack**: Centralized logging
 
 ## 🎯 Single-Command Deployment
 

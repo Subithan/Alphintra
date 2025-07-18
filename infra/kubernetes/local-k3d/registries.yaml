@@ -1,0 +1,5 @@
+
+mirrors:
+  "localhost:5001":
+    endpoint:
+      - http://172.21.0.2:5000

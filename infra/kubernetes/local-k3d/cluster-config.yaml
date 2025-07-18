@@ -1,32 +1,35 @@
-# k3d cluster configuration for Alphintra Trading Platform
-# This creates a local Kubernetes cluster that simulates GKE
+# k3d cluster configuration for Alphintra Financial Trading Platform
+# Optimized for secure microservices architecture with internal networking
 
 apiVersion: k3d.io/v1alpha5
 kind: Simple
 metadata:
-  name: alphintra-dev
+  name: alphintra-cluster
 servers: 1
-agents: 0
+agents: 3
 kubeAPI:
   host: "127.0.0.1"
   hostIP: "127.0.0.1"
-  hostPort: "6443"
+  hostPort: "6550"
 image: rancher/k3s:v1.28.5-k3s1
 network: alphintra-k3d-network
 ports:
-  - port: 8085:80
+  - port: 80:80
     nodeFilters:
       - loadbalancer
-  - port: 8443:443
+  - port: 443:443
     nodeFilters:
       - loadbalancer
-  - port: 9091:9090
+  - port: 30001:30001
     nodeFilters:
       - loadbalancer
-  - port: 3002:3000
+  - port: 8080:8080
     nodeFilters:
       - loadbalancer
-  - port: 5001:5000
+  - port: 5432:5432
+    nodeFilters:
+      - loadbalancer
+  - port: 6379:6379
     nodeFilters:
       - loadbalancer
 env:

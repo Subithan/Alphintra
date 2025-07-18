@@ -7,7 +7,7 @@ set -e
 
 CLUSTER_NAME="alphintra-cluster"
 REGISTRY_NAME="alphintra-registry"
-REGISTRY_PORT="5002"
+REGISTRY_PORT="5001"
 
 echo "🚀 Setting up Alphintra k3d cluster..."
 
@@ -30,15 +30,17 @@ k3d registry create $REGISTRY_NAME --port $REGISTRY_PORT
 # Create k3d cluster with enhanced configuration
 echo "🏗️  Creating k3d cluster with enhanced configuration..."
 k3d cluster create $CLUSTER_NAME \
-  --agents 2 \
+  --agents 3 \
   --servers 1 \
   --registry-use k3d-$REGISTRY_NAME:$REGISTRY_PORT \
-  --port "8090:80@loadbalancer" \
-  --port "8453:443@loadbalancer" \
+  --port "8080:80@loadbalancer" \
+  --port "8443:443@loadbalancer" \
   --port "9091:9090@loadbalancer" \
-  --port "3010:3000@loadbalancer" \
+  --port "3001:3000@loadbalancer" \
   --port "5010:5000@loadbalancer" \
   --port "16687:16686@loadbalancer" \
+  --port "8762:8761@loadbalancer" \
+  --port "8889:8888@loadbalancer" \
   --k3s-arg "--disable=traefik@server:*" \
   --wait
 
@@ -46,24 +48,12 @@ k3d cluster create $CLUSTER_NAME \
 echo "🔧 Setting kubectl context..."
 kubectl config use-context k3d-$CLUSTER_NAME
 
-# Create namespaces
-echo "📁 Creating namespaces..."
-kubectl create namespace alphintra-system --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace alphintra-dev --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace alphintra-monitoring --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace alphintra-ml --dry-run=client -o yaml | kubectl apply -f -
+# Apply namespace configuration from our standardized YAML
+echo "📁 Creating standardized namespaces..."
+kubectl apply -f /Users/usubithan/Documents/Alphintra/infra/kubernetes/base/namespace.yaml
 
-# Label namespaces for Istio injection
-echo "🏷️  Labeling namespaces for Istio injection..."
-kubectl label namespace alphintra-dev istio-injection=enabled --overwrite
-kubectl label namespace alphintra-ml istio-injection=enabled --overwrite
-
-# Skip MetalLB for faster development setup (using k3d built-in servicelb)
-echo "🚀 Using k3d built-in LoadBalancer for faster development setup..."
-echo "💡 MetalLB can be installed later if needed: kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.12/config/manifests/metallb-native.yaml"
-
-# Note: MetalLB IP pool configuration skipped for development
-echo "🌐 LoadBalancer services will use k3d's built-in load balancer..."
+# Label namespaces for Istio injection (already configured in namespace.yaml)
+echo "🏷️  Namespaces are pre-configured with Istio injection labels..."
 
 # Create storage class for persistent volumes
 echo "💾 Creating storage class..."
@@ -79,6 +69,41 @@ volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
 EOF
 
+# Setup secrets interactively
+echo "🔐 Setting up platform secrets..."
+echo ""
+echo "You can either:"
+echo "  1. Set up secrets interactively (recommended)"
+echo "  2. Use default secrets (for quick testing only)"
+echo ""
+read -p "Do you want to set up secrets interactively? (Y/n): " setup_secrets
+
+if [[ "$setup_secrets" =~ ^[Nn]$ ]]; then
+    echo "📝 Using default secrets for quick testing..."
+    # Create default secrets for testing
+    kubectl create secret generic alphintra-secrets \
+      --namespace=alphintra \
+      --from-literal=jwt-secret="alphintra_jwt_super_secret_key_for_financial_platform" \
+      --from-literal=redis-password="alphintra_redis_pass" \
+      --from-literal=postgres-password="alphintra_postgres_pass" \
+      --from-literal=internal-service-token="alphintra-internal-token-2024" \
+      --from-literal=encryption-key="alphintra_encryption_key_2024" \
+      --from-literal=minio-access-key="alphintra-admin" \
+      --from-literal=minio-secret-key="alphintra-secret-2024" \
+      --dry-run=client -o yaml | kubectl apply -f -
+
+    kubectl create secret generic monitoring-secrets \
+      --namespace=monitoring \
+      --from-literal=grafana-admin-password="admin" \
+      --dry-run=client -o yaml | kubectl apply -f -
+    
+    echo "⚠️  WARNING: Using default secrets for testing only!"
+    echo "   For production, run: ./scripts/setup-secrets.sh"
+else
+    echo "🚀 Starting interactive secrets setup..."
+    ./scripts/setup-secrets.sh
+fi
+
 # Display cluster information
 echo "✅ Cluster setup complete!"
 echo ""
@@ -88,17 +113,28 @@ echo "  Registry: localhost:$REGISTRY_PORT"
 echo "  Kubeconfig Context: k3d-$CLUSTER_NAME"
 echo ""
 echo "🌐 Exposed Ports:"
-echo "  - HTTP: localhost:8080"
+echo "  - API Gateway: localhost:8080"
 echo "  - HTTPS: localhost:8443"
-echo "  - Prometheus: localhost:9090"
-echo "  - Grafana: localhost:3000"
-echo "  - MLflow: localhost:5000"
-echo "  - Jaeger: localhost:16686"
+echo "  - Prometheus: localhost:9091"
+echo "  - Grafana: localhost:3001"
+echo "  - MLflow: localhost:5010"
+echo "  - Jaeger: localhost:16687"
+echo "  - Eureka Server: localhost:8762"
+echo "  - Config Server: localhost:8889"
 echo ""
-echo "📁 Namespaces:"
-kubectl get namespaces | grep alphintra
+echo "📁 Namespaces Created:"
+kubectl get namespaces | grep -E "(alphintra|monitoring|infrastructure|stream-processing)"
+echo ""
+echo "🔐 Secrets Created:"
+kubectl get secrets -n alphintra | grep alphintra-secrets
+kubectl get secrets -n monitoring | grep monitoring-secrets
 echo ""
 echo "🔧 Next steps:"
-echo "  1. Run './install-istio.sh' to install Istio service mesh"
-echo "  2. Deploy applications with 'kubectl apply -k ../kubernetes/overlays/dev/'"
-echo "  3. Access services through the configured ports above"
+echo "  1. Install Istio: './install-istio.sh'"
+echo "  2. Deploy platform: './k8s/deploy.sh'"
+echo "  3. Access services through configured ports above"
+echo ""
+echo "📋 Useful Commands:"
+echo "  kubectl get pods -A"
+echo "  kubectl get services -A"
+echo "  kubectl logs -f deployment/api-gateway -n alphintra"

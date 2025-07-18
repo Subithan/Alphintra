@@ -1,0 +1,163 @@
+# Google Cloud Build Configuration for Alphintra Trading Platform
+# Builds all services in parallel using Google Distroless images for optimal performance and security
+
+steps:
+  # Build Java services in parallel
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'src/backend/gateway/Dockerfile.distroless',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/api-gateway:$SHORT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/api-gateway:latest',
+      'src/backend/gateway'
+    ]
+    id: 'build-api-gateway'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'src/backend/auth-service/Dockerfile.distroless',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/auth-service:$SHORT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/auth-service:latest',
+      'src/backend/auth-service'
+    ]
+    id: 'build-auth-service'
+
+  # Build Python services in parallel
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'src/backend/trading-api/Dockerfile.optimized',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/trading-api:$SHORT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/trading-api:latest',
+      'src/backend/trading-api'
+    ]
+    id: 'build-trading-api'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'src/backend/graphql-gateway/Dockerfile.optimized',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/graphql-gateway:$SHORT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/graphql-gateway:latest',
+      'src/backend/graphql-gateway'
+    ]
+    id: 'build-graphql-gateway'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'src/backend/strategy-engine/Dockerfile.optimized',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/strategy-engine:$SHORT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/alphintra/strategy-engine:latest',
+      'src/backend/strategy-engine'
+    ]
+    id: 'build-strategy-engine'
+
+  # Push all images to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/api-gateway:$SHORT_SHA']
+    waitFor: ['build-api-gateway']
+    id: 'push-api-gateway'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/api-gateway:latest']
+    waitFor: ['build-api-gateway']
+    id: 'push-api-gateway-latest'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/auth-service:$SHORT_SHA']
+    waitFor: ['build-auth-service']
+    id: 'push-auth-service'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/auth-service:latest']
+    waitFor: ['build-auth-service']
+    id: 'push-auth-service-latest'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/trading-api:$SHORT_SHA']
+    waitFor: ['build-trading-api']
+    id: 'push-trading-api'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/trading-api:latest']
+    waitFor: ['build-trading-api']
+    id: 'push-trading-api-latest'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/graphql-gateway:$SHORT_SHA']
+    waitFor: ['build-graphql-gateway']
+    id: 'push-graphql-gateway'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/graphql-gateway:latest']
+    waitFor: ['build-graphql-gateway']
+    id: 'push-graphql-gateway-latest'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/strategy-engine:$SHORT_SHA']
+    waitFor: ['build-strategy-engine']
+    id: 'push-strategy-engine'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/alphintra/strategy-engine:latest']
+    waitFor: ['build-strategy-engine']
+    id: 'push-strategy-engine-latest'
+
+  # Optional: Run security scan on built images
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Running security scans on built images..."
+        gcloud container images scan gcr.io/$PROJECT_ID/alphintra/api-gateway:$SHORT_SHA --format="value(discovery.analysisCompleted)" || true
+        gcloud container images scan gcr.io/$PROJECT_ID/alphintra/auth-service:$SHORT_SHA --format="value(discovery.analysisCompleted)" || true
+        gcloud container images scan gcr.io/$PROJECT_ID/alphintra/trading-api:$SHORT_SHA --format="value(discovery.analysisCompleted)" || true
+        gcloud container images scan gcr.io/$PROJECT_ID/alphintra/graphql-gateway:$SHORT_SHA --format="value(discovery.analysisCompleted)" || true
+        gcloud container images scan gcr.io/$PROJECT_ID/alphintra/strategy-engine:$SHORT_SHA --format="value(discovery.analysisCompleted)" || true
+        echo "Security scans initiated for all images"
+    waitFor: ['push-api-gateway', 'push-auth-service', 'push-trading-api', 'push-graphql-gateway', 'push-strategy-engine']
+    id: 'security-scan'
+
+# Build configuration
+options:
+  # Use high-performance machine type for faster builds
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 100
+  # Enable parallel builds
+  substitution_option: 'ALLOW_LOOSE'
+  dynamic_substitutions: true
+  # Use faster disk type
+  disk_type: 'pd-ssd'
+
+# Substitutions for build variables
+substitutions:
+  _DEPLOY_ENV: 'production'
+  _REGION: 'us-central1'
+  _SERVICE_ACCOUNT: 'alphintra-builder@$PROJECT_ID.iam.gserviceaccount.com'
+
+# Timeout for the entire build (30 minutes)
+timeout: '1800s'
+
+# Images to be pushed (for build artifacts)
+images:
+  - 'gcr.io/$PROJECT_ID/alphintra/api-gateway:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/alphintra/api-gateway:latest'
+  - 'gcr.io/$PROJECT_ID/alphintra/auth-service:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/alphintra/auth-service:latest'
+  - 'gcr.io/$PROJECT_ID/alphintra/trading-api:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/alphintra/trading-api:latest'
+  - 'gcr.io/$PROJECT_ID/alphintra/graphql-gateway:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/alphintra/graphql-gateway:latest'
+  - 'gcr.io/$PROJECT_ID/alphintra/strategy-engine:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/alphintra/strategy-engine:latest'
+
+# Build triggers (optional - for CI/CD)
+# availableSecrets:
+#   secretManager:
+#   - versionName: projects/$PROJECT_ID/secrets/alphintra-jwt-secret/versions/latest
+#     env: 'JWT_SECRET'
+#   - versionName: projects/$PROJECT_ID/secrets/alphintra-db-password/versions/latest
+#     env: 'DB_PASSWORD'

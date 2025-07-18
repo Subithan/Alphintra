@@ -52,6 +52,37 @@ class WorkflowResponse(BaseModel):
     class Config:
         from_attributes = True
 
+    @classmethod
+    def from_orm(cls, obj):
+        return cls(
+            id=obj.id,
+            uuid=str(obj.uuid),  # Convert UUID to string
+            name=obj.name,
+            description=obj.description,
+            category=obj.category,
+            tags=obj.tags or [],
+            workflow_data=obj.workflow_data or {"nodes": [], "edges": []},
+            generated_code=obj.generated_code,
+            generated_code_language=obj.generated_code_language or 'python',
+            generated_requirements=obj.generated_requirements or [],
+            compilation_status=obj.compilation_status or 'pending',
+            compilation_errors=obj.compilation_errors or [],
+            validation_status=obj.validation_status or 'pending',
+            validation_errors=obj.validation_errors or [],
+            deployment_status=obj.deployment_status or 'not_deployed',
+            execution_mode=obj.execution_mode or 'backtest',
+            version=obj.version or 1,
+            is_template=obj.is_template or False,
+            is_public=obj.is_public or False,
+            total_executions=obj.total_executions or 0,
+            successful_executions=obj.successful_executions or 0,
+            avg_performance_score=obj.avg_performance_score,
+            last_execution_at=obj.last_execution_at,
+            created_at=obj.created_at,
+            updated_at=obj.updated_at,
+            published_at=obj.published_at
+        )
+
 # Component schemas
 class ComponentResponse(BaseModel):
     id: int

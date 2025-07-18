@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: broker-simulator
-  namespace: alphintra-dev
+  namespace: alphintra
   labels:
     app: broker-simulator
     version: v1
@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: broker-simulator
-        image: localhost:5001/alphintra/broker-simulator:latest
+        image: k3d-alphintra-registry:5000/alphintra/broker-simulator:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -95,7 +95,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: broker-simulator
-  namespace: alphintra-dev
+  namespace: alphintra
   labels:
     app: broker-simulator
 spec:

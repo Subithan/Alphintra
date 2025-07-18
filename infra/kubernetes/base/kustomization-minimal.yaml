@@ -1,0 +1,129 @@
+# Minimal Kustomization for Local K3D Development
+# Ultra-lightweight configuration with only essential services
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: alphintra
+
+# Essential resources only
+resources:
+  - namespace.yaml
+  - redis-statefulset-optimized.yaml
+  - postgresql-statefulset-minimal.yaml
+  - api-gateway.yaml
+  - auth-service.yaml
+  - trading-api-deployment.yaml
+  - graphql-gateway.yaml
+  - strategy-engine-deployment.yaml
+  - monitoring-stack-minimal.yaml
+
+# Resource patches for minimal configuration
+patches:
+  # API Gateway minimal resources
+  - target:
+      kind: Deployment
+      name: api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  # Auth Service minimal resources
+  - target:
+      kind: Deployment
+      name: auth-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  # Trading API minimal resources
+  - target:
+      kind: Deployment
+      name: trading-api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  # GraphQL Gateway minimal resources
+  - target:
+      kind: Deployment
+      name: graphql-gateway
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  # Strategy Engine minimal resources
+  - target:
+      kind: Deployment
+      name: strategy-engine
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+# Common environment variables for all services
+commonLabels:
+  environment: local-development
+  version: minimal
+
+# Image transformations to use optimized/distroless versions
+images:
+  - name: localhost:5001/api-gateway
+    newTag: distroless
+  - name: localhost:5001/auth-service  
+    newTag: distroless
+  - name: localhost:5001/trading-api
+    newTag: optimized
+  - name: localhost:5001/graphql-gateway
+    newTag: optimized
+  - name: localhost:5001/strategy-engine
+    newTag: optimized

@@ -1,0 +1,131 @@
+# Database deployments for Alphintra no-code-service
+# PostgreSQL deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alphintra-postgres
+  namespace: alphintra
+  labels:
+    app: alphintra-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alphintra-postgres
+  template:
+    metadata:
+      labels:
+        app: alphintra-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "alphintra"
+        - name: POSTGRES_USER
+          value: "alphintra"
+        - name: POSTGRES_PASSWORD
+          value: "alphintra"
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - alphintra
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - alphintra
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: postgres-storage
+        emptyDir: {}
+---
+# PostgreSQL service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alphintra-postgres
+  namespace: alphintra
+  labels:
+    app: alphintra-postgres
+spec:
+  selector:
+    app: alphintra-postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+  type: ClusterIP
+---
+# Redis deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alphintra-redis
+  namespace: alphintra
+  labels:
+    app: alphintra-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alphintra-redis
+  template:
+    metadata:
+      labels:
+        app: alphintra-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: redis-storage
+        emptyDir: {}
+---
+# Redis service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alphintra-redis
+  namespace: alphintra
+  labels:
+    app: alphintra-redis
+spec:
+  selector:
+    app: alphintra-redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+    name: redis
+  type: ClusterIP
