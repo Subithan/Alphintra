@@ -194,22 +194,23 @@ class CompilationResult(Base):
     __tablename__ = "compilation_results"
     
     id = Column(String, primary_key=True)
-    workflow_id = Column(String, ForeignKey("workflows.id"), nullable=False)
+    workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"), nullable=False)
     python_code = Column(Text, nullable=False)  # Generated Python code
     validation_results = Column(JSON, default=dict)  # Validation and security scan results
     status = Column(String, default="pending")  # pending, success, failed, validating, validated, validation_failed
+    
     error_message = Column(Text)
     created_at = Column(DateTime, default=func.now())
     
     # Relationships
-    workflow = relationship("Workflow", back_populates="compilations")
+    workflow = relationship("NoCodeWorkflow")
     training_jobs = relationship("TrainingJob", back_populates="compilation")
 
 class TrainingJob(Base):
     __tablename__ = "training_jobs"
     
     id = Column(String, primary_key=True)
-    workflow_id = Column(String, ForeignKey("workflows.id"), nullable=False)
+    workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"), nullable=False)
     compilation_id = Column(String, ForeignKey("compilation_results.id"), nullable=False)
     dataset_id = Column(String, nullable=False)
     config = Column(JSON, nullable=False)  # Training configuration
@@ -225,7 +226,6 @@ class TrainingJob(Base):
     completed_at = Column(DateTime)
     
     # Relationships
-    workflow = relationship("Workflow", back_populates="training_jobs")
     compilation = relationship("CompilationResult", back_populates="training_jobs")
 
 class Dataset(Base):
@@ -235,7 +235,7 @@ class Dataset(Base):
     name = Column(String, nullable=False)
     description = Column(Text)
     type = Column(String, nullable=False)  # platform, user_uploaded, external
-    owner_id = Column(String, ForeignKey("users.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"))
     file_path = Column(String)  # Path to dataset file
     dataset_metadata = Column(JSON, default=dict)  # Dataset metadata (columns, size, etc.)
     is_public = Column(Boolean, default=False)
@@ -266,7 +266,7 @@ class TestingResult(Base):
     __tablename__ = "testing_results"
     
     id = Column(String, primary_key=True)
-    workflow_id = Column(String, ForeignKey("workflows.id"), nullable=False)
+    workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"), nullable=False)
     compilation_id = Column(String, ForeignKey("compilation_results.id"), nullable=False)
     test_type = Column(String, nullable=False)  # security, performance, accuracy
     status = Column(String, default="pending")  # pending, running, completed, failed
@@ -281,7 +281,7 @@ class MarketplaceStrategy(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     description = Column(Text)
-    author_id = Column(String, ForeignKey("users.id"), nullable=False)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     category = Column(String, nullable=False)
     tags = Column(JSON, default=list)
     price = Column(Float, default=0.0)  # 0 for free
@@ -299,7 +299,7 @@ class StrategyRating(Base):
     
     id = Column(String, primary_key=True)
     strategy_id = Column(String, ForeignKey("marketplace_strategies.id"), nullable=False)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     rating = Column(Integer, nullable=False)  # 1-5 stars
     review = Column(Text)
     created_at = Column(DateTime, default=func.now())
@@ -308,7 +308,7 @@ class WorkflowExecution(Base):
     __tablename__ = "workflow_executions"
     
     id = Column(String, primary_key=True)
-    workflow_id = Column(String, ForeignKey("workflows.id"), nullable=False)
+    workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"), nullable=False)
     training_job_id = Column(String, ForeignKey("training_jobs.id"))
     execution_type = Column(String, nullable=False)  # backtest, live, paper
     status = Column(String, default="pending")  # pending, running, completed, failed
@@ -321,7 +321,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     
     id = Column(String, primary_key=True)
-    user_id = Column(String, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
     action = Column(String, nullable=False)  # create, update, delete, compile, train, etc.
     resource_type = Column(String, nullable=False)  # workflow, training_job, etc.
     resource_id = Column(String, nullable=False)

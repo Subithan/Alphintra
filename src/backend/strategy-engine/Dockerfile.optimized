@@ -1,0 +1,61 @@
+# Multi-stage build for Strategy Engine (Python)
+# Production-ready, secure, and lightweight container
+
+# Stage 1: Build stage
+FROM python:3.11-slim AS builder
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    gfortran \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements-minimal.txt requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Stage 2: Runtime stage with minimal image
+FROM python:3.11-slim
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 alphintra && \
+    adduser --system --uid 1001 --ingroup alphintra alphintra
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python packages from builder stage
+COPY --from=builder /root/.local /home/alphintra/.local
+
+# Copy application code
+COPY main.py .
+
+# Set environment variables
+ENV PATH="/home/alphintra/.local/bin:$PATH"
+ENV PYTHONPATH="/app"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Change ownership and switch to non-root user
+RUN chown -R alphintra:alphintra /app
+USER alphintra
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Run the application
+CMD ["python", "main.py"]

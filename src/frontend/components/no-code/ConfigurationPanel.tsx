@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { useToast } from '@/components/ui/use-toast';
 import { 
   Settings, 
   ArrowRight, 
@@ -33,7 +34,10 @@ interface ConfigurationPanelProps {
 
 export function ConfigurationPanel({ selectedNode, onNodeSelect }: ConfigurationPanelProps) {
   const { currentWorkflow, updateNodeParameters, removeNode, duplicateNode } = useNoCodeStore();
+  const { toast } = useToast();
   const [localParameters, setLocalParameters] = useState<Record<string, any>>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout>();
   
   // Add workflow validation
   const validation = useWorkflowValidation(
@@ -51,21 +55,68 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
   
   console.log('ConfigurationPanel:', { selectedNode, selectedNodeData, currentWorkflow }); // Debug log
 
+  // Sync local parameters when selected node changes
   useEffect(() => {
     if (selectedNodeData) {
-      setLocalParameters(selectedNodeData.data.parameters || {});
+      const nodeParams = selectedNodeData.data.parameters || {};
+      setLocalParameters(nodeParams);
+      setIsDirty(false);
     } else {
       setLocalParameters({});
+      setIsDirty(false);
     }
-  }, [selectedNodeData]);
+  }, [selectedNodeData?.id]); // Only trigger when node ID changes
 
-  const handleParameterChange = (key: string, value: any) => {
+  // Listen for parameter changes from store (e.g., from other components)
+  useEffect(() => {
+    if (selectedNodeData) {
+      const storeParams = selectedNodeData.data.parameters || {};
+      const hasExternalChanges = JSON.stringify(storeParams) !== JSON.stringify(localParameters);
+      
+      if (hasExternalChanges && !isDirty) {
+        setLocalParameters(storeParams);
+      }
+    }
+  }, [selectedNodeData?.data.parameters, isDirty]);
+
+  // Debounced parameter update
+  const debouncedUpdate = useCallback((nodeId: string, newParameters: Record<string, any>) => {
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    
+    updateTimeoutRef.current = setTimeout(() => {
+      updateNodeParameters(nodeId, newParameters);
+      setIsDirty(false);
+      
+      // Show success feedback for significant changes
+      if (Object.keys(newParameters).length > 0) {
+        toast({
+          title: "Parameters Updated",
+          description: "Node configuration has been saved",
+        });
+      }
+    }, 500); // 500ms debounce
+  }, [updateNodeParameters, toast]);
+
+  const handleParameterChange = useCallback((key: string, value: any) => {
     const newParameters = { ...localParameters, [key]: value };
     setLocalParameters(newParameters);
+    setIsDirty(true);
+    
     if (selectedNode) {
-      updateNodeParameters(selectedNode, newParameters);
+      debouncedUpdate(selectedNode, newParameters);
     }
-  };
+  }, [localParameters, selectedNode, debouncedUpdate]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleDeleteNode = () => {
     if (selectedNode) {

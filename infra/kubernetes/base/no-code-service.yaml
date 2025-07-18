@@ -1,0 +1,334 @@
+# No-Code Service Deployment for Secure Microservices Architecture
+# FastAPI service for visual workflow builder and execution
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-code-service-config
+  namespace: alphintra
+data:
+  requirements.txt: |
+    fastapi==0.104.1
+    uvicorn[standard]==0.24.0
+    sqlalchemy==2.0.23
+    asyncpg==0.29.0
+    psycopg2-binary==2.9.9
+    pydantic==2.5.0
+    python-multipart==0.0.6
+    python-jose[cryptography]==3.3.0
+    passlib[bcrypt]==1.7.4
+    alembic==1.13.0
+    pandas==2.1.4
+    numpy==1.24.4
+    scikit-learn==1.3.2
+    joblib==1.3.2
+    aiofiles==23.2.0
+    httpx==0.25.2
+    redis==5.0.1
+    python-dotenv==1.0.0
+    strawberry-graphql[fastapi]==0.219.0
+    strawberry-graphql[subscriptions]==0.219.0
+    prometheus-fastapi-instrumentator==6.1.0
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-code-service-code
+  namespace: alphintra
+data:
+  main.py: |
+    from fastapi import FastAPI, HTTPException, Depends
+    from fastapi.middleware.cors import CORSMiddleware
+    import uvicorn
+    import os
+    
+    app = FastAPI(
+        title="Alphintra No-Code Service",
+        description="Visual workflow builder and execution engine",
+        version="1.0.0"
+    )
+    
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "service": "no-code-service"}
+    
+    @app.get("/")
+    async def root():
+        return {"message": "Alphintra No-Code Service", "version": "1.0.0"}
+    
+    @app.get("/workflows")
+    async def get_workflows():
+        return {"workflows": [], "message": "No workflows defined yet"}
+    
+    if __name__ == "__main__":
+        uvicorn.run(
+            "main:app",
+            host="0.0.0.0",
+            port=8080,
+            reload=False
+        )
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: no-code-service
+  namespace: alphintra
+  labels:
+    app: no-code-service
+    service: no-code-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: no-code-service
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: no-code-service
+  namespace: alphintra
+  labels:
+    app: no-code-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: no-code-service
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: no-code-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: default
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: no-code-service
+        image: python:3.11-slim
+        imagePullPolicy: IfNotPresent
+        command:
+          - python
+          - main.py
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        # Correct environment variables matching the service expectations
+        - name: DATABASE_URL
+          value: "postgresql://nocode_service_user:nocode_service_pass@postgresql-primary.alphintra.svc.cluster.local:5432/alphintra_nocode"
+        - name: REDIS_URL
+          value: "redis://:alphintra_redis_pass@redis-primary.alphintra.svc.cluster.local:6379/2"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service.alphintra.svc.cluster.local:8080"
+        - name: PYTHONPATH
+          value: "/app"
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+        - name: tmp-volume
+          mountPath: /tmp
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+              - ALL
+      volumes:
+      - name: app-code
+        configMap:
+          name: no-code-service-code
+      - name: tmp-volume
+        emptyDir: {}
+      - name: requirements
+        configMap:
+          name: no-code-service-config
+      - name: app-packages
+        emptyDir: {}
+      - name: source-code
+        configMap:
+          name: no-code-service-code
+      initContainers:
+      - name: install-dependencies
+        image: python:3.11-slim
+        command:
+          - sh
+          - -c
+          - |
+            # Install dependencies
+            pip install --no-cache-dir -r /config/requirements.txt
+            # Copy installed packages to shared volume
+            cp -r /usr/local/lib/python3.11/site-packages/* /app-packages/
+        volumeMounts:
+        - name: requirements
+          mountPath: /config
+        - name: app-packages
+          mountPath: /app-packages
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      - name: copy-source
+        image: busybox:1.35
+        command:
+          - sh
+          - -c
+          - |
+            # Copy source code to app directory
+            cp -r /source/* /app/
+            # Set proper permissions
+            chown -R 1001:1001 /app
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+        - name: source-code
+          mountPath: /source
+      - name: wait-for-dependencies
+        image: busybox:1.35
+        command:
+          - sh
+          - -c
+          - |
+            echo "Waiting for PostgreSQL..."
+            until nc -z postgresql-primary.alphintra.svc.cluster.local 5432; do
+              echo "Waiting for PostgreSQL..."
+              sleep 5
+            done
+            echo "Waiting for Redis..."
+            until nc -z redis-primary.alphintra.svc.cluster.local 6379; do
+              echo "Waiting for Redis..."
+              sleep 5
+            done
+            echo "All dependencies are ready!"
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - no-code-service
+              topologyKey: kubernetes.io/hostname
+
+---
+# HorizontalPodAutoscaler for No-Code Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: no-code-service-hpa
+  namespace: alphintra
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: no-code-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60

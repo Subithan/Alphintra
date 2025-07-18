@@ -2,8 +2,9 @@
 // Provides convenient React Query hooks for API interactions
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { 
-  noCodeApiClient, 
+  noCodeGraphQLApiClient, 
   type Workflow, 
   type WorkflowCreate, 
   type WorkflowUpdate,
@@ -14,7 +15,7 @@ import {
   type WorkflowFilters,
   type ComponentFilters,
   type TemplateFilters
-} from '../api/no-code-api';
+} from '../api/no-code-graphql-api';
 
 // Query keys for React Query caching
 export const noCodeKeys = {
@@ -30,7 +31,7 @@ export const noCodeKeys = {
 export function useWorkflows(filters?: WorkflowFilters) {
   return useQuery({
     queryKey: [...noCodeKeys.workflows, filters],
-    queryFn: () => noCodeApiClient.getWorkflows(filters),
+    queryFn: () => noCodeGraphQLApiClient.getWorkflows(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -38,7 +39,7 @@ export function useWorkflows(filters?: WorkflowFilters) {
 export function useWorkflow(workflowId: string) {
   return useQuery({
     queryKey: noCodeKeys.workflow(workflowId),
-    queryFn: () => noCodeApiClient.getWorkflow(workflowId),
+    queryFn: () => noCodeGraphQLApiClient.getWorkflow(workflowId),
     enabled: !!workflowId,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
@@ -48,7 +49,7 @@ export function useCreateWorkflow() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (workflow: WorkflowCreate) => noCodeApiClient.createWorkflow(workflow),
+    mutationFn: (workflow: WorkflowCreate) => noCodeGraphQLApiClient.createWorkflow(workflow),
     onSuccess: (newWorkflow) => {
       // Invalidate workflows list to refetch
       queryClient.invalidateQueries({ queryKey: noCodeKeys.workflows });
@@ -67,7 +68,7 @@ export function useUpdateWorkflow() {
 
   return useMutation({
     mutationFn: ({ workflowId, updates }: { workflowId: string; updates: WorkflowUpdate }) =>
-      noCodeApiClient.updateWorkflow(workflowId, updates),
+      noCodeGraphQLApiClient.updateWorkflow(workflowId, updates),
     onSuccess: (updatedWorkflow, { workflowId }) => {
       // Update the specific workflow in cache
       queryClient.setQueryData(
@@ -85,7 +86,7 @@ export function useDeleteWorkflow() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (workflowId: string) => noCodeApiClient.deleteWorkflow(workflowId),
+    mutationFn: (workflowId: string) => noCodeGraphQLApiClient.deleteWorkflow(workflowId),
     onSuccess: (_, workflowId) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: noCodeKeys.workflow(workflowId) });
@@ -101,7 +102,7 @@ export function useCompileWorkflow() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (workflowId: string) => noCodeApiClient.compileWorkflow(workflowId),
+    mutationFn: (workflowId: string) => noCodeGraphQLApiClient.compileWorkflow(workflowId),
     onSuccess: (compilationResult, workflowId) => {
       // Update the workflow in cache with compilation results
       queryClient.setQueryData(
@@ -125,7 +126,7 @@ export function useCompileWorkflow() {
 export function useExecution(executionId: string) {
   return useQuery({
     queryKey: noCodeKeys.execution(executionId),
-    queryFn: () => noCodeApiClient.getExecution(executionId),
+    queryFn: () => noCodeGraphQLApiClient.getExecution(executionId),
     enabled: !!executionId,
     refetchInterval: (query) => {
       // Poll every 2 seconds if execution is in progress
@@ -143,7 +144,7 @@ export function useExecuteWorkflow() {
 
   return useMutation({
     mutationFn: ({ workflowId, config }: { workflowId: string; config: ExecutionConfig }) =>
-      noCodeApiClient.executeWorkflow(workflowId, config),
+      noCodeGraphQLApiClient.executeWorkflow(workflowId, config),
     onSuccess: (execution) => {
       // Add execution to cache
       queryClient.setQueryData(
@@ -161,7 +162,7 @@ export function useExecuteWorkflow() {
 export function useComponents(filters?: ComponentFilters) {
   return useQuery({
     queryKey: [...noCodeKeys.components, filters],
-    queryFn: () => noCodeApiClient.getComponents(filters),
+    queryFn: () => noCodeGraphQLApiClient.getComponents(filters),
     staleTime: 10 * 60 * 1000, // 10 minutes - components change rarely
   });
 }
@@ -170,7 +171,7 @@ export function useComponents(filters?: ComponentFilters) {
 export function useTemplates(filters?: TemplateFilters) {
   return useQuery({
     queryKey: [...noCodeKeys.templates, filters],
-    queryFn: () => noCodeApiClient.getTemplates(filters),
+    queryFn: () => noCodeGraphQLApiClient.getTemplates(filters),
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }
@@ -180,7 +181,7 @@ export function useCreateWorkflowFromTemplate() {
 
   return useMutation({
     mutationFn: ({ templateId, workflowName }: { templateId: string; workflowName: string }) =>
-      noCodeApiClient.createWorkflowFromTemplate(templateId, workflowName),
+      noCodeGraphQLApiClient.createWorkflowFromTemplate(templateId, workflowName),
     onSuccess: (newWorkflow) => {
       // Add to cache
       queryClient.setQueryData(
@@ -198,7 +199,7 @@ export function useCreateWorkflowFromTemplate() {
 export function useNoCodeHealthCheck() {
   return useQuery({
     queryKey: ['no-code-health'],
-    queryFn: () => noCodeApiClient.healthCheck(),
+    queryFn: () => noCodeGraphQLApiClient.healthCheck(),
     refetchInterval: 30000, // Check every 30 seconds
     retry: 3,
   });
@@ -233,7 +234,7 @@ export function usePrefetchWorkflow() {
     prefetchWorkflow: (workflowId: string) => {
       queryClient.prefetchQuery({
         queryKey: noCodeKeys.workflow(workflowId),
-        queryFn: () => noCodeApiClient.getWorkflow(workflowId),
+        queryFn: () => noCodeGraphQLApiClient.getWorkflow(workflowId),
         staleTime: 2 * 60 * 1000,
       });
     },
@@ -268,5 +269,112 @@ export function useWorkflowOperations() {
       compile: compileWorkflow.error,
       execute: executeWorkflow.error,
     },
+  };
+}
+
+// GraphQL subscription hooks for real-time updates
+export function useExecutionSubscription(executionId: string) {
+  const queryClient = useQueryClient();
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!executionId) return;
+
+    // Subscribe to execution updates
+    const unsubscribe = noCodeGraphQLApiClient.subscribeToExecutionUpdates(
+      executionId,
+      (updatedExecution) => {
+        // Update the execution in cache
+        queryClient.setQueryData(
+          noCodeKeys.execution(executionId),
+          updatedExecution
+        );
+      }
+    );
+
+    unsubscribeRef.current = unsubscribe;
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, [executionId, queryClient]);
+
+  return {
+    isConnected: !!unsubscribeRef.current,
+    disconnect: () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    },
+  };
+}
+
+export function useWorkflowSubscription(workflowId: string) {
+  const queryClient = useQueryClient();
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!workflowId) return;
+
+    // Subscribe to workflow updates
+    const unsubscribe = noCodeGraphQLApiClient.subscribeToWorkflowUpdates(
+      workflowId,
+      (updatedWorkflow) => {
+        // Update the workflow in cache
+        queryClient.setQueryData(
+          noCodeKeys.workflow(workflowId),
+          updatedWorkflow
+        );
+
+        // Also invalidate workflows list to ensure consistency
+        queryClient.invalidateQueries({ 
+          queryKey: noCodeKeys.workflows,
+          exact: false 
+        });
+      }
+    );
+
+    unsubscribeRef.current = unsubscribe;
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, [workflowId, queryClient]);
+
+  return {
+    isConnected: !!unsubscribeRef.current,
+    disconnect: () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    },
+  };
+}
+
+// Enhanced execution hook with subscription support
+export function useExecutionWithSubscription(executionId: string) {
+  const executionQuery = useExecution(executionId);
+  const subscription = useExecutionSubscription(executionId);
+
+  return {
+    ...executionQuery,
+    subscription,
+  };
+}
+
+// Enhanced workflow hook with subscription support
+export function useWorkflowWithSubscription(workflowId: string) {
+  const workflowQuery = useWorkflow(workflowId);
+  const subscription = useWorkflowSubscription(workflowId);
+
+  return {
+    ...workflowQuery,
+    subscription,
   };
 }

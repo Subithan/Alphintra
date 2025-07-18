@@ -49,6 +49,7 @@ help: ## Show this help message
 	@echo ""
 	@echo "$(GREEN)Kubernetes Operations:$(RESET)"
 	@echo "  make k8s-setup          - Set up local Kubernetes cluster"
+	@echo "  make k8s-secrets        - Set up Kubernetes secrets interactively"
 	@echo "  make k8s-deploy         - Deploy to Kubernetes"
 	@echo "  make k8s-destroy        - Destroy Kubernetes cluster"
 	@echo "  make istio-install      - Install Istio service mesh"
@@ -261,6 +262,11 @@ k8s-setup: ## Set up local Kubernetes cluster
 	@./scripts/setup-k8s-cluster.sh
 	@echo "$(GREEN)✓ Local Kubernetes cluster setup completed!$(RESET)"
 
+k8s-secrets: ## Set up Kubernetes secrets interactively
+	@echo "$(BLUE)Setting up Kubernetes secrets...$(RESET)"
+	@./scripts/setup-secrets.sh
+	@echo "$(GREEN)✓ Kubernetes secrets setup completed!$(RESET)"
+
 k8s-deploy: ## Deploy to Kubernetes
 	@echo "$(BLUE)Deploying to Kubernetes...$(RESET)"
 	@./scripts/k8s/deploy.sh $(ENV)
@@ -268,8 +274,15 @@ k8s-deploy: ## Deploy to Kubernetes
 
 k8s-destroy: ## Destroy Kubernetes cluster
 	@echo "$(BLUE)Destroying Kubernetes cluster...$(RESET)"
-	@./scripts/k8s/destroy-cluster.sh
+	@../scripts/destroy-platform.sh
 	@echo "$(GREEN)✓ Kubernetes cluster destroyed!$(RESET)"
+
+k8s-stop-all: ## Scale all deployments in all namespaces to zero (stop all services)
+	@echo "$(BLUE)Scaling all deployments in all namespaces to zero replicas...$(RESET)"
+	@for ns in $(shell kubectl get ns --no-headers -o custom-columns=":metadata.name"); do \
+	  kubectl scale deployment --all --replicas=0 -n $$ns; \
+	done
+	@echo "$(GREEN)✓ All deployments scaled to zero replicas!$(RESET)"
 
 istio-install: ## Install Istio service mesh
 	@echo "$(BLUE)Installing Istio service mesh...$(RESET)"
@@ -312,8 +325,6 @@ test-e2e: ## Run end-to-end tests
 	@./scripts/test/run-e2e-tests.sh $(ENV)
 
 test-all: test-unit test-integration test-e2e ## Run all tests
-
-lint: ## Run code linting
 	@echo "$(BLUE)Running code linting...$(RESET)"
 	@./scripts/lint/run-linting.sh
 
@@ -380,7 +391,7 @@ reset-%: ## Reset environment completely
 
 build-images: ## Build all Docker images
 	@echo "$(BLUE)Building all Docker images...$(RESET)"
-	@./scripts/build/build-all-images.sh $(VERSION)
+	@../scripts/build/build-all-images.sh $(VERSION)
 	@echo "$(GREEN)✓ Image building completed!$(RESET)"
 
 push-images: ## Push images to registry

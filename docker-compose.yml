@@ -240,7 +240,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: development
+      SPRING_PROFILES_ACTIVE: kubernetes
       REDIS_HOST: redis
       REDIS_PASSWORD: redis123
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics,prometheus
@@ -351,6 +351,87 @@ services:
       - alphintra-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  graphql-gateway:
+    build:
+      context: ./src/backend/graphql-gateway
+      dockerfile: Dockerfile
+    container_name: alphintra-graphql-gateway
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  no-code-service:
+    build:
+      context: ./src/backend/no-code-service
+      dockerfile: Dockerfile
+    container_name: alphintra-no-code-service
+    ports:
+      - "8006:8006"
+    environment:
+      # Main PostgreSQL connection for database creation
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: alphintra
+      DATABASE_PASSWORD: alphintra123
+      DATABASE_NAME: alphintra
+      # Dedicated no-code service database
+      NOCODE_DB_NAME: no_code_service_db
+      NOCODE_DB_USER: alphintra_user
+      NOCODE_DB_PASSWORD: alphintra_password
+      # Other services
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  risk-service:
+    build:
+      context: ./src/backend/risk-service
+      dockerfile: Dockerfile
+    container_name: alphintra-risk-service
+    ports:
+      - "8007:8007"
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
       interval: 30s
       timeout: 10s
       retries: 3

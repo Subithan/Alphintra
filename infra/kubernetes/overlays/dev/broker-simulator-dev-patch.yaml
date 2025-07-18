@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broker-simulator
+  namespace: alphintra-dev
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/actuator/prometheus"
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+      - name: broker-simulator
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes,dev"
+        - name: LOGGING_LEVEL_ROOT
+          value: "DEBUG"
+        - name: LOGGING_LEVEL_COM_ALPHINTRA
+          value: "DEBUG"
+        - name: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_KAFKA
+          value: "DEBUG"
+        - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+          value: "health,info,metrics,prometheus,env,configprops,kafka"
+        - name: MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS
+          value: "always"
+        - name: MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED
+          value: "true"
+        - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
+          value: "1.0"
+        - name: SPRING_SLEUTH_ZIPKIN_BASE_URL
+          value: "http://jaeger-collector.istio-system:14268"
+        - name: SPRING_JPA_SHOW_SQL
+          value: "true"
+        - name: SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL
+          value: "true"
+        - name: SIMULATION_MODE
+          value: "REALISTIC"
+        - name: MARKET_DATA_SIMULATION_ENABLED
+          value: "true"
+        - name: MARKET_DATA_SIMULATION_INTERVAL
+          value: "1000"
+        - name: MARKET_DATA_SYMBOLS
+          value: "AAPL,GOOGL,MSFT,AMZN,TSLA,NVDA,META,NFLX,AMD,INTC"
+        - name: ORDER_EXECUTION_DELAY_MS
+          value: "50"
+        - name: ORDER_REJECTION_RATE
+          value: "0.01"
+        - name: SLIPPAGE_FACTOR
+          value: "0.0005"
+        - name: COMMISSION_RATE
+          value: "0.001"
+        - name: SPREAD_PERCENTAGE
+          value: "0.001"
+        - name: VOLATILITY_FACTOR
+          value: "0.02"
+        - name: LIQUIDITY_SIMULATION_ENABLED
+          value: "true"
+        - name: PARTIAL_FILL_ENABLED
+          value: "true"
+        - name: AFTER_HOURS_TRADING_ENABLED
+          value: "false"
+        - name: CIRCUIT_BREAKER_ENABLED
+          value: "true"
+        - name: KAFKA_CONSUMER_GROUP_ID
+          value: "broker-simulator-dev"
+        - name: KAFKA_AUTO_OFFSET_RESET
+          value: "earliest"
+        - name: MARKET_HOURS_START
+          value: "09:30"
+        - name: MARKET_HOURS_END
+          value: "16:00"
+        - name: TIMEZONE
+          value: "America/New_York"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 45
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3

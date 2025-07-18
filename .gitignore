@@ -512,8 +512,7 @@ kustomization.yaml
 *.pfx
 
 # Local development
-local/
-dev/
+
 test-data/
 sample-data/
 
@@ -606,3 +605,7 @@ cython_debug/
 .trae/
 Alphintra Project Proposal (1).pdf
 .gemini
+
+# Secrets and sensitive data
+infra/.secrets/
+infra/backups/

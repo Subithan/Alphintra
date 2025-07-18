@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Node, Edge } from 'reactflow';
-import { noCodeApiClient, type Workflow as ApiWorkflow, type WorkflowData } from '../api/no-code-api';
+import { noCodeGraphQLApiClient, type Workflow as ApiWorkflow, type WorkflowData } from '../api/no-code-graphql-api';
 
 export interface NoCodeWorkflow {
   id: string;
@@ -12,6 +12,9 @@ export interface NoCodeWorkflow {
   createdAt: string | Date;
   lastModified?: string | Date;
   updatedAt?: Date;
+  hasUnsavedChanges?: boolean;
+  version?: number;
+  parent_workflow_id?: number;
 }
 
 export interface NoCodeState {
@@ -39,7 +42,7 @@ export interface NoCodeState {
 export const useNoCodeStore = create<NoCodeState>((set, get) => ({
   currentWorkflow: {
     id: 'default',
-    name: 'Untitled Strategy',
+    name: 'Untitled Model',
     nodes: [],
     edges: [],
     parameters: {},
@@ -67,7 +70,7 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
       set({
         currentWorkflow: {
           id: 'default',
-          name: 'Untitled Strategy',
+          name: 'Untitled Model',
           nodes: workflow.nodes,
           edges: workflow.edges,
           parameters: {},
@@ -137,7 +140,7 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
     try {
       // If workflow has a UUID, use API compilation
       if (current.id !== 'default') {
-        const result = await noCodeApiClient.compileWorkflow(current.id);
+        const result = await noCodeGraphQLApiClient.compileWorkflow(current.id);
         set({ 
           compilationResult: result.generated_code,
           isCompiling: false 
@@ -162,7 +165,7 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
 
   syncWithApi: async () => {
     try {
-      const workflows = await noCodeApiClient.getWorkflows();
+      const workflows = await noCodeGraphQLApiClient.getWorkflows();
       const convertedWorkflows: NoCodeWorkflow[] = workflows.map(apiWorkflow => ({
         id: apiWorkflow.uuid,
         name: apiWorkflow.name,
@@ -202,7 +205,7 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
         })),
       };
 
-      const newWorkflow = await noCodeApiClient.createWorkflow({
+      const newWorkflow = await noCodeGraphQLApiClient.createWorkflow({
         name,
         description,
         workflow_data: workflowData,
@@ -235,21 +238,47 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
 
   updateNodeParameters: (nodeId, parameters) => {
     const current = get().currentWorkflow;
-    if (!current) return;
+    if (!current) {
+      console.warn('No current workflow found when updating node parameters');
+      return;
+    }
 
-    const updatedNodes = current.nodes.map(node =>
-      node.id === nodeId
-        ? { ...node, data: { ...node.data, parameters: { ...node.data.parameters, ...parameters } } }
-        : node
-    );
+    console.log('Updating node parameters:', { nodeId, parameters }); // Debug log
+
+    const updatedNodes = current.nodes.map(node => {
+      if (node.id === nodeId) {
+        const updatedNode = { 
+          ...node, 
+          data: { 
+            ...node.data, 
+            parameters: { 
+              ...node.data.parameters, 
+              ...parameters 
+            },
+            // Update label if name parameter changed
+            label: parameters.name || node.data.label,
+            // Mark as modified for visual feedback
+            isModified: true,
+            lastModified: new Date().toISOString()
+          } 
+        };
+        console.log('Updated node:', updatedNode); // Debug log
+        return updatedNode;
+      }
+      return node;
+    });
 
     set({
       currentWorkflow: {
         ...current,
         nodes: updatedNodes,
         updatedAt: new Date(),
+        // Mark workflow as having unsaved changes
+        hasUnsavedChanges: true,
       },
     });
+
+    console.log('Store updated with new parameters'); // Debug log
   },
 
   addNode: (node) => {

@@ -1,0 +1,130 @@
+# Eureka Service Discovery Server for Microservices Architecture
+# Provides service registration and discovery with high availability
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eureka-config
+  namespace: alphintra
+data:
+  application.yml: |
+    server:
+      port: 8761
+    
+    eureka:
+      instance:
+        hostname: eureka-server
+        prefer-ip-address: true
+        ip-address: ${POD_IP:127.0.0.1}
+        instance-id: ${spring.application.name}:${POD_IP}:${server.port}
+        lease-renewal-interval-in-seconds: 10
+        lease-expiration-duration-in-seconds: 30
+      client:
+        register-with-eureka: false
+        fetch-registry: false
+        service-url:
+          defaultZone: http://eureka-server.alphintra.svc.cluster.local:8761/eureka/
+      server:
+        enable-self-preservation: false
+        eviction-interval-timer-in-ms: 5000
+        response-cache-update-interval-ms: 5000
+        response-cache-auto-expiration-in-seconds: 30
+    
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus
+      endpoint:
+        health:
+          show-details: always
+    
+    logging:
+      level:
+        com.netflix.eureka: DEBUG
+        com.netflix.discovery: DEBUG
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka-server
+  namespace: alphintra
+  labels:
+    app: eureka-server
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8761
+      targetPort: 8761
+      protocol: TCP
+  selector:
+    app: eureka-server
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka-server
+  namespace: alphintra
+  labels:
+    app: eureka-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eureka-server
+  template:
+    metadata:
+      labels:
+        app: eureka-server
+    spec:
+      containers:
+      - name: eureka-server
+        image: steeltoeoss/eureka-server:3.1.5
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: JAVA_OPTS
+          value: "-Xmx512m -Xms256m"
+        ports:
+        - name: http
+          containerPort: 8761
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8761
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8761
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: eureka-config
+          mountPath: /workspace/application.yml
+          subPath: application.yml
+      volumes:
+      - name: eureka-config
+        configMap:
+          name: eureka-config
