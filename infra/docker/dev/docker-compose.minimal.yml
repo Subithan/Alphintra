@@ -175,6 +175,34 @@ services:
       - alphintra-minimal-network
     restart: unless-stopped
 
+# trading-engine Service - API Gateway using Spring Cloud Gateway
+  trading-engine:
+    build:
+      context: ../../../src/backend/trading-engine
+      dockerfile: Dockerfile.distroless
+    container_name: alphintra-minimal-trading-engine
+    environment:
+      SPRING_PROFILES_ACTIVE: standalone
+      REDIS_HOST: redis
+      REDIS_PASSWORD: redis123
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-trading-engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8008:8008"
+    networks:
+      - alphintra-minimal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
 # Add this top-level volumes section if missing
 volumes:
   adminer-data:

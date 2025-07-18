@@ -1,0 +1,16 @@
+# Stage 1: Build the Java application
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
+RUN mkdir -p /app/lib && cp target/lib/postgresql-42.7.4.jar /app/lib/
+
+# Stage 2: Create minimal distroless image
+FROM gcr.io/distroless/java17-debian12
+WORKDIR /app
+COPY --from=builder /app/target/trading-engine-1.0-SNAPSHOT.jar app.jar
+COPY --from=builder /app/lib/postgresql-42.7.4.jar lib/postgresql-42.7.4.jar
+COPY --from=builder /app/src/main/resources/init_database.sql init_database.sql
+# Run MainApplication directly (db-init service handles initialization)
+ENTRYPOINT ["java", "-cp", "app.jar:lib/postgresql-42.7.4.jar", "com.alphintra.trading_engine.MainApplication"]
