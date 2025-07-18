@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+import psycopg2
 
 # Add the current directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -744,6 +745,35 @@ def generate_sell_signal(condition, quantity={quantity}, order_type='{order_type
         raise e
     finally:
         db.close()
+
+# --- Database bootstrap logic ---
+DB_NAME = "alphintra-no-code-service"
+DB_USER = "alphintra"
+DB_PASSWORD = "alphintra123"
+DB_HOST = "postgres"
+DB_PORT = os.getenv("DATABASE_PORT", "5432")
+
+# Connect to default 'postgres' DB to create the target DB if needed
+try:
+    conn = psycopg2.connect(dbname="postgres", user=DB_USER, password=DB_PASSWORD, host=DB_HOST, port=DB_PORT)
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute(f"SELECT 1 FROM pg_database WHERE datname = '{DB_NAME}'")
+    exists = cur.fetchone()
+    if not exists:
+        print(f"Creating database '{DB_NAME}'...")
+        cur.execute(f"CREATE DATABASE \"{DB_NAME}\"")
+        print(f"✅ Database '{DB_NAME}' created.")
+    else:
+        print(f"Database '{DB_NAME}' already exists.")
+    cur.close()
+    conn.close()
+except Exception as e:
+    print(f"❌ Error ensuring database exists: {e}")
+    sys.exit(1)
+
+# Now set DATABASE_URL for SQLAlchemy
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 def main():
     """Main initialization function"""

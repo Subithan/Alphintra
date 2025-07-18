@@ -8,13 +8,21 @@ from models import NoCodeWorkflow, NoCodeExecution, NoCodeComponent, NoCodeTempl
 from schemas_updated import WorkflowCreate, WorkflowUpdate, ExecutionCreate
 import json
 
+# Create custom scalar types for JSON objects
+JSON = strawberry.scalar(
+    Dict[str, Any],
+    serialize=lambda v: v,
+    parse_value=lambda v: v,
+    description="JSON object"
+)
+
 # GraphQL Types
 @strawberry.type
 class WorkflowNode:
     id: str
     type: str
-    position: Dict[str, float]
-    data: Dict[str, Any]
+    position: JSON
+    data: JSON
 
 @strawberry.type
 class WorkflowEdge:
@@ -42,9 +50,9 @@ class Workflow:
     generated_code_language: str
     generated_requirements: List[str]
     compilation_status: str
-    compilation_errors: List[Dict[str, Any]]
+    compilation_errors: List[JSON]
     validation_status: str
-    validation_errors: List[Dict[str, Any]]
+    validation_errors: List[JSON]
     deployment_status: str
     execution_mode: str
     version: int
@@ -80,10 +88,10 @@ class Execution:
     max_drawdown_percent: Optional[float]
     total_trades: int
     winning_trades: int
-    trades_data: List[Dict[str, Any]]
-    performance_metrics: Dict[str, Any]
-    execution_logs: List[Dict[str, Any]]
-    error_logs: List[Dict[str, Any]]
+    trades_data: List[JSON]
+    performance_metrics: JSON
+    execution_logs: List[JSON]
+    error_logs: List[JSON]
     started_at: datetime
     completed_at: Optional[datetime]
     created_at: datetime
@@ -98,14 +106,14 @@ class Component:
     category: str
     subcategory: Optional[str]
     component_type: str
-    input_schema: Dict[str, Any]
-    output_schema: Dict[str, Any]
-    parameters_schema: Dict[str, Any]
-    default_parameters: Dict[str, Any]
+    input_schema: JSON
+    output_schema: JSON
+    parameters_schema: JSON
+    default_parameters: JSON
     code_template: str
     imports_required: List[str]
     dependencies: List[str]
-    ui_config: Dict[str, Any]
+    ui_config: JSON
     icon: Optional[str]
     is_builtin: bool
     is_public: bool
@@ -131,7 +139,7 @@ class Template:
     rating: Optional[float]
     keywords: List[str]
     estimated_time_minutes: Optional[int]
-    expected_performance: Dict[str, Any]
+    expected_performance: JSON
     created_at: datetime
     updated_at: datetime
 
@@ -141,7 +149,7 @@ class CompilationResult:
     generated_code: str
     requirements: List[str]
     status: str
-    errors: List[Dict[str, Any]]
+    errors: List[JSON]
     created_at: datetime
 
 @strawberry.type
@@ -152,7 +160,7 @@ class WorkflowHistory:
     user_name: Optional[str]
     version: Optional[int]
     timestamp: datetime
-    metadata: Optional[Dict[str, Any]]
+    metadata: Optional[JSON]
 
 @strawberry.type
 class WorkflowsConnection:
@@ -171,8 +179,8 @@ class ExecutionsConnection:
 class WorkflowNodeInput:
     id: str
     type: str
-    position: Dict[str, float]
-    data: Dict[str, Any]
+    position: JSON
+    data: JSON
 
 @strawberry.input
 class WorkflowEdgeInput:
@@ -214,7 +222,7 @@ class ExecutionCreateInput:
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     initial_capital: float
-    parameters: Optional[Dict[str, Any]] = None
+    parameters: Optional[JSON] = None
 
 @strawberry.input
 class WorkflowFilters:

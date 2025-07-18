@@ -232,9 +232,15 @@ spring:
           jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-service.alphintra.svc.cluster.local:8080/.well-known/jwks.json}
 
 eureka:
+  server:
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 5000
+    renewal-percent-threshold: 0.85
+    response-cache-update-interval-ms: 5000
+    response-cache-auto-expiration-in-seconds: 30
   client:
     service-url:
-      defaultZone: http://eureka-server.alphintra.svc.cluster.local:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
     healthcheck:

@@ -208,19 +208,14 @@ export interface TemplateFilters {
 }
 
 export class NoCodeApiClient extends BaseApiClient {
-  private mockMode: boolean;
-
   constructor() {
     super({
-      baseUrl: process.env.NEXT_PUBLIC_NOCODE_API_URL || 'http://localhost:8004',
+      baseUrl: process.env.NEXT_PUBLIC_NOCODE_API_URL || 'http://localhost:8006',
     });
-    // Enable mock mode only if explicitly set to true
-    this.mockMode = process.env.NEXT_PUBLIC_MOCK_API === 'true';
     
     // Debug logging only in development mode and when explicitly enabled
     if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEBUG_API === 'true') {
       console.log('🔧 NoCodeApiClient Debug:', {
-        mockMode: this.mockMode,
         baseUrl: this.config.baseUrl
       });
     }
@@ -228,38 +223,6 @@ export class NoCodeApiClient extends BaseApiClient {
 
   // Workflow Management
   async createWorkflow(workflow: WorkflowCreate): Promise<Workflow> {
-    console.log('📝 createWorkflow called:', { mockMode: this.mockMode, workflow });
-    
-    if (this.mockMode) {
-      console.log('🎭 Using mock mode for createWorkflow');
-      // Return mock workflow for development
-      return {
-        id: Date.now(),
-        uuid: `mock-${Date.now()}`,
-        name: workflow.name,
-        description: workflow.description || '',
-        category: workflow.category || 'custom',
-        tags: workflow.tags || [],
-        workflow_data: workflow.workflow_data || { nodes: [], edges: [] },
-        generated_code: '',
-        generated_code_language: 'python',
-        generated_requirements: [],
-        compilation_status: 'pending',
-        compilation_errors: [],
-        validation_status: 'pending',
-        validation_errors: [],
-        deployment_status: 'draft',
-        execution_mode: workflow.execution_mode || 'backtest',
-        version: 1,
-        is_template: false,
-        is_public: false,
-        total_executions: 0,
-        successful_executions: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-    }
-
     return this.requestWithRetry<Workflow>('/api/workflows', {
       method: 'POST',
       body: JSON.stringify(workflow),
@@ -517,35 +480,6 @@ export class NoCodeApiClient extends BaseApiClient {
     changes_summary?: string;
     workflow_data?: WorkflowData;
   } = {}): Promise<Workflow> {
-    if (this.mockMode) {
-      // Return mock version for development
-      return {
-        id: Date.now(),
-        uuid: `mock-version-${Date.now()}`,
-        name: options.name || `Version ${Math.floor(Math.random() * 10) + 1}`,
-        description: options.changes_summary || 'Mock version created',
-        category: 'custom',
-        tags: [],
-        workflow_data: options.workflow_data || { nodes: [], edges: [] },
-        generated_code: '',
-        generated_code_language: 'python',
-        generated_requirements: [],
-        compilation_status: 'pending',
-        compilation_errors: [],
-        validation_status: 'pending',
-        validation_errors: [],
-        deployment_status: 'draft',
-        execution_mode: 'backtest',
-        version: Math.floor(Math.random() * 10) + 1,
-        is_template: false,
-        is_public: false,
-        total_executions: 0,
-        successful_executions: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-    }
-
     return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/versions`, {
       method: 'POST',
       body: JSON.stringify(options),
@@ -553,42 +487,6 @@ export class NoCodeApiClient extends BaseApiClient {
   }
 
   async getVersions(workflowId: string): Promise<WorkflowVersion[]> {
-    if (this.mockMode) {
-      // Return mock versions for development
-      return [
-        {
-          id: 1,
-          uuid: 'mock-version-1',
-          name: 'Initial Version',
-          version: 1,
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          updated_at: new Date(Date.now() - 86400000).toISOString(),
-          created_by: 'Demo User',
-          changes_summary: 'Initial model creation'
-        },
-        {
-          id: 2,
-          uuid: 'mock-version-2',
-          name: 'Enhanced Strategy',
-          version: 2,
-          created_at: new Date(Date.now() - 43200000).toISOString(),
-          updated_at: new Date(Date.now() - 43200000).toISOString(),
-          created_by: 'Demo User',
-          changes_summary: 'Added RSI indicator and improved risk management'
-        },
-        {
-          id: 3,
-          uuid: 'mock-version-3',
-          name: 'Current Version',
-          version: 3,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          created_by: 'Demo User',
-          changes_summary: 'Latest improvements and optimizations'
-        }
-      ];
-    }
-
     return this.requestWithRetry<WorkflowVersion[]>(`/api/workflows/${workflowId}/versions`);
   }
 
@@ -640,61 +538,6 @@ export class NoCodeApiClient extends BaseApiClient {
     total: number;
     hasMore: boolean;
   }> {
-    if (this.mockMode) {
-      // Return mock activity history for development
-      return {
-        activities: [
-          {
-            id: '1',
-            action_type: 'created',
-            description: 'Model created',
-            user_name: 'Demo User',
-            version: 1,
-            timestamp: new Date(Date.now() - 86400000).toISOString(),
-            metadata: { nodes: 2, edges: 1 }
-          },
-          {
-            id: '2',
-            action_type: 'updated',
-            description: 'Added RSI indicator',
-            user_name: 'Demo User',
-            version: 2,
-            timestamp: new Date(Date.now() - 43200000).toISOString(),
-            metadata: { nodes: 4, edges: 3 }
-          },
-          {
-            id: '3',
-            action_type: 'versioned',
-            description: 'Created version snapshot',
-            user_name: 'Demo User',
-            version: 2,
-            timestamp: new Date(Date.now() - 21600000).toISOString(),
-            metadata: {}
-          },
-          {
-            id: '4',
-            action_type: 'executed',
-            description: 'Backtesting completed',
-            user_name: 'Demo User',
-            version: 2,
-            timestamp: new Date(Date.now() - 10800000).toISOString(),
-            metadata: { return: 12.5, trades: 45 }
-          },
-          {
-            id: '5',
-            action_type: 'updated',
-            description: 'Optimized parameters',
-            user_name: 'Demo User',
-            version: 3,
-            timestamp: new Date().toISOString(),
-            metadata: { nodes: 4, edges: 3 }
-          }
-        ],
-        total: 5,
-        hasMore: false
-      };
-    }
-
     const params = new URLSearchParams();
     Object.entries(options).forEach(([key, value]) => {
       if (value !== undefined) {

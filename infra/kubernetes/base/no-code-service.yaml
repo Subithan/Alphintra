@@ -32,6 +32,54 @@ data:
 
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-code-service-code
+  namespace: alphintra
+data:
+  main.py: |
+    from fastapi import FastAPI, HTTPException, Depends
+    from fastapi.middleware.cors import CORSMiddleware
+    import uvicorn
+    import os
+    
+    app = FastAPI(
+        title="Alphintra No-Code Service",
+        description="Visual workflow builder and execution engine",
+        version="1.0.0"
+    )
+    
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "service": "no-code-service"}
+    
+    @app.get("/")
+    async def root():
+        return {"message": "Alphintra No-Code Service", "version": "1.0.0"}
+    
+    @app.get("/workflows")
+    async def get_workflows():
+        return {"workflows": [], "message": "No workflows defined yet"}
+    
+    if __name__ == "__main__":
+        uvicorn.run(
+            "main:app",
+            host="0.0.0.0",
+            port=8080,
+            reload=False
+        )
+
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: no-code-service
@@ -163,6 +211,14 @@ spec:
           name: no-code-service-code
       - name: tmp-volume
         emptyDir: {}
+      - name: requirements
+        configMap:
+          name: no-code-service-config
+      - name: app-packages
+        emptyDir: {}
+      - name: source-code
+        configMap:
+          name: no-code-service-code
       initContainers:
       - name: install-dependencies
         image: python:3.11-slim

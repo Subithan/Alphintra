@@ -76,7 +76,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: Gateway
 metadata:
   name: alphintra-gateway
-  namespace: alphintra-dev
+  namespace: alphintra
 spec:
   selector:
     istio: ingressgateway
@@ -105,7 +105,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: alphintra-vs
-  namespace: alphintra-dev
+  namespace: alphintra
 spec:
   hosts:
   - "*"
@@ -153,9 +153,9 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: alphintra-destination-rules
-  namespace: alphintra-dev
+  namespace: alphintra
 spec:
-  host: "*.alphintra-dev.svc.cluster.local"
+  host: "*.alphintra.svc.cluster.local"
   trafficPolicy:
     tls:
       mode: ISTIO_MUTUAL
@@ -173,8 +173,7 @@ EOF
 
 # Enable automatic sidecar injection for application namespaces
 echo "💉 Enabling automatic sidecar injection..."
-kubectl label namespace alphintra-dev istio-injection=enabled --overwrite
-kubectl label namespace alphintra-ml istio-injection=enabled --overwrite
+kubectl label namespace alphintra istio-injection=enabled --overwrite
 
 # Display installation summary
 echo "✅ Istio installation complete!"
@@ -191,13 +190,12 @@ echo "  - Jaeger: kubectl port-forward -n istio-system svc/jaeger 16686:16686"
 echo "  - Kiali: kubectl port-forward -n istio-system svc/kiali 20001:20001"
 echo ""
 echo "🚪 Gateway Configuration:"
-echo "  - Gateway: alphintra-gateway (alphintra-dev namespace)"
+echo "  - Gateway: alphintra-gateway (alphintra namespace)"
 echo "  - VirtualService: alphintra-vs (routing configured)"
 echo "  - DestinationRule: alphintra-destination-rules (traffic policies)"
 echo ""
 echo "💉 Sidecar Injection:"
-echo "  - alphintra-dev: enabled"
-echo "  - alphintra-ml: enabled"
+echo "  - alphintra: enabled"
 echo ""
 echo "🔧 Next steps:"
 echo "  1. Deploy applications to namespaces with istio-injection=enabled"

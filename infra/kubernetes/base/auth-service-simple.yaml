@@ -1,0 +1,112 @@
+# Simplified Auth Service using pre-built distroless image
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config-simple
+  namespace: alphintra
+data:
+  application.yml: |
+    server:
+      port: 8080
+    
+    spring:
+      application:
+        name: auth-service
+      
+      datasource:
+        url: jdbc:postgresql://postgresql:5432/alphintra_main
+        username: alphintra_user
+        password: alphintra_pass
+        driver-class-name: org.postgresql.Driver
+      
+      redis:
+        host: redis
+        port: 6379
+        password: redis_dev_password
+        database: 0
+      
+      jpa:
+        hibernate:
+          ddl-auto: create-drop
+        properties:
+          hibernate:
+            dialect: org.hibernate.dialect.PostgreSQLDialect
+    
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: "health,info,prometheus"
+      endpoint:
+        health:
+          probes:
+            enabled: true
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: alphintra
+  labels:
+    app: auth-service
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        version: v1
+    spec:
+      containers:
+      - name: auth-service
+        image: localhost:5001/alphintra/auth-service:optimized
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        env:
+        - name: PYTHONPATH
+          value: "/root/.local/lib/python3.11/site-packages"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: alphintra
+  labels:
+    app: auth-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: auth-service

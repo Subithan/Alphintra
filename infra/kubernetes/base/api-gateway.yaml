@@ -90,7 +90,7 @@ metadata:
     app: api-gateway
     version: v1
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: api-gateway
@@ -112,12 +112,8 @@ spec:
         fsGroup: 1001
       containers:
       - name: api-gateway
-        image: openjdk:17-jre-slim
+        image: localhost:5001/alphintra/api-gateway:optimized
         imagePullPolicy: IfNotPresent
-        command:
-          - java
-          - -jar
-          - /app/gateway.jar
         env:
         - name: POD_IP
           valueFrom:
@@ -166,7 +162,7 @@ spec:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 120
+          initialDelaySeconds: 60
           periodSeconds: 30
           timeoutSeconds: 10
           successThreshold: 1
@@ -191,18 +187,17 @@ spec:
           failureThreshold: 30
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "256Mi"
+            cpu: "200m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "512Mi"
+            cpu: "400m"
         volumeMounts:
         - name: gateway-config
           mountPath: /workspace/bootstrap.yml
           subPath: bootstrap.yml
-        - name: gateway-jar
-          mountPath: /app
-          readOnly: true
+        - name: tmp-volume
+          mountPath: /tmp
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -213,34 +208,9 @@ spec:
       - name: gateway-config
         configMap:
           name: api-gateway-config
-      - name: gateway-jar
-        configMap:
-          name: gateway-jar
       - name: tmp-volume
         emptyDir: {}
-      initContainers:
-      - name: wait-for-dependencies
-        image: busybox:1.35
-        command:
-          - sh
-          - -c
-          - |
-            echo "Waiting for Eureka Server..."
-            until nc -z eureka-server.alphintra.svc.cluster.local 8761; do
-              echo "Waiting for Eureka Server..."
-              sleep 5
-            done
-            echo "Waiting for Config Server..."
-            until nc -z config-server.alphintra.svc.cluster.local 8888; do
-              echo "Waiting for Config Server..."
-              sleep 5
-            done
-            echo "Waiting for Redis..."
-            until nc -z redis-primary.alphintra.svc.cluster.local 6379; do
-              echo "Waiting for Redis..."
-              sleep 5
-            done
-            echo "All dependencies are ready!"
+      # Removing init containers to simplify deployment for security testing
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       affinity:

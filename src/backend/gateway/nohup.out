@@ -518,3 +518,5 @@ Caused by: java.net.UnknownHostException: Failed to resolve 'redis-primary.alphi
 2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.s.w.s.DelegatingServerAuthenticationEntryPoint - No match found. Using default entry point org.springframework.security.web.server.authentication.HttpBasicServerAuthenticationEntryPoint@4b435518
 2025-07-07 20:00:42 [parallel-5] DEBUG [,] o.s.w.s.a.HttpWebHandlerAdapter - [fa04707b-3] Completed 401 UNAUTHORIZED
 2025-07-07 20:00:43 [AsyncReporter{org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinWebClientSender@4e66c602}] DEBUG [,] o.s.w.r.f.client.ExchangeFunctions - [6d1f731c] HTTP POST http://localhost:9411/api/v2/spans
+2025-07-08 01:07:42 [SpringApplicationShutdownHook] INFO  [,] o.s.b.w.e.netty.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-07-08 01:07:42 [netty-shutdown] INFO  [,] o.s.b.w.e.netty.GracefulShutdown - Graceful shutdown complete

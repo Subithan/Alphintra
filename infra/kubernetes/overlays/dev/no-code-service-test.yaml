@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: no-code-service-test
+  labels:
+    app: no-code-service-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: no-code-service-test
+  template:
+    metadata:
+      labels:
+        app: no-code-service-test
+    spec:
+      containers:
+      - name: no-code-service
+        image: alphintra/no-code-service:latest # Placeholder, replace with your actual image
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://Alphintra:Alphintra@alphintra-db:5432/alphintra_db"
+        - name: REDIS_URL
+          value: "redis://alphintra-redis:6379/0"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: no-code-service-test
+  labels:
+    app: no-code-service-test
+spec:
+  selector:
+    app: no-code-service-test
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

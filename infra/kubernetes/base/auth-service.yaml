@@ -287,9 +287,12 @@ spec:
         emptyDir: {}
       - name: tmp-volume
         emptyDir: {}
+      - name: maven-cache
+        persistentVolumeClaim:
+          claimName: maven-cache
       initContainers:
       - name: build-auth-service
-        image: maven:3.9-openjdk-17-slim
+        image: maven:3.8.1-openjdk-17-slim
         command:
           - sh
           - -c

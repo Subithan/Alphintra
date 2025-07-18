@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from security_middleware import GatewaySecurityMiddleware, init_microservice_security, require_gateway_routing
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import asyncio
@@ -153,6 +154,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Gateway security middleware
+strict_mode = os.getenv('ENVIRONMENT', 'development') != 'development'
+app.add_middleware(GatewaySecurityMiddleware, strict_mode=strict_mode)
+
+# Initialize microservice security
+init_microservice_security(app)
 
 # Security
 security = HTTPBearer()
