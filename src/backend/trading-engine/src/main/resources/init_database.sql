@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS trading_accounts (
 
 -- Creating Orders table
 CREATE TABLE IF NOT EXISTS orders (
-    order_id SERIAL PRIMARY KEY,
+    order_id BIGSERIAL PRIMARY KEY,
     order_uuid UUID DEFAULT gen_random_uuid() UNIQUE,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     account_id INTEGER NOT NULL REFERENCES trading_accounts(account_id) ON DELETE CASCADE,
