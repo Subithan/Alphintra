@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { useToast } from '@/components/ui/use-toast';
+import { shallow } from 'zustand/shallow';
 import { 
   Settings, 
   ArrowRight, 
@@ -33,7 +34,15 @@ interface ConfigurationPanelProps {
 }
 
 export function ConfigurationPanel({ selectedNode, onNodeSelect }: ConfigurationPanelProps) {
-  const { currentWorkflow, updateNodeParameters, removeNode, duplicateNode } = useNoCodeStore();
+  const { currentWorkflow, updateNodeParameters, removeNode, duplicateNode } = useNoCodeStore(
+    (state) => ({
+      currentWorkflow: state.currentWorkflow,
+      updateNodeParameters: state.updateNodeParameters,
+      removeNode: state.removeNode,
+      duplicateNode: state.duplicateNode
+    }),
+    shallow
+  );
   const { toast } = useToast();
   const [localParameters, setLocalParameters] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
@@ -50,8 +59,11 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
     }
   );
 
-  // Get the selected node data from both the store and the current workflow
-  const selectedNodeData = currentWorkflow?.nodes.find(node => node.id === selectedNode);
+  // Get the selected node data from the store using useMemo for optimization
+  const selectedNodeData = useMemo(() => {
+    if (!selectedNode || !currentWorkflow) return null;
+    return currentWorkflow.nodes.find(node => node.id === selectedNode);
+  }, [selectedNode, currentWorkflow?.nodes]);
   
   console.log('ConfigurationPanel:', { selectedNode, selectedNodeData, currentWorkflow }); // Debug log
 
@@ -856,7 +868,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
             description: 'Choose between system datasets or user upload',
             options: [
               { value: 'system', label: 'System Dataset' },
-              { value: 'upload', label: 'Upload Custom Data' },
+              
             ],
             default: 'system'
           },

@@ -3,6 +3,8 @@ import { Handle, Position, type NodeProps } from 'reactflow';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Target, TrendingUp, GitMerge, Activity, Search, Clock } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface ConditionNodeData {
   label: string;
@@ -17,7 +19,18 @@ interface ConditionNodeData {
   };
 }
 
-export function ConditionNode({ data, selected }: NodeProps<ConditionNodeData>) {
+export function ConditionNode({ id, selected }: NodeProps<ConditionNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Condition', parameters: {} }
+      };
+    },
+    shallow
+  );
+
   const { label, parameters } = data;
   const conditionType = parameters?.conditionType || 'comparison';
   const condition = parameters?.condition || 'greater_than';

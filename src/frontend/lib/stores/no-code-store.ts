@@ -236,11 +236,11 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
     }
   },
 
-  updateNodeParameters: (nodeId, parameters) => {
-    const current = get().currentWorkflow;
+  updateNodeParameters: (nodeId, parameters) => set((state) => {
+    const current = state.currentWorkflow;
     if (!current) {
       console.warn('No current workflow found when updating node parameters');
-      return;
+      return state;
     }
 
     console.log('Updating node parameters:', { nodeId, parameters }); // Debug log
@@ -268,18 +268,21 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
       return node;
     });
 
-    set({
-      currentWorkflow: {
-        ...current,
-        nodes: updatedNodes,
-        updatedAt: new Date(),
-        // Mark workflow as having unsaved changes
-        hasUnsavedChanges: true,
-      },
-    });
+    const newWorkflow = {
+      ...current,
+      nodes: updatedNodes,
+      updatedAt: new Date(),
+      // Mark workflow as having unsaved changes
+      hasUnsavedChanges: true,
+    };
 
     console.log('Store updated with new parameters'); // Debug log
-  },
+    
+    return {
+      ...state,
+      currentWorkflow: newWorkflow,
+    };
+  }),
 
   addNode: (node) => {
     const current = get().currentWorkflow;
