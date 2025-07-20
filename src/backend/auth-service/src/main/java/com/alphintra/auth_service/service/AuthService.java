@@ -4,6 +4,7 @@
 package com.alphintra.auth_service.service;
 
 import com.alphintra.auth_service.entity.User;
+import com.alphintra.auth_service.entity.Role;
 import com.alphintra.auth_service.repository.UserRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
