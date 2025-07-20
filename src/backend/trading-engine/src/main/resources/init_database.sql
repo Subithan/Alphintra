@@ -1,6 +1,4 @@
--- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS alphintra_trading_engine;
-\c alphintra_trading_engine;
+
 
 -- Creating Users table
 CREATE TABLE IF NOT EXISTS users (
