@@ -3,8 +3,8 @@ package com.alphintra.trading_engine;
 import java.math.BigDecimal;
 
 public class OrderRequest {
-    private Integer userId;
-    private Integer accountId;
+    private Long userId;
+    private Long accountId;
     private String symbol;
     private String side;
     private String orderType;
@@ -15,10 +15,10 @@ public class OrderRequest {
     private String clientOrderId;
 
     // Getters and Setters
-    public Integer getUserId() { return userId; }
-    public void setUserId(Integer userId) { this.userId = userId; }
-    public Integer getAccountId() { return accountId; }
-    public void setAccountId(Integer accountId) { this.accountId = accountId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public Long getAccountId() { return accountId; }
+    public void setAccountId(Long accountId) { this.accountId = accountId; }
     public String getSymbol() { return symbol; }
     public void setSymbol(String symbol) { this.symbol = symbol; }
     public String getSide() { return side; }

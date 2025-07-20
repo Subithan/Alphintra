@@ -8,21 +8,24 @@ import java.time.OffsetDateTime;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer userId;
+    private Long userId;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(length = 50)
     private String firstName;
+
+    @Column(length = 50)
     private String lastName;
 
-    @Column(nullable = false)
+    @Column
     private Boolean isActive = true;
 
     @Column(nullable = false)
@@ -32,8 +35,8 @@ public class User {
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
     // Getters and Setters
-    public Integer getUserId() { return userId; }
-    public void setUserId(Integer userId) { this.userId = userId; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getEmail() { return email; }

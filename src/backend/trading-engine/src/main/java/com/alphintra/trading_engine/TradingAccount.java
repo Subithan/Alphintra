@@ -9,15 +9,16 @@ import java.time.OffsetDateTime;
 public class TradingAccount {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer accountId;
+    private Long accountId;
 
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String accountType;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private String exchange = "internal";
 
     @Column(nullable = false)
@@ -29,7 +30,7 @@ public class TradingAccount {
     @Column(nullable = false)
     private BigDecimal lockedBalance = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column
     private Boolean isActive = true;
 
     @Column(nullable = false)
@@ -39,10 +40,10 @@ public class TradingAccount {
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
     // Getters and Setters
-    public Integer getAccountId() { return accountId; }
-    public void setAccountId(Integer accountId) { this.accountId = accountId; }
-    public Integer getUserId() { return userId; }
-    public void setUserId(Integer userId) { this.userId = userId; }
+    public Long getAccountId() { return accountId; }
+    public void setAccountId(Long accountId) { this.accountId = accountId; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
     public String getAccountType() { return accountType; }
     public void setAccountType(String accountType) { this.accountType = accountType; }
     public String getExchange() { return exchange; }

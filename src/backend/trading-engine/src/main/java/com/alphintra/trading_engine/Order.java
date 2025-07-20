@@ -8,81 +8,75 @@ import java.util.UUID;
 @Entity
 @Table(name = "orders")
 public class Order {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "order_id")
     private Long orderId;
 
-    @Column(name = "order_uuid", nullable = false, unique = true)
-    private UUID orderUuid;
+    @Column(nullable = false, unique = true)
+    private UUID orderUuid = UUID.randomUUID();
 
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "account_id", nullable = false)
-    private Integer accountId;
+    @ManyToOne
+    @JoinColumn(name = "account_id", nullable = false)
+    private TradingAccount account;
 
-    @Column(name = "symbol", nullable = false)
+    @Column(nullable = false)
     private String symbol;
 
-    @Column(name = "side", nullable = false)
+    @Column(nullable = false)
     private String side;
 
-    @Column(name = "order_type", nullable = false)
+    @Column(nullable = false)
     private String orderType;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(nullable = false)
     private BigDecimal quantity;
 
-    @Column(name = "price")
     private BigDecimal price;
 
-    @Column(name = "stop_price")
     private BigDecimal stopPrice;
 
-    @Column(name = "time_in_force", nullable = false)
-    private String timeInForce;
+    @Column(nullable = false)
+    private String timeInForce = "GTC";
 
-    @Column(name = "status", nullable = false)
-    private String status;
+    @Column(nullable = false)
+    private String status = "PENDING";
 
-    @Column(name = "filled_quantity")
-    private BigDecimal filledQuantity;
+    @Column(nullable = false)
+    private BigDecimal filledQuantity = BigDecimal.ZERO;
 
-    @Column(name = "average_price")
     private BigDecimal averagePrice;
 
-    @Column(name = "fee")
-    private BigDecimal fee;
+    @Column(nullable = false)
+    private BigDecimal fee = BigDecimal.ZERO;
 
-    @Column(name = "exchange", nullable = false)
-    private String exchange;
+    @Column(nullable = false)
+    private String exchange = "internal";
 
-    @Column(name = "client_order_id")
     private String clientOrderId;
 
-    @Column(name = "exchange_order_id")
     private String exchangeOrderId;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
+    @Column(nullable = false)
+    private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
+    @Column(nullable = false)
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
 
-    @Column(name = "expires_at")
     private OffsetDateTime expiresAt;
 
-    // Getters and setters
+    // Getters and Setters
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }
     public UUID getOrderUuid() { return orderUuid; }
     public void setOrderUuid(UUID orderUuid) { this.orderUuid = orderUuid; }
-    public Integer getUserId() { return userId; }
-    public void setUserId(Integer userId) { this.userId = userId; }
-    public Integer getAccountId() { return accountId; }
-    public void setAccountId(Integer accountId) { this.accountId = accountId; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public TradingAccount getAccount() { return account; }
+    public void setAccount(TradingAccount account) { this.account = account; }
     public String getSymbol() { return symbol; }
     public void setSymbol(String symbol) { this.symbol = symbol; }
     public String getSide() { return side; }
