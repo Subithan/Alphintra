@@ -178,7 +178,7 @@ services:
   auth-service:
     build:
       context: ../../../src/backend/auth-service
-      dockerfile: Dockerfile.distroless
+      dockerfile: dockerfile
     container_name: alphintra-minimal-auth-service
     environment:
       DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-auth-service
