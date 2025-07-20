@@ -1,8 +1,5 @@
--- Path: Alphintra/src/backend/auth-service/src/main/resources/init_database.sql
--- Purpose: Defines the initial PostgreSQL schema with KYC fields (first_name, last_name, date_of_birth, 
--- phone_number, address, kyc_status) added to the users table and a new kyc_documents table. 
--- Retains original tables (users, roles, user_roles) and default admin user.
--- Schema for DockerNetworkDatabaseInitializer, identical to auth_service_schema.txt for manual initialization compatibility.
+-- Path: Alphintra/src/backend/auth-service/src/main/resources/db/migration/V1__initial_schema.sql
+-- Purpose: Flyway migration script for the initial schema, mirroring init_database.sql with KYC extensions.
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,

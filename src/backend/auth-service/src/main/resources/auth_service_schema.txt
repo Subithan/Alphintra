@@ -1,10 +1,5 @@
--- Path: Alphintra/src/backend/auth-service/src/main/resources/init_database.sql
--- Purpose: Defines the initial PostgreSQL schema with KYC fields (first_name, last_name, date_of_birth, 
--- phone_number, address, kyc_status) added to the users table and a new kyc_documents table. 
--- Retains original tables (users, roles, user_roles) and default admin user.
--- Schema for DockerNetworkDatabaseInitializer, identical to auth_service_schema.txt for manual initialization compatibility.
-
-CREATE TABLE IF NOT EXISTS users (
+-- Creating the users table to store user information with KYC fields
+CREATE TABLE users (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     username VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -19,14 +14,16 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS roles (
+-- Creating the roles table to store role information
+CREATE TABLE roles (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name VARCHAR(50) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS user_roles (
+-- Creating the user_roles junction table for many-to-many relationship
+CREATE TABLE user_roles (
     user_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
     PRIMARY KEY (user_id, role_id),
@@ -34,7 +31,8 @@ CREATE TABLE IF NOT EXISTS user_roles (
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS kyc_documents (
+-- Creating the kyc_documents table for KYC document storage
+CREATE TABLE kyc_documents (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     user_id BIGINT NOT NULL,
     document_type VARCHAR(50) NOT NULL,
@@ -45,21 +43,25 @@ CREATE TABLE IF NOT EXISTS kyc_documents (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name);
-CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
-CREATE INDEX IF NOT EXISTS idx_kyc_documents_user_id ON kyc_documents(user_id);
+-- Adding indexes for performance
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_roles_name ON roles(name);
+CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
+CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
+CREATE INDEX idx_kyc_documents_user_id ON kyc_documents(user_id);
 
+-- Insert default roles
 INSERT INTO roles (name) VALUES ('USER') ON CONFLICT (name) DO NOTHING;
 INSERT INTO roles (name) VALUES ('ADMIN') ON CONFLICT (name) DO NOTHING;
 INSERT INTO roles (name) VALUES ('KYC_ADMIN') ON CONFLICT (name) DO NOTHING;
 
+-- Insert default admin user
 INSERT INTO users (username, email, password, kyc_status)
 VALUES ('admin', 'admin@alphintra.com', '$2a$10$1eZ5h5f2g4v3k2j5n6m7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d2e3f', 'NOT_STARTED')
 ON CONFLICT (username) DO NOTHING;
 
+-- Assign ADMIN role to admin user
 INSERT INTO user_roles (user_id, role_id)
 SELECT u.id, r.id
 FROM users u, roles r
