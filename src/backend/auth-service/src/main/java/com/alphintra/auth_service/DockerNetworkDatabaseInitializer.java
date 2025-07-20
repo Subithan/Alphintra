@@ -1,5 +1,6 @@
+```java
 // Path: Alphintra/src/backend/auth-service/src/main/java/com/alphintra/auth_service/DockerNetworkDatabaseInitializer.java
-// Purpose: Initializes the PostgreSQL database and executes init_database.sql. Added environment variables for KYC provider settings.
+// Purpose: Initializes the PostgreSQL database and executes init_database.sql. Updated to align with docker-compose.minimal.yml credentials.
 
 package com.alphintra.auth_service;
 
@@ -17,9 +18,9 @@ import java.sql.Statement;
 
 public class DockerNetworkDatabaseInitializer {
     private static final Logger log = LoggerFactory.getLogger(DockerNetworkDatabaseInitializer.class);
-    private static final String DB_URL = "jdbc:postgresql://postgres:5432/postgres";
-    private static final String DB_USER = System.getenv("POSTGRES_USER") != null ? System.getenv("POSTGRES_USER") : "postgres";
-    private static final String DB_PASSWORD = System.getenv("POSTGRES_PASSWORD") != null ? System.getenv("POSTGRES_PASSWORD") : "password";
+    private static final String DB_URL = "jdbc:postgresql://postgres:5432/alphintra";
+    private static final String DB_USER = System.getenv("POSTGRES_USER") != null ? System.getenv("POSTGRES_USER") : "alphintra";
+    private static final String DB_PASSWORD = System.getenv("POSTGRES_PASSWORD") != null ? System.getenv("POSTGRES_PASSWORD") : "alphintra123";
     private static final String DB_NAME = "alphintra_auth_service";
     private static final String KYC_API_KEY = System.getenv("KYC_API_KEY") != null ? System.getenv("KYC_API_KEY") : "";
     private static final String KYC_ENDPOINT = System.getenv("KYC_ENDPOINT") != null ? System.getenv("KYC_ENDPOINT") : "";
@@ -82,3 +83,4 @@ public class DockerNetworkDatabaseInitializer {
         return sql.toString();
     }
 }
+```
