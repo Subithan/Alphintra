@@ -3,6 +3,8 @@ import { Handle, Position, type NodeProps } from 'reactflow';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface CustomDatasetNodeData {
   label: string;
@@ -24,7 +26,18 @@ interface CustomDatasetNodeData {
   };
 }
 
-export function CustomDatasetNode({ data, selected }: NodeProps<CustomDatasetNodeData>) {
+export function CustomDatasetNode({ id, selected }: NodeProps<CustomDatasetNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Custom Dataset', parameters: {} }
+      };
+    },
+    shallow
+  );
+
   const { label, parameters } = data;
   const fileName = parameters?.fileName || 'No file uploaded';
   const dataQuality = parameters?.dataQuality || 'warning';

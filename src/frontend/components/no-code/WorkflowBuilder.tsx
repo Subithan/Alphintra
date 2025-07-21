@@ -26,6 +26,7 @@ import { useWorkflows, useCreateWorkflow, useUpdateWorkflow } from '../../lib/ho
 import { ComponentPalette } from './ComponentPalette';
 import { NodePropertiesPanel } from './NodePropertiesPanel';
 import { WorkflowToolbar } from './WorkflowToolbar';
+import { EditableTitle } from './EditableTitle';
 import { CustomNodes } from './nodes';
 import { CustomEdges } from './edges';
 
@@ -309,6 +310,17 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
               nodeColor="#3b82f6"
               className="bg-white border border-gray-200"
             />
+            
+            {/* Editable Title Panel */}
+            <Panel position="top-center" className="!left-auto !right-auto !transform-none w-full max-w-4xl">
+              <div className="px-8">
+                <EditableTitle 
+                  workflowId={currentWorkflow?.id || 'default'}
+                  initialTitle={currentWorkflow?.name || 'Untitled Model'} 
+                  readOnly={readOnly}
+                />
+              </div>
+            </Panel>
             
             {/* Status Panel */}
             <Panel position="top-right" className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">

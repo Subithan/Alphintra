@@ -24,6 +24,7 @@ import { useUser } from '@/contexts/UserContext';
 import { noCodeApiClient } from '@/lib/api/no-code-api';
 import { timescaleMarketData, formatTimescaleDate, getTimescaleTimeframe } from '@/lib/api/market-data-timescale';
 import { EnvDebug } from '@/components/debug/EnvDebug';
+import { EditableTitle } from '@/components/no-code/EditableTitle';
 
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
@@ -1114,7 +1115,12 @@ if __name__ == "__main__":
       <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{workflowName}</h1>
+            <EditableTitle 
+              workflowId={currentWorkflow?.id || 'default'}
+              initialTitle={workflowName}
+              className="text-xl font-semibold text-gray-900 dark:text-gray-100"
+              readOnly={false}
+            />
             <Badge variant={currentStep === 'design' ? 'default' : 'secondary'}>
               {currentStep === 'design' && 'Design'}
               {currentStep === 'dataset' && 'Dataset Selection'}

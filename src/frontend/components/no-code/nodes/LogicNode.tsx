@@ -3,6 +3,8 @@ import { Handle, Position, type NodeProps } from 'reactflow';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { GitBranch } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface LogicNodeData {
   label: string;
@@ -12,7 +14,18 @@ interface LogicNodeData {
   };
 }
 
-export function LogicNode({ data, selected }: NodeProps<LogicNodeData>) {
+export function LogicNode({ id, selected }: NodeProps<LogicNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Node', parameters: {} }
+      };
+    },
+    shallow
+  );
+
   const { label, parameters } = data;
   const operation = parameters?.operation || 'AND';
   const inputs = parameters?.inputs || 2;
