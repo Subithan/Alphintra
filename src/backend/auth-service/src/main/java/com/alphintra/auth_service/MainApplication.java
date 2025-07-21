@@ -6,12 +6,12 @@ package com.alphintra.auth_service;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-// Removed: import java.util.concurrent.CountDownLatch; // No longer needed
+import java.util.concurrent.CountDownLatch;
 
 @SpringBootApplication
 public class MainApplication {
-    public static void main(String[] args) { // Removed 'throws InterruptedException' as it's no longer needed
+    public static void main(String[] args) throws InterruptedException {
         SpringApplication.run(MainApplication.class, args);
-        // Removed: new CountDownLatch(1).await(); // This line caused the application to hang
+        new CountDownLatch(1).await();
     }
 }

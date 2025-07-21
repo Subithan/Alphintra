@@ -1,4 +1,3 @@
-
 # Minimal Development Docker Compose Configuration
 # Only essential services: PostgreSQL, Redis, and Kafka
 # Run: docker-compose -f docker-compose.minimal.yml up -d
