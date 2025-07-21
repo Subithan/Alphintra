@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Activity, 
-  BarChart3, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Activity,
+  BarChart3,
   Settings,
   Play,
   Pause,
@@ -16,6 +16,7 @@ import {
   Clock,
   Zap
 } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -112,6 +113,7 @@ export default function Trade() {
 
   return (
     <div className="space-y-6">
+  
       {/* Portfolio Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className={"bg-white border-gray-200 shadow-lg transition-all hover:shadow-xl dark:bg-slate-800 dark:border-slate-700 dark:shadow-xl"}>
@@ -202,7 +204,11 @@ export default function Trade() {
         </Card>
       </div>
 
+        
+
+  
       {/* Main Trading Interface */}
+      
       <Card className="bg-white border-gray-200 shadow-lg dark:bg-slate-800 dark:border-slate-700 dark:shadow-xl">
         <CardHeader className="pb-0">
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
@@ -337,7 +343,7 @@ export default function Trade() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">All Positions</h3>
               </div>
-              <Button className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-semibold">
+              <Button className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold">
                 New Position
               </Button>
             </div>
