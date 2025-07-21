@@ -1,4 +1,4 @@
-```java
+
 // Path: Alphintra/src/backend/auth-service/src/main/java/com/alphintra/auth_service/DockerNetworkDatabaseInitializer.java
 // Purpose: Initializes the PostgreSQL database and executes init_database.sql. Updated to align with docker-compose.minimal.yml credentials.
 
@@ -83,4 +83,3 @@ public class DockerNetworkDatabaseInitializer {
         return sql.toString();
     }
 }
-```
