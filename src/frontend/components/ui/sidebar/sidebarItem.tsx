@@ -3,6 +3,8 @@ import { SidebarItemType } from "./types";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { usePathname } from "next/navigation";
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from "react";
 
 interface Props {
   item: SidebarItemType;
@@ -12,13 +14,18 @@ interface Props {
 const SidebarItem = ({ item, collapsed = false }: Props) => {
   const pathname = usePathname();
   const isActive = pathname === item.url;
+  const { theme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  const currentTheme = theme === 'system' ? systemTheme : theme;
 
   return (
     <li
       className={`rounded-md transition ${
         isActive && !item.external
           ? "bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 text-yellow-500"
-          : "hover:bg-gradient-to-r hover:from-yellow-500/10 hover:to-transparent hover:border-l-4 hover:border-yellow-500 hover:text-yellow-500"
+          : `hover:bg-gradient-to-r hover:from-yellow-500/10 hover:to-transparent hover:border-l-4 hover:border-yellow-500 hover:text-yellow-500 ${currentTheme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`
       }`}
     >
       {item.external ? (

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTheme } from 'next-themes';
 import LogoIcon from "@/components/ui/LogoIcon";
 import Link from "next/link";
 import { mainSidebarItems, footerSidebarItems } from "./sidebarData";
@@ -8,31 +9,28 @@ import { Icon } from "@iconify/react";
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { theme, systemTheme } = useTheme();
 
-  // Collapse sidebar automatically on small screens
+  // Flag component as mounted to avoid hydration mismatch
+  useEffect(() => setMounted(true), []);
+
+  // Handle responsive collapse
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setCollapsed(true);
-      } else {
-        setCollapsed(false);
-      }
-    };
-
-    // Initial check
+    const handleResize = () => setCollapsed(window.innerWidth < 768);
     handleResize();
-
-    // Listen for resize events
-    window.addEventListener("resize", handleResize);
-
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  if (!mounted) return null;
+  const currentTheme = theme === 'system' ? systemTheme : theme;
 
   return (
     <aside
       className={`sticky top-0 left-0 h-screen ${
         collapsed ? "w-24" : "w-64"
-      } bg-[#060819] text-white border-r border-[#262739] p-4 flex flex-col justify-between transition-all duration-300 z-40`}
+      } ${currentTheme === 'dark' ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-gray-900 border-gray-300'} border-r p-4 flex flex-col justify-between transition-all duration-300 z-40 shadow-lg`}
     >
       {/* Top Section */}
       <div>
@@ -42,7 +40,7 @@ const Sidebar = () => {
               <LogoIcon className="text-black w-full h-full" />
             </div>
             {!collapsed && (
-              <span className="text-white font-bold text-xl hidden sm:block">ALPHINTRA</span>
+              <span className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'} font-bold text-xl hidden sm:block`}>ALPHINTRA</span>
             )}
           </Link>
         </div>
@@ -56,7 +54,7 @@ const Sidebar = () => {
 
       {/* Bottom Section */}
       <div>
-        <ul className="space-y-2 border-t border-[#262739] pt-4 mb-2">
+        <ul className={`space-y-2 border-t ${currentTheme === 'dark' ? 'border-slate-700' : 'border-gray-300'} pt-4 mb-2`}>
           {footerSidebarItems.map((item) => (
             <SidebarItem key={item.id} item={item} collapsed={collapsed} />
           ))}
@@ -66,11 +64,11 @@ const Sidebar = () => {
       {/* Collapse Toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute top-[40px] -right-3 bg-[#060819] hover:border-yellow-500 border rounded-sm border-[#262739] w-6 h-6 flex items-center justify-center cursor-pointer group transition"
+        className={`absolute top-[40px] -right-3 ${currentTheme === 'dark' ? 'bg-slate-800 border-slate-600' : 'bg-white border-gray-300'} hover:border-yellow-500 border rounded-md w-6 h-6 flex items-center justify-center cursor-pointer group transition shadow-lg`}
       >
         <Icon
           icon="solar:alt-arrow-left-linear"
-          className={`text-white group-hover:text-yellow-500 transition-transform duration-300 ${
+          className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-600'} group-hover:text-yellow-500 transition-transform duration-300 ${
             collapsed ? "rotate-180" : ""
           }`}
           width={16}

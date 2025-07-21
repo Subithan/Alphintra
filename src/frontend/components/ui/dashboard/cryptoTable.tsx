@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useTheme } from 'next-themes';
 import { cn } from "@/lib/utils";
 
 const tabs = ["Titans", "Momentum", "Macro", "Small"];
@@ -35,19 +36,24 @@ const data = [
 
 export default function CryptoTable() {
   const [activeTab, setActiveTab] = useState("Titans");
+  const { theme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  const currentTheme = theme === 'system' ? systemTheme : theme;
 
   return (
-    <div className="text-white p-4">
+    <div className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'} p-4`}>
       {/* Tabs */}
-      <div className="flex gap-4 mb-4 border-b border-[#1a1a2e]">
+      <div className={`flex gap-4 mb-4 border-b ${currentTheme === 'dark' ? 'border-[#1a1a2e]' : 'border-gray-200'}`}>
         {tabs.map((tab) => (
           <button
             key={tab}
             className={cn(
               "pb-2 text-sm font-semibold transition",
               tab === activeTab
-                ? "text-white border-b-2 border-blue-500"
-                : "text-gray-400 hover:text-white"
+                ? `${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'} border-b-2 border-yellow-500`
+                : `${currentTheme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`
             )}
             onClick={() => setActiveTab(tab)}
           >
@@ -57,9 +63,9 @@ export default function CryptoTable() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg bg-[#0a0a1a]">
+      <div className={`overflow-x-auto rounded-lg ${currentTheme === 'dark' ? 'bg-[#0a0a1a]' : 'bg-gray-50'}`}>
         <table className="min-w-full text-sm text-left">
-          <thead className="bg-[#101020] text-gray-400 uppercase text-xs">
+          <thead className={`${currentTheme === 'dark' ? 'bg-[#101020] text-gray-400' : 'bg-gray-100 text-gray-600'} uppercase text-xs`}>
             <tr>
               <th className="px-4 py-3">Ticker</th>
               <th className="px-4 py-3">Expiry</th>
@@ -72,7 +78,7 @@ export default function CryptoTable() {
             {data.map((row, i) => (
               <tr
                 key={i}
-                className="border-b border-[#1a1a2e] hover:bg-[#141426]"
+                className={`border-b ${currentTheme === 'dark' ? 'border-[#1a1a2e] hover:bg-[#141426]' : 'border-gray-200 hover:bg-gray-100'} transition-colors`}
               >
                 <td className="px-4 py-3 font-bold flex items-center gap-2">
                   <span>{String(i + 1).padStart(2, "0")}</span>
@@ -81,7 +87,7 @@ export default function CryptoTable() {
                 </td>
                 <td className="px-4 py-3">{row.expiry}</td>
                 <td className="px-4 py-3">
-                  <span className="bg-[#1e1e3f] text-white px-3 py-1 rounded-full">
+                  <span className={`${currentTheme === 'dark' ? 'bg-[#1e1e3f] text-white' : 'bg-yellow-100 text-yellow-800'} px-3 py-1 rounded-full`}>
                     {row.type}
                   </span>
                 </td>
@@ -90,7 +96,7 @@ export default function CryptoTable() {
                   {row.sector.map((sec, idx) => (
                     <span
                       key={idx}
-                      className="bg-[#1e1e3f] text-gray-300 px-2 py-1 rounded-full text-xs"
+                      className={`${currentTheme === 'dark' ? 'bg-[#1e1e3f] text-gray-300' : 'bg-gray-200 text-gray-700'} px-2 py-1 rounded-full text-xs`}
                     >
                       {sec}
                     </span>
@@ -103,24 +109,24 @@ export default function CryptoTable() {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-center mt-4 text-gray-400 gap-1">
-        <button className="px-2 py-1 hover:text-white">&lt;</button>
+      <div className={`flex justify-center mt-4 ${currentTheme === 'dark' ? 'text-gray-400' : 'text-gray-500'} gap-1`}>
+        <button className={`px-2 py-1 ${currentTheme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900'} transition-colors`}>&lt;</button>
         {[1, 2, 3, 4].map((num) => (
           <button
             key={num}
             className={cn(
-              "w-8 h-8 rounded-full",
+              "w-8 h-8 rounded-full transition-colors",
               num === 2
-                ? "bg-blue-600 text-white"
-                : "hover:text-white"
+                ? `bg-yellow-500 ${currentTheme === 'dark' ? 'text-black' : 'text-black'}`
+                : `${currentTheme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900'}`
             )}
           >
             {num}
           </button>
         ))}
         <span className="px-2">...</span>
-        <button className="px-2 py-1 hover:text-white">120</button>
-        <button className="px-2 py-1 hover:text-white">&gt;</button>
+        <button className={`px-2 py-1 ${currentTheme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900'} transition-colors`}>120</button>
+        <button className={`px-2 py-1 ${currentTheme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900'} transition-colors`}>&gt;</button>
       </div>
     </div>
   );

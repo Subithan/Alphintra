@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTheme } from 'next-themes';
 
 interface GradientBorderProps {
   children: React.ReactNode;
@@ -10,22 +13,26 @@ interface GradientBorderProps {
 const GradientBorder: React.FC<GradientBorderProps> = ({
   children,
   gradientAngle,
-  backgroundColor = 'bg-[#060819]',
+  backgroundColor,
   className = '',
 }) => {
+  const { theme } = useTheme();
+  
+  const bgColor = backgroundColor || (theme === 'dark' ? 'bg-[#060819]' : 'bg-white');
+  const innerBg = theme === 'dark' ? '#060819' : '#ffffff';
   return (
     <div
-      className={`w-full  rounded-2xl border border-transparent ${backgroundColor} ${className}`}
+      className={`w-full rounded-2xl border border-transparent ${bgColor} ${className}`}
       style={{
         backgroundImage: `
-          linear-gradient(${gradientAngle}, #060819, #060819 100%),
+          linear-gradient(${gradientAngle}, ${innerBg}, ${innerBg} 100%),
           conic-gradient(
             from ${gradientAngle},
-            rgba(71, 85, 105, 0.48) 80%,
+            ${theme === 'dark' ? 'rgba(71, 85, 105, 0.48)' : 'rgba(156, 163, 175, 0.48)'} 80%,
             #FFD700 86%,
             #FFE4B5 90%,
             #FFD700 94%,
-            rgba(71, 85, 105, 0.48)
+            ${theme === 'dark' ? 'rgba(71, 85, 105, 0.48)' : 'rgba(156, 163, 175, 0.48)'}
           )
         `,
         backgroundOrigin: 'border-box',

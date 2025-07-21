@@ -1,28 +1,36 @@
 "use client";
-import { useEffect, useState } from "react";
+
 import { Icon } from "@iconify/react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 const ThemeToggle = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, setTheme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
+  // Ensure component is mounted before accessing theme to avoid hydration mismatch
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.toggle("dark", darkMode);
-    localStorage.setItem("theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    setDarkMode(saved === "dark");
+    setMounted(true);
   }, []);
+
+  if (!mounted) return null;
+
+  // Resolve the currently active theme (light / dark / system)
+  const currentTheme = theme === "system" ? systemTheme : theme;
+  const isDark = currentTheme === "dark";
+
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
 
   return (
     <button
-      onClick={() => setDarkMode(!darkMode)}
+      onClick={toggleTheme}
       className="p-2 rounded-full hover:bg-[#262739] hover:text-yellow-500 dark:hover:bg-gray-800"
+      aria-label="Toggle theme"
     >
       <Icon
-        icon={darkMode ? "solar:moon-line-duotone" : "solar:sun-line-duotone"}
+        icon={isDark ? "solar:moon-line-duotone" : "solar:sun-line-duotone"}
         height={20}
       />
     </button>

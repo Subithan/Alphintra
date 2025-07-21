@@ -1,7 +1,7 @@
-// app/ui/dashboard/PriceChart.tsx
 "use client"
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 import {
   Card,
   CardContent,
@@ -14,12 +14,18 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import { BarChart3 } from "lucide-react";
 
 interface PriceChartProps {
   price: number;
 }
 
 export default function PriceChart({ price }: PriceChartProps) {
+  const { theme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  const currentTheme = theme === 'system' ? systemTheme : theme;
   const chartData = [
     { x: 1, y: 31000 },
     { x: 2, y: 21100 },
@@ -38,17 +44,19 @@ export default function PriceChart({ price }: PriceChartProps) {
   };
 
   return (
-    <Card
-      className="p-0 rounded-lg shadow-lg text-white"
-      style={{ backgroundColor: '#060819', border: '#060819' }}
-    >
-      <CardHeader className="flex justify-between items-center mb-2 px-2 pt-2 pb-0">
-        <CardTitle className="text-xl font-bold">BITCOIN</CardTitle>
-        <div className="text-gray-400 hover:text-white cursor-pointer">
-          {price.toLocaleString()}
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-orange-500/10">
+            <BarChart3 className="w-5 h-5 text-orange-500" />
+          </div>
+          <h2 className={`text-xl font-bold ${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>BITCOIN</h2>
         </div>
-      </CardHeader>
-      <CardContent className="px-2 pt-0 pb-0">
+        <div className={`text-lg font-semibold ${currentTheme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>
+          ${price.toLocaleString()}
+        </div>
+      </div>
+      <div className={`p-4 rounded-lg ${currentTheme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
         <ChartContainer config={chartConfig} className="h-[180px] w-full">
           <AreaChart data={chartData}>
             <defs>
@@ -69,7 +77,7 @@ export default function PriceChart({ price }: PriceChartProps) {
             />
           </AreaChart>
         </ChartContainer>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

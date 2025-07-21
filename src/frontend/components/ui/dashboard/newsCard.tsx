@@ -1,6 +1,7 @@
-// NewsCard.tsx
-import React from 'react';
+'use client';
 
+import React, { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { Megaphone, MoreHorizontal } from 'lucide-react';
 
 interface NewsCardProps {
@@ -10,15 +11,25 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ title, source, time }: NewsCardProps) {
+  const { theme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  const currentTheme = theme === 'system' ? systemTheme : theme;
+
   return (
-      <div className="border border-[#262739] p-4 rounded-lg shadow-lg mb-4">
-        <div className="flex items-center">
-          <div className="text-white rounded-full w-6 h-6 flex items-center justify-center mr-2">
-            <Megaphone className="w-6 h-6 text-yellow-500 mr-2" />
+      <div className={`p-3 rounded-lg ${currentTheme === 'dark' ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-50 hover:bg-gray-100'} transition-all cursor-pointer`}>
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-yellow-500/10 flex-shrink-0">
+            <Megaphone className="w-4 h-4 text-yellow-500" />
           </div>
-          <div>
-            <h3 className="text-white text-2xs font-bold">{title}</h3>
-            <p className="text-gray-400 text-sm">{source} · {time}</p>
+          <div className="min-w-0 flex-1">
+            <h3 className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'} text-sm font-semibold leading-tight mb-1 line-clamp-2`}>
+              {title}
+            </h3>
+            <p className={`${currentTheme === 'dark' ? 'text-slate-400' : 'text-gray-600'} text-xs`}>
+              {source} · {time}
+            </p>
           </div>
         </div>
       </div>
