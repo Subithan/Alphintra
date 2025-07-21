@@ -4,31 +4,84 @@
 spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra-auth-service}
-    username: ${POSTGRES_USER:alphintra}
-    password: ${POSTGRES_PASSWORD:alphintra123}
+    username: ${POSTGRES_USER:alphintra} # Uses POSTGRES_USER from docker-compose if set, or default
+    password: ${POSTGRES_PASSWORD:alphintra123} # Uses POSTGRES_PASSWORD from docker-compose if set, or default
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: none
-    show-sql: true
+      ddl-auto: none # Managed by Flyway
+    show-sql: true # Set to false for production
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
-    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra-auth-service}
-    user: ${POSTGRES_USER:alphintra}
-    password: ${POSTGRES_PASSWORD:alphintra123}
+    baseline-on-migrate: true # Use with caution, particularly in production with existing DBs
+    # Removed redundant url, user, password as Flyway automatically uses spring.datasource configuration
+
+  data: # For Redis configuration
+    redis:
+      url: ${REDIS_URL:redis://:redis123@redis:6379} # Use REDIS_URL to configure Redis
+
+  kafka: # For Kafka configuration
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 jwt:
-  secret: ${JWT_SECRET:your-secure-jwt-secret}
+  secret: ${JWT_SECRET:your-secure-jwt-secret} # Default for local dev, override in production
   expiration: 86400000 # 24 hours in milliseconds
 
 kyc:
   provider:
     name: placeholder
-    api-key: ${KYC_API_KEY:}
-    endpoint: ${KYC_ENDPOINT:}
+    api-key: ${KYC_API_KEY:} # Expected to be set via environment variable
+    endpoint: ${KYC_ENDPOINT:} # Expected to be set via environment variable
     enabled: false
 
 server:
-  port: 8009
+  port: 8009 # Port for this microservice
+
+management: # Spring Boot Actuator for health checks, etc.
+  endpoints:
+    web:
+      exposure:
+        include: health # Expose only 'health' endpoint by default
+
+
+
+
+
+# # Path: Alphintra/src/backend/auth-service/src/main/resources/application.yml
+# # Purpose: Configures Spring Boot for auth-service, aligning with docker-compose.minimal.yml
+
+# spring:
+#   datasource:
+#     url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra-auth-service}
+#     username: ${POSTGRES_USER:alphintra}
+#     password: ${POSTGRES_PASSWORD:alphintra123}
+#     driver-class-name: org.postgresql.Driver
+#   jpa:
+#     hibernate:
+#       ddl-auto: none
+#     show-sql: true
+#   flyway:
+#     enabled: true
+#     locations: classpath:db/migration
+#     baseline-on-migrate: true
+#     url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra-auth-service}
+#     user: ${POSTGRES_USER:alphintra}
+#     password: ${POSTGRES_PASSWORD:alphintra123}
+
+# jwt:
+#   secret: ${JWT_SECRET:your-secure-jwt-secret}
+#   expiration: 86400000 # 24 hours in milliseconds
+
+# kyc:
+#   provider:
+#     name: placeholder
+#     api-key: ${KYC_API_KEY:}
+#     endpoint: ${KYC_ENDPOINT:}
+#     enabled: false
+
+# server:
+#   port: 8009

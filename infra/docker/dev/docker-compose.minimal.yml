@@ -77,6 +77,25 @@ services:
       - alphintra-minimal-network
     restart: unless-stopped
 
+  # --- NEW SERVICE: Database Initializer ---
+  db-initializer:
+    # Context points to the auth-service folder, where Dockerfile.db-initializer is located
+    build:
+      context: ../../../src/backend/auth-service
+      # Specify the new Dockerfile specifically for the initializer
+      dockerfile: Dockerfile.db-initializer
+    container_name: alphintra-minimal-db-initializer
+    environment:
+      # Pass default postgres credentials for the initializer to connect
+      POSTGRES_USER: alphintra
+      POSTGRES_PASSWORD: alphintra123
+    depends_on:
+      postgres:
+        condition: service_healthy # Ensure PostgreSQL is healthy before attempting initialization
+    networks:
+      - alphintra-minimal-network
+    # This service should run to completion and exit. No restart policy needed typically.
+
   # No-Code Service - Visual workflow builder API
   no-code-service:
     build:
@@ -92,6 +111,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      db-initializer: # <-- ADDED: Dependency on db-initializer
+        condition: service_completed_successfully
     ports:
       - "8006:8006"
     networks:
@@ -151,6 +174,7 @@ services:
         condition: service_healthy
       no-code-service:
         condition: service_healthy
+      # db-initializer is not added here as graphql-gateway uses the default 'alphintra' DB
     ports:
       - "8005:8005"
     networks:
@@ -189,6 +213,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      db-initializer: # <-- ADDED: Dependency on db-initializer
+        condition: service_completed_successfully
     ports:
       - "8009:8009"
     networks:
@@ -212,3 +240,219 @@ volumes:
 networks:
   alphintra-minimal-network:
     driver: bridge
+
+
+# # Minimal Development Docker Compose Configuration
+# # Only essential services: PostgreSQL, Redis, and Kafka
+# # Run: docker-compose -f docker-compose.minimal.yml up -d
+
+# services:
+#   # PostgreSQL - Main application database
+#   postgres:
+#     image: postgres:15-alpine
+#     container_name: alphintra-minimal-postgres
+#     environment:
+#       POSTGRES_DB: alphintra
+#       POSTGRES_USER: alphintra
+#       POSTGRES_PASSWORD: alphintra123
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_minimal_data:/var/lib/postgresql/data
+#     networks:
+#       - alphintra-minimal-network
+#     healthcheck:
+#       test: ["CMD-SHELL", "PGPASSWORD=alphintra123 psql -U alphintra -d alphintra -c 'SELECT 1;'"]
+#       interval: 15s
+#       timeout: 10s
+#       retries: 5
+#       start_period: 30s
+#     restart: unless-stopped
+
+#   # Redis - Cache and session store
+#   redis:
+#     image: redis:7-alpine
+#     container_name: alphintra-minimal-redis
+#     command: redis-server --appendonly yes --requirepass redis123
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_minimal_data:/data
+#     networks:
+#       - alphintra-minimal-network
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "-a", "redis123", "ping"]
+#       interval: 10s
+#       timeout: 10s
+#       retries: 3
+#     restart: unless-stopped
+
+#   # Zookeeper - Required for Kafka
+#   zookeeper:
+#     image: confluentinc/cp-zookeeper:7.4.0
+#     container_name: alphintra-minimal-zookeeper
+#     environment:
+#       ZOOKEEPER_CLIENT_PORT: 2181
+#       ZOOKEEPER_TICK_TIME: 2000
+#     ports:
+#       - "2181:2181"
+#     networks:
+#       - alphintra-minimal-network
+#     restart: unless-stopped
+
+#   # Kafka - Message streaming
+#   kafka:
+#     image: confluentinc/cp-kafka:7.4.0
+#     container_name: alphintra-minimal-kafka
+#     depends_on:
+#       - zookeeper
+#     ports:
+#       - "9092:9092"
+#     environment:
+#       KAFKA_BROKER_ID: 1
+#       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+#       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+#       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+#       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+#       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+#     networks:
+#       - alphintra-minimal-network
+#     restart: unless-stopped
+
+#   # No-Code Service - Visual workflow builder API
+#   no-code-service:
+#     build:
+#       context: ../../../src/backend/no-code-service
+#       dockerfile: Dockerfile
+#     container_name: alphintra-minimal-no-code-service
+#     environment:
+#       DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-no-code-service
+#       REDIS_URL: redis://:redis123@redis:6379
+#       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     ports:
+#       - "8006:8006"
+#     networks:
+#       - alphintra-minimal-network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 40s
+#     restart: unless-stopped
+
+#   # # Gateway Service - API Gateway using Spring Cloud Gateway
+#   # gateway:
+#   #   build:
+#   #     context: ../../../src/backend/gateway
+#   #     dockerfile: Dockerfile.distroless
+#   #   container_name: alphintra-minimal-gateway
+#   #   environment:
+#   #     SPRING_PROFILES_ACTIVE: standalone
+#   #     REDIS_HOST: redis
+#   #     REDIS_PASSWORD: redis123
+#   #     DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+#   #   depends_on:
+#   #     postgres:
+#   #       condition: service_healthy
+#   #     redis:
+#   #       condition: service_healthy
+#   #   ports:
+#   #     - "8080:8080"
+#   #   networks:
+#   #     - alphintra-minimal-network
+#   #   healthcheck:
+#   #     test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+#   #     interval: 30s
+#   #     timeout: 10s
+#   #     retries: 3
+#   #     start_period: 60s
+#   #   restart: unless-stopped
+
+#   # GraphQL Gateway - GraphQL API interface
+#   graphql-gateway:
+#     build:
+#       context: ../../../src/backend/graphql-gateway
+#       dockerfile: Dockerfile
+#     container_name: alphintra-minimal-graphql-gateway
+#     environment:
+#       DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+#       REDIS_URL: redis://:redis123@redis:6379
+#       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+#       NO_CODE_SERVICE_URL: http://no-code-service:8006
+#       AUTH_SERVICE_URL: http://auth-service:8001
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#       no-code-service:
+#         condition: service_healthy
+#     ports:
+#       - "8005:8005"
+#     networks:
+#       - alphintra-minimal-network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 40s
+#     restart: unless-stopped
+
+#   adminer:
+#     image: adminer:latest
+#     container_name: alphintra-adminer
+#     ports:
+#       - "8080:8080"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#     networks:
+#       - alphintra-minimal-network
+#     restart: unless-stopped
+
+#   auth-service:
+#     build:
+#       context: ../../../src/backend/auth-service
+#       dockerfile: Dockerfile
+#     container_name: alphintra-minimal-auth-service
+#     environment:
+#       DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-auth-service
+#       REDIS_URL: redis://:redis123@redis:6379
+#       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     ports:
+#       - "8009:8009"
+#     networks:
+#       - alphintra-minimal-network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 40s
+#     restart: unless-stopped
+
+# # Add this top-level volumes section if missing
+# volumes:
+#   adminer-data:
+#   postgres_minimal_data:
+#     driver: local
+#   redis_minimal_data:
+#     driver: local
+
+# networks:
+#   alphintra-minimal-network:
+#     driver: bridge
