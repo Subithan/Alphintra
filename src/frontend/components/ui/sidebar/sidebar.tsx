@@ -30,7 +30,7 @@ const Sidebar = () => {
     <aside
       className={`sticky top-0 left-0 h-screen ${
         collapsed ? "w-24" : "w-64"
-      } ${currentTheme === 'dark' ? 'bg-slate-800 text-white border-slate-700' : 'bg-white text-gray-900 border-gray-300'} border-r p-4 flex flex-col justify-between transition-all duration-300 z-40 shadow-lg`}
+      } ${currentTheme === 'dark' ? 'bg-[#0a0a1a] text-white border-yellow-500/20' : 'bg-white text-gray-900 border-gray-300'} border-r p-4 flex flex-col justify-between transition-all duration-300 z-40 shadow-lg`}
     >
       {/* Top Section */}
       <div>
@@ -54,7 +54,7 @@ const Sidebar = () => {
 
       {/* Bottom Section */}
       <div>
-        <ul className={`space-y-2 border-t ${currentTheme === 'dark' ? 'border-slate-700' : 'border-gray-300'} pt-4 mb-2`}>
+        <ul className={`space-y-2 border-t ${currentTheme === 'dark' ? 'border-yellow-500/20' : 'border-gray-300'} pt-4 mb-2`}>
           {footerSidebarItems.map((item) => (
             <SidebarItem key={item.id} item={item} collapsed={collapsed} />
           ))}
@@ -64,7 +64,7 @@ const Sidebar = () => {
       {/* Collapse Toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className={`absolute top-[40px] -right-3 ${currentTheme === 'dark' ? 'bg-slate-800 border-slate-600' : 'bg-white border-gray-300'} hover:border-yellow-500 border rounded-md w-6 h-6 flex items-center justify-center cursor-pointer group transition shadow-lg`}
+        className={`absolute top-[40px] -right-3 ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border-yellow-500/20' : 'bg-white border-gray-300'} hover:border-yellow-500 border rounded-md w-6 h-6 flex items-center justify-center cursor-pointer group transition shadow-lg`}
       >
         <Icon
           icon="solar:alt-arrow-left-linear"

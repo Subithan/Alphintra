@@ -10,11 +10,11 @@ export default function DashboardLayout({
 }) {
 
   return (
-    <div className="flex w-full min-h-screen bg-gray-100 dark:bg-slate-900">
+    <div className="flex w-full min-h-screen bg-gray-50 dark:bg-[#0a0a1a]">
       <Sidebar />
       <div className="flex flex-col w-full">
         <Header />
-        <main className="p-6 min-h-screen bg-gray-100 dark:bg-slate-900">
+        <main className="p-6 min-h-screen bg-gray-50 dark:bg-[#0a0a1a]">
           {children}
         </main>
       </div>

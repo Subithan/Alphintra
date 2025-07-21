@@ -13,7 +13,7 @@ export default function BalanceCard() {
   const currentTheme = theme === 'system' ? systemTheme : theme;
 
   return (
-      <div className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'} flex justify-between items-center`}>
+      <div className={`p-4 rounded-lg ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border border-yellow-500/20 hover:bg-[#141426] text-white' : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-900'} flex justify-between items-center transition-all`}>
         <div>
           <div className="text-xl font-bold">Estimated Balance</div>
           <div className="text-2xl font-bold">

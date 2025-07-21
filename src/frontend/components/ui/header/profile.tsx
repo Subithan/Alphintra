@@ -1,14 +1,17 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useTheme } from 'next-themes';
 import Link from "next/link";
 import Image from "next/image";
 import { Icon } from "@iconify/react";
 
 const Profile = () => {
+  const { theme, systemTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
+  useEffect(() => setMounted(true), []);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -21,6 +24,11 @@ const Profile = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (!mounted) return null;
+  const currentTheme = theme === 'system' ? systemTheme : theme;
+
+  
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -40,10 +48,10 @@ const Profile = () => {
 
       {/* Dropdown Menu */}
       {open && (
-        <div className="absolute right-0 mt-2 w-48 bg-gray-900 border-[#262739] dark:bg-gray-800 rounded-md shadow-lg z-50">
+        <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg z-50 border transition-all ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border-yellow-500/20' : 'bg-gray-50 border-gray-200'}`}>
           <Link
             href="/profile"
-            className="flex items-center gap-2 px-4 py-2 hover:bg-[#262739] dark:hover:bg-gray-700 text-sm text-white dark:text-gray-200"
+            className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${currentTheme === 'dark' ? 'text-white hover:bg-[#141426]' : 'text-gray-900 hover:bg-gray-100'}`}
             onClick={() => setOpen(false)}
           >
             <Icon icon="solar:user-circle-outline" width={20} />
@@ -52,7 +60,7 @@ const Profile = () => {
 
           <Link
             href="/settings"
-            className="flex items-center gap-2 px-4 py-2 hover:bg-[#262739] dark:hover:bg-gray-700 text-sm text-white dark:text-gray-200"
+            className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${currentTheme === 'dark' ? 'text-white hover:bg-[#141426]' : 'text-gray-900 hover:bg-gray-100'}`}
             onClick={() => setOpen(false)}
           >
             <Icon icon="solar:settings-outline" width={20} />
@@ -63,7 +71,7 @@ const Profile = () => {
 
           <Link
             href="/auth/login"
-            className=" border-t border-[#262739] block w-full text-left px-4 py-2 hover:bg-[#262739] dark:hover:bg-gray-700 text-sm text-white"
+            className={`block w-full text-left px-4 py-2 text-sm transition-colors ${currentTheme === 'dark' ? 'text-white hover:bg-[#141426] border-t border-yellow-500/20' : 'text-gray-900 hover:bg-gray-100 border-t border-gray-200'}` }
             onClick={() => setOpen(false)}
           >
             Logout

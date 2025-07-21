@@ -44,7 +44,7 @@ export default function PriceChart({ price }: PriceChartProps) {
   };
 
   return (
-    <div>
+    <div className={`p-4 rounded-lg ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border border-yellow-500/20 hover:bg-[#141426] text-white' : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-900'} flex flex-col transition-all`}>
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-lg bg-orange-500/10">
@@ -56,7 +56,7 @@ export default function PriceChart({ price }: PriceChartProps) {
           ${price.toLocaleString()}
         </div>
       </div>
-      <div className={`p-4 rounded-lg ${currentTheme === 'dark' ? 'bg-slate-700/50' : 'bg-gray-50'}`}>
+      <div className="mt-4">
         <ChartContainer config={chartConfig} className="h-[180px] w-full">
           <AreaChart data={chartData}>
             <defs>

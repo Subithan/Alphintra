@@ -8,7 +8,7 @@ import Profile from "./profile";
 const Header = () => {
   return (
     <header
-      className={`transition ${"bg-transparent"}`}
+      className={`px-4 py-3 bg-gray-50 border-b border-gray-200 dark:bg-[#0a0a1a] dark:border-yellow-500/20 transition-all`}
     >
       <div className="flex justify-between items-center px-4 py-3">
         {/* Left side (can add logo or leave empty) */}

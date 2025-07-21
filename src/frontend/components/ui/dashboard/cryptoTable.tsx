@@ -43,7 +43,7 @@ export default function CryptoTable() {
   const currentTheme = theme === 'system' ? systemTheme : theme;
 
   return (
-    <div className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'} p-4`}>
+    <div className={`p-4 rounded-lg ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border border-yellow-500/20 hover:bg-[#141426] text-white' : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-900'} flex flex-col transition-all`}>
       {/* Tabs */}
       <div className={`flex gap-4 mb-4 border-b ${currentTheme === 'dark' ? 'border-[#1a1a2e]' : 'border-gray-200'}`}>
         {tabs.map((tab) => (

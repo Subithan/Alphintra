@@ -18,7 +18,7 @@ export default function NewsCard({ title, source, time }: NewsCardProps) {
   const currentTheme = theme === 'system' ? systemTheme : theme;
 
   return (
-      <div className={`p-3 rounded-lg ${currentTheme === 'dark' ? 'bg-slate-700/50 hover:bg-slate-700/70' : 'bg-gray-50 hover:bg-gray-100'} transition-all cursor-pointer`}>
+      <div className={`p-3 rounded-lg ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border border-yellow-500/20 hover:bg-[#141426]' : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'} transition-all cursor-pointer`}>
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-yellow-500/10 flex-shrink-0">
             <Megaphone className="w-4 h-4 text-yellow-500" />
