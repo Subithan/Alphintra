@@ -63,9 +63,9 @@ export default function CryptoTable() {
       </div>
 
       {/* Table */}
-      <div className={`overflow-x-auto rounded-lg ${currentTheme === 'dark' ? 'bg-[#0a0a1a]' : 'bg-gray-50'}`}>
+      <div className={`overflow-x-auto rounded-lg ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border border-yellow-500/20 shadow-[0_0_0_1px_rgba(234,179,8,0.1)]' : 'bg-gray-50 border border-gray-200'}`}>
         <table className="min-w-full text-sm text-left">
-          <thead className={`${currentTheme === 'dark' ? 'bg-[#101020] text-gray-400' : 'bg-gray-100 text-gray-600'} uppercase text-xs`}>
+          <thead className={`${currentTheme === 'dark' ? 'bg-[#101020] text-gray-500' : 'bg-gray-100 text-gray-600'} uppercase text-xs`}>
             <tr>
               <th className="px-4 py-3">Ticker</th>
               <th className="px-4 py-3">Expiry</th>
@@ -78,7 +78,7 @@ export default function CryptoTable() {
             {data.map((row, i) => (
               <tr
                 key={i}
-                className={`border-b ${currentTheme === 'dark' ? 'border-[#1a1a2e] hover:bg-[#141426]' : 'border-gray-200 hover:bg-gray-100'} transition-colors`}
+                className={`border-b ${currentTheme === 'dark' ? 'border-[#1f1f38] hover:bg-[#141426]' : 'border-gray-200 hover:bg-gray-100'} transition-colors`}
               >
                 <td className="px-4 py-3 font-bold flex items-center gap-2">
                   <span>{String(i + 1).padStart(2, "0")}</span>
@@ -118,7 +118,7 @@ export default function CryptoTable() {
               "w-8 h-8 rounded-full transition-colors",
               num === 2
                 ? `bg-yellow-500 ${currentTheme === 'dark' ? 'text-black' : 'text-black'}`
-                : `${currentTheme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900'}`
+                : `${currentTheme === 'dark' ? 'hover:text-yellow-400' : 'hover:text-gray-900'}`
             )}
           >
             {num}
