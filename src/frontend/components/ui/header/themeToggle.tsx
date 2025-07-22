@@ -1,28 +1,26 @@
 "use client";
-import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 const ThemeToggle = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.toggle("dark", darkMode);
-    localStorage.setItem("theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
+  // Prevent hydration mismatch
+  useEffect(() => setMounted(true), []);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    setDarkMode(saved === "dark");
-  }, []);
+  if (!mounted) return null;
+
+  const isDark = resolvedTheme === "dark";
 
   return (
     <button
-      onClick={() => setDarkMode(!darkMode)}
-      className="p-2 rounded-full hover:bg-[#262739] hover:text-yellow-500 dark:hover:bg-gray-800"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="relative p-2 hover:bg-gray-100 dark:hover:bg-[#262739] hover:text-yellow-500 rounded-full cursor-pointer"
     >
       <Icon
-        icon={darkMode ? "solar:moon-line-duotone" : "solar:sun-line-duotone"}
+        icon={isDark ? "solar:sun-line-duotone" : "solar:moon-line-duotone"}
         height={20}
       />
     </button>

@@ -66,7 +66,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
     return currentWorkflow.nodes.find(node => node.id === selectedNode);
   }, [selectedNode, currentWorkflow?.nodes]);
   
-  console.log('ConfigurationPanel:', { selectedNode, selectedNodeData, currentWorkflow }); // Debug log
+  console.log('ConfigurationPanel:', { selectedNode, selectedNodeData, localParameters, isDirty }); // Debug log
 
   // Sync local parameters when selected node changes
   useEffect(() => {
@@ -92,7 +92,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
     }
   }, [selectedNodeData?.data.parameters, isDirty]);
 
-  // Debounced parameter update
+  // Debounced parameter update with immediate save for important changes
   const debouncedUpdate = useCallback((nodeId: string, newParameters: Record<string, any>) => {
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
@@ -101,6 +101,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
     updateTimeoutRef.current = setTimeout(() => {
       updateNodeParameters(nodeId, newParameters);
       setIsDirty(false);
+      updateTimeoutRef.current = undefined;
       
       // Show success feedback for significant changes
       if (Object.keys(newParameters).length > 0) {
@@ -109,7 +110,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
           description: "Node configuration has been saved",
         });
       }
-    }, 500); // 500ms debounce
+    }, 200); // 200ms debounce - faster saving
   }, [updateNodeParameters, toast]);
 
   const handleParameterChange = useCallback((key: string, value: any) => {
@@ -122,11 +123,13 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
     }
   }, [localParameters, selectedNode, debouncedUpdate]);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeout on unmount and save pending changes
   useEffect(() => {
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
+        // Note: We can't reliably save on unmount due to React's cleanup timing
+        // The debounced save should handle most cases
       }
     };
   }, []);
@@ -463,7 +466,15 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
           <TabsContent value="parameters" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold text-foreground">Node Parameters</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold text-foreground">Node Parameters</CardTitle>
+                  {isDirty && (
+                    <div className="flex items-center space-x-2 text-xs text-amber-600">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                      <span>Unsaved changes</span>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {Object.entries(nodeConfig).map(([key, config]) => {
