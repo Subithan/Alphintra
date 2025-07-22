@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { NoCodeWorkflowEditorWrapper } from '@/components/no-code/NoCodeWorkflowEditor';
 import { ComponentLibrary } from '@/components/no-code/ComponentLibrary';
 import { TemplateLibrary } from '@/components/no-code/TemplateLibrary';
@@ -28,6 +29,7 @@ import { EnvDebug } from '@/components/debug/EnvDebug';
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
   const { user } = useUser();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Local state
@@ -68,7 +70,7 @@ export default function NoCodeConsolePage() {
   });
   
   // No-code store
-  const { currentWorkflow, updateWorkflow } = useNoCodeStore();
+  const { currentWorkflow, loadWorkflow } = useNoCodeStore();
   
   // Workflow hooks
   const [workflowState, workflowActions] = useWorkflow({
@@ -446,6 +448,44 @@ export default function NoCodeConsolePage() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  // Load workflow from URL parameter
+  useEffect(() => {
+    const workflowId = searchParams.get('workflow');
+    if (workflowId && user) {
+      loadWorkflowById(workflowId);
+    }
+  }, [searchParams, user]);
+
+  const loadWorkflowById = async (workflowId: string) => {
+    try {
+      const workflow = await noCodeApiClient.getWorkflow(workflowId);
+      // Convert API workflow to NoCodeWorkflow format
+      const noCodeWorkflow = {
+        id: workflow.uuid,
+        name: workflow.name,
+        description: workflow.description,
+        nodes: workflow.workflow_data?.nodes || [],
+        edges: workflow.workflow_data?.edges || [],
+        parameters: {},
+        createdAt: workflow.created_at,
+        lastModified: workflow.updated_at,
+        updatedAt: new Date(workflow.updated_at)
+      };
+      loadWorkflow(noCodeWorkflow);
+      toast({
+        title: "Workflow Loaded",
+        description: `Successfully loaded "${workflow.name}"`,
+      });
+    } catch (error) {
+      console.error('Error loading workflow:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load workflow. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleRunExecution = useCallback(async () => {
     if (!currentWorkflow) {
