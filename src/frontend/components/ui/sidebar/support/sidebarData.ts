@@ -9,7 +9,7 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/support",
   },
     {
-    id: "User Potal",
+    id: "User Portal",
     name: "User Potal",
     icon:"solar:user-line-duotone",
     url: "/user-portal",

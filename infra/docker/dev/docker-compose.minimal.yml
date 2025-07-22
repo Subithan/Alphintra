@@ -175,6 +175,62 @@ services:
       - alphintra-minimal-network
     restart: unless-stopped
 
+
+  trading-engine:
+    build:
+      context: ../../../src/backend/trading-engine
+      dockerfile: Dockerfile.distroless
+    container_name: alphintra-minimal-trading-engine
+    environment:
+      SPRING_PROFILES_ACTIVE: standalone
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis123
+      DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra_trading_engine?user=alphintra&password=alphintra123
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8008:8008"
+    networks:
+      - alphintra-minimal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ../../../src/backend/auth-service
+      dockerfile: Dockerfile
+    container_name: alphintra-minimal-auth-service
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-auth-service
+      REDIS_URL: redis://:redis123@redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8009:8009"
+    networks:
+      - alphintra-minimal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
 # Add this top-level volumes section if missing
 volumes:
   adminer-data:

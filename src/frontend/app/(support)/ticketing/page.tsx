@@ -1,8 +1,6 @@
 'use client'
 
 import { SearchBar } from '@/components/ui/searchBar'
-import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
 import TicketTabs from '@/components/ui/support/ticketing/ticketTabs'
 
 const tickets = [
@@ -46,20 +44,19 @@ const tickets = [
     messages: 2
   }
 ]
-
 const priorityColors = {
-  urgent: 'bg-support-urgent text-white',
-  high: 'bg-support-high text-white',
-  medium: 'bg-support-medium text-white',
-  low: 'bg-support-low text-white',
-}
+  urgent: 'bg-red-500 text-white',
+  high: 'bg-orange-500 text-white',
+  medium: 'bg-yellow-500 text-white',
+  low: 'bg-yellow-200 text-gray-900',
+};
 
 const statusColors = {
   open: 'bg-blue-100 text-blue-800',
   'in-progress': 'bg-orange-100 text-orange-800',
   pending: 'bg-yellow-100 text-yellow-800',
   resolved: 'bg-green-100 text-green-800',
-}
+};
 
 export default function TicketsPage() {
   return (
@@ -68,7 +65,6 @@ export default function TicketsPage() {
         <div className="p-4 pt-0 flex justify-end items-center gap-4 flex-wrap">
           <SearchBar placeholder="Search tickets..." className="w-full sm:w-72" />
         </div>
-        {/* Ticket Tabs */}
         <TicketTabs
           tickets={tickets}
           priorityColors={priorityColors}
@@ -76,5 +72,5 @@ export default function TicketsPage() {
         />
       </main>
     </div>
-  )
+  );
 }

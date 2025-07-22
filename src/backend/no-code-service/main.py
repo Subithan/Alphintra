@@ -517,8 +517,11 @@ async def get_workflows(
 ):
     """Get user's workflows with filtering"""
     try:
+        # In dev mode, use user_id=2 for testing
+        user_id_to_use = 2 if DEV_MODE else current_user.id
+        
         query = db.query(NoCodeWorkflow).filter(
-            (NoCodeWorkflow.user_id == current_user.id) | 
+            (NoCodeWorkflow.user_id == user_id_to_use) | 
             (NoCodeWorkflow.is_public == True)
         )
         
