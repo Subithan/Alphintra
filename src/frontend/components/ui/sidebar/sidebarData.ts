@@ -19,7 +19,7 @@ export const mainSidebarItems: SidebarItemType[] = [
     id: "market",
     name: "Market",
     icon: "solar:chart-line-duotone",
-    url: "/market",
+    url: "/marketplace",
   },
   {
     id: "wallet",
