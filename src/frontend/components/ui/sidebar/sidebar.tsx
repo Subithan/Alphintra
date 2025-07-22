@@ -1,46 +1,71 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useTheme } from 'next-themes';
+
+import { useState, useEffect, useRef } from "react";
 import LogoIcon from "@/components/ui/LogoIcon";
 import Link from "next/link";
 import { mainSidebarItems, footerSidebarItems } from "./sidebarData";
 import SidebarItem from "./sidebarItem";
 import { Icon } from "@iconify/react";
+import { useTheme } from "next-themes";
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { theme, systemTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
+  const sidebarRef = useRef<HTMLElement>(null);
 
-  // Flag component as mounted to avoid hydration mismatch
-  useEffect(() => setMounted(true), []);
-
-  // Handle responsive collapse
+  // Mark component as mounted to avoid hydration issues
   useEffect(() => {
-    const handleResize = () => setCollapsed(window.innerWidth < 768);
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    setMounted(true);
   }, []);
 
-  if (!mounted) return null;
-  const currentTheme = theme === 'system' ? systemTheme : theme;
+  // Collapse sidebar automatically on small screens
+  useEffect(() => {
+    const handleResize = () => {
+      setCollapsed(window.innerWidth < 768);
+    };
+
+    handleResize(); // initial check
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Log theme and sidebar background color after mount & theme change
+  useEffect(() => {
+    if (!mounted) return;
+
+    console.log("Resolved theme:", resolvedTheme);
+
+    if (sidebarRef.current) {
+      const bgColor = window.getComputedStyle(sidebarRef.current).backgroundColor;
+      console.log("Sidebar computed background color:", bgColor);
+    }
+  }, [resolvedTheme, mounted]);
+
+  if (!mounted) return null; // Don't render on server or until mounted
 
   return (
     <aside
+      ref={sidebarRef}
       className={`sticky top-0 left-0 h-screen ${
         collapsed ? "w-24" : "w-64"
-      } ${currentTheme === 'dark' ? 'bg-[#0a0a1a] text-white border-yellow-500/20' : 'bg-white text-gray-900 border-gray-300'} border-r p-4 flex flex-col justify-between transition-all duration-300 z-40 shadow-lg`}
+      } p-4 flex flex-col justify-between transition-all duration-300 z-40 border-r border-[#a7adb7] dark:border-[#222c3e]`}
+      style={{
+        backgroundColor: "hsl(var(--background))",
+        color: "hsl(var(--foreground))",
+      }}
     >
       {/* Top Section */}
       <div>
         <div className="py-3 sm:py-4 lg:-mt-8 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="h-10 w-10 bg-yellow-400 rounded-full flex items-center justify-center p-2">
-              <LogoIcon className="text-black w-full h-full" />
+            <div className="h-10 w-10 flex items-center justify-center p-2">
+              <LogoIcon className="w-full h-full text-black dark:text-white" />
             </div>
             {!collapsed && (
-              <span className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-900'} font-bold text-xl hidden sm:block`}>ALPHINTRA</span>
+              <span className="font-bold text-xl hidden sm:block text-black dark:text-white">
+                ALPHINTRA
+              </span>
             )}
           </Link>
         </div>
@@ -54,7 +79,7 @@ const Sidebar = () => {
 
       {/* Bottom Section */}
       <div>
-        <ul className={`space-y-2 border-t ${currentTheme === 'dark' ? 'border-yellow-500/20' : 'border-gray-300'} pt-4 mb-2`}>
+        <ul className="space-y-2 border-t border-[#a7adb7] dark:border-[#222c3e] pt-4 mb-2">
           {footerSidebarItems.map((item) => (
             <SidebarItem key={item.id} item={item} collapsed={collapsed} />
           ))}
@@ -64,11 +89,12 @@ const Sidebar = () => {
       {/* Collapse Toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className={`absolute top-[40px] -right-3 ${currentTheme === 'dark' ? 'bg-[#0a0a1a] border-yellow-500/20' : 'bg-white border-gray-300'} hover:border-yellow-500 border rounded-md w-6 h-6 flex items-center justify-center cursor-pointer group transition shadow-lg`}
+        className={`absolute top-[40px] -right-3 border rounded-sm w-6 h-6 flex items-center justify-center cursor-pointer group transition
+          bg-white dark:bg-[#060819] border-[#a7adb7] dark:border-[#222c3e] text-[#a7adb7] dark:text-[#222c3e] hover:border-yellow-500`}
       >
         <Icon
           icon="solar:alt-arrow-left-linear"
-          className={`${currentTheme === 'dark' ? 'text-white' : 'text-gray-600'} group-hover:text-yellow-500 transition-transform duration-300 ${
+          className={`group-hover:text-yellow-500 transition-transform duration-300 ${
             collapsed ? "rotate-180" : ""
           }`}
           width={16}

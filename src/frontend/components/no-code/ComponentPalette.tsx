@@ -276,8 +276,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
 
   // Handle drag start
   const onDragStart = (event: React.DragEvent, component: ComponentItem) => {
-    event.dataTransfer.setData('application/reactflow', component.type);
-    event.dataTransfer.setData('application/label', component.label);
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(component));
     event.dataTransfer.effectAllowed = 'move';
   };
 

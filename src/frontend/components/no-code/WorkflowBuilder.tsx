@@ -6,8 +6,8 @@ import ReactFlow, {
   Node,
   Edge,
   addEdge,
-  useNodesState,
-  useEdgesState,
+  applyNodeChanges,
+  applyEdgeChanges,
   Controls,
   Background,
   MiniMap,
@@ -62,7 +62,7 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project } = useReactFlow();
   
-  // Zustand store
+  // Zustand store - single source of truth
   const {
     currentWorkflow,
     selectedNode,
@@ -79,9 +79,9 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
     createWorkflowOnServer,
   } = useNoCodeStore();
 
-  // React Flow state
-  const [nodes, setNodes, onNodesChange] = useNodesState(currentWorkflow?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(currentWorkflow?.edges || []);
+  // Get nodes and edges directly from store
+  const nodes = currentWorkflow?.nodes || [];
+  const edges = currentWorkflow?.edges || [];
   
   // UI state
   const [isPaletteOpen, setIsPaletteOpen] = useState(true);
@@ -100,18 +100,7 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
     }
   }, [workflowId, loadWorkflow, currentWorkflow?.id]);
 
-  // Sync nodes and edges with store
-  useEffect(() => {
-    if (currentWorkflow) {
-      setNodes(currentWorkflow.nodes);
-      setEdges(currentWorkflow.edges);
-    }
-  }, [currentWorkflow, setNodes, setEdges]);
-
-  // Update store when nodes/edges change
-  useEffect(() => {
-    updateWorkflow({ nodes, edges });
-  }, [nodes, edges, updateWorkflow]);
+  // No more syncing needed - store is the single source of truth
 
   // Handle new connections between nodes
   const onConnect = useCallback(
@@ -124,9 +113,9 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
         type: 'default',
       };
       
-      setEdges((eds) => addEdge(newEdge, eds));
+      updateWorkflow({ nodes, edges: [...edges, newEdge] });
     },
-    [setEdges, readOnly]
+    [readOnly, updateWorkflow, nodes, edges]
   );
 
   // Handle node selection
@@ -161,12 +150,14 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
       
       if (readOnly) return;
 
-      const type = event.dataTransfer.getData('application/reactflow');
-      const label = event.dataTransfer.getData('application/label');
+      const componentDataString = event.dataTransfer.getData('application/reactflow');
 
-      if (typeof type === 'undefined' || !type || !reactFlowWrapper.current) {
+      if (!componentDataString || !reactFlowWrapper.current) {
         return;
       }
+
+      const component = JSON.parse(componentDataString);
+      const { type, label, ...rest } = component;
 
       const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = project({
@@ -180,7 +171,8 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
         position,
         data: {
           label: label || type,
-          parameters: {},
+          ...rest,
+          parameters: { ...rest.parameters }, // Ensure parameters are copied
         },
       };
 
@@ -188,6 +180,9 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
     },
     [project, addNode, readOnly]
   );
+
+  // Handle property updates - simply use store function
+  const handleUpdateNode = updateNodeParameters;
 
   // Save workflow
   const handleSave = useCallback(async () => {
@@ -287,8 +282,20 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            onNodesChange={(changes) => {
+              // Only sync position/removal changes, ignore select events to prevent parameter overwrites
+              const relevantChanges = changes.filter(
+                (change) => change.type === 'position' || change.type === 'remove'
+              );
+              if (relevantChanges.length === 0) return;
+
+              const newNodes = applyNodeChanges(relevantChanges, nodes);
+              updateWorkflow({ nodes: newNodes, edges });
+            }}
+            onEdgesChange={(changes) => {
+              const newEdges = applyEdgeChanges(changes, edges);
+              updateWorkflow({ nodes, edges: newEdges });
+            }}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onNodesDelete={onNodesDelete}
