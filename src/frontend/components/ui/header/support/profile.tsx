@@ -22,7 +22,7 @@ const Profile = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <Link href="/profile">
+      <Link href="/support-profile">
         <Image
           src="/images/profile/user-1.jpg"
           alt="Profile"

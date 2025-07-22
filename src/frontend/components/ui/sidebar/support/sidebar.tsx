@@ -58,7 +58,7 @@ const Sidebar = () => {
       {/* Top Section */}
       <div>
         <div className="py-3 sm:py-4 lg:-mt-8 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/support" className="flex items-center gap-2">
             <div className="h-10 w-10 flex items-center justify-center p-2">
               <LogoIcon className="w-full h-full text-black dark:text-white" />
             </div>

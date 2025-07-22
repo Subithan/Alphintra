@@ -31,10 +31,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     
     return (
       <Comp
-        className={cn('rounded-lg transition-all', 
+        className={cn(
           'btn',
           buttonVariants.variant[variant],
-          buttonVariants.size[size], 'dark:shadow-none dark:opacity-90',
+          buttonVariants.size[size],
           className
         )}
         ref={ref}

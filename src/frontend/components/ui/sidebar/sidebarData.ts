@@ -19,7 +19,7 @@ export const mainSidebarItems: SidebarItemType[] = [
     id: "market",
     name: "Market",
     icon: "solar:chart-line-duotone",
-    url: "/marketplace",
+    url: "/market",
   },
   {
     id: "wallet",
@@ -28,14 +28,8 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/wallet",
   },
   {
-    id: "strategy-hub",
-    name: "Strategy Hub",
-    icon: "solar:code-square-line-duotone",
-    url: "/strategy-hub",
-  },
-  {
     id: "no-code-console",
-    name: "No-Code Console",
+    name: "No-Code",
     icon: "solar:programming-line-duotone",
     url: "/strategy-hub/no-code-console",
     external: true,
@@ -53,6 +47,6 @@ export const footerSidebarItems: SidebarItemType[] = [
     id: "logout",
     name: "Logout",
     icon: "solar:logout-line-duotone",
-    url: "/logout",
+    url: "/",
   },
 ];

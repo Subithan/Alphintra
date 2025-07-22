@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+
 import Notification from "./notification";
-import ThemeToggle from "./themeToggle";     
+import ThemeToggle from "../themeToggle";    
 import Profile from "./profile"; 
 
 const Header = () => {

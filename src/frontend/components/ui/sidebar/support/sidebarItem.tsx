@@ -1,5 +1,5 @@
 "use client";
-import { SidebarItemType } from "./types";
+import { SidebarItemType } from "../types";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { usePathname } from "next/navigation";
