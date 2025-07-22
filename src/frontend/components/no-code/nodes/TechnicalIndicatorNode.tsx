@@ -3,6 +3,8 @@ import { Handle, Position, type NodeProps } from 'reactflow';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Activity, BarChart3, Volume2, Zap } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface TechnicalIndicatorNodeData {
   label: string;
@@ -25,7 +27,18 @@ interface TechnicalIndicatorNodeData {
   };
 }
 
-export function TechnicalIndicatorNode({ data, selected }: NodeProps<TechnicalIndicatorNodeData>) {
+export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndicatorNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Technical Indicator', parameters: {} }
+      };
+    },
+    shallow
+  );
+
   const { label, parameters } = data;
   const indicatorCategory = parameters?.indicatorCategory || 'trend';
   const indicator = parameters?.indicator || 'SMA';
