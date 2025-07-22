@@ -5,7 +5,7 @@ import {
   EdgeLabelRenderer,
   BaseEdge,
 } from 'reactflow';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/no-code/badge';
 
 interface SmartEdgeData {
   rule?: {

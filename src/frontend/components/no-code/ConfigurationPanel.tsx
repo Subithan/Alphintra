@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/no-code/card';
+import { Label } from '@/components/ui/no-code/label';
+import { Input } from '@/components/ui/no-code/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/no-code/select';
+import { Switch } from '@/components/ui/no-code/switch';
+import { Slider } from '@/components/ui/no-code/slider';
+import { Button } from '@/components/ui/no-code/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
+import { Badge } from '@/components/ui/no-code/badge';
+import { Separator } from '@/components/ui/no-code/separator';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/no-code/use-toast';
 import { shallow } from 'zustand/shallow';
 import { 
   Settings, 
