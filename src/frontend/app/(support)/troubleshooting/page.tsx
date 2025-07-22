@@ -8,11 +8,11 @@ export default function Troubleshooting() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-1 p-6 space-y-6">
-        <div className="flex justify-end p-4 pt-0">
+        {/* <div className="flex justify-end p-4 pt-0">
           <Button className="bg-yellow-500 hover:bg-yellow-500 hover:scale-105 gap-2 text-sm whitespace-nowrap">
             <Play className="h-4 w-4" />Run diagnosis
           </Button>
-        </div>
+        </div> */}
 
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="shadow-card">

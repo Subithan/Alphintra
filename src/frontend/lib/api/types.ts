@@ -67,3 +67,23 @@ export type OrderBookEntry = {
     amount: number;
     total: number;
 }
+
+export interface OrderRequest {
+  userId: number;
+  accountId: number;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  orderType: 'Limit' | 'Market' | 'Stop';
+  quantity: number;
+  price: number;
+  timeInForce: 'GTC' | 'FOK' | 'IOC';
+}
+
+export interface User {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  tier: 'premium' | 'standard' | 'basic';
+  status: 'active' | 'pending' | 'inactive';
+}

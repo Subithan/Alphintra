@@ -28,12 +28,6 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/wallet",
   },
   {
-    id: "strategy-hub",
-    name: "Strategy Hub",
-    icon: "solar:code-square-line-duotone",
-    url: "/strategy-hub",
-  },
-  {
     id: "no-code-console",
     name: "No-Code",
     icon: "solar:programming-line-duotone",

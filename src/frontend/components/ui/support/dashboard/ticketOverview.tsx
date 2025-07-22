@@ -66,9 +66,6 @@ export function TicketOverview() {
                     <Clock className="h-3 w-3" />
                     {ticket.lastUpdate}
                   </div>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <Eye className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </div>

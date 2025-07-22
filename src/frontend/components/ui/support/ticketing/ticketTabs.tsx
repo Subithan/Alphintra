@@ -217,17 +217,10 @@ export default function TicketTabs({ tickets, statusColors, priorityColors }: Ti
                                     </div>
                                   </div>
                                   <div>
-                                    <label className="text-sm font-medium text-muted-foreground">
-                                      Add Response
-                                    </label>
-                                    <Textarea
-                                      placeholder="Type your response here..."
-                                      className="mt-1 min-h-[100px]"
-                                    />
                                     <div className="flex justify-end mt-2">
                                       <Button className="gap-2">
                                         <Send className="h-4 w-4" />
-                                        Send Response
+                                        Send
                                       </Button>
                                     </div>
                                   </div>

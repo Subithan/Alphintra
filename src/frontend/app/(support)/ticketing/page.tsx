@@ -67,9 +67,6 @@ export default function TicketsPage() {
       <main className="flex-1 p-6 pt-0 space-y-6">
         <div className="p-4 pt-0 flex justify-end items-center gap-4 flex-wrap">
           <SearchBar placeholder="Search tickets..." className="w-full sm:w-72" />
-          <Button className="bg-yellow-500 hover:bg-yellow-500 hover:scale-105 gap-2 text-sm whitespace-nowrap">
-            <Plus className="h-4 w-4" />New Ticket
-          </Button>
         </div>
         {/* Ticket Tabs */}
         <TicketTabs
