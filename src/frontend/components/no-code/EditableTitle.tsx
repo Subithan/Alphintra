@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/no-code/input';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { shallow } from 'zustand/shallow';
 

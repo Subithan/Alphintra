@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/no-code/card';
+import { Button } from '@/components/ui/no-code/button';
+import { Badge } from '@/components/ui/no-code/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
+import { ScrollArea } from '@/components/ui/no-code/scroll-area';
+import { Separator } from '@/components/ui/no-code/separator';
 import {
   Code2,
   Download,

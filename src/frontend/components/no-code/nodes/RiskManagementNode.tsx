@@ -1,7 +1,7 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
 import { Shield, AlertTriangle, Activity, BarChart3, TrendingDown, Eye } from 'lucide-react';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { shallow } from 'zustand/shallow';
