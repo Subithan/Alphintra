@@ -11,6 +11,12 @@ RUN mvn clean package -DskipTests
 # Stage 2: Create minimal distroless image
 FROM gcr.io/distroless/java17-debian12
 WORKDIR /app
-COPY --from=builder /app/target/auth-service-0.0.1-SNAPSHOT.jar /app/auth-service.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/auth-service.jar"]
+COPY --from=builder /app/target/auth-service-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /app/src/main/resources/init_database.sql init_database.sql
+
+ENV SPRING_PROFILES_ACTIVE=standalone
+ENV DATABASE_URL=jdbc:postgresql://alphintra:alphintra123@postgres:5432/alphintra-auth-service
+ENV DB_USER=alphintra
+ENV DB_PASSWORD=alphintra123
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
