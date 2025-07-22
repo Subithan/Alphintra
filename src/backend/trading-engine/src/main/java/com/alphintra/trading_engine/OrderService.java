@@ -78,7 +78,7 @@ public class OrderService {
         }
 
         // Publish to Kafka
-        kafkaTemplate.send(ORDER_TOPIC, order.getOrderUuid().toString(), order.toString());
+        // kafkaTemplate.send(ORDER_TOPIC, order.getOrderUuid().toString(), order.toString());
 
         // Trigger order matching
         orderMatchingService.matchOrder(order);
