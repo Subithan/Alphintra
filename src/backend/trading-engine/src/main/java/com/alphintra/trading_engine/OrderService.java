@@ -8,7 +8,11 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -32,6 +36,9 @@ public class OrderService {
     private OrderMatchingService orderMatchingService;
 
     @Autowired
+    private TradeRepository tradeRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     private static final String ORDER_TOPIC = "orders";
@@ -53,9 +60,9 @@ public class OrderService {
         order.setSymbol(request.getSymbol());
         order.setSide(request.getSide());
         order.setOrderType(request.getOrderType());
-        order.setQuantity(request.getQuantity());
-        order.setPrice(request.getPrice());
-        order.setStopPrice(request.getStopPrice());
+        order.setQuantity(request.getQuantity()); // Direct BigDecimal assignment
+        order.setPrice(request.getPrice()); // Direct BigDecimal assignment
+        order.setStopPrice(request.getStopPrice()); // Direct BigDecimal assignment
         order.setTimeInForce(request.getTimeInForce());
         order.setClientOrderId(request.getClientOrderId());
 
@@ -108,6 +115,12 @@ public class OrderService {
         return mapToResponse(order);
     }
 
+    public List<TradeResponse> getTradeHistory() {
+        return tradeRepository.findAll().stream()
+                .map(this::mapToTradeResponse)
+                .collect(Collectors.toList());
+    }
+
     private OrderResponse mapToResponse(Order order) {
         OrderResponse response = new OrderResponse();
         response.setOrderId(order.getOrderId());
@@ -131,6 +144,24 @@ public class OrderService {
         response.setCreatedAt(order.getCreatedAt());
         response.setUpdatedAt(order.getUpdatedAt());
         response.setExpiresAt(order.getExpiresAt());
+        return response;
+    }
+
+    private TradeResponse mapToTradeResponse(Trade trade) {
+        TradeResponse response = new TradeResponse();
+        response.setTradeId(trade.getTradeId());
+        response.setTradeUuid(trade.getTradeUuid());
+        response.setOrderId(trade.getOrder().getOrderId());
+        response.setUserId(trade.getUser().getUserId());
+        response.setAccountId(trade.getAccount().getAccountId());
+        response.setSymbol(trade.getSymbol());
+        response.setSide(trade.getSide());
+        response.setQuantity(trade.getQuantity());
+        response.setPrice(trade.getPrice());
+        response.setFee(trade.getFee());
+        response.setExchange(trade.getExchange());
+        response.setTradeType(trade.getTradeType());
+        response.setTimestamp(trade.getTimestamp());
         return response;
     }
 }

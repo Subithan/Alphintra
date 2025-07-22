@@ -28,3 +28,11 @@ export const escalationRuleSchema = z.object({
   }),
   status: z.enum(['active', 'inactive'], { message: 'Invalid status' }),
 });
+
+export const userTicketSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
+  priority: z.enum(['low', 'medium', 'high', 'urgent'], {
+    errorMap: () => ({ message: 'Priority is required' }),
+  }),
+});
