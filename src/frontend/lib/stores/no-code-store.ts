@@ -57,12 +57,26 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
   updateWorkflow: (workflow) => {
     const current = get().currentWorkflow;
     if (current) {
+      const currentNodesMap = new Map(current.nodes.map(n => [n.id, n]));
+      const updatedNodes = workflow.nodes.map(node => {
+        const existingNode = currentNodesMap.get(node.id);
+        if (existingNode) {
+          // When a node is updated (e.g., by dragging), React Flow provides a new
+          // node object. This object might have a stale `data` property if parameters
+          // were changed elsewhere. To prevent overwriting parameter changes, we merge
+          // the incoming node with the `data` from the node currently in the store.
+          return { ...node, data: existingNode.data };
+        }
+        return node; // New node.
+      });
+
       set({
         currentWorkflow: {
           ...current,
-          nodes: workflow.nodes,
+          nodes: updatedNodes,
           edges: workflow.edges,
           updatedAt: new Date(),
+          hasUnsavedChanges: true,
         },
       });
     } else {
@@ -76,6 +90,7 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
           parameters: {},
           createdAt: new Date(),
           updatedAt: new Date(),
+          hasUnsavedChanges: true,
         },
       });
     }

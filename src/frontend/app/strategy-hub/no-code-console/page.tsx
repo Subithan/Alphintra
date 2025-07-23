@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { NoCodeWorkflowEditorWrapper } from '@/components/no-code/NoCodeWorkflowEditor';
 import { ComponentLibrary } from '@/components/no-code/ComponentLibrary';
 import { TemplateLibrary } from '@/components/no-code/TemplateLibrary';
@@ -9,11 +10,11 @@ import { ClientOnly } from '@/components/no-code/ClientOnly';
 import { DatasetSelector } from '@/components/no-code/DatasetSelector';
 import { TrainingProgress } from '@/components/no-code/TrainingProgress';
 import VersionHistoryPanel from '@/components/no-code/VersionHistoryPanel';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
+import { Button } from '@/components/ui/no-code/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
+import { Input } from '@/components/ui/no-code/input';
 import { Icon } from '@iconify/react';
 import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X, GitBranch } from 'lucide-react';
 import { useWorkflow, useWorkflowExecution } from '@/hooks/useWorkflow';
@@ -29,6 +30,7 @@ import { EditableTitle } from '@/components/no-code/EditableTitle';
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
   const { user } = useUser();
+  const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Local state
@@ -69,7 +71,7 @@ export default function NoCodeConsolePage() {
   });
   
   // No-code store
-  const { currentWorkflow, updateWorkflow } = useNoCodeStore();
+  const { currentWorkflow, loadWorkflow } = useNoCodeStore();
   
   // Workflow hooks
   const [workflowState, workflowActions] = useWorkflow({
@@ -447,6 +449,44 @@ export default function NoCodeConsolePage() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  // Load workflow from URL parameter
+  useEffect(() => {
+    const workflowId = searchParams.get('workflow');
+    if (workflowId && user) {
+      loadWorkflowById(workflowId);
+    }
+  }, [searchParams, user]);
+
+  const loadWorkflowById = async (workflowId: string) => {
+    try {
+      const workflow = await noCodeApiClient.getWorkflow(workflowId);
+      // Convert API workflow to NoCodeWorkflow format
+      const noCodeWorkflow = {
+        id: workflow.uuid,
+        name: workflow.name,
+        description: workflow.description,
+        nodes: workflow.workflow_data?.nodes || [],
+        edges: workflow.workflow_data?.edges || [],
+        parameters: {},
+        createdAt: workflow.created_at,
+        lastModified: workflow.updated_at,
+        updatedAt: new Date(workflow.updated_at)
+      };
+      loadWorkflow(noCodeWorkflow);
+      toast({
+        title: "Workflow Loaded",
+        description: `Successfully loaded "${workflow.name}"`,
+      });
+    } catch (error) {
+      console.error('Error loading workflow:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load workflow. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleRunExecution = useCallback(async () => {
     if (!currentWorkflow) {
