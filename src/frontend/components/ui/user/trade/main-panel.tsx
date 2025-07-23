@@ -138,26 +138,26 @@ export default function MainPanel() {
   const [error, setError] = useState<string | null>(null);
 
   // Commenting out backend API call for demo
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // useEffect(() => {
+  //   fetchData();
+  // }, []);
 
   // Commenting out backend API call for demo
-  const fetchData = async () => {
-    try {
-      const [ordRes, tradeRes] = await Promise.all([
-        axios.get<Order[]>('/api/proxy/orders?status=PENDING'),
-        axios.get<Trade[]>('/api/proxy/trades'),
-      ]);
-      setPendingOrders(ordRes.data);
-      setTradeHistory(tradeRes.data);
-    } catch (err: any) {
-      setError('Network error. Please check API or server connection.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchData = async () => {
+  //   try {
+  //     const [ordRes, tradeRes] = await Promise.all([
+  //       axios.get<Order[]>('/api/proxy/orders?status=PENDING'),
+  //       axios.get<Trade[]>('/api/proxy/trades'),
+  //     ]);
+  //     setPendingOrders(ordRes.data);
+  //     setTradeHistory(tradeRes.data);
+  //   } catch (err: any) {
+  //     setError('Network error. Please check API or server connection.');
+  //     console.error(err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <Tabs defaultValue="orders" className="w-full max-w-full">
