@@ -1,8 +1,10 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
 import { Shield, AlertTriangle, Activity, BarChart3, TrendingDown, Eye } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface RiskManagementNodeData {
   label: string;
@@ -18,7 +20,18 @@ interface RiskManagementNodeData {
   };
 }
 
-export function RiskManagementNode({ data, selected }: NodeProps<RiskManagementNodeData>) {
+export function RiskManagementNode({ id, selected }: NodeProps<RiskManagementNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Node', parameters: {} }
+      };
+    },
+    shallow
+  );
+
   const { label, parameters } = data;
   const riskCategory = parameters?.riskCategory || 'position';
   const riskType = parameters?.riskType || 'position_size';

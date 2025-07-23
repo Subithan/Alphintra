@@ -10,11 +10,11 @@ import { ClientOnly } from '@/components/no-code/ClientOnly';
 import { DatasetSelector } from '@/components/no-code/DatasetSelector';
 import { TrainingProgress } from '@/components/no-code/TrainingProgress';
 import VersionHistoryPanel from '@/components/no-code/VersionHistoryPanel';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
+import { Button } from '@/components/ui/no-code/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
+import { Input } from '@/components/ui/no-code/input';
 import { Icon } from '@iconify/react';
 import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X, GitBranch } from 'lucide-react';
 import { useWorkflow, useWorkflowExecution } from '@/hooks/useWorkflow';
@@ -25,6 +25,7 @@ import { useUser } from '@/contexts/UserContext';
 import { noCodeApiClient } from '@/lib/api/no-code-api';
 import { timescaleMarketData, formatTimescaleDate, getTimescaleTimeframe } from '@/lib/api/market-data-timescale';
 import { EnvDebug } from '@/components/debug/EnvDebug';
+import { EditableTitle } from '@/components/no-code/EditableTitle';
 
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
@@ -1154,7 +1155,12 @@ if __name__ == "__main__":
       <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{workflowName}</h1>
+            <EditableTitle 
+              workflowId={currentWorkflow?.id || 'default'}
+              initialTitle={workflowName}
+              className="text-xl font-semibold text-gray-900 dark:text-gray-100"
+              readOnly={false}
+            />
             <Badge variant={currentStep === 'design' ? 'default' : 'secondary'}>
               {currentStep === 'design' && 'Design'}
               {currentStep === 'dataset' && 'Dataset Selection'}

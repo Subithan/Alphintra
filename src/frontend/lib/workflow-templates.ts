@@ -102,7 +102,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e2', source: 'data-1', target: 'slow-ma', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e3', source: 'fast-ma', target: 'crossover-condition', sourceHandle: 'value-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e4', source: 'slow-ma', target: 'crossover-condition', sourceHandle: 'value-output', targetHandle: 'value-input', type: 'smart' },
-      { id: 'e5', source: 'crossover-condition', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' }
+      { id: 'e5', source: 'crossover-condition', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' }
     ]
   },
 
@@ -183,8 +183,8 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e1', source: 'data-1', target: 'rsi-indicator', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e2', source: 'rsi-indicator', target: 'oversold-condition', sourceHandle: 'value-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e3', source: 'rsi-indicator', target: 'overbought-condition', sourceHandle: 'value-output', targetHandle: 'data-input', type: 'smart' },
-      { id: 'e4', source: 'oversold-condition', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' },
-      { id: 'e5', source: 'overbought-condition', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' }
+      { id: 'e4', source: 'oversold-condition', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' },
+      { id: 'e5', source: 'overbought-condition', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' }
     ]
   },
 
@@ -268,7 +268,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e4', source: 'macd-indicator', target: 'histogram-positive', sourceHandle: 'histogram-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e5', source: 'signal-crossover', target: 'and-gate', sourceHandle: 'signal-output', targetHandle: 'input', type: 'smart' },
       { id: 'e6', source: 'histogram-positive', target: 'and-gate', sourceHandle: 'signal-output', targetHandle: 'input', type: 'smart' },
-      { id: 'e7', source: 'and-gate', target: 'buy-action', sourceHandle: 'output', targetHandle: 'trigger-input', type: 'smart' }
+      { id: 'e7', source: 'and-gate', target: 'buy-action', sourceHandle: 'output', targetHandle: 'signal-input', type: 'smart' }
     ]
   },
 
@@ -352,8 +352,8 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e3', source: 'bb-indicator', target: 'lower-touch', sourceHandle: 'lower-output', targetHandle: 'value-input', type: 'smart' },
       { id: 'e4', source: 'data-1', target: 'upper-touch', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e5', source: 'bb-indicator', target: 'upper-touch', sourceHandle: 'upper-output', targetHandle: 'value-input', type: 'smart' },
-      { id: 'e6', source: 'lower-touch', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' },
-      { id: 'e7', source: 'upper-touch', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' }
+      { id: 'e6', source: 'lower-touch', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' },
+      { id: 'e7', source: 'upper-touch', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' }
     ]
   },
 
@@ -434,8 +434,8 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e1', source: 'data-1', target: 'stoch-indicator', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e2', source: 'stoch-indicator', target: 'oversold-condition', sourceHandle: 'k-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e3', source: 'stoch-indicator', target: 'overbought-condition', sourceHandle: 'k-output', targetHandle: 'data-input', type: 'smart' },
-      { id: 'e4', source: 'oversold-condition', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' },
-      { id: 'e5', source: 'overbought-condition', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' }
+      { id: 'e4', source: 'oversold-condition', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' },
+      { id: 'e5', source: 'overbought-condition', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' }
     ]
   },
 
@@ -561,8 +561,8 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e9', source: 'adx-filter', target: 'buy-and-gate', sourceHandle: 'signal-output', targetHandle: 'input', type: 'smart' },
       { id: 'e10', source: 'lower-breakout', target: 'sell-and-gate', sourceHandle: 'signal-output', targetHandle: 'input', type: 'smart' },
       { id: 'e11', source: 'adx-filter', target: 'sell-and-gate', sourceHandle: 'signal-output', targetHandle: 'input', type: 'smart' },
-      { id: 'e12', source: 'buy-and-gate', target: 'buy-action', sourceHandle: 'output', targetHandle: 'trigger-input', type: 'smart' },
-      { id: 'e13', source: 'sell-and-gate', target: 'sell-action', sourceHandle: 'output', targetHandle: 'trigger-input', type: 'smart' }
+      { id: 'e12', source: 'buy-and-gate', target: 'buy-action', sourceHandle: 'output', targetHandle: 'signal-input', type: 'smart' },
+      { id: 'e13', source: 'sell-and-gate', target: 'sell-action', sourceHandle: 'output', targetHandle: 'signal-input', type: 'smart' }
     ]
   },
 
@@ -675,8 +675,8 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e6', source: 'data-1', target: 'short-entry', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e7', source: 'entry-breakout', target: 'short-entry', sourceHandle: 'lower-output', targetHandle: 'value-input', type: 'smart' },
       { id: 'e8', source: 'atr-indicator', target: 'position-sizing', sourceHandle: 'value-output', targetHandle: 'data-input', type: 'smart' },
-      { id: 'e9', source: 'long-entry', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' },
-      { id: 'e10', source: 'short-entry', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' },
+      { id: 'e9', source: 'long-entry', target: 'buy-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' },
+      { id: 'e10', source: 'short-entry', target: 'sell-action', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' },
       { id: 'e11', source: 'position-sizing', target: 'buy-action', sourceHandle: 'risk-output', targetHandle: 'risk-input', type: 'smart' },
       { id: 'e12', source: 'position-sizing', target: 'sell-action', sourceHandle: 'risk-output', targetHandle: 'risk-input', type: 'smart' }
     ]
@@ -771,7 +771,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e3', source: 'data-1', target: 'drawdown-protection', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e4', source: 'portfolio-heat', target: 'risk-filter', sourceHandle: 'risk-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e5', source: 'data-1', target: 'position-sizing', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
-      { id: 'e6', source: 'risk-filter', target: 'safe-entry', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' },
+      { id: 'e6', source: 'risk-filter', target: 'safe-entry', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' },
       { id: 'e7', source: 'position-sizing', target: 'safe-entry', sourceHandle: 'risk-output', targetHandle: 'risk-input', type: 'smart' }
     ]
   },
@@ -865,8 +865,8 @@ export const workflowTemplates: WorkflowTemplate[] = [
       { id: 'e3', source: 'data-5m', target: 'trend-condition', sourceHandle: 'data-output', targetHandle: 'data-input', type: 'smart' },
       { id: 'e4', source: 'ema-5m', target: 'trend-condition', sourceHandle: 'value-output', targetHandle: 'value-input', type: 'smart' },
       { id: 'e5', source: 'rsi-1m', target: 'entry-condition', sourceHandle: 'value-output', targetHandle: 'data-input', type: 'smart' },
-      { id: 'e6', source: 'trend-condition', target: 'scalp-entry', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' },
-      { id: 'e7', source: 'entry-condition', target: 'scalp-entry', sourceHandle: 'signal-output', targetHandle: 'trigger-input', type: 'smart' }
+      { id: 'e6', source: 'trend-condition', target: 'scalp-entry', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' },
+      { id: 'e7', source: 'entry-condition', target: 'scalp-entry', sourceHandle: 'signal-output', targetHandle: 'signal-input', type: 'smart' }
     ]
   }
 ];

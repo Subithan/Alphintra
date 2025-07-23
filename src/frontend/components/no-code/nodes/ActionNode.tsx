@@ -1,8 +1,10 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
 import { Zap, ArrowUp, ArrowDown, LogIn, LogOut, Settings, BarChart3 } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface ActionNodeData {
   label: string;
@@ -17,7 +19,18 @@ interface ActionNodeData {
   };
 }
 
-export function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
+export function ActionNode({ id, selected }: NodeProps<ActionNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Action', parameters: {} }
+      };
+    },
+    shallow
+  );
+
   const { label, parameters } = data;
   const actionCategory = parameters?.actionCategory || 'entry';
   const action = parameters?.action || 'buy';

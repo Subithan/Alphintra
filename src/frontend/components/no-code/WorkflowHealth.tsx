@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
+import { Button } from '@/components/ui/no-code/button';
+import { Progress } from '@/components/ui/no-code/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
+import { ScrollArea } from '@/components/ui/no-code/scroll-area';
+import { Separator } from '@/components/ui/no-code/separator';
 import { 
   Heart, 
   TrendingUp, 

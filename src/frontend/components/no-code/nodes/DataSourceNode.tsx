@@ -1,8 +1,10 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
 import { Database, TrendingUp, Upload, Globe, DollarSign, Bitcoin } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface DataSourceNodeData {
   label: string;
@@ -17,7 +19,18 @@ interface DataSourceNodeData {
   };
 }
 
-export function DataSourceNode({ data, selected }: NodeProps<DataSourceNodeData>) {
+export function DataSourceNode({ id, selected }: NodeProps<DataSourceNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Data Source', parameters: {} }
+      };
+    },
+    shallow // Optimize re-renders with shallow comparison
+  );
+
   const { label, parameters } = data;
   const symbol = parameters?.symbol || 'AAPL';
   const timeframe = parameters?.timeframe || '1h';

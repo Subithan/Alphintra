@@ -1,8 +1,10 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/no-code/card';
+import { Badge } from '@/components/ui/no-code/badge';
 import { BarChart3 } from 'lucide-react';
+import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { shallow } from 'zustand/shallow';
 
 interface OutputNodeData {
   label: string;
@@ -12,7 +14,18 @@ interface OutputNodeData {
   };
 }
 
-export function OutputNode({ data, selected }: NodeProps<OutputNodeData>) {
+export function OutputNode({ id, selected }: NodeProps<OutputNodeData>) {
+  // Get the node data directly from the store and subscribe to updates
+  const { data } = useNoCodeStore(
+    (state) => {
+      const node = state.currentWorkflow?.nodes.find(n => n.id === id);
+      return { 
+        data: node?.data || { label: 'Node', parameters: {} }
+      };
+    },
+    shallow
+  );
+
   const { label, parameters } = data;
   const outputType = parameters?.output_type || 'signals';
 

@@ -118,7 +118,7 @@ export class ConnectionManager {
       sourceType: 'condition',
       targetType: 'action',
       sourceHandle: 'signal-output',
-      targetHandle: 'trigger-input',
+      targetHandle: 'signal-input',
       dataType: 'signal',
       label: 'Trigger Signal',
       description: 'Triggers action when condition is met'
@@ -180,7 +180,7 @@ export class ConnectionManager {
       sourceType: 'logic',
       targetType: 'action',
       sourceHandle: 'output',
-      targetHandle: 'trigger-input',
+      targetHandle: 'signal-input',
       dataType: 'signal',
       label: 'Logic Output',
       description: 'Logic gate result triggers action'
