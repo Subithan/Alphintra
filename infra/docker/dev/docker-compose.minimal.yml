@@ -211,7 +211,7 @@ services:
       dockerfile: Dockerfile
     container_name: alphintra-minimal-auth-service
     environment:
-      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-auth-service
+      DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra_auth_service?user=alphintra&password=alphintra123
       REDIS_URL: redis://:redis123@redis:6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
