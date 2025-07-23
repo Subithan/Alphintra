@@ -88,7 +88,7 @@ export interface OrderRequest {
   accountId: number;
   symbol: string;
   side: 'BUY' | 'SELL';
-  orderType: 'Limit' | 'Market' | 'Stop';
+  orderType: 'LIMIT' | 'MARKET' | 'STOP';
   quantity: number;
   price: number;
   timeInForce: 'GTC' | 'FOK' | 'IOC';
