@@ -1,11 +1,11 @@
 spring:
   # datasource:
-  #   url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra-auth-service?user=alphintra&password=alphintra123}
+  #   url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra_auth_service?user=alphintra&password=alphintra123}
   #   username: ${POSTGRES_USER:alphintra}
   #   password: ${POSTGRES_PASSWORD:alphintra123}
   
   datasource:
-    url: jdbc:postgresql://postgres:5432/alphintra-auth-service
+    url: jdbc:postgresql://postgres:5432/alphintra_auth_service
     username: alphintra
     password: alphintra123
     driver-class-name: org.postgresql.Driver
@@ -13,8 +13,7 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
-  flyway:
-    enabled: false
+
 
 jwt:
   secret: ${JWT_SECRET:your-secure-jwt-secret}

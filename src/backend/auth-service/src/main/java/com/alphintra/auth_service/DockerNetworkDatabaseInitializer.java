@@ -17,7 +17,7 @@ import java.util.List;
 public class DockerNetworkDatabaseInitializer {
     private static final Logger log = LoggerFactory.getLogger(DockerNetworkDatabaseInitializer.class);
 
-    private static final String DB_NAME = "alphintra-auth-service";
+    private static final String DB_NAME = "alphintra_auth_service";
     private static final String SQL_FILE_PATH = "/app/init_database.sql"; // adjust if needed
 
     private static final int MAX_RETRY_ATTEMPTS = 30;
