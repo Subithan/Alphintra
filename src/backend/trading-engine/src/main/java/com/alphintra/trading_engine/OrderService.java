@@ -46,13 +46,11 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
-        // Validate user and account
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         TradingAccount account = tradingAccountRepository.findById(request.getAccountId())
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
-        // Create order
         Order order = new Order();
         order.setOrderUuid(UUID.randomUUID());
         order.setUser(user);
@@ -60,16 +58,14 @@ public class OrderService {
         order.setSymbol(request.getSymbol());
         order.setSide(request.getSide());
         order.setOrderType(request.getOrderType());
-        order.setQuantity(request.getQuantity()); // Direct BigDecimal assignment
-        order.setPrice(request.getPrice()); // Direct BigDecimal assignment
-        order.setStopPrice(request.getStopPrice()); // Direct BigDecimal assignment
+        order.setQuantity(request.getQuantity());
+        order.setPrice(request.getPrice());
+        order.setStopPrice(request.getStopPrice());
         order.setTimeInForce(request.getTimeInForce());
         order.setClientOrderId(request.getClientOrderId());
 
-        // Save order
         order = orderRepository.save(order);
 
-        // Cache order in Redis as JSON
         try {
             String orderJson = objectMapper.writeValueAsString(order);
             redisTemplate.opsForValue().set(ORDER_CACHE_PREFIX + order.getOrderUuid(), orderJson);
@@ -77,17 +73,14 @@ public class OrderService {
             throw new RuntimeException("Failed to serialize order to JSON", e);
         }
 
-        // Publish to Kafka
+        // Temporarily bypass Kafka (as suggested earlier)
         // kafkaTemplate.send(ORDER_TOPIC, order.getOrderUuid().toString(), order.toString());
-
-        // Trigger order matching
         orderMatchingService.matchOrder(order);
 
         return mapToResponse(order);
     }
 
     public OrderResponse getOrder(UUID orderUuid) {
-        // Check Redis cache
         String cachedOrderJson = (String) redisTemplate.opsForValue().get(ORDER_CACHE_PREFIX + orderUuid);
         if (cachedOrderJson != null) {
             try {
@@ -98,13 +91,11 @@ public class OrderService {
             }
         }
 
-        // Fetch from database
         Order order = orderRepository.findByOrderUuid(orderUuid);
         if (order == null) {
             throw new RuntimeException("Order not found");
         }
 
-        // Cache in Redis as JSON
         try {
             String orderJson = objectMapper.writeValueAsString(order);
             redisTemplate.opsForValue().set(ORDER_CACHE_PREFIX + orderUuid, orderJson);
@@ -121,7 +112,12 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
-    private OrderResponse mapToResponse(Order order) {
+    // Add this method
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    public OrderResponse mapToResponse(Order order) {
         OrderResponse response = new OrderResponse();
         response.setOrderId(order.getOrderId());
         response.setOrderUuid(order.getOrderUuid());

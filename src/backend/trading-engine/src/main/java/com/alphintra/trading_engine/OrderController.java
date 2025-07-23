@@ -31,4 +31,15 @@ public class OrderController {
         List<TradeResponse> response = orderService.getTradeHistory();
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping
+    public ResponseEntity<List<OrderResponse>> getOrders(@RequestParam(required = false) String status) {
+        // For now, return all orders or filter by status if implemented in OrderService
+        List<Order> orders = orderService.getAllOrders(); // Add this method to OrderService
+        List<OrderResponse> responses = orders.stream()
+                .filter(o -> status == null || o.getStatus().equalsIgnoreCase(status))
+                .map(orderService::mapToResponse)
+                .toList();
+        return ResponseEntity.ok(responses);
+    }
 }
