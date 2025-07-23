@@ -27,9 +27,9 @@ export default function OrderModal({ onOrderPlaced }: { onOrderPlaced: () => voi
   const [formData, setFormData] = useState<OrderRequest>({
     userId: 1,
     accountId: 1,
-    symbol: 'BTC/USD',
+    symbol: 'BTC',
     side: 'BUY',
-    orderType: 'Limit',
+    orderType: 'LIMIT',
     quantity: 0.1,
     price: 50000.0,
     timeInForce: 'GTC',
@@ -84,16 +84,16 @@ export default function OrderModal({ onOrderPlaced }: { onOrderPlaced: () => voi
             <Label htmlFor="orderType">Order Type</Label>
             <Select
               value={formData.orderType}
-              onValueChange={(value) => setFormData({ ...formData, orderType: value as 'Limit' | 'Market' | 'Stop'
+              onValueChange={(value) => setFormData({ ...formData, orderType: value as 'LIMIT' | 'MARKET' | 'STOP'
                })}
             >
               <SelectTrigger id="orderType">
                 <SelectValue placeholder="Select order type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Limit">Limit</SelectItem>
-                <SelectItem value="Stop">Stop</SelectItem>
-                <SelectItem value="Market">Market</SelectItem>
+                <SelectItem value="LIMIT">Limit</SelectItem>
+                <SelectItem value="STOP">Stop</SelectItem>
+                <SelectItem value="MARKET">Market</SelectItem>
               </SelectContent>
             </Select>
           </div>

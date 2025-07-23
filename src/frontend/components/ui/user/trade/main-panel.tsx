@@ -1,8 +1,6 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import {
   Tabs,
   TabsContent,
@@ -46,8 +44,8 @@ const positions: Position[] = [
     quantity: 10,
     entryPrice: 3500,
     markPrice: 3450.5,
-    pnl: 495,
-    pnlPercentage: 1.41,
+    pnl: -495,
+    pnlPercentage: -1.41,
   },
   {
     asset: 'SOL/USDT',
@@ -55,8 +53,8 @@ const positions: Position[] = [
     quantity: 100,
     entryPrice: 150,
     markPrice: 162.3,
-    pnl: -1230,
-    pnlPercentage: -8.2,
+    pnl: 1230,
+    pnlPercentage: 8.2,
   },
 ];
 
@@ -91,35 +89,75 @@ const activeBots: Bot[] = [
   },
 ];
 
+const mockPendingOrders: Order[] = [
+  {
+    symbol: 'BTC/USDT',
+    orderType: 'LIMIT',
+    side: 'SELL',
+    price: '68000.0',
+    quantity: '0.5',
+    status: 'PENDING',
+  },
+  {
+    symbol: 'ETH/USDT',
+    orderType: 'LIMIT',
+    side: 'BUY',
+    price: '3450.0',
+    quantity: '5.0',
+    status: 'PENDING',
+  },
+];
+
+const mockTradeHistory: Trade[] = [
+  {
+    time: new Date().toISOString(),
+    asset: 'BTC/USDT',
+    side: 'Buy',
+    price: 67000,
+    quantity: 0.5,
+    pnl: 500.25,
+  },
+  {
+    time: new Date().toISOString(),
+    asset: 'ETH/USDT',
+    side: 'Sell',
+    price: 3500,
+    quantity: 5,
+    pnl: -120.75,
+  },
+];
+
 const ROW_HEIGHT = 40;
 const VISIBLE_ROWS = 4;
 const MAX_HEIGHT = 240; // 40px * 4 rows
 
 export default function MainPanel() {
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [tradeHistory, setTradeHistory] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>(mockPendingOrders);
+  const [tradeHistory, setTradeHistory] = useState<Trade[]>(mockTradeHistory);
+  const [loading, setLoading] = useState(false); // Set to false for demo
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Commenting out backend API call for demo
+  // useEffect(() => {
+  //   fetchData();
+  // }, []);
 
-  const fetchData = async () => {
-    try {
-      const [ordRes, tradeRes] = await Promise.all([
-        axios.get<Order[]>('http://localhost:8008/api/orders?status=OPEN'),
-        axios.get<Trade[]>('http://localhost:8008/api/trades'),
-      ]);
-      setPendingOrders(ordRes.data);
-      setTradeHistory(tradeRes.data);
-    } catch (err: any) {
-      setError('Network error. Please check API or server connection.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Commenting out backend API call for demo
+  // const fetchData = async () => {
+  //   try {
+  //     const [ordRes, tradeRes] = await Promise.all([
+  //       axios.get<Order[]>('/api/proxy/orders?status=PENDING'),
+  //       axios.get<Trade[]>('/api/proxy/trades'),
+  //     ]);
+  //     setPendingOrders(ordRes.data);
+  //     setTradeHistory(tradeRes.data);
+  //   } catch (err: any) {
+  //     setError('Network error. Please check API or server connection.');
+  //     console.error(err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <Tabs defaultValue="orders" className="w-full max-w-full">
@@ -297,14 +335,14 @@ const PendingOrdersTable = ({ data }: { data: Order[] }) => (
       </TableHeader>
       <TableBody>
         {data.map((order, index) => (
-          <TableRow key={`${order.asset}-${index}`} style={{ height: ROW_HEIGHT }}>
-            <TableCell className="font-medium text-xs sm:text-sm">{order.asset}</TableCell>
-            <TableCell className="text-xs sm:text-sm">{order.type}</TableCell>
-            <TableCell className={`text-xs sm:text-sm ${order.side === 'Buy' ? 'text-[#0b9981]' : 'text-red-500'}`}>
+          <TableRow key={`${order.symbol}-${index}`} style={{ height: ROW_HEIGHT }}>
+            <TableCell className="font-medium text-xs sm:text-sm">{order.symbol}</TableCell>
+            <TableCell className="text-xs sm:text-sm">{order.orderType}</TableCell>
+            <TableCell className={`text-xs sm:text-sm ${order.side === 'BUY' ? 'text-[#0b9981]' : 'text-red-500'}`}>
               {order.side}
             </TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">${order.price.toLocaleString()}</TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">{order.quantity}</TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">${parseFloat(order.price).toLocaleString()}</TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">{parseFloat(order.quantity).toLocaleString()}</TableCell>
             <TableCell className="text-right text-xs sm:text-sm">
               <Badge variant="outline">{order.status}</Badge>
             </TableCell>

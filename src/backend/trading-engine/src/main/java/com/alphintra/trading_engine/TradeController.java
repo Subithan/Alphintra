@@ -5,12 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/trades")
@@ -26,6 +25,15 @@ public class TradeController {
     private ObjectMapper objectMapper;
 
     private static final String TRADE_CACHE_PREFIX = "trade:";
+
+    @GetMapping
+    public ResponseEntity<List<TradeResponse>> getAllTrades() {
+        List<Trade> trades = tradeRepository.findAll();
+        List<TradeResponse> responses = trades.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
 
     @GetMapping("/{tradeUuid}")
     public ResponseEntity<TradeResponse> getTrade(@PathVariable UUID tradeUuid) {
