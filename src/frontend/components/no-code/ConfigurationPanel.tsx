@@ -399,84 +399,90 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
 
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="p-4 space-y-4">
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-black dark:to-gray-900">
+      <div className="flex-shrink-0 p-6 space-y-4">
         {/* Node Header */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Node Configuration</h2>
-            <div className="flex space-x-1">
-              <Button size="sm" variant="outline" onClick={handleDuplicateNode}>
+            <h2 className="text-xl font-bold text-foreground bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Node Configuration
+            </h2>
+            <div className="flex space-x-2">
+              <Button size="sm" variant="outline" onClick={handleDuplicateNode} className="rounded-xl hover:scale-105 transition-transform">
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button size="sm" variant="outline" onClick={handleDeleteNode}>
+              <Button size="sm" variant="outline" onClick={handleDeleteNode} className="rounded-xl hover:scale-105 transition-transform hover:bg-red-50 hover:border-red-200">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
           
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary">{selectedNodeData.type}</Badge>
-              <span className="text-sm font-medium text-foreground">{selectedNodeData.data.label}</span>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-gray-500">
+            <div className="flex items-center space-x-3">
+              <Badge variant="secondary" className="rounded-full px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                {selectedNodeData.type}
+              </Badge>
+              <span className="text-sm font-semibold text-foreground">{selectedNodeData.data.label}</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2 font-mono">
               ID: {selectedNode}
             </p>
           </div>
         </div>
 
-        <Separator />
-
         {/* Configuration Tabs */}
-        <Tabs defaultValue="parameters" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="parameters" data-value="parameters">
-              <Settings className="h-4 w-4 mr-1" />
-              Parameters
-            </TabsTrigger>
-            <TabsTrigger value="inputs" data-value="inputs">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Inputs
-            </TabsTrigger>
-            <TabsTrigger value="outputs" data-value="outputs">
-              <ArrowRight className="h-4 w-4 mr-1" />
-              Outputs
-            </TabsTrigger>
-            <TabsTrigger value="validation" data-value="validation">
-              <CheckCircle className={`h-4 w-4 mr-1 ${
-                validation.validation.isValid 
-                  ? 'text-green-500' 
-                  : validation.hasErrors 
-                    ? 'text-red-500' 
-                    : 'text-yellow-500'
-              }`} />
-              Validation
-              {(validation.hasErrors || validation.hasWarnings) && (
-                <Badge 
-                  variant={validation.hasErrors ? "destructive" : "secondary"} 
-                  className="ml-1 text-xs px-1 py-0"
-                >
-                  {validation.validation.errors.length + validation.validation.warnings.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex-1 flex flex-col min-h-0">
+          <Tabs defaultValue="parameters" className="w-full h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-gray-800 rounded-2xl p-1 shadow-sm border border-slate-200 dark:border-gray-500">
+              <TabsTrigger value="parameters" data-value="parameters" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all">
+                <Settings className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Parameters</span>
+              </TabsTrigger>
+              <TabsTrigger value="inputs" data-value="inputs" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Inputs</span>
+              </TabsTrigger>
+              <TabsTrigger value="outputs" data-value="outputs" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all">
+                <ArrowRight className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Outputs</span>
+              </TabsTrigger>
+              <TabsTrigger value="validation" data-value="validation" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white transition-all">
+                <CheckCircle className={`h-4 w-4 mr-1 ${
+                  validation.validation.isValid 
+                    ? 'text-green-500' 
+                    : validation.hasErrors 
+                      ? 'text-red-500' 
+                      : 'text-yellow-500'
+                }`} />
+                <span className="hidden sm:inline">Validation</span>
+                {(validation.hasErrors || validation.hasWarnings) && (
+                  <Badge 
+                    variant={validation.hasErrors ? "destructive" : "secondary"} 
+                    className="ml-1 text-xs px-1 py-0 rounded-full"
+                  >
+                    {validation.validation.errors.length + validation.validation.warnings.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="parameters" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-foreground">Node Parameters</CardTitle>
-                  {isDirty && (
-                    <div className="flex items-center space-x-2 text-xs text-amber-600">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                      <span>Unsaved changes</span>
+            {/* Fixed height container for tab content */}
+             <div className="flex-1 mt-4 min-h-0 overflow-hidden">
+
+              <TabsContent value="parameters" className="h-full overflow-y-auto space-y-4 data-[state=active]:flex data-[state=active]:flex-col">
+                <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                  <CardHeader className="rounded-t-2xl">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-bold text-foreground bg-gradient-to-r from-slate-700 to-slate-900 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">Node Parameters</CardTitle>
+                      {isDirty && (
+                        <div className="flex items-center space-x-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-full">
+                          <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                          <span className="font-medium">Unsaved changes</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                  </CardHeader>
+                  <CardContent className="space-y-4 p-6">
                 {Object.entries(nodeConfig).map(([key, config]) => {
                   // Conditional field rendering based on other parameter values
                   const shouldShow = shouldShowField(key, config, localParameters);
@@ -494,93 +500,113 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
                   </p>
                 )}
                 
-                {/* Validation Messages */}
-                {getValidationErrors().length > 0 && (
-                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                    <h4 className="text-sm font-medium text-red-800 dark:text-red-400 mb-2">Configuration Errors:</h4>
-                    <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
-                      {getValidationErrors().map((error, index) => (
-                        <li key={index}>• {error}</li>
+                    {/* Validation Messages */}
+                    {getValidationErrors().length > 0 && (
+                      <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
+                        <h4 className="text-sm font-semibold text-red-800 dark:text-red-400 mb-3">Configuration Errors:</h4>
+                        <ul className="text-xs text-red-600 dark:text-red-400 space-y-2">
+                          {getValidationErrors().map((error, index) => (
+                            <li key={index} className="flex items-start space-x-2">
+                              <span className="text-red-500 mt-0.5">•</span>
+                              <span>{error}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="inputs" className="h-full overflow-y-auto space-y-4 data-[state=active]:flex data-[state=active]:flex-col">
+                <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                  <CardHeader className="rounded-t-2xl">
+                    <CardTitle className="text-lg font-bold text-foreground bg-gradient-to-r from-slate-700 to-slate-900 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">Input Connections</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      {getNodeInputs().map((input, index) => (
+                        <div key={index} className="flex items-center justify-between p-4 border border-slate-200 dark:border-gray-500 rounded-2xl bg-slate-50 dark:bg-gray-900/50 hover:bg-slate-100 dark:hover:bg-gray-800/50 transition-colors">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${input.connected ? 'bg-green-500 shadow-lg shadow-green-500/30' : 'bg-gray-300'}`} />
+                            <span className="text-sm font-medium">{input.name}</span>
+                          </div>
+                          <Badge variant={input.connected ? "outline" : "secondary"} className="rounded-full">
+                            {input.connected ? `Connected to ${input.source}` : 'Not Connected'}
+                          </Badge>
+                        </div>
                       ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="inputs" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold text-foreground">Input Connections</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {getNodeInputs().map((input, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-3 h-3 rounded-full ${input.connected ? 'bg-green-500' : 'bg-gray-300'}`} />
-                        <span className="text-sm">{input.name}</span>
-                      </div>
-                      <Badge variant={input.connected ? "outline" : "secondary"}>
-                        {input.connected ? `Connected to ${input.source}` : 'Not Connected'}
-                      </Badge>
+                      {getNodeInputs().length === 0 && (
+                        <div className="text-center py-8">
+                          <ArrowLeft className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            This node has no input connections
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  {getNodeInputs().length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      This node has no input connections
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          <TabsContent value="outputs" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold text-foreground">Output Connections</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {getNodeOutputs().map((output, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-3 h-3 rounded-full ${output.color}`} />
-                        <span className="text-sm">{output.name}</span>
-                      </div>
-                      <Badge variant="outline">
-                        {output.connected} connections
-                      </Badge>
+              <TabsContent value="outputs" className="h-full overflow-y-auto space-y-4 data-[state=active]:flex data-[state=active]:flex-col">
+                <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                  <CardHeader className="rounded-t-2xl">
+                    <CardTitle className="text-lg font-bold text-foreground bg-gradient-to-r from-slate-700 to-slate-900 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">Output Connections</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      {getNodeOutputs().map((output, index) => (
+                        <div key={index} className="flex items-center justify-between p-4 border border-slate-200 dark:border-gray-500 rounded-2xl bg-slate-50 dark:bg-gray-900/50 hover:bg-slate-100 dark:hover:bg-gray-800/50 transition-colors">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${output.color} shadow-lg`} />
+                            <span className="text-sm font-medium">{output.name}</span>
+                          </div>
+                          <Badge variant="outline" className="rounded-full">
+                            {output.connected} connections
+                          </Badge>
+                        </div>
+                      ))}
+                      {getNodeOutputs().length === 0 && (
+                        <div className="text-center py-8">
+                          <ArrowRight className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            This node has no output connections
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="validation" className="h-full overflow-y-auto space-y-4 data-[state=active]:flex data-[state=active]:flex-col">
+                <div className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6">
+                  <ValidationPanel 
+                    validation={validation}
+                    onNodeSelect={(nodeId) => {
+                      // Focus on the node when validation error is clicked
+                      console.log('Validation panel requesting focus on node:', nodeId);
+                      if (onNodeSelect && nodeId) {
+                        onNodeSelect(nodeId);
+                      }
+                    }}
+                    nodes={currentWorkflow?.nodes || []}
+                    edges={currentWorkflow?.edges || []}
+                    className="border-0 shadow-none p-0"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+      </div>
 
-          <TabsContent value="validation" className="space-y-4">
-            <ValidationPanel 
-              validation={validation}
-              onNodeSelect={(nodeId) => {
-                // Focus on the node when validation error is clicked
-                console.log('Validation panel requesting focus on node:', nodeId);
-                if (onNodeSelect && nodeId) {
-                  onNodeSelect(nodeId);
-                }
-              }}
-              nodes={currentWorkflow?.nodes || []}
-              edges={currentWorkflow?.edges || []}
-              className="border-0 shadow-none p-0"
-            />
-          </TabsContent>
-        </Tabs>
-
-        {/* Test Node */}
-        <Card>
-          <CardContent className="pt-4">
-            <Button className="w-full" variant="outline">
+      {/* Test Node - Fixed at bottom */}
+      <div className="flex-shrink-0 p-6 pt-0">
+        <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <Button className="w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium transition-all hover:scale-105" variant="default">
               <Play className="h-4 w-4 mr-2" />
               Test Node
             </Button>

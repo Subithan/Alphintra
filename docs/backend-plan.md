@@ -20,7 +20,7 @@ The backend will be composed of the following core microservices:
 
 ---
 
-### 3.1. Core Trading Engine
+### 3.1. Trading Engine Service
 
 *   **Purpose:** To provide the central, high-performance engine for all trading-related operations. This is a mission-critical component where latency and reliability are paramount.
 *   **Primary Technology:** Java 21+ with Spring Boot 3.x (utilizing Project Reactor for non-blocking I/O).
@@ -32,26 +32,41 @@ The backend will be composed of the following core microservices:
     *   Handle complex transaction management to ensure atomicity in trading operations.
 *   **Key Data Models:** `Order`, `Trade`, `Position`.
 *   **Integrations:**
-    *   **Consumes:** `trade_execution_signals` topic from Kafka (from Strategy/AI Service).
+    *   **Consumes:** `trade_execution_signals` topic from Kafka (from AI/ML Strategy Service).
     *   **Produces:** `trade_updates` and `order_status` events to Kafka.
     *   **Interacts with:** Broker Integration Service (for external execution), Asset Management Service (to verify funds).
 
-### 3.2. AI/ML & Strategy Service
+### 3.2. No-Code Service
 
-*   **Purpose:** To provide the complete environment for users to create, test, train, and deploy trading strategies, both with and without code.
+*   **Purpose:** To provide the complete environment for users to create, test, and deploy no-code trading strategies using visual workflow builders.
 *   **Primary Technology:** Python 3.11+ with FastAPI.
 *   **Core Responsibilities:**
     *   Provide the runtime for the no-code visual strategy builder.
+    *   Execute and validate no-code workflow blocks and connections.
+    *   Convert visual workflows into executable trading logic.
+    *   Manage no-code strategy templates and presets.
+    *   Generate trade signals from no-code strategies.
+*   **Key Data Models:** `NoCodeStrategy`, `WorkflowBlock`, `BlockConnection`, `StrategyTemplate`.
+*   **Integrations:**
+    *   **Produces:** `trade_execution_signals` to Kafka.
+    *   **Interacts with:** Market Data Service (for indicators), AI/ML Strategy Service (for hybrid strategies).
+
+### 3.3. AI/ML Strategy Service
+
+*   **Purpose:** To provide machine learning capabilities, model training, and AI-powered trading strategies.
+*   **Primary Technology:** Python 3.11+ with FastAPI.
+*   **Core Responsibilities:**
     *   Execute backtests against historical data from TimescaleDB.
     *   Manage and orchestrate model training jobs using Kubeflow/Vertex AI.
     *   Serve trained ML models for live inference.
-    *   Generate trade signals based on strategy logic and publish them.
-*   **Key Data Models:** `Strategy`, `BacktestReport`, `TrainingJob`, `ModelArtifact`.
+    *   Generate AI-powered trade signals and predictions.
+    *   Provide code-based strategy development environment.
+*   **Key Data Models:** `MLStrategy`, `BacktestReport`, `TrainingJob`, `ModelArtifact`.
 *   **Integrations:**
     *   **Produces:** `trade_execution_signals` to Kafka.
-    *   **Interacts with:** TimescaleDB (for historical data), MLflow (for experiment tracking), Broker Integration Service (for paper trading).
+    *   **Interacts with:** TimescaleDB (for historical data), MLflow (for experiment tracking), Market Data Service.
 
-### 3.3. User & Authentication Service
+### 3.4. Auth Service
 
 *   **Purpose:** To manage user identity, authentication, authorization, and profile information.
 *   **Primary Technology:** Java/Spring Boot with Spring Security.
@@ -64,7 +79,36 @@ The backend will be composed of the following core microservices:
 *   **Integrations:**
     *   **Interacts with:** All services via the API Gateway to authenticate requests. Produces `user_registered` events to Kafka.
 
-### 3.4. Broker Integration Service
+### 3.5. Market Data Service
+
+*   **Purpose:** To manage real-time and historical market data ingestion, processing, and distribution.
+*   **Primary Technology:** Python 3.11+ with FastAPI and asyncio for high-throughput data streaming.
+*   **Core Responsibilities:**
+    *   Ingest real-time market data from multiple exchanges and data providers.
+    *   Process, clean, and normalize market data feeds.
+    *   Store historical market data in TimescaleDB.
+    *   Provide WebSocket streams for real-time data distribution.
+    *   Calculate technical indicators and market metrics.
+*   **Key Data Models:** `MarketTick`, `OHLCV`, `OrderBook`, `TechnicalIndicator`.
+*   **Integrations:**
+    *   **Produces:** `market_data_feed` events to Kafka.
+    *   **Interacts with:** TimescaleDB (for storage), Redis (for caching), external data providers.
+
+### 3.6. Asset Management Service
+
+*   **Purpose:** To manage platform wallets, user assets, deposits, withdrawals, and portfolio tracking.
+*   **Primary Technology:** Java/Spring Boot.
+*   **Core Responsibilities:**
+    *   Manage user asset balances and portfolio allocation.
+    *   Process deposit and withdrawal requests.
+    *   Track transaction history and audit trails.
+    *   Calculate portfolio performance metrics.
+    *   Integrate with payment processors and crypto wallets.
+*   **Key Data Models:** `Wallet`, `Transaction`, `AssetBalance`, `PortfolioSnapshot`.
+*   **Integrations:**
+    *   **Interacts with:** Trading Engine (for trade settlements), Auth Service (for user verification), external payment providers.
+
+### 3.7. Broker Integration Service
 
 *   **Purpose:** To act as a standardized gateway to all supported external brokers and exchanges.
 *   **Primary Technology:** Python/FastAPI (well-suited for I/O-bound API calls).
@@ -73,12 +117,12 @@ The backend will be composed of the following core microservices:
     *   Translate internal trade commands into the specific format required by each broker's API.
     *   Normalize data received from brokers (e.g., account balances, trade confirmations).
     *   Handle API rate limiting, errors, and inconsistencies from external brokers.
-*   **Key Data Models:** `BrokerConnection`, `EncryptedApiKey`.
+*   **Key Data Models:** `BrokerConnection`, `EncryptedApiKey`, `BrokerOrder`.
 *   **Integrations:**
-    *   **Called by:** Trading Engine, AI/ML Service (for paper trading).
+    *   **Called by:** Trading Engine, AI/ML Strategy Service (for paper trading).
     *   **Synchronizes with:** External broker APIs.
 
-### 3.5. Marketplace Service
+### 3.8. Marketplace Service
 
 *   **Purpose:** To manage the lifecycle of strategies shared by external developers, including discovery, usage, and monetization.
 *   **Primary Technology:** Java/Spring Boot.
@@ -90,20 +134,37 @@ The backend will be composed of the following core microservices:
     *   Provide a dashboard for developers to view their model performance and earnings.
 *   **Key Data Models:** `MarketplaceStrategy`, `DeveloperProfile`, `Review`, `UsageMetric`.
 *   **Integrations:**
-    *   **Interacts with:** User Service (for developer info), AI/ML Service (to deploy strategies).
+    *   **Interacts with:** Auth Service (for developer info), AI/ML Strategy Service and No-Code Service (to deploy strategies).
 
-### 3.6. Compliance Service
+### 3.9. Notification Service
 
-*   **Purpose:** To handle all regulatory and compliance-related tasks, primarily KYC and AML.
-*   **Primary Technology:** Java/Spring Boot.
+*   **Purpose:** To handle all user notifications across multiple channels including email, SMS, push notifications, and in-app alerts.
+*   **Primary Technology:** Python/FastAPI with Celery for async processing.
 *   **Core Responsibilities:**
-    *   Manage the Know Your Customer (KYC) verification workflow.
-    *   Integrate with third-party services for identity verification.
-    *   Monitor transactions for suspicious activity to comply with Anti-Money Laundering (AML) regulations.
-    *   Generate data for regulatory reports.
-*   **Key Data Models:** `KYCRecord`, `AMLFlaggedTransaction`.
+    *   Send email notifications for account activities and trade alerts.
+    *   Deliver push notifications to mobile and web applications.
+    *   Send SMS alerts for critical events and security notifications.
+    *   Manage notification preferences and user communication settings.
+    *   Handle notification templates and personalization.
+*   **Key Data Models:** `NotificationTemplate`, `NotificationPreference`, `NotificationLog`.
 *   **Integrations:**
-    *   **Interacts with:** User Service, Asset Management Service.
+    *   **Consumes:** Various event topics from Kafka (trade confirmations, account alerts, etc.).
+    *   **Interacts with:** External notification providers (SendGrid, Twilio, Firebase).
+
+### 3.10. API Gateway
+
+*   **Purpose:** To provide a single entry point for all client requests with routing, authentication, rate limiting, and request aggregation.
+*   **Primary Technology:** Spring Cloud Gateway or Kong.
+*   **Core Responsibilities:**
+    *   Route requests to appropriate microservices.
+    *   Handle authentication and authorization validation.
+    *   Implement rate limiting and request throttling.
+    *   Aggregate responses from multiple services.
+    *   Provide API versioning and backward compatibility.
+*   **Key Features:** Load balancing, circuit breaker patterns, request/response transformation.
+*   **Integrations:**
+    *   **Routes to:** All backend microservices.
+    *   **Validates with:** Auth Service for JWT token verification.
 
 ---
 
@@ -119,12 +180,14 @@ The backend will be composed of the following core microservices:
 
 *   **API Gateway (Spring Cloud Gateway):** A single, unified entry point for all client requests (web and mobile). It will handle request routing to the appropriate microservice, authentication (JWT validation), rate limiting, and aggregation of responses.
 *   **Asynchronous Communication (Apache Kafka):** The event-driven backbone of the system. Key topics will include:
-    *   `market_data_ingest`: Raw market data from various sources.
-    *   `trade_execution_signals`: Signals from strategies to the trading engine.
-    *   `order_status_updates`: Real-time updates on order state (e.g., PENDING, FILLED, CANCELED).
-    *   `trade_confirmations`: Confirmed trade executions.
-    *   `user_events`: Events like `user_registered`, `password_reset`.
-    *   `notification_dispatch`: Events that trigger user notifications (email, push).
+    *   `market_data_feed`: Real-time market data from Market Data Service.
+    *   `strategy_signals`: Signals from No-Code and AI/ML Strategy Services to Trading Engine.
+    *   `order_events`: Real-time updates on order state (e.g., PENDING, FILLED, CANCELED).
+    *   `trade_executions`: Confirmed trade executions from Trading Engine.
+    *   `user_events`: Events like `user_registered`, `password_reset` from Auth Service.
+    *   `notification_dispatch`: Events that trigger user notifications via Notification Service.
+    *   `asset_transactions`: Deposit, withdrawal, balance updates from Asset Management Service.
+    *   `broker_events`: External broker API interactions and status updates.
 
 ## 5. Cross-Cutting Concerns
 
@@ -141,7 +204,7 @@ The backend will be composed of the following core microservices:
 
 ### 6.1 Detailed Service Specifications
 
-#### Core Trading Engine (Spring Boot)
+#### Trading Engine Service (Spring Boot)
 **Purpose**: High-performance trading execution and order management
 **Technology**: Java 21 + Spring Boot 3.x + Spring WebFlux
 **Database**: PostgreSQL (primary), Redis (caching)
@@ -201,16 +264,37 @@ public class Position {
 }
 ```
 
-#### AI/ML & Strategy Service (FastAPI)
-**Purpose**: Strategy creation, training, backtesting, and signal generation
+#### No-Code Service (FastAPI)
+**Purpose**: No-code visual strategy creation and workflow management
+**Technology**: Python 3.11 + FastAPI + Pydantic + NumPy/Pandas
+**Database**: PostgreSQL, Redis (caching)
+**Key Components**:
+- **Visual Strategy Builder**: Drag-and-drop workflow interface
+- **Block Validation Engine**: Validate workflow logic and connections
+- **Strategy Execution Engine**: Execute no-code workflows
+- **Template Manager**: Manage pre-built strategy templates
+- **Signal Generator**: Generate signals from visual strategies
+
+**API Endpoints**:
+```
+POST /api/no-code/strategies - Create new no-code strategy
+GET /api/no-code/strategies/{id} - Get strategy details
+POST /api/no-code/strategies/{id}/validate - Validate strategy workflow
+POST /api/no-code/blocks - Get available workflow blocks
+POST /api/no-code/templates - Get strategy templates
+POST /api/no-code/strategies/{id}/execute - Execute strategy
+```
+
+#### AI/ML Strategy Service (FastAPI)
+**Purpose**: Machine learning model training, backtesting, and AI-powered strategies
 **Technology**: Python 3.11 + FastAPI + Pydantic + NumPy/Pandas
 **Database**: PostgreSQL, TimescaleDB, MLflow
 **Key Components**:
-- **Strategy Builder**: No-code visual strategy creation
 - **Code IDE Service**: Python strategy development environment
 - **Backtesting Engine**: Historical strategy testing
 - **Model Training Service**: ML model training orchestration
-- **Signal Generator**: Live trading signal generation
+- **Signal Generator**: AI-powered trading signal generation
+- **Experiment Tracking**: MLflow integration for model versioning
 
 **API Endpoints**:
 ```
@@ -258,7 +342,7 @@ class BacktestResult(BaseModel):
     metrics: Dict[str, Any]
 ```
 
-#### User & Authentication Service (Spring Boot)
+#### Auth Service (Spring Boot)
 **Purpose**: User management, authentication, and authorization
 **Technology**: Java 21 + Spring Boot + Spring Security + JWT
 **Database**: PostgreSQL
@@ -288,6 +372,36 @@ PUT /api/users/profile - Update user profile
 - **Data Processing**: Clean, normalize, and validate market data
 - **Historical Data API**: Access to historical price data
 - **Real-time Streaming**: WebSocket connections for live data
+- **Technical Indicators**: Calculate and serve technical analysis indicators
+
+**API Endpoints**:
+```
+GET /api/market-data/real-time/{symbol} - Get real-time price data
+GET /api/market-data/historical/{symbol} - Get historical OHLCV data
+WS /api/market-data/stream/{symbol} - WebSocket real-time data stream
+GET /api/market-data/indicators/{symbol} - Get technical indicators
+POST /api/market-data/custom-indicators - Calculate custom indicators
+```
+
+**Data Models**:
+```python
+class MarketTick(BaseModel):
+    symbol: str
+    price: Decimal
+    volume: Decimal
+    timestamp: datetime
+    source: str
+
+class OHLCV(BaseModel):
+    symbol: str
+    open_price: Decimal
+    high_price: Decimal
+    low_price: Decimal
+    close_price: Decimal
+    volume: Decimal
+    timestamp: datetime
+    timeframe: str  # 1m, 5m, 1h, 1d, etc.
+```
 
 #### Asset Management Service (Spring Boot)
 **Purpose**: Platform wallet and asset management
@@ -297,6 +411,42 @@ PUT /api/users/profile - Update user profile
 - **Wallet Management**: User asset balances and transactions
 - **Deposit/Withdrawal**: Fiat and crypto deposit/withdrawal processing
 - **Transaction History**: Complete audit trail of all transactions
+- **Portfolio Tracking**: Real-time portfolio performance metrics
+- **Payment Integration**: Integration with payment processors
+
+**API Endpoints**:
+```
+GET /api/assets/balance - Get user asset balances
+POST /api/assets/deposit - Initiate deposit transaction
+POST /api/assets/withdraw - Initiate withdrawal transaction
+GET /api/assets/transactions - Get transaction history
+GET /api/assets/portfolio - Get portfolio performance metrics
+```
+
+**Data Models**:
+```java
+@Entity
+public class Wallet {
+    private Long id;
+    private String userId;
+    private String assetSymbol;
+    private BigDecimal balance;
+    private BigDecimal lockedBalance;
+    private Instant updatedAt;
+}
+
+@Entity
+public class Transaction {
+    private Long id;
+    private String userId;
+    private String assetSymbol;
+    private TransactionType type; // DEPOSIT, WITHDRAWAL, TRADE
+    private BigDecimal amount;
+    private TransactionStatus status;
+    private String externalReference;
+    private Instant createdAt;
+}
+```
 
 #### Broker Integration Service (FastAPI)
 **Purpose**: External broker API integration and management
@@ -327,29 +477,53 @@ PUT /api/users/profile - Update user profile
 - **Push Notifications**: Mobile and web push notifications
 - **SMS Service**: SMS notifications for critical alerts
 - **Notification Templates**: Customizable notification templates
+- **Preference Manager**: User notification preference management
 
-#### Compliance Service (Spring Boot)
-**Purpose**: KYC/AML compliance and regulatory reporting
-**Technology**: Java 21 + Spring Boot + Spring Batch
-**Database**: PostgreSQL (encrypted PII)
-**Key Components**:
-- **KYC Workflow**: Identity verification process
-- **AML Monitoring**: Transaction monitoring for suspicious activity
-- **Regulatory Reporting**: Generate compliance reports
-- **Document Management**: Secure storage of verification documents
+**API Endpoints**:
+```
+POST /api/notifications/send - Send notification
+GET /api/notifications/templates - Get notification templates
+PUT /api/notifications/preferences - Update user preferences
+GET /api/notifications/history - Get notification history
+POST /api/notifications/test - Test notification delivery
+```
+
+**Data Models**:
+```python
+class NotificationTemplate(BaseModel):
+    id: str
+    name: str
+    type: NotificationType  # EMAIL, SMS, PUSH, IN_APP
+    subject: Optional[str]
+    content: str
+    variables: List[str]
+    is_active: bool
+
+class NotificationPreference(BaseModel):
+    user_id: str
+    email_enabled: bool
+    sms_enabled: bool
+    push_enabled: bool
+    trade_alerts: bool
+    account_alerts: bool
+    market_alerts: bool
+```
+
 
 ### 6.2 Event-Driven Architecture
 
 **Kafka Topics**:
 ```
-market_data_feed - Real-time market data
-order_events - Order creation, modification, cancellation
-trade_executions - Completed trade confirmations
-strategy_signals - Trading signals from strategies
-user_events - User registration, login, profile updates
-compliance_alerts - KYC/AML alerts and notifications
-system_metrics - System health and performance metrics
-audit_events - Security and compliance audit trail
+market_data_feed - Real-time market data from Market Data Service
+order_events - Order creation, modification, cancellation from Trading Engine
+trade_executions - Completed trade confirmations from Trading Engine
+strategy_signals - Trading signals from No-Code and AI/ML Strategy Services
+user_events - User registration, login, profile updates from Auth Service
+asset_transactions - Deposit, withdrawal, balance updates from Asset Management
+broker_events - External broker API interactions and status updates
+notification_dispatch - Notification events for delivery by Notification Service
+marketplace_events - Strategy publishing, reviews, usage metrics
+system_metrics - System health and performance metrics from all services
 ```
 
 **Event Schemas**:
@@ -685,39 +859,63 @@ routes:
   - id: auth-service
     uri: http://auth-service:8080
     predicates:
-      - Path=/api/auth/**
-  - id: trading-service
-    uri: http://trading-service:8080
+      - Path=/api/auth/**, /api/users/**
+  - id: trading-engine-service
+    uri: http://trading-engine-service:8080
     predicates:
       - Path=/api/orders/**, /api/trades/**, /api/positions/**
-  - id: strategy-service
-    uri: http://strategy-service:8000
+  - id: no-code-service
+    uri: http://no-code-service:8000
     predicates:
-      - Path=/api/strategies/**, /api/backtests/**
+      - Path=/api/no-code/**
+  - id: ai-ml-strategy-service
+    uri: http://ai-ml-strategy-service:8000
+    predicates:
+      - Path=/api/strategies/**, /api/backtests/**, /api/models/**
+  - id: market-data-service
+    uri: http://market-data-service:8000
+    predicates:
+      - Path=/api/market-data/**
+  - id: asset-management-service
+    uri: http://asset-management-service:8080
+    predicates:
+      - Path=/api/assets/**
+  - id: broker-integration-service
+    uri: http://broker-integration-service:8000
+    predicates:
+      - Path=/api/brokers/**
+  - id: marketplace-service
+    uri: http://marketplace-service:8080
+    predicates:
+      - Path=/api/marketplace/**
+  - id: notification-service
+    uri: http://notification-service:8000
+    predicates:
+      - Path=/api/notifications/**
 ```
 
 ### 8.3 Deployment Architecture
 
 **Kubernetes Manifests**:
 ```yaml
-# Trading Service Deployment
+# Trading Engine Service Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: trading-service
+  name: trading-engine-service
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: trading-service
+      app: trading-engine-service
   template:
     metadata:
       labels:
-        app: trading-service
+        app: trading-engine-service
     spec:
       containers:
-      - name: trading-service
-        image: gcr.io/alphintra/trading-service:latest
+      - name: trading-engine-service
+        image: gcr.io/alphintra/trading-engine-service:latest
         ports:
         - containerPort: 8080
         env:

@@ -30,6 +30,9 @@ import { RiskManagementNode } from './nodes/RiskManagementNode';
 import { SmartEdge } from './edges/SmartEdge';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { connectionManager } from '@/lib/connection-manager';
+import { ConfigurationPanel } from './ConfigurationPanel';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/no-code/button';
 
 const nodeTypes = {
   technicalIndicator: TechnicalIndicatorNode,
@@ -56,6 +59,9 @@ interface NoCodeWorkflowEditorProps {
 
 function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflowEditorProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [isClosingModal, setIsClosingModal] = useState(false);
+  const [modalSelectedNode, setModalSelectedNode] = useState<string | null>(null);
   const { currentWorkflow, updateWorkflow, addNode, removeNode } = useNoCodeStore();
   const { screenToFlowPosition } = useReactFlow();
   
@@ -131,36 +137,20 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
 
   const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
     console.log('Double click on node:', node.id); // Debug log
+    setModalSelectedNode(node.id);
+    setShowConfigModal(true);
     onNodeSelect(node.id);
-    // Auto-focus on parameters tab when double-clicking
-    setTimeout(() => {
-      // Try multiple selectors to find the parameters tab
-      const selectors = [
-        '[data-value="parameters"]',
-        'button[data-value="parameters"]',
-        '[role="tab"][data-value="parameters"]',
-        '.parameters-tab'
-      ];
-      
-      let parametersTab: HTMLElement | null = null;
-      for (const selector of selectors) {
-        parametersTab = document.querySelector(selector) as HTMLElement;
-        if (parametersTab) break;
-      }
-      
-      if (parametersTab) {
-        parametersTab.click();
-        console.log('Clicked parameters tab with selector:', selectors.find(s => document.querySelector(s))); // Debug log
-      } else {
-        console.log('Parameters tab not found, available tabs:', 
-          Array.from(document.querySelectorAll('[role="tab"]')).map(el => ({
-            text: el.textContent,
-            attributes: Array.from(el.attributes).map(attr => `${attr.name}="${attr.value}"`).join(' ')
-          }))
-        ); // Debug log
-      }
-    }, 300);
   }, [onNodeSelect]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsClosingModal(true);
+    // Wait for exit animation to complete before hiding modal
+    setTimeout(() => {
+      setShowConfigModal(false);
+      setModalSelectedNode(null);
+      setIsClosingModal(false);
+    }, 200); // Match animation duration
+  }, []);
 
   const onPaneClick = useCallback(() => {
     onNodeSelect(null);
@@ -435,6 +425,48 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
         />
         </ReactFlow>
       </div>
+      
+      {/* Configuration Modal */}
+      {showConfigModal && modalSelectedNode && (
+        <div className={`fixed inset-0 z-50 flex items-center justify-center ${
+          isClosingModal 
+            ? 'animate-out fade-out-0 duration-200' 
+            : 'animate-in fade-in-0 duration-200'
+        }`}>
+          {/* Blur Background Overlay */}
+          <div 
+            className={`absolute inset-0 bg-black/30 backdrop-blur-sm ${
+              isClosingModal 
+                ? 'animate-out fade-out-0 duration-200' 
+                : 'animate-in fade-in-0 duration-200'
+            }`}
+            onClick={handleCloseModal}
+          />
+          
+          {/* Modal Content */}
+          <div className={`relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-[700px] max-w-[95vw] max-h-[95vh] overflow-hidden ${
+            isClosingModal 
+              ? 'animate-out zoom-out-95 slide-out-to-bottom-2 duration-200' 
+              : 'animate-in zoom-in-95 slide-in-from-bottom-2 duration-200'
+          }`}>
+            
+            {/* Modal Body */}
+            <div className="overflow-y-auto max-h-[calc(95vh-80px)] p-1">
+              <ConfigurationPanel 
+                selectedNode={modalSelectedNode}
+                onNodeSelect={(nodeId) => {
+                  if (nodeId) {
+                    setModalSelectedNode(nodeId);
+                    onNodeSelect(nodeId);
+                  } else {
+                    handleCloseModal();
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
