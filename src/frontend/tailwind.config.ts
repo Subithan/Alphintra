@@ -52,13 +52,13 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // Trading-specific colors
+        // Trading-specific colors with high contrast support
         success: {
           DEFAULT: 'hsl(142, 76%, 36%)',
           foreground: 'hsl(138, 76%, 97%)',
         },
         warning: {
-          DEFAULT: 'hsl(32, 95%, 44%)',
+          DEFAULT: 'hsl(var(--warning))',
           foreground: 'hsl(48, 96%, 89%)',
         },
         error: {
@@ -66,14 +66,21 @@ const config: Config = {
           foreground: 'hsl(0, 93%, 94%)',
         },
         profit: {
-          DEFAULT: 'hsl(142, 76%, 36%)',
+          DEFAULT: 'hsl(var(--profit))',
           light: 'hsl(142, 76%, 46%)',
           dark: 'hsl(142, 76%, 26%)',
         },
         loss: {
-          DEFAULT: 'hsl(0, 84%, 60%)',
+          DEFAULT: 'hsl(var(--loss))',
           light: 'hsl(0, 84%, 70%)',
           dark: 'hsl(0, 84%, 50%)',
+        },
+        // High contrast specific colors
+        'high-contrast': {
+          bg: 'hsl(0, 0%, 0%)',
+          fg: 'hsl(0, 0%, 100%)',
+          border: 'hsl(0, 0%, 25%)',
+          accent: 'hsl(45, 100%, 60%)',
         },
       },
       borderRadius: {

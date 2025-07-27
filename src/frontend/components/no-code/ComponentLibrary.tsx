@@ -653,18 +653,22 @@ export function ComponentLibrary() {
   };
 
   return (
-    <div className="h-full overflow-y-auto p-4 space-y-4 bg-white dark:bg-gray-900">
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Component Library</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
+    <div className="h-full overflow-y-auto p-6 space-y-6 bg-gradient-to-br from-gray-50/90 via-white/50 to-gray-100/90 dark:from-black/90 dark:via-gray-900/50 dark:to-black/90 backdrop-blur-sm relative">
+      {/* Premium glass overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-transparent to-purple-50/20 dark:from-blue-900/20 dark:via-transparent dark:to-purple-900/10 pointer-events-none"></div>
+      
+      <div className="relative z-10 space-y-3">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-200 dark:to-purple-200 bg-clip-text text-transparent tracking-tight">Component Library</h2>
+        <p className="text-sm text-gray-700 dark:text-gray-200 font-medium">
           Drag components to the canvas to build your strategy
         </p>
       </div>
 
-      <Accordion type="multiple" defaultValue={Object.keys(groupedComponents)} className="w-full">
+      <div className="relative z-10">
+        <Accordion type="multiple" defaultValue={Object.keys(groupedComponents)} className="w-full space-y-3">
         {Object.entries(groupedComponents).map(([category, components]) => (
           <AccordionItem key={category} value={category}>
-            <AccordionTrigger className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400">
+            <AccordionTrigger className="text-base font-semibold text-gray-900 dark:text-white hover:bg-white/60 dark:hover:bg-gray-800/80 backdrop-blur-sm rounded-xl px-5 py-4 transition-all duration-300 ease-in-out border border-white/30 dark:border-gray-700/50 hover:border-blue-300/50 dark:hover:border-blue-500/50 shadow-sm hover:shadow-lg mb-2">
               {category} ({components.length})
             </AccordionTrigger>
             <AccordionContent>
@@ -672,20 +676,23 @@ export function ComponentLibrary() {
                 {components.map((component) => (
                   <Card
                     key={component.id}
-                    className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                      draggedItem === component.type ? 'opacity-50 scale-95' : 'hover:scale-[1.02]'
+                    className={`cursor-grab active:cursor-grabbing shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-white/20 dark:border-gray-700/50 hover:border-blue-300/50 dark:hover:border-blue-500/50 rounded-xl relative overflow-hidden ${
+                      draggedItem === component.type ? 'opacity-50 scale-95' : 'hover:scale-[1.03] hover:-translate-y-1'
                     }`}
                     draggable={true}
                     onDragStart={(e) => onDragStart(e, component.type, component.name)}
                     onDragEnd={onDragEnd}
                   >
-                    <CardContent className="p-3">
+                    {/* Glass effect overlay for cards */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-blue-50/20 dark:from-white/5 dark:via-transparent dark:to-blue-900/10 pointer-events-none rounded-xl"></div>
+                    
+                    <CardContent className="p-4 relative z-10">
                       <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0 mt-1">
                           {component.icon}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">
+                          <h4 className="text-base font-bold truncate text-gray-900 dark:text-high-contrast-fg">
                             {component.name}
                           </h4>
                           <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
@@ -695,8 +702,8 @@ export function ComponentLibrary() {
                             {component.tags.slice(0, 2).map((tag) => (
                               <Badge
                                 key={tag}
-                                variant="secondary"
-                                className="text-xs px-1 py-0"
+                                variant="default"
+                                className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-high-contrast-accent/20 dark:text-high-contrast-accent rounded-full"
                               >
                                 {tag}
                               </Badge>
@@ -711,7 +718,8 @@ export function ComponentLibrary() {
             </AccordionContent>
           </AccordionItem>
         ))}
-      </Accordion>
+        </Accordion>
+      </div>
     </div>
   );
 }

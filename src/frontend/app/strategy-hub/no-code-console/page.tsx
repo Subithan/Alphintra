@@ -5,18 +5,16 @@ import { useSearchParams } from 'next/navigation';
 import { NoCodeWorkflowEditorWrapper } from '@/components/no-code/NoCodeWorkflowEditor';
 import { ComponentLibrary } from '@/components/no-code/ComponentLibrary';
 import { TemplateLibrary } from '@/components/no-code/TemplateLibrary';
-import { ConfigurationPanel } from '@/components/no-code/ConfigurationPanel';
 import { ClientOnly } from '@/components/no-code/ClientOnly';
 import { DatasetSelector } from '@/components/no-code/DatasetSelector';
 import { TrainingProgress } from '@/components/no-code/TrainingProgress';
-import VersionHistoryPanel from '@/components/no-code/VersionHistoryPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
 import { Button } from '@/components/ui/no-code/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/no-code/card';
 import { Badge } from '@/components/ui/no-code/badge';
 import { Input } from '@/components/ui/no-code/input';
 import { Icon } from '@iconify/react';
-import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X, GitBranch } from 'lucide-react';
+import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X } from 'lucide-react';
 import { useWorkflow, useWorkflowExecution } from '@/hooks/useWorkflow';
 import { useWorkflowSearch } from '@/hooks/useWorkflowSearch';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
@@ -38,7 +36,7 @@ export default function NoCodeConsolePage() {
   const [isTraining, setIsTraining] = useState(false);
   const [currentStep, setCurrentStep] = useState<'design' | 'dataset' | 'training' | 'testing'>('design');
   const [leftSidebar, setLeftSidebar] = useState<'components' | 'templates'>('components');
-  const [rightSidebar, setRightSidebar] = useState<'configuration' | 'versions'>('configuration');
+
   const [nodeCount, setNodeCount] = useState(2);
   const [connectionCount, setConnectionCount] = useState(1);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -1149,10 +1147,10 @@ if __name__ == "__main__":
   };
 
   return (
-    <div className="h-screen flex flex-col dark:bg-background">
+    <div className="h-screen flex flex-col dark:bg-black">
       <EnvDebug />
       {/* Header */}
-      <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+      <div className="border-b bg-white dark:bg-black border-gray-200 dark:border-gray-600">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center space-x-4">
             <EditableTitle 
@@ -1954,9 +1952,12 @@ if __name__ == "__main__":
         {currentStep === 'design' && (
           <>
             {/* Left Sidebar - Components/Templates */}
-            <div className="w-80 border-r bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 flex flex-col">
+            <div className="w-96 border-r bg-white/80 dark:bg-black/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-600/50 flex flex-col shadow-2xl relative overflow-hidden">
+              {/* Glass effect overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-white/10 pointer-events-none"></div>
+              <div className="relative z-10 flex flex-col h-full">
               {/* Sidebar Tabs */}
-              <div className="border-b border-gray-200 dark:border-gray-700">
+              <div className="border-b border-gray-200 dark:border-gray-600">
                 <Tabs value={leftSidebar} onValueChange={(value) => setLeftSidebar(value as 'components' | 'templates')} className="w-full">
                   <TabsList className="grid w-full grid-cols-2 rounded-none">
                     <TabsTrigger value="components" className="flex items-center space-x-2">
@@ -1971,18 +1972,19 @@ if __name__ == "__main__":
                 </Tabs>
               </div>
 
-              {/* Sidebar Content */}
-              <div className="flex-1 overflow-hidden">
-                {leftSidebar === 'components' && (
-                  <ClientOnly fallback={<div className="p-4">Loading components...</div>}>
-                    <ComponentLibrary />
-                  </ClientOnly>
-                )}
-                {leftSidebar === 'templates' && (
-                  <ClientOnly fallback={<div className="p-4">Loading templates...</div>}>
-                    <TemplateLibrary onTemplateSelect={() => setLeftSidebar('components')} />
-                  </ClientOnly>
-                )}
+                {/* Sidebar Content */}
+                <div className="flex-1 overflow-hidden">
+                  {leftSidebar === 'components' && (
+                    <ClientOnly fallback={<div className="p-4">Loading components...</div>}>
+                      <ComponentLibrary />
+                    </ClientOnly>
+                  )}
+                  {leftSidebar === 'templates' && (
+                    <ClientOnly fallback={<div className="p-4">Loading templates...</div>}>
+                      <TemplateLibrary onTemplateSelect={() => setLeftSidebar('components')} />
+                    </ClientOnly>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2005,66 +2007,7 @@ if __name__ == "__main__":
               </div>
             </div>
 
-            {/* Right Sidebar - Configuration/Versions */}
-            <div className="w-80 border-l bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 flex flex-col">
-              {/* Right Sidebar Tabs */}
-              <div className="border-b border-gray-200 dark:border-gray-700">
-                <Tabs value={rightSidebar} onValueChange={(value) => setRightSidebar(value as 'configuration' | 'versions')} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 rounded-none">
-                    <TabsTrigger value="configuration" className="flex items-center space-x-2">
-                      <Settings className="h-4 w-4" />
-                      <span>Config</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="versions" className="flex items-center space-x-2">
-                      <GitBranch className="h-4 w-4" />
-                      <span>Versions</span>
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
 
-              {/* Right Sidebar Content */}
-              <div className="flex-1 overflow-hidden">
-                {rightSidebar === 'configuration' && (
-                  <ClientOnly fallback={<div className="p-4">Loading settings...</div>}>
-                    <ConfigurationPanel 
-                      selectedNode={selectedNode} 
-                      onNodeSelect={setSelectedNode}
-                    />
-                  </ClientOnly>
-                )}
-                {rightSidebar === 'versions' && (
-                  <ClientOnly fallback={<div className="p-4">Loading version history...</div>}>
-                    <div className="p-4">
-                      <VersionHistoryPanel
-                        workflowId={currentWorkflow?.id !== 'default' ? currentWorkflow?.id || '' : ''}
-                        currentVersion={currentWorkflow?.version || 1}
-                        onVersionRestore={(version) => {
-                          toast({
-                            title: "Version Restored",
-                            description: `Successfully restored to version ${version}`,
-                          });
-                          // Refresh current workflow data
-                          if (currentWorkflow?.id && currentWorkflow.id !== 'default') {
-                            // Reload the workflow data from the restored version
-                            window.location.reload();
-                          }
-                        }}
-                        onVersionCreate={() => {
-                          // Auto-save current state before creating version
-                          handleSave().then(() => {
-                            toast({
-                              title: "Version Created",
-                              description: "Current model state has been saved as a new version",
-                            });
-                          });
-                        }}
-                      />
-                    </div>
-                  </ClientOnly>
-                )}
-              </div>
-            </div>
           </>
         )}
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
+import { theme } from "../theme";
 
 const Notification = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,7 +34,8 @@ const Notification = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
-        className="relative p-2 hover:bg-[#262739] dark:hover:bg-gray-700 hover:text-yellow-500 rounded-full cursor-pointer"
+        className="relative p-2 hover:bg-gray-700 hover:text-yellow-500 rounded-full cursor-pointer"
+        style={{ backgroundColor: theme.colors.dark.cardBorder }}
       >
         <Icon icon="solar:bell-linear" width={20} />
         <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-yellow-500"></span>
@@ -51,7 +53,8 @@ const Notification = () => {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className="flex items-center px-4 py-2 text-white hover:bg-[#262739] transition-colors"
+                className="flex items-center px-4 py-2 text-white transition-colors"
+                style={{ backgroundColor: theme.colors.dark.cardBorder }}
               >
                
                 <div className="flex-1">
@@ -64,7 +67,8 @@ const Notification = () => {
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="w-full px-4 py-2 text-yellow-500 hover:bg-[#262739] rounded-b-lg text-sm font-medium"
+            className="w-full px-4 py-2 text-yellow-500 rounded-b-lg text-sm font-medium"
+            style={{ backgroundColor: theme.colors.dark.cardBorder }}
           >
             See All Notifications
           </button>
