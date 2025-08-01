@@ -30,8 +30,9 @@ import { RiskManagementNode } from './nodes/RiskManagementNode';
 import { SmartEdge } from './edges/SmartEdge';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { connectionManager } from '@/lib/connection-manager';
+import { validateWorkflow, ValidationResult } from '@/lib/workflow-validation';
 import { ConfigurationPanel } from './ConfigurationPanel';
-import { X } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/no-code/button';
 
 const nodeTypes = {
@@ -62,6 +63,8 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [modalSelectedNode, setModalSelectedNode] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [showValidationPanel, setShowValidationPanel] = useState(false);
   const { currentWorkflow, updateWorkflow, addNode, removeNode } = useNoCodeStore();
   const { screenToFlowPosition } = useReactFlow();
   
@@ -76,6 +79,16 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
       setEdges(currentWorkflow.edges);
     }
   }, [currentWorkflow?.nodes?.length, currentWorkflow?.edges?.length, setNodes, setEdges]);
+
+  // Run validation when workflow changes
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      const result = validateWorkflow(nodes, edges);
+      setValidationResult(result);
+    } else {
+      setValidationResult(null);
+    }
+  }, [nodes, edges]);
 
   // Validate connection before ReactFlow attempts to create it
   const isValidConnection = useCallback(
@@ -395,8 +408,131 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
     }
   }, []);
 
+  const getValidationIcon = () => {
+    if (!validationResult) return null;
+    
+    if (validationResult.errors.length > 0) {
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    } else if (validationResult.warnings.length > 0) {
+      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+    } else {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    }
+  };
+
+  const getValidationStatus = () => {
+    if (!validationResult) return 'No validation';
+    
+    if (validationResult.errors.length > 0) {
+      return `${validationResult.errors.length} error${validationResult.errors.length > 1 ? 's' : ''}`;
+    } else if (validationResult.warnings.length > 0) {
+      return `${validationResult.warnings.length} warning${validationResult.warnings.length > 1 ? 's' : ''}`;
+    } else {
+      return 'Valid workflow';
+    }
+  };
+
   return (
     <div className="w-full h-full relative" suppressHydrationWarning>
+      {/* Validation Status Bar */}
+      {validationResult && (
+        <div className="absolute top-4 left-4 z-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg">
+          <div className="flex items-center space-x-2">
+            {getValidationIcon()}
+            <span className="text-sm font-medium">{getValidationStatus()}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowValidationPanel(!showValidationPanel)}
+              className="h-6 px-2 text-xs"
+            >
+              {showValidationPanel ? 'Hide' : 'Details'}
+            </Button>
+          </div>
+          
+          {/* Performance Metrics */}
+          {validationResult.performance && (
+            <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              Complexity: {validationResult.performance.estimatedComplexity} | 
+              Logic Depth: {validationResult.performance.logicDepth} | 
+              Indicators: {validationResult.performance.indicatorCount}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Validation Panel */}
+      {showValidationPanel && validationResult && (
+        <div className="absolute top-20 left-4 z-40 w-96 max-h-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-sm">Workflow Validation</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowValidationPanel(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="overflow-y-auto max-h-80">
+            {/* Errors */}
+            {validationResult.errors.length > 0 && (
+              <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">
+                  Errors ({validationResult.errors.length})
+                </h4>
+                {validationResult.errors.map((error, index) => (
+                  <div key={index} className="mb-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs">
+                    <div className="font-medium text-red-800 dark:text-red-300">{error.message}</div>
+                    {error.suggestion && (
+                      <div className="text-red-600 dark:text-red-400 mt-1">{error.suggestion}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Warnings */}
+            {validationResult.warnings.length > 0 && (
+              <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">
+                  Warnings ({validationResult.warnings.length})
+                </h4>
+                {validationResult.warnings.map((warning, index) => (
+                  <div key={index} className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs">
+                    <div className="font-medium text-yellow-800 dark:text-yellow-300">{warning.message}</div>
+                    {warning.suggestion && (
+                      <div className="text-yellow-600 dark:text-yellow-400 mt-1">{warning.suggestion}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Suggestions */}
+            {validationResult.suggestions && validationResult.suggestions.length > 0 && (
+              <div className="p-3">
+                <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
+                  Suggestions ({validationResult.suggestions.length})
+                </h4>
+                {validationResult.suggestions.map((suggestion, index) => (
+                  <div key={index} className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
+                    <div className="font-medium text-blue-800 dark:text-blue-300">{suggestion.message}</div>
+                    <div className="text-blue-600 dark:text-blue-400 mt-1 capitalize">
+                      {suggestion.type} • Priority: {suggestion.priority}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {isDragOver && (
         <div className="absolute inset-0 bg-blue-100/20 dark:bg-blue-900/20 border-2 border-dashed border-blue-400 dark:border-blue-600 z-50 flex items-center justify-center pointer-events-none">
           <div className="bg-blue-50 dark:bg-blue-900/50 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-700">
