@@ -77,6 +77,57 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
     }
   }, [currentWorkflow?.nodes?.length, currentWorkflow?.edges?.length, setNodes, setEdges]);
 
+  // Validate connection before ReactFlow attempts to create it
+  const isValidConnection = useCallback(
+    (connection: Connection) => {
+      // Find source and target nodes for validation
+      const sourceNode = nodes.find(n => n.id === connection.source);
+      const targetNode = nodes.find(n => n.id === connection.target);
+      
+      if (!sourceNode || !targetNode) {
+        console.warn('Source or target node not found for validation');
+        return false;
+      }
+
+      // For technical indicators, check if the handle should exist based on the indicator type
+      if (sourceNode.type === 'technicalIndicator' && connection.sourceHandle) {
+        const indicator = sourceNode.data?.parameters?.indicator;
+        console.log(`🔍 Checking handle ${connection.sourceHandle} for indicator ${indicator}`);
+        
+        // List of valid handles for each indicator (full handle IDs)
+        const validHandles: Record<string, string[]> = {
+          'ADX': ['adx-output', 'di_plus-output', 'di_minus-output'],
+          'BB': ['upper-output', 'middle-output', 'lower-output', 'width-output'],
+          'MACD': ['macd-output', 'signal-output', 'histogram-output'],
+          'STOCH': ['k-output', 'd-output'],
+          'Stochastic': ['k-output', 'd-output'],
+        };
+
+        const expectedHandles = validHandles[indicator] || ['value-output', 'signal-output'];
+        if (!expectedHandles.includes(connection.sourceHandle)) {
+          console.warn(`Handle ${connection.sourceHandle} not valid for indicator ${indicator}`);
+          return false;
+        }
+      }
+
+      // Validate connection using connection manager
+      const validation = connectionManager.validateConnection(
+        sourceNode,
+        connection.sourceHandle || 'default',
+        targetNode,
+        connection.targetHandle || 'default'
+      );
+
+      if (!validation.valid) {
+        console.warn('Invalid connection attempt:', validation.reason);
+        return false;
+      }
+
+      return true;
+    },
+    [nodes]
+  );
+
   const onConnect = useCallback(
     (params: Connection) => {
       console.log('🔗 Creating connection:', params);
@@ -100,7 +151,6 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
 
       if (!validation.valid) {
         console.warn('Invalid connection:', validation.reason);
-        // You could show a toast notification here
         return;
       }
 
@@ -111,7 +161,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
         target: params.target!,
         sourceHandle: params.sourceHandle,
         targetHandle: params.targetHandle,
-        type: 'smart', // Use our custom smart edge
+        type: 'smart',
         markerEnd: { type: MarkerType.ArrowClosed },
         ...connectionManager.getConnectionStyle(validation.rule),
         animated: validation.rule?.dataType === 'signal',

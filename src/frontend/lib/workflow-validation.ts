@@ -432,11 +432,42 @@ export class WorkflowValidator {
         return 'ohlcv';
       case 'technicalIndicator':
         if (!handle) return 'value';
+        
+        // Channel-based outputs
+        if (handle.includes('upper') || handle.includes('lower') || handle.includes('middle') || handle.includes('width')) return 'numeric';
+        
+        // MACD and PPO outputs  
+        if (handle.includes('histogram') || handle.includes('macd') || handle.includes('ppo')) return 'numeric';
+        
+        // For MACD, PPO, TSI signal outputs, we need to check the node's indicator type
+        if (handle === 'signal-output') {
+          // This would need node context to determine indicator type, defaulting to numeric for multi-output indicators
+          return 'numeric';
+        }
+        
+        // Stochastic outputs (including KDJ)
+        if (handle.includes('k') || handle.includes('d') || handle.includes('j')) return 'numeric';
+        
+        // Directional indicators
+        if (handle.includes('adx') || handle.includes('di_plus') || handle.includes('di_minus') || 
+            handle.includes('dmi_plus') || handle.includes('dmi_minus')) return 'numeric';
+        
+        // Aroon outputs
+        if (handle.includes('aroon_up') || handle.includes('aroon_down')) return 'numeric';
+        
+        // Vortex outputs
+        if (handle.includes('vi_plus') || handle.includes('vi_minus')) return 'numeric';
+        
+        // TSI output
+        if (handle.includes('tsi')) return 'numeric';
+        
+        // Default value output
+        if (handle.includes('value')) return 'value';
+        
+        // Generic signal outputs (for simple indicators that just have signal/value outputs)
         if (handle.includes('signal')) return 'signal';
-        if (handle.includes('upper') || handle.includes('lower') || handle.includes('middle')) return 'numeric';
-        if (handle.includes('histogram') || handle.includes('macd') || handle.includes('k') || handle.includes('d')) return 'numeric';
-        if (handle.includes('width') || handle.includes('adx') || handle.includes('di')) return 'numeric';
-        return 'value';
+        
+        return 'numeric'; // Default for all other technical indicator outputs
       case 'condition':
         return 'signal';
       case 'logic':
