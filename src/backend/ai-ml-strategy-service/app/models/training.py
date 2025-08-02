@@ -1,11 +1,12 @@
 """
-ML model training related database models.
+ML model training related database models for Phase 4: Model Training Orchestrator.
 """
 
+from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Dict, Any, List
 
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, Enum, ForeignKey, BigInteger
+from sqlalchemy import Column, String, Text, Boolean, Integer, Float, Enum, ForeignKey, BigInteger, DateTime, Index
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.orm import relationship
 
@@ -52,7 +53,31 @@ class ModelFramework(PyEnum):
     XGBOOST = "xgboost"
     LIGHTGBM = "lightgbm"
     CATBOOST = "catboost"
+    KERAS = "keras"
     CUSTOM = "custom"
+
+
+class OptimizationObjective(PyEnum):
+    """Hyperparameter optimization objective."""
+    MINIMIZE = "minimize"
+    MAXIMIZE = "maximize"
+
+
+class OptimizationAlgorithm(PyEnum):
+    """Hyperparameter optimization algorithm."""
+    RANDOM_SEARCH = "random_search"
+    GRID_SEARCH = "grid_search"
+    BAYESIAN_OPTIMIZATION = "bayesian_optimization"
+    HYPERBAND = "hyperband"
+    POPULATION_BASED = "population_based"
+
+
+class TrainingPriority(PyEnum):
+    """Training job priority levels."""
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
 
 
 class TrainingJob(BaseModel, UserMixin, MetadataMixin):
