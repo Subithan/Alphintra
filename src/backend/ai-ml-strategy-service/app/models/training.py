@@ -102,10 +102,17 @@ class TrainingJob(BaseModel, UserMixin, MetadataMixin):
     
     # Job execution
     status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False, index=True)
-    start_time = Column(String(30))  # ISO datetime string
-    end_time = Column(String(30))    # ISO datetime string
+    priority = Column(Enum(TrainingPriority), default=TrainingPriority.NORMAL, nullable=False)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
     duration_seconds = Column(Integer)
     progress_percentage = Column(Integer, default=0)
+    
+    # Queue management
+    queued_at = Column(DateTime)
+    queue_position = Column(Integer)
+    estimated_start_time = Column(DateTime)
+    estimated_completion_time = Column(DateTime)
     
     # Configuration
     hyperparameters = Column(JSON, default=dict)
@@ -177,22 +184,31 @@ class ModelArtifact(BaseModel):
     
     # Relationships
     training_job = relationship("TrainingJob", back_populates="artifacts")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_artifacts_training_job', 'training_job_id'),
+        Index('idx_artifacts_model_name', 'model_name'),
+        Index('idx_artifacts_framework', 'framework'),
+        Index('idx_artifacts_deployed', 'is_deployed'),
+    )
 
 
-class HyperparameterTrial(BaseModel):
+class HyperparameterTrial(BaseModel, MetadataMixin):
     """
     Individual hyperparameter tuning trial.
     """
     __tablename__ = "hyperparameter_trials"
     
-    training_job_id = Column(UUID(as_uuid=True), ForeignKey("training_jobs.id"), nullable=False)
+    training_job_id = Column(UUID(as_uuid=True), ForeignKey("training_jobs.id"))
+    tuning_job_id = Column(UUID(as_uuid=True), ForeignKey("hyperparameter_tuning_jobs.id"))
     trial_number = Column(Integer, nullable=False)
     hyperparameters = Column(JSON, nullable=False)
     
     # Trial execution
     status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False)
-    start_time = Column(String(30))
-    end_time = Column(String(30))
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
     duration_seconds = Column(Integer)
     
     # Results
@@ -204,8 +220,24 @@ class HyperparameterTrial(BaseModel):
     objective_value = Column(Float)
     objective_metric = Column(String(100))  # The metric being optimized
     
+    # Resource usage
+    compute_cost = Column(Float, default=0.0)
+    
+    # External references
+    vertex_ai_trial_id = Column(String(255))
+    mlflow_run_id = Column(String(255))
+    
     # Relationships
     training_job = relationship("TrainingJob", back_populates="hyperparameter_trials")
+    tuning_job = relationship("HyperparameterTuningJob", back_populates="trials")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_trials_training_job', 'training_job_id'),
+        Index('idx_trials_tuning_job', 'tuning_job_id'),
+        Index('idx_trials_status', 'status'),
+        Index('idx_trials_objective_value', 'objective_value'),
+    )
 
 
 class TrainingMetric(BaseModel):
@@ -235,6 +267,14 @@ class TrainingMetric(BaseModel):
     # Relationships
     training_job = relationship("TrainingJob")
     trial = relationship("HyperparameterTrial")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_metrics_training_job', 'training_job_id'),
+        Index('idx_metrics_trial', 'trial_id'),
+        Index('idx_metrics_name', 'metric_name'),
+        Index('idx_metrics_timestamp', 'timestamp'),
+    )
 
 
 class ModelRegistry(BaseModel, UserMixin):
@@ -299,6 +339,14 @@ class ModelVersion(BaseModel):
     # Relationships
     model_registry = relationship("ModelRegistry", back_populates="versions")
     artifact = relationship("ModelArtifact")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_model_versions_registry', 'model_registry_id'),
+        Index('idx_model_versions_version', 'version'),
+        Index('idx_model_versions_current', 'is_current'),
+        Index('idx_model_versions_stage', 'stage'),
+    )
 
 
 class ComputeResource(BaseModel):
@@ -331,4 +379,168 @@ class ComputeResource(BaseModel):
     
     # Performance benchmarks
     benchmark_score = Column(Float)
-    benchmark_date = Column(String(30))
+    benchmark_date = Column(DateTime)
+    
+    # Relationships
+    training_jobs = relationship("TrainingJob")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_compute_resources_name', 'resource_name'),
+        Index('idx_compute_resources_type', 'resource_type'),
+        Index('idx_compute_resources_provider', 'provider'),
+        Index('idx_compute_resources_available', 'is_available'),
+    )
+
+
+class HyperparameterTuningJob(BaseModel, UserMixin, MetadataMixin):
+    """
+    Hyperparameter tuning job configuration and tracking.
+    """
+    __tablename__ = "hyperparameter_tuning_jobs"
+    
+    # Basic information
+    strategy_id = Column(UUID(as_uuid=True), ForeignKey("strategies.id"), nullable=False)
+    dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
+    job_name = Column(String(255), nullable=False, index=True)
+    
+    # Optimization configuration
+    optimization_algorithm = Column(Enum(OptimizationAlgorithm), nullable=False)
+    optimization_objective = Column(Enum(OptimizationObjective), nullable=False)
+    objective_metric = Column(String(100), nullable=False)  # The metric to optimize
+    max_trials = Column(Integer, default=100)
+    max_parallel_trials = Column(Integer, default=4)
+    max_trial_duration_hours = Column(Integer, default=4)
+    
+    # Search space
+    parameter_space = Column(JSON, nullable=False)  # Hyperparameter search space
+    early_stopping_config = Column(JSON, default=dict)
+    
+    # Job execution
+    status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False, index=True)
+    priority = Column(Enum(TrainingPriority), default=TrainingPriority.NORMAL, nullable=False)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    duration_seconds = Column(Integer)
+    progress_percentage = Column(Integer, default=0)
+    
+    # Compute configuration
+    instance_type = Column(Enum(InstanceType), nullable=False)
+    estimated_cost = Column(Float, default=0.0)
+    actual_cost = Column(Float)
+    
+    # Results
+    best_trial_id = Column(UUID(as_uuid=True), ForeignKey("hyperparameter_trials.id"))
+    best_hyperparameters = Column(JSON, default=dict)
+    best_objective_value = Column(Float)
+    completed_trials = Column(Integer, default=0)
+    failed_trials = Column(Integer, default=0)
+    
+    # External references
+    vertex_ai_job_id = Column(String(255))
+    mlflow_experiment_id = Column(String(255))
+    
+    # Relationships
+    strategy = relationship("Strategy")
+    dataset = relationship("Dataset")
+    trials = relationship("HyperparameterTrial", back_populates="tuning_job", cascade="all, delete-orphan")
+    best_trial = relationship("HyperparameterTrial", foreign_keys=[best_trial_id], post_update=True)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_tuning_jobs_user_id', 'user_id'),
+        Index('idx_tuning_jobs_status', 'status'),
+        Index('idx_tuning_jobs_strategy_id', 'strategy_id'),
+        Index('idx_tuning_jobs_dataset_id', 'dataset_id'),
+    )
+
+
+class ResourceQuota(BaseModel, UserMixin, MetadataMixin):
+    """
+    User resource quotas and usage tracking.
+    """
+    __tablename__ = "resource_quotas"
+    
+    # Quota limits (per month)
+    max_cpu_hours = Column(Float, default=100.0)
+    max_gpu_hours = Column(Float, default=10.0)
+    max_memory_gb_hours = Column(Float, default=1000.0)
+    max_storage_gb = Column(Float, default=100.0)
+    max_concurrent_jobs = Column(Integer, default=5)
+    max_monthly_cost = Column(Float, default=1000.0)
+    
+    # Current usage (this month)
+    used_cpu_hours = Column(Float, default=0.0)
+    used_gpu_hours = Column(Float, default=0.0)
+    used_memory_gb_hours = Column(Float, default=0.0)
+    used_storage_gb = Column(Float, default=0.0)
+    current_concurrent_jobs = Column(Integer, default=0)
+    current_monthly_cost = Column(Float, default=0.0)
+    
+    # Reset tracking
+    quota_period_start = Column(DateTime, nullable=False, default=datetime.utcnow)
+    quota_period_end = Column(DateTime, nullable=False)
+    last_reset = Column(DateTime)
+    
+    # Alerts and notifications
+    cpu_alert_threshold = Column(Float, default=0.8)  # Alert at 80% usage
+    gpu_alert_threshold = Column(Float, default=0.8)
+    cost_alert_threshold = Column(Float, default=0.8)
+    alert_enabled = Column(Boolean, default=True)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_resource_quotas_user_id', 'user_id'),
+        Index('idx_resource_quotas_period', 'quota_period_start', 'quota_period_end'),
+    )
+
+
+class TrainingTemplate(BaseModel, UserMixin, MetadataMixin):
+    """
+    Reusable training configuration templates.
+    """
+    __tablename__ = "training_templates"
+    
+    # Basic information
+    template_name = Column(String(255), nullable=False, index=True)
+    description = Column(Text)
+    category = Column(String(100), nullable=False)  # 'deep_learning', 'classical_ml', 'time_series'
+    
+    # Template configuration
+    model_framework = Column(Enum(ModelFramework), nullable=False)
+    default_hyperparameters = Column(JSON, default=dict)
+    training_config = Column(JSON, default=dict)
+    model_config = Column(JSON, default=dict)
+    
+    # Compute recommendations
+    recommended_instance_type = Column(Enum(InstanceType))
+    min_memory_gb = Column(Integer)
+    estimated_training_time_hours = Column(Float)
+    
+    # Usage and validation
+    is_public = Column(Boolean, default=False)
+    is_validated = Column(Boolean, default=False)
+    usage_count = Column(Integer, default=0)
+    success_rate = Column(Float, default=0.0)
+    avg_performance_score = Column(Float)
+    
+    # Versioning
+    version = Column(String(50), default="1.0.0")
+    parent_template_id = Column(UUID(as_uuid=True), ForeignKey("training_templates.id"))
+    
+    # Tags and metadata
+    tags = Column(ARRAY(String), default=list)
+    documentation = Column(Text)
+    example_code = Column(Text)
+    
+    # Relationships
+    parent_template = relationship("TrainingTemplate", remote_side="TrainingTemplate.id")
+    child_templates = relationship("TrainingTemplate", cascade="all, delete-orphan")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_training_templates_category', 'category'),
+        Index('idx_training_templates_framework', 'model_framework'),
+        Index('idx_training_templates_public', 'is_public'),
+        Index('idx_training_templates_usage', 'usage_count'),
+    )
