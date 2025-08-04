@@ -169,7 +169,7 @@ class Generator:
         label_lines: List[str] = []
         feature_cols: List[str] = []
         label_cols: List[str] = []
-        df_name: str | None = None
+        df_name: str = "df"
         requirements: Set[str] = set(BASE_REQUIREMENTS)
 
         for node in self.nodes:
@@ -183,18 +183,17 @@ class Generator:
             requirements.update(handler.required_packages())
 
             ntype = node.type
-            if ntype == "dataSource":
+            if ntype in {"dataSource", "customDataset"}:
                 data_lines.append(snippet)
-                if df_name is None:
-                    df_name = f"data_{NodeHandler.sanitize_id(node.id)}"
             elif ntype == "technicalIndicator":
                 feature_lines.append(snippet)
                 feature_cols.append(f"feature_{NodeHandler.sanitize_id(node.id)}")
             elif ntype == "condition":
                 label_lines.append(snippet)
                 label_cols.append(f"target_{NodeHandler.sanitize_id(node.id)}")
+            else:
+                feature_lines.append(snippet)
 
-        df_name = df_name or "data"
         label_col = label_cols[0] if label_cols else "target"
 
         template = dedent(
