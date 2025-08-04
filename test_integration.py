@@ -8,9 +8,12 @@ import os
 import sys
 import subprocess
 import time
-import requests
 import json
 from pathlib import Path
+
+import pytest
+
+requests = pytest.importorskip("requests")
 
 def test_backend_start():
     """Test if backend can start"""
