@@ -9,6 +9,7 @@ const buttonVariants = {
     secondary: 'btn-secondary',
     ghost: 'btn-ghost',
     link: 'btn-link',
+    glass: 'btn-glass',
   },
   size: {
     default: '',
