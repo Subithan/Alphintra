@@ -36,3 +36,22 @@ def test_generate_and_compile(workflow_file: Path):
 
     subprocess.run([sys.executable, "-m", "py_compile", str(trainer)], check=True)
     subprocess.run([sys.executable, "-m", "py_compile", str(requirements)], check=True)
+
+
+def test_unknown_node_triggers_warning(caplog):
+    """Ensure unknown node types are handled gracefully with a warning."""
+
+    generator = Generator()
+    workflow = {
+        "nodes": [
+            {"id": "data-1", "type": "dataSource", "data": {"parameters": {}}},
+            {"id": "mystery-1", "type": "mystery"},
+        ],
+        "edges": [],
+    }
+
+    with caplog.at_level("WARNING"):
+        result = generator.generate_strategy_code(workflow)
+
+    assert result["success"], "Generation should succeed despite unknown node"
+    assert "No handler registered for node type 'mystery'" in caplog.text

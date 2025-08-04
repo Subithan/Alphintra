@@ -21,7 +21,7 @@ from textwrap import dedent
 # ``code_generator`` sits alongside the ``node_handlers`` package.  Import the
 # registry and base class directly so this module can be used as a standalone
 # script or as part of the package.
-from node_handlers import HANDLER_REGISTRY, NodeHandler
+from node_handlers import HANDLER_REGISTRY, NodeHandler, FALLBACK_HANDLER
 
 BASE_REQUIREMENTS = {"pandas", "numpy", "scikit-learn", "joblib"}
 
@@ -38,6 +38,8 @@ class Generator:
     def __init__(self) -> None:
         # Handlers are stored in a simple dictionary registry.
         self.handlers: Dict[str, NodeHandler] = dict(HANDLER_REGISTRY)
+        # Fallback handler used when no specific handler is registered.
+        self.fallback_handler: NodeHandler = FALLBACK_HANDLER
         # Store workflow structure so handlers can resolve connections between
         # nodes when emitting code.
         self.nodes: List[Dict[str, Any]] = []
@@ -194,7 +196,7 @@ class Generator:
         for node in nodes:
             handler = self.get_handler(node.get("type", ""))
             if not handler:
-                continue
+                handler = self.fallback_handler
             snippet = handler.handle(node, self)
             if not snippet:
                 continue
