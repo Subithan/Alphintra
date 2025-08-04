@@ -1,8 +1,8 @@
 """Fallback handler for unknown node types."""
 
-from typing import Dict, Any
 import logging
 
+from ir import Node
 from .base import NodeHandler
 
 logger = logging.getLogger(__name__)
@@ -18,11 +18,11 @@ class FallbackHandler(NodeHandler):
 
     node_type = "__fallback__"
 
-    def handle(self, node: Dict[str, Any], generator) -> str:  # noqa: D401
+    def handle(self, node: Node, generator) -> str:  # noqa: D401
         logger.warning(
             "No handler registered for node type '%s'; node '%s' will be ignored",
-            node.get("type"),
-            node.get("id"),
+            node.type,
+            node.id,
         )
         return ""
 

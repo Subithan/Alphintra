@@ -55,3 +55,21 @@ def test_unknown_node_triggers_warning(caplog):
 
     assert result["success"], "Generation should succeed despite unknown node"
     assert "No handler registered for node type 'mystery'" in caplog.text
+
+
+def test_parse_workflow_builds_ir():
+    """Ensure JSON is converted into a graph IR."""
+
+    generator = Generator()
+    workflow = {
+        "nodes": [
+            {"id": "n1", "type": "dataSource", "data": {"parameters": {}}},
+            {"id": "n2", "type": "action", "data": {}},
+        ],
+        "edges": [{"source": "n1", "target": "n2"}],
+    }
+
+    ir = generator.parse_workflow(workflow)
+    assert set(ir.nodes.keys()) == {"n1", "n2"}
+    assert ir.edges and ir.edges[0].source == "n1" and ir.edges[0].target == "n2"
+    assert ir.adjacency()["n1"] == ["n2"]

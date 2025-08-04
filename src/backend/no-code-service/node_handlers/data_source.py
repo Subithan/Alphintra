@@ -1,18 +1,19 @@
 """Handler for data source nodes."""
 
-from typing import Dict, Any, List
+from typing import List
 
+from ir import Node
 from .base import NodeHandler
 
 
 class DataSourceHandler(NodeHandler):
     node_type = "dataSource"
 
-    def handle(self, node: Dict[str, Any], generator) -> str:
-        params = node.get("data", {}).get("parameters", {})
+    def handle(self, node: Node, generator) -> str:
+        params = node.data.get("parameters", {})
         symbol = params.get("symbol", "AAPL")
         timeframe = params.get("timeframe", "1h")
-        var_name = f"data_{self.sanitize_id(node['id'])}"
+        var_name = f"data_{self.sanitize_id(node.id)}"
         return (
             f"{var_name} = pd.DataFrame()  # TODO load {symbol} ({timeframe})"
         )
