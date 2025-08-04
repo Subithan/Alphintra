@@ -55,6 +55,7 @@ def test_unknown_node_triggers_warning(caplog):
 
     assert result["success"], "Generation should succeed despite unknown node"
     assert "No handler registered for node type 'mystery'" in caplog.text
+    assert "df['unknown_mystery" in result["code"]
 
 
 def test_parse_workflow_builds_ir():
@@ -73,3 +74,37 @@ def test_parse_workflow_builds_ir():
     assert set(ir.nodes.keys()) == {"n1", "n2"}
     assert ir.edges and ir.edges[0].source == "n1" and ir.edges[0].target == "n2"
     assert ir.adjacency()["n1"] == ["n2"]
+
+
+def test_handlers_add_dataframe_columns():
+    workflow = {
+        "nodes": [
+            {"id": "ds1", "type": "dataSource", "data": {"parameters": {}}},
+            {"id": "ti1", "type": "technicalIndicator", "data": {"parameters": {}}},
+            {"id": "c1", "type": "condition", "data": {"parameters": {}}},
+            {"id": "l1", "type": "logic", "data": {}},
+            {"id": "a1", "type": "action", "data": {}},
+            {"id": "r1", "type": "risk", "data": {}},
+            {"id": "o1", "type": "output", "data": {}},
+        ],
+        "edges": [
+            {"source": "ds1", "target": "ti1"},
+            {"source": "ti1", "target": "c1"},
+            {"source": "c1", "target": "l1"},
+            {"source": "l1", "target": "a1"},
+            {"source": "a1", "target": "r1"},
+            {"source": "r1", "target": "o1"},
+        ],
+    }
+
+    generator = Generator()
+    result = generator.generate_strategy_code(workflow)
+
+    code = result["code"]
+    assert "df = pd.DataFrame" in code
+    assert "df['feature_ti1']" in code
+    assert "df['target_c1']" in code
+    assert "df['logic_l1']" in code
+    assert "df['action_a1']" in code
+    assert "df['risk_r1']" in code
+    assert "df['output_o1']" in code

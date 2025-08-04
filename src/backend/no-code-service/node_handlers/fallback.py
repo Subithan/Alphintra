@@ -1,6 +1,7 @@
 """Fallback handler for unknown node types."""
 
 import logging
+from typing import List
 
 from ir import Node
 from .base import NodeHandler
@@ -20,9 +21,15 @@ class FallbackHandler(NodeHandler):
 
     def handle(self, node: Node, generator) -> str:  # noqa: D401
         logger.warning(
-            "No handler registered for node type '%s'; node '%s' will be ignored",
+            "No handler registered for node type '%s'; node '%s' will be processed as a placeholder",
             node.type,
             node.id,
         )
-        return ""
+        col_name = f"unknown_{self.sanitize_id(node.id)}"
+        return (
+            f"df['{col_name}'] = None  # Unsupported node type {node.type}"
+        )
+
+    def required_packages(self) -> List[str]:
+        return ["pandas"]
 

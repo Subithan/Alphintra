@@ -15,13 +15,11 @@ class TechnicalIndicatorHandler(NodeHandler):
         period = params.get("period", 20)
         source_col = params.get("source", "close")
 
-        inputs = generator.get_incoming(node.id)
-        df_var = f"data_{self.sanitize_id(inputs[0])}" if inputs else "data"
         col_name = f"feature_{self.sanitize_id(node.id)}"
 
         return (
-            f"{df_var}['{col_name}'] = "
-            f"ta.{indicator}({df_var}['{source_col}'], timeperiod={period})"
+            f"df['{col_name}'] = "
+            f"ta.{indicator}(df['{source_col}'], timeperiod={period})"
         )
 
     def required_packages(self) -> List[str]:

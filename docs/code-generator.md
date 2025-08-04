@@ -46,3 +46,27 @@ If a workflow contains a node whose type is not present in the registry, the
 empty snippet, allowing generation to continue while signalling that the node
 was ignored.  The behaviour ensures forward compatibility with newer workflow
 features without causing failures in older deployments.
+
+## DataFrame column conventions
+
+All node handlers operate on a shared pandas ``DataFrame`` named ``df``. Each
+handler appends a column to this frame following a simple naming scheme based on
+the node's identifier:
+
+| Node type             | Column prefix | Example column        |
+|----------------------|---------------|-----------------------|
+| ``dataSource``       | *(initialises ``df``)* | ``df`` loaded with data |
+| ``customDataset``    | *(initialises ``df``)* | ``df`` from CSV         |
+| ``technicalIndicator`` | ``feature_`` | ``feature_abcd1234``  |
+| ``condition``        | ``target_``   | ``target_abcd1234``   |
+| ``action``           | ``action_``   | ``action_abcd1234``   |
+| ``logic``            | ``logic_``    | ``logic_abcd1234``    |
+| ``risk``             | ``risk_``     | ``risk_abcd1234``     |
+| ``output``           | ``output_``   | ``output_abcd1234``   |
+| unknown              | ``unknown_``  | ``unknown_abcd1234``  |
+
+Nodes are processed sequentially in the order they appear in the workflow. Data
+sources initialise ``df`` first. Feature generators such as technical indicators
+run next, followed by label generation via condition nodes. Remaining nodes add
+their respective columns afterwards. This order ensures that downstream steps
+can rely on features and targets being present when needed.

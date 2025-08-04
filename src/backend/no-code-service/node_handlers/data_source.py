@@ -13,9 +13,8 @@ class DataSourceHandler(NodeHandler):
         params = node.data.get("parameters", {})
         symbol = params.get("symbol", "AAPL")
         timeframe = params.get("timeframe", "1h")
-        var_name = f"data_{self.sanitize_id(node.id)}"
         return (
-            f"{var_name} = pd.DataFrame()  # TODO load {symbol} ({timeframe})"
+            f"df = pd.DataFrame()  # TODO load {symbol} ({timeframe})"
         )
 
     def required_packages(self) -> List[str]:

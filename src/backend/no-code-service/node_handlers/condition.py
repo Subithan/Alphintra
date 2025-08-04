@@ -15,30 +15,17 @@ class ConditionHandler(NodeHandler):
         threshold = params.get("threshold", 0)
 
         inputs = generator.get_incoming(node.id)
-        data_src = None
-        features: list[str] = []
-        for src in inputs:
-            src_node = generator.node_map.get(src)
-            src_type = src_node.type if src_node else None
-            if src_type == "dataSource" and not data_src:
-                data_src = src
-            else:
-                features.append(src)
+        features: list[str] = [src for src in inputs]
 
-        if not data_src:
-            # Fallback: assume all features belong to the first input's frame
-            data_src = inputs[0] if inputs else ""
-
-        df_var = f"data_{self.sanitize_id(data_src)}" if data_src else "data"
         target_col = f"target_{self.sanitize_id(node.id)}"
 
         if features:
             feat = f"feature_{self.sanitize_id(features[0])}"
-            expr = f"{df_var}['{feat}'] {operator} {threshold}"
+            expr = f"df['{feat}'] {operator} {threshold}"
         else:
             expr = "False"
 
-        return f"{df_var}['{target_col}'] = ({expr}).astype(int)"
+        return f"df['{target_col}'] = ({expr}).astype(int)"
 
     def required_packages(self) -> List[str]:
         return ["pandas"]

@@ -11,8 +11,8 @@ class LogicHandler(NodeHandler):
 
     def handle(self, node: Node, generator) -> str:
         label = node.data.get("label", "logic")
-        var_name = f"logic_{self.sanitize_id(node.id)}"
-        return f"{var_name} = '{label}'  # placeholder for logic operation"
+        col_name = f"logic_{self.sanitize_id(node.id)}"
+        return f"df['{col_name}'] = '{label}'  # placeholder for logic operation"
 
     def required_packages(self) -> List[str]:
-        return []
+        return ["pandas"]

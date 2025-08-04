@@ -11,8 +11,8 @@ class ActionHandler(NodeHandler):
 
     def handle(self, node: Node, generator) -> str:
         label = node.data.get("label", "action")
-        var_name = f"action_{self.sanitize_id(node.id)}"
-        return f"{var_name} = '{label}'  # placeholder for action execution"
+        col_name = f"action_{self.sanitize_id(node.id)}"
+        return f"df['{col_name}'] = '{label}'  # placeholder for action execution"
 
     def required_packages(self) -> List[str]:
-        return []
+        return ["pandas"]
