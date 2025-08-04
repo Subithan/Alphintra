@@ -36,7 +36,7 @@
    Usage: add `liquid-glass` to panels or cards for a frosted translucent surface */
 .liquid-glass {
   background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(12px) saturate(1.8);
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
