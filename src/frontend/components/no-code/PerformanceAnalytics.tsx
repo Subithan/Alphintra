@@ -177,7 +177,7 @@ export function PerformanceAnalytics({
     return (
       <div className="space-y-6">
         {/* Execution Controls */}
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Activity className="h-5 w-5" />
@@ -216,7 +216,7 @@ export function PerformanceAnalytics({
 
         {/* Strategy Information */}
         {generatedStrategy && (
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle>Generated Strategy Info</CardTitle>
             </CardHeader>
@@ -265,7 +265,7 @@ export function PerformanceAnalytics({
   return (
     <div className="space-y-6">
       {/* Execution Controls */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -326,7 +326,7 @@ export function PerformanceAnalytics({
         <>
           {/* Key Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
+            <Card variant="glass">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <Clock className="h-4 w-4 text-blue-500" />
@@ -338,7 +338,7 @@ export function PerformanceAnalytics({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <Memory className="h-4 w-4 text-purple-500" />
@@ -350,7 +350,7 @@ export function PerformanceAnalytics({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <Zap className="h-4 w-4 text-yellow-500" />
@@ -362,7 +362,7 @@ export function PerformanceAnalytics({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   {metrics.errorRate > 0 ? (
@@ -380,7 +380,7 @@ export function PerformanceAnalytics({
           </div>
 
           {/* Signal Breakdown */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle>Signal Breakdown</CardTitle>
             </CardHeader>
@@ -405,7 +405,7 @@ export function PerformanceAnalytics({
           </Card>
 
           {/* Performance Trend */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 {getTrendIcon(metrics.recentPerformance.trend)}
@@ -457,7 +457,7 @@ export function PerformanceAnalytics({
           </Card>
 
           {/* Recent Execution Results */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle>Recent Executions</CardTitle>
             </CardHeader>

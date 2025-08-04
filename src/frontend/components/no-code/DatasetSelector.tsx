@@ -85,7 +85,7 @@ export function DatasetSelector({ onNext }: DatasetSelectorProps) {
   };
 
   const renderDatasetCard = (dataset: any) => (
-    <Card 
+    <Card variant="glass" 
       key={dataset.id}
       className={`cursor-pointer transition-all ${
         selectedDataset === dataset.id 
@@ -190,7 +190,7 @@ export function DatasetSelector({ onNext }: DatasetSelectorProps) {
           <div className="grid gap-4">
             {userDatasets.map(renderDatasetCard)}
             {userDatasets.length === 0 && (
-              <Card>
+              <Card variant="glass">
                 <CardContent className="p-8 text-center">
                   <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">No Custom Datasets</h3>
@@ -205,7 +205,7 @@ export function DatasetSelector({ onNext }: DatasetSelectorProps) {
         </TabsContent>
 
         <TabsContent value="upload" className="space-y-4">
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle>Upload Custom Dataset</CardTitle>
               <CardDescription>

@@ -354,7 +354,7 @@ export function PortfolioAnalyticsDashboard({
     <div className="space-y-6">
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -369,7 +369,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -382,7 +382,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -395,7 +395,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -410,7 +410,7 @@ export function PortfolioAnalyticsDashboard({
       </div>
 
       {/* Portfolio Performance Chart */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -453,7 +453,7 @@ export function PortfolioAnalyticsDashboard({
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Activity className="h-5 w-5" />
@@ -486,7 +486,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <PieChart className="h-5 w-5" />
@@ -513,7 +513,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Globe className="h-5 w-5" />
@@ -551,7 +551,7 @@ export function PortfolioAnalyticsDashboard({
     <div className="space-y-6">
       {/* Performance Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Total Return</p>
@@ -563,7 +563,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Annualized Return</p>
@@ -575,7 +575,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Volatility</p>
@@ -587,7 +587,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Sharpe Ratio</p>
@@ -599,7 +599,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Max Drawdown</p>
@@ -611,7 +611,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Win Rate</p>
@@ -625,7 +625,7 @@ export function PortfolioAnalyticsDashboard({
       </div>
 
       {/* Advanced Metrics */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle>Advanced Performance Metrics</CardTitle>
         </CardHeader>
@@ -681,7 +681,7 @@ export function PortfolioAnalyticsDashboard({
       </Card>
 
       {/* Returns Distribution */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <BarChart3 className="h-5 w-5" />
@@ -708,7 +708,7 @@ export function PortfolioAnalyticsDashboard({
     <div className="space-y-6">
       {/* Risk Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Portfolio Risk</p>
@@ -720,7 +720,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Concentration Risk</p>
@@ -732,7 +732,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Correlation Risk</p>
@@ -744,7 +744,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="text-center">
               <p className="text-sm text-gray-600">Liquidity Risk</p>
@@ -758,7 +758,7 @@ export function PortfolioAnalyticsDashboard({
       </div>
 
       {/* VaR Analysis */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Shield className="h-5 w-5" />
@@ -796,7 +796,7 @@ export function PortfolioAnalyticsDashboard({
 
       {/* Risk Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle>Sector Risk Exposure</CardTitle>
           </CardHeader>
@@ -821,7 +821,7 @@ export function PortfolioAnalyticsDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle>Geographic Risk Exposure</CardTitle>
           </CardHeader>
@@ -848,7 +848,7 @@ export function PortfolioAnalyticsDashboard({
       </div>
 
       {/* Stress Testing */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5" />
@@ -896,7 +896,7 @@ export function PortfolioAnalyticsDashboard({
   const renderAllocationTab = () => (
     <div className="space-y-6">
       {/* Allocation Overview */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <PieChart className="h-5 w-5" />
@@ -917,7 +917,7 @@ export function PortfolioAnalyticsDashboard({
       </Card>
 
       {/* Strategy Details Table */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle>Strategy Performance</CardTitle>
         </CardHeader>
@@ -971,7 +971,7 @@ export function PortfolioAnalyticsDashboard({
       </Card>
 
       {/* Rebalancing History */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Clock className="h-5 w-5" />
@@ -1004,7 +1004,7 @@ export function PortfolioAnalyticsDashboard({
   const renderAttributionTab = () => (
     <div className="space-y-6">
       {/* Attribution Analysis */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <BarChart3 className="h-5 w-5" />
@@ -1049,7 +1049,7 @@ export function PortfolioAnalyticsDashboard({
       </Card>
 
       {/* Strategy Contributions */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle>Strategy Contributions to Return</CardTitle>
         </CardHeader>
@@ -1090,7 +1090,7 @@ export function PortfolioAnalyticsDashboard({
       </Card>
 
       {/* Factor Analysis */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Target className="h-5 w-5" />

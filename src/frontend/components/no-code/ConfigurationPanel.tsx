@@ -470,7 +470,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
              <div className="flex-1 mt-4 min-h-0 overflow-hidden">
 
               <TabsContent value="parameters" className="h-full overflow-y-auto space-y-4 data-[state=active]:flex data-[state=active]:flex-col">
-                <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                <Card variant="glass" className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
                   <CardHeader className="rounded-t-2xl">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg font-bold text-foreground bg-gradient-to-r from-slate-700 to-slate-900 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">Node Parameters</CardTitle>
@@ -519,7 +519,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
               </TabsContent>
 
               <TabsContent value="inputs" className="h-full overflow-y-auto space-y-4 data-[state=active]:flex data-[state=active]:flex-col">
-                <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                <Card variant="glass" className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
                   <CardHeader className="rounded-t-2xl">
                     <CardTitle className="text-lg font-bold text-foreground bg-gradient-to-r from-slate-700 to-slate-900 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">Input Connections</CardTitle>
                   </CardHeader>
@@ -550,7 +550,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
               </TabsContent>
 
               <TabsContent value="outputs" className="h-full overflow-y-auto space-y-4 data-[state=active]:flex data-[state=active]:flex-col">
-                <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+                <Card variant="glass" className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
                   <CardHeader className="rounded-t-2xl">
                     <CardTitle className="text-lg font-bold text-foreground bg-gradient-to-r from-slate-700 to-slate-900 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">Output Connections</CardTitle>
                   </CardHeader>
@@ -604,7 +604,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
 
       {/* Test Node - Fixed at bottom */}
       <div className="flex-shrink-0 p-6 pt-0">
-        <Card className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+        <Card variant="glass" className="rounded-2xl shadow-lg border-slate-200 dark:border-gray-500 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
           <CardContent className="p-4">
             <Button className="w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium transition-all hover:scale-105" variant="default">
               <Play className="h-4 w-4 mr-2" />

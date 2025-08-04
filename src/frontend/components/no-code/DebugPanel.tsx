@@ -501,7 +501,7 @@ export function DebugPanel({
 
   if (!debugState) {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Bug className="h-5 w-5" />
@@ -525,7 +525,7 @@ export function DebugPanel({
   return (
     <div className="space-y-4">
       {/* Debug Controls */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -571,7 +571,7 @@ export function DebugPanel({
       </Card>
 
       {/* Debug Tabs */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <div className="flex space-x-4 border-b">
             {(['execution', 'signals', 'performance', 'warnings'] as const).map(tab => (

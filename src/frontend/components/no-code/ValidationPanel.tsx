@@ -154,7 +154,7 @@ export function ValidationPanel({ validation, onNodeSelect, className, nodes = [
   );
 
   return (
-    <Card className={className}>
+    <Card variant="glass" className={className}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold flex items-center space-x-2">
@@ -231,7 +231,7 @@ export function ValidationPanel({ validation, onNodeSelect, className, nodes = [
           <TabsContent value="performance" className="mt-4">
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
-                <Card>
+                <Card variant="glass">
                   <CardContent className="pt-4">
                     <div className="flex items-center space-x-3">
                       <Zap className="h-5 w-5 text-blue-500" />
@@ -247,7 +247,7 @@ export function ValidationPanel({ validation, onNodeSelect, className, nodes = [
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card variant="glass">
                   <CardContent className="pt-4">
                     <div className="flex items-center space-x-3">
                       <Clock className="h-5 w-5 text-green-500" />
@@ -262,7 +262,7 @@ export function ValidationPanel({ validation, onNodeSelect, className, nodes = [
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card variant="glass">
                   <CardContent className="pt-4">
                     <div className="flex items-center space-x-3">
                       <HardDrive className="h-5 w-5 text-purple-500" />
