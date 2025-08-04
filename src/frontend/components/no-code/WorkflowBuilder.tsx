@@ -15,6 +15,7 @@ import ReactFlow, {
   NodeTypes,
   EdgeTypes,
   Connection,
+  MarkerType,
   ReactFlowProvider,
   Panel,
   useReactFlow,
@@ -304,14 +305,19 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             connectionMode={ConnectionMode.Loose}
+            defaultEdgeOptions={{
+              type: 'default',
+              markerEnd: { type: MarkerType.ArrowClosed },
+              style: { strokeWidth: 2, stroke: 'hsl(var(--foreground) / 0.4)' },
+            }}
             fitView
             attributionPosition="bottom-left"
-            className="bg-gray-50"
+            className="bg-background dark:bg-background"
             deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
             multiSelectionKeyCode={readOnly ? null : ['Meta', 'Ctrl']}
             selectionKeyCode={readOnly ? null : ['Shift']}
           >
-            <Background color="#e5e7eb" gap={20} />
+            <Background color="hsl(var(--foreground) / 0.1)" gap={20} />
             <Controls showInteractive={!readOnly} />
             <MiniMap 
               nodeColor="#3b82f6"

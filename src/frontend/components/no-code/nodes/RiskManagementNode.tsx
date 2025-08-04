@@ -54,20 +54,26 @@ export function RiskManagementNode({ id, selected }: NodeProps<RiskManagementNod
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'position': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'portfolio': return 'bg-green-100 text-green-800 border-green-300';
-      case 'market': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'drawdown': return 'bg-red-100 text-red-800 border-red-300';
-      case 'exposure': return 'bg-purple-100 text-purple-800 border-purple-300';
-      default: return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'position':
+        return 'bg-blue-100 text-blue-800 dark:text-blue-200 border-blue-300';
+      case 'portfolio':
+        return 'bg-green-100 text-green-800 dark:text-green-200 border-green-300';
+      case 'market':
+        return 'bg-orange-100 text-orange-800 dark:text-orange-200 border-orange-300';
+      case 'drawdown':
+        return 'bg-red-100 text-red-800 dark:text-red-200 border-red-300';
+      case 'exposure':
+        return 'bg-purple-100 text-purple-800 dark:text-purple-200 border-purple-300';
+      default:
+        return 'bg-blue-100 text-blue-800 dark:text-blue-200 border-blue-300';
     }
   };
 
   const getRiskColor = (level: number) => {
-    if (level <= 1) return 'bg-green-100 text-green-800 border-green-300';
-    if (level <= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-    if (level <= 3) return 'bg-orange-100 text-orange-800 border-orange-300';
-    return 'bg-red-100 text-red-800 border-red-300';
+    if (level <= 1) return 'bg-green-100 text-green-800 dark:text-green-200 border-green-300';
+    if (level <= 2) return 'bg-yellow-100 text-yellow-800 dark:text-yellow-200 border-yellow-300';
+    if (level <= 3) return 'bg-orange-100 text-orange-800 dark:text-orange-200 border-orange-300';
+    return 'bg-red-100 text-red-800 dark:text-red-200 border-red-300';
   };
 
   const getEmergencyActionIcon = (action: string) => {
@@ -89,30 +95,34 @@ export function RiskManagementNode({ id, selected }: NodeProps<RiskManagementNod
   };
 
   return (
-    <Card variant="glass" className={`min-w-[220px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
+    <Card
+      variant="glass"
+      className={`min-w-[220px] node-glow ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      suppressHydrationWarning
+    >
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           {getCategoryIcon(riskCategory)}
-          <span className="font-medium text-sm dark:text-foreground">{label}</span>
+          <span className="font-medium text-sm text-foreground">{label}</span>
         </div>
         
         <div className="space-y-1.5">
           <div className="flex items-center space-x-2">
-            <Badge variant="default" className="text-xs font-semibold">
+            <Badge variant="default" className="glass-badge text-xs font-semibold">
               {riskType.replace(/_/g, ' ').toUpperCase()}
             </Badge>
             {emergencyAction && emergencyAction !== 'alert_only' && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="glass-badge text-xs">
                 {getEmergencyActionIcon(emergencyAction)}
               </Badge>
             )}
           </div>
-          
-          <div className={`text-xs px-1.5 py-0.5 rounded border ${getCategoryColor(riskCategory)}`}>
+
+          <div className={`text-xs px-1.5 py-0.5 rounded border glass-badge ${getCategoryColor(riskCategory)}`}>
             {riskCategory.toUpperCase()} RISK
           </div>
-          
-          <div className={`text-xs px-1.5 py-0.5 rounded border ${getRiskColor(riskLevel)}`}>
+
+          <div className={`text-xs px-1.5 py-0.5 rounded border glass-badge ${getRiskColor(riskLevel)}`}>
             {getDisplayValue()}
           </div>
         </div>

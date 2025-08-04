@@ -41,6 +41,28 @@
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
+/* Translucent badge utility */
+.glass-badge {
+  --tw-bg-opacity: 0.4;
+  --tw-border-opacity: 0.4;
+  backdrop-filter: blur(4px);
+}
+
+/* Subtle glow for glass nodes */
+.node-glow {
+  position: relative;
+}
+
+.node-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 0%, hsl(var(--glass-highlight)), transparent 70%);
+  opacity: 0.25;
+}
+
 @keyframes liquid-gradient {
   0% {
     background-position: 0% 0%;

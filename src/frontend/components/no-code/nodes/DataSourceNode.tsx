@@ -54,30 +54,38 @@ export function DataSourceNode({ id, selected }: NodeProps<DataSourceNodeData>) 
 
   const getAssetClassColor = (assetClass: string) => {
     switch (assetClass) {
-      case 'crypto': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'forex': return 'bg-green-100 text-green-800 border-green-300';
-      case 'stocks': return 'bg-blue-100 text-blue-800 border-blue-300';
-      default: return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'crypto':
+        return 'bg-orange-100 text-orange-800 dark:text-orange-200 border-orange-300';
+      case 'forex':
+        return 'bg-green-100 text-green-800 dark:text-green-200 border-green-300';
+      case 'stocks':
+        return 'bg-blue-100 text-blue-800 dark:text-blue-200 border-blue-300';
+      default:
+        return 'bg-blue-100 text-blue-800 dark:text-blue-200 border-blue-300';
     }
   };
 
   return (
-    <Card variant="glass" className={`min-w-[180px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
+    <Card
+      variant="glass"
+      className={`min-w-[180px] node-glow ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      suppressHydrationWarning
+    >
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           {getDataSourceIcon(dataSource)}
-          <span className="font-medium text-sm dark:text-foreground">{label}</span>
+          <span className="font-medium text-sm text-foreground">{label}</span>
         </div>
         
         <div className="space-y-1.5">
           <div className="flex items-center space-x-1">
-            <Badge variant="default" className="text-xs font-semibold">
+            <Badge variant="default" className="glass-badge text-xs font-semibold">
               {symbol}
             </Badge>
             {getAssetIcon(assetClass)}
           </div>
-          
-          <div className={`text-xs px-1.5 py-0.5 rounded border ${getAssetClassColor(assetClass)}`}>
+
+          <div className={`text-xs px-1.5 py-0.5 rounded border glass-badge ${getAssetClassColor(assetClass)}`}>
             {assetClass.toUpperCase()}
           </div>
           

@@ -51,15 +51,19 @@ export function LogicNode({ id, selected }: NodeProps<LogicNodeData>) {
   };
 
   return (
-    <Card variant="glass" className={`min-w-[140px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
+    <Card
+      variant="glass"
+      className={`min-w-[140px] node-glow ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      suppressHydrationWarning
+    >
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           <GitBranch className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-          <span className="font-medium text-sm dark:text-foreground">{label}</span>
+          <span className="font-medium text-sm text-foreground">{label}</span>
         </div>
         
         <div className="space-y-1">
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="glass-badge text-xs">
             <span className={`font-bold ${getOperationColor(operation)}`}>
               {getOperationSymbol(operation)}
             </span>

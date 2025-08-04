@@ -60,12 +60,18 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'trend': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'momentum': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'volatility': return 'bg-red-100 text-red-800 border-red-300';
-      case 'volume': return 'bg-green-100 text-green-800 border-green-300';
-      case 'oscillators': return 'bg-purple-100 text-purple-800 border-purple-300';
-      default: return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'trend':
+        return 'bg-blue-100 text-blue-800 dark:text-blue-200 border-blue-300';
+      case 'momentum':
+        return 'bg-yellow-100 text-yellow-800 dark:text-yellow-200 border-yellow-300';
+      case 'volatility':
+        return 'bg-red-100 text-red-800 dark:text-red-200 border-red-300';
+      case 'volume':
+        return 'bg-green-100 text-green-800 dark:text-green-200 border-green-300';
+      case 'oscillators':
+        return 'bg-purple-100 text-purple-800 dark:text-purple-200 border-purple-300';
+      default:
+        return 'bg-blue-100 text-blue-800 dark:text-blue-200 border-blue-300';
     }
   };
 
@@ -186,29 +192,30 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
   const availableOutputs = getAvailableOutputs();
 
   return (
-    <Card variant="glass" 
-      className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} 
+    <Card
+      variant="glass"
+      className={`min-w-[200px] node-glow ${selected ? 'ring-2 ring-blue-500' : ''}`}
       suppressHydrationWarning
     >
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           {getCategoryIcon(indicatorCategory)}
-          <span className="font-medium text-sm dark:text-foreground">{label}</span>
+          <span className="font-medium text-sm text-foreground">{label}</span>
         </div>
         
         <div className="space-y-1.5">
           <div className="flex items-center space-x-2">
-            <Badge variant="default" className="text-xs font-semibold">
+            <Badge variant="default" className="glass-badge text-xs font-semibold">
               {indicator}
             </Badge>
             {outputType && outputType !== 'main' && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="glass-badge text-xs">
                 {outputType}
               </Badge>
             )}
           </div>
-          
-          <div className={`text-xs px-1.5 py-0.5 rounded border ${getCategoryColor(indicatorCategory)}`}>
+
+          <div className={`text-xs px-1.5 py-0.5 rounded border glass-badge ${getCategoryColor(indicatorCategory)}`}>
             {indicatorCategory.toUpperCase()}
           </div>
           

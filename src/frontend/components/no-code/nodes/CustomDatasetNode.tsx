@@ -55,21 +55,29 @@ export function CustomDatasetNode({ id, selected }: NodeProps<CustomDatasetNodeD
 
   const getQualityColor = (quality: string) => {
     switch (quality) {
-      case 'good': return 'bg-green-100 text-green-800 border-green-300';
-      case 'warning': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'error': return 'bg-red-100 text-red-800 border-red-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'good':
+        return 'bg-green-100 text-green-800 dark:text-green-200 border-green-300';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-800 dark:text-yellow-200 border-yellow-300';
+      case 'error':
+        return 'bg-red-100 text-red-800 dark:text-red-200 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:text-gray-200 border-gray-300';
     }
   };
 
   const hasFile = fileName !== 'No file uploaded';
 
   return (
-    <Card variant="glass" className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
+    <Card
+      variant="glass"
+      className={`min-w-[200px] node-glow ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      suppressHydrationWarning
+    >
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <span className="font-medium text-sm dark:text-foreground">{label}</span>
+          <span className="font-medium text-sm text-foreground">{label}</span>
         </div>
         
         <div className="space-y-1.5">
@@ -80,7 +88,7 @@ export function CustomDatasetNode({ id, selected }: NodeProps<CustomDatasetNodeD
               </div>
               
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="glass-badge text-xs">
                   {rowCount.toLocaleString()} rows
                 </Badge>
                 <div className="flex items-center space-x-1">
@@ -89,7 +97,7 @@ export function CustomDatasetNode({ id, selected }: NodeProps<CustomDatasetNodeD
                 </div>
               </div>
               
-              <div className={`text-xs px-1.5 py-0.5 rounded border ${getQualityColor(dataQuality)}`}>
+              <div className={`text-xs px-1.5 py-0.5 rounded border glass-badge ${getQualityColor(dataQuality)}`}>
                 {dataQuality === 'good' && 'Data Valid'}
                 {dataQuality === 'warning' && 'Minor Issues'}
                 {dataQuality === 'error' && 'Validation Errors'}
