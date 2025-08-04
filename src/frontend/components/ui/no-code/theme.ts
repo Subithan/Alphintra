@@ -10,6 +10,11 @@ export const theme = {
       textSecondary: '#B0B0B0',
       accent: '#FFD700',
       accentHover: '#FFBF00',
+      glass: {
+        background: 'rgba(0, 0, 0, 0.6)',
+        border: 'rgba(255, 255, 255, 0.1)',
+        highlight: 'rgba(255, 215, 0, 0.2)',
+      },
     },
     light: {
         background: '#FFFFFF',
@@ -19,6 +24,11 @@ export const theme = {
         textSecondary: '#505050',
         accent: '#FFD700',
         accentHover: '#FFBF00',
+        glass: {
+          background: 'rgba(255, 255, 255, 0.6)',
+          border: 'rgba(0, 0, 0, 0.1)',
+          highlight: 'rgba(255, 215, 0, 0.3)',
+        },
     }
   },
 };
