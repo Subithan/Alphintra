@@ -24,6 +24,7 @@ import { noCodeApiClient } from '@/lib/api/no-code-api';
 import { timescaleMarketData, formatTimescaleDate, getTimescaleTimeframe } from '@/lib/api/market-data-timescale';
 import { EnvDebug } from '@/components/debug/EnvDebug';
 import { EditableTitle } from '@/components/no-code/EditableTitle';
+import { LiquidBackground } from '@/components/ui/no-code/LiquidBackground';
 
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
@@ -1147,10 +1148,12 @@ if __name__ == "__main__":
   };
 
   return (
-    <div className="h-screen flex flex-col dark:bg-black">
-      <EnvDebug />
+    <div className="relative h-screen overflow-hidden">
+      <LiquidBackground />
+      <div className="h-full flex flex-col">
+        <EnvDebug />
       {/* Header */}
-      <div className="border-b bg-white dark:bg-black border-gray-200 dark:border-gray-600">
+      <div className="border-b liquid-glass">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center space-x-4">
             <EditableTitle 
@@ -1167,8 +1170,8 @@ if __name__ == "__main__":
             </Badge>
           </div>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="glass"
               size="sm"
               onClick={toggleTheme}
               className="p-2"
@@ -1179,8 +1182,8 @@ if __name__ == "__main__":
                 <Moon className="h-4 w-4" />
               )}
             </Button>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="glass"
               size="sm"
               onClick={handleSave}
               disabled={!currentWorkflow}
@@ -1188,16 +1191,16 @@ if __name__ == "__main__":
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="glass"
               size="sm"
               onClick={handleImport}
             >
               <Upload className="h-4 w-4 mr-2" />
               Import
             </Button>
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="glass"
               size="sm"
               onClick={handleExport}
               disabled={!currentWorkflow}
@@ -1205,10 +1208,11 @@ if __name__ == "__main__":
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button 
+            <Button
+              variant="glass"
               onClick={handleCompileAndTrain}
               disabled={isTraining}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600/60 hover:bg-blue-700 text-white"
             >
               <Play className="h-4 w-4 mr-2" />
               Compile & Train
@@ -1218,31 +1222,32 @@ if __name__ == "__main__":
       </div>
 
       {/* Workflow Toolbar */}
-      <div className="border-b bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+      <div className="border-b liquid-glass">
         <div className="flex h-12 items-center justify-between px-4">
           {/* Left Section - Control Buttons */}
           <div className="flex items-center space-x-3">
-            <Button 
-              size="sm" 
-              className="bg-green-600 hover:bg-green-700"
+            <Button
+              size="sm"
+              variant="glass"
+              className="bg-green-600/60 hover:bg-green-700"
               onClick={handleRunExecution}
               disabled={isExecuting || !currentWorkflow}
             >
               <Play className="h-4 w-4 mr-1" />
               {isExecuting ? 'Running...' : 'Run'}
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary"
+            <Button
+              size="sm"
+              variant="glass"
               onClick={handleStop}
               disabled={!workflowExecution.execution || workflowExecution.execution.status !== 'running'}
             >
               <Pause className="h-4 w-4 mr-1" />
               Stop
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary"
+            <Button
+              size="sm"
+              variant="glass"
               onClick={handleReset}
               disabled={!currentWorkflow}
             >
@@ -1252,10 +1257,10 @@ if __name__ == "__main__":
             
             <div className="w-px h-6 bg-border mx-2"></div>
             
-            <Button 
-              size="sm" 
-              variant={showSearch ? "default" : "secondary"} 
-              className="p-2"
+            <Button
+              size="sm"
+              variant="glass"
+              className={`p-2 ${showSearch ? 'bg-white/20 dark:bg-black/20' : ''}`}
               onClick={handleSearch}
             >
               <Search className="h-4 w-4" />
@@ -1263,37 +1268,37 @@ if __name__ == "__main__":
             
             <div className="w-px h-6 bg-border mx-2"></div>
             
-            <Button 
-              size="sm" 
-              variant="secondary" 
+            <Button
+              size="sm"
+              variant="glass"
               className="p-2"
               onClick={handleZoomIn}
               title="Zoom In"
             >
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
+            <Button
+              size="sm"
+              variant="glass"
               className="p-2"
               onClick={handleZoomOut}
               title="Zoom Out"
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
+            <Button
+              size="sm"
+              variant="glass"
               className="p-2"
               onClick={handleResetZoom}
               title="Reset Zoom (100%)"
             >
               <span className="text-xs font-mono">{Math.round(zoomLevel * 100)}%</span>
             </Button>
-            <Button 
-              size="sm" 
-              variant={isFullscreen ? "default" : "secondary"} 
-              className="p-2"
+            <Button
+              size="sm"
+              variant="glass"
+              className={`p-2 ${isFullscreen ? 'bg-white/20 dark:bg-black/20' : ''}`}
               onClick={handleFullscreen}
               title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             >
@@ -1304,17 +1309,19 @@ if __name__ == "__main__":
           {/* Center Section - View Controls */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <Button 
-                size="sm" 
-                variant={showVisual ? "default" : "secondary"}
+              <Button
+                size="sm"
+                variant="glass"
+                className={showVisual ? 'bg-white/20 dark:bg-black/20' : ''}
                 onClick={handleVisual}
               >
                 <Eye className="h-4 w-4 mr-1" />
                 Visual
               </Button>
-              <Button 
-                size="sm" 
-                variant={showCodeGeneration ? "default" : "secondary"}
+              <Button
+                size="sm"
+                variant="glass"
+                className={showCodeGeneration ? 'bg-white/20 dark:bg-black/20' : ''}
                 onClick={handleCodeGeneration}
               >
                 <Code className="h-4 w-4 mr-1" />
@@ -1346,45 +1353,45 @@ if __name__ == "__main__":
 
           {/* Right Section - Additional Actions */}
           <div className="flex items-center space-x-2">
-            <Button 
-              size="sm" 
-              variant="secondary"
+            <Button
+              size="sm"
+              variant="glass"
               onClick={handleTest}
               disabled={!currentWorkflow}
             >
               <TestTube className="h-4 w-4 mr-1" />
               Test
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary"
+            <Button
+              size="sm"
+              variant="glass"
               onClick={handleSave}
               disabled={!currentWorkflow}
             >
               <Save className="h-4 w-4 mr-1" />
               Save
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
+            <Button
+              size="sm"
+              variant="glass"
               className="p-2"
               onClick={handleExport}
               disabled={!currentWorkflow}
             >
               <Download className="h-4 w-4" />
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
+            <Button
+              size="sm"
+              variant="glass"
               className="p-2"
               onClick={handleImport}
             >
               <Upload className="h-4 w-4" />
             </Button>
-            <Button 
-              size="sm" 
-              variant={showSettings ? "default" : "secondary"} 
-              className="p-2"
+            <Button
+              size="sm"
+              variant="glass"
+              className={`p-2 ${showSettings ? 'bg-white/20 dark:bg-black/20' : ''}`}
               onClick={handleSettings}
             >
               <Settings className="h-4 w-4" />
@@ -1395,7 +1402,7 @@ if __name__ == "__main__":
 
       {/* Search Panel */}
       {showSearch && (
-        <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4">
+        <div className="border-b liquid-glass p-4">
           <div className="flex items-center space-x-4">
             <div className="flex-1 relative">
               <Input
@@ -1410,7 +1417,7 @@ if __name__ == "__main__":
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             <Button
-              variant="ghost"
+              variant="glass"
               size="sm"
               onClick={() => setShowSearch(false)}
             >
@@ -1445,7 +1452,7 @@ if __name__ == "__main__":
 
       {/* Code Generation Panel */}
       {showCodeGeneration && (
-        <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4">
+        <div className="border-b liquid-glass p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <h3 className="text-lg font-medium">Generated Code</h3>
@@ -1458,7 +1465,7 @@ if __name__ == "__main__":
             </div>
             <div className="flex items-center space-x-2">
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={() => {
                   navigator.clipboard.writeText(generatedCode);
@@ -1472,7 +1479,7 @@ if __name__ == "__main__":
                 Copy
               </Button>
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={async () => {
                   const blob = new Blob([generatedCode], { type: 'text/plain' });
@@ -1491,7 +1498,7 @@ if __name__ == "__main__":
                 Download
               </Button>
               <Button
-                variant="ghost"
+                variant="glass"
                 size="sm"
                 onClick={() => setShowCodeGeneration(false)}
               >
@@ -1519,11 +1526,11 @@ if __name__ == "__main__":
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4">
+        <div className="border-b liquid-glass p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Model Settings</h3>
             <Button
-              variant="ghost"
+              variant="glass"
               size="sm"
               onClick={() => setShowSettings(false)}
             >
@@ -1744,7 +1751,7 @@ if __name__ == "__main__":
             </div>
             <div className="flex space-x-2">
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={() => {
                   // Reset to default settings
@@ -1776,11 +1783,11 @@ if __name__ == "__main__":
 
       {/* Visual Panel */}
       {showVisual && (
-        <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4">
+        <div className="border-b liquid-glass p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium">Visual Overview</h3>
             <Button
-              variant="ghost"
+              variant="glass"
               size="sm"
               onClick={() => setShowVisual(false)}
             >
@@ -1916,7 +1923,7 @@ if __name__ == "__main__":
             </div>
             <div className="flex space-x-2">
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={() => setShowCodeGeneration(true)}
                 disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
@@ -1925,7 +1932,7 @@ if __name__ == "__main__":
                 Generate Code
               </Button>
               <Button
-                variant="outline"
+                variant="glass"
                 size="sm"
                 onClick={handleTest}
                 disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
@@ -1952,7 +1959,7 @@ if __name__ == "__main__":
         {currentStep === 'design' && (
           <>
             {/* Left Sidebar - Components/Templates */}
-            <div className="w-96 border-r bg-white/80 dark:bg-black/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-600/50 flex flex-col shadow-2xl relative overflow-hidden">
+            <div className="w-96 border-r liquid-glass border-gray-200/50 dark:border-gray-600/50 flex flex-col shadow-2xl relative overflow-hidden">
               {/* Glass effect overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-white/10 pointer-events-none"></div>
               <div className="relative z-10 flex flex-col h-full">
@@ -2052,7 +2059,8 @@ if __name__ == "__main__":
                     <span>Accuracy Testing</span>
                     <Badge variant="default">Passed</Badge>
                   </div>
-                  <Button 
+                  <Button
+                    variant="glass"
                     className="w-full"
                     onClick={() => setCurrentStep('design')}
                   >
@@ -2065,5 +2073,6 @@ if __name__ == "__main__":
         )}
       </div>
     </div>
+  </div>
   );
 }
