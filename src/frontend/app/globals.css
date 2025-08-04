@@ -48,6 +48,20 @@
   backdrop-filter: blur(4px);
 }
 
+@supports not ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
+  .liquid-glass {
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  .dark .liquid-glass {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .glass-badge {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+}
+
 /* Subtle glow for glass nodes */
 .node-glow {
   position: relative;
