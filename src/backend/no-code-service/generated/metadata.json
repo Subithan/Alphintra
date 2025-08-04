@@ -1,10 +1,10 @@
 {
-  "name": "GeneratedStrategy",
+  "name": "TestStrategy",
   "description": "Auto-generated training script",
-  "generatedAt": "2024-05-25T00:00:00Z",
+  "generatedAt": "2025-08-04T12:51:04.753014",
   "complexity": {
-    "nodes": 0,
-    "edges": 0,
-    "linesOfCode": 0
+    "nodes": 16,
+    "edges": 19,
+    "linesOfCode": 43
   }
 }
