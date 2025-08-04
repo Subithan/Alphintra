@@ -1,6 +1,6 @@
 """Handler for action nodes."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from .base import NodeHandler
 
@@ -12,3 +12,6 @@ class ActionHandler(NodeHandler):
         label = node.get("data", {}).get("label", "action")
         var_name = f"action_{self.sanitize_id(node['id'])}"
         return f"{var_name} = '{label}'  # placeholder for action execution"
+
+    def required_packages(self) -> List[str]:
+        return []

@@ -1,6 +1,6 @@
 """Handler for technical indicator nodes."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from .base import NodeHandler
 
@@ -22,3 +22,6 @@ class TechnicalIndicatorHandler(NodeHandler):
             f"{df_var}['{col_name}'] = "
             f"ta.{indicator}({df_var}['{source_col}'], timeperiod={period})"
         )
+
+    def required_packages(self) -> List[str]:
+        return ["pandas", "ta-lib"]

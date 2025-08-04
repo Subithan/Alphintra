@@ -1,6 +1,6 @@
 """Handler for condition nodes."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from .base import NodeHandler
 
@@ -37,3 +37,6 @@ class ConditionHandler(NodeHandler):
             expr = "False"
 
         return f"{df_var}['{target_col}'] = ({expr}).astype(int)"
+
+    def required_packages(self) -> List[str]:
+        return ["pandas"]
