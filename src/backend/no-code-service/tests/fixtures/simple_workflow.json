@@ -1,0 +1,40 @@
+{
+  "nodes": [
+    {
+      "id": "1",
+      "type": "dataSource",
+      "data": {
+        "parameters": {
+          "symbol": "AAPL",
+          "timeframe": "1h"
+        }
+      }
+    },
+    {
+      "id": "2",
+      "type": "technicalIndicator",
+      "data": {
+        "parameters": {
+          "indicator": "SMA",
+          "period": 5,
+          "source": "close"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "condition",
+      "data": {
+        "parameters": {
+          "operator": ">",
+          "threshold": 100
+        }
+      }
+    }
+  ],
+  "edges": [
+    {"source": "1", "target": "2"},
+    {"source": "1", "target": "3"},
+    {"source": "2", "target": "3"}
+  ]
+}
