@@ -13,7 +13,7 @@ handler class into the registry.
 """
 
 from datetime import datetime
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Set
 import os
 from textwrap import dedent
 
@@ -21,6 +21,8 @@ from textwrap import dedent
 # registry and base class directly so this module can be used as a standalone
 # script or as part of the package.
 from node_handlers import HANDLER_REGISTRY, NodeHandler
+
+BASE_REQUIREMENTS = {"pandas", "numpy", "scikit-learn", "joblib"}
 
 
 class Generator:
@@ -186,6 +188,7 @@ class Generator:
         feature_cols: List[str] = []
         label_cols: List[str] = []
         df_name: str | None = None
+        requirements: Set[str] = set(BASE_REQUIREMENTS)
 
         for node in nodes:
             handler = self.get_handler(node.get("type", ""))
@@ -194,6 +197,8 @@ class Generator:
             snippet = handler.handle(node, self)
             if not snippet:
                 continue
+
+            requirements.update(handler.required_packages())
 
             ntype = node.get("type")
             if ntype == "dataSource":
@@ -259,15 +264,19 @@ joblib.dump(model, 'trained_model.joblib')
             df_name=df_name,
         )
 
-        # Persist trainer script to disk for convenience
+        requirements_list = sorted(requirements)
+
+        # Persist trainer script and requirements to disk for convenience
         output_dir = os.path.join(os.path.dirname(__file__), "generated")
         os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, "trainer.py"), "w", encoding="utf-8") as f:
             f.write(code)
+        with open(os.path.join(output_dir, "requirements.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join(requirements_list))
 
         return {
             "code": code,
-            "requirements": [],
+            "requirements": requirements_list,
             "metadata": {
                 "name": name,
                 "generatedAt": datetime.utcnow().isoformat(),

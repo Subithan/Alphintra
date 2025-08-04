@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import re
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 
 class NodeHandler(ABC):
@@ -28,6 +28,16 @@ class NodeHandler(ABC):
         """
 
         raise NotImplementedError
+
+    def required_packages(self) -> List[str]:
+        """Return third-party packages required by this handler.
+
+        Sub-classes can override this to declare additional dependencies
+        that are needed for the generated code snippet to run.  The generator
+        aggregates these across all nodes and writes them to ``requirements.txt``.
+        """
+
+        return []
 
     # ------------------------------------------------------------------
     # Helper utilities

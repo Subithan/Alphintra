@@ -1,6 +1,6 @@
 """Handler for data source nodes."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from .base import NodeHandler
 
@@ -16,3 +16,6 @@ class DataSourceHandler(NodeHandler):
         return (
             f"{var_name} = pd.DataFrame()  # TODO load {symbol} ({timeframe})"
         )
+
+    def required_packages(self) -> List[str]:
+        return ["pandas"]

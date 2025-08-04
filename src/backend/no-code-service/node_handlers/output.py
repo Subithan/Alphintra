@@ -1,6 +1,6 @@
 """Handler for output nodes."""
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from .base import NodeHandler
 
@@ -15,3 +15,6 @@ class OutputHandler(NodeHandler):
         src_var = f"target_{self.sanitize_id(src)}" if src else ""  # assume last signal
         var_name = f"output_{self.sanitize_id(node['id'])}"
         return f"{var_name} = {src_var}  # {label}"
+
+    def required_packages(self) -> List[str]:
+        return ["pandas"]
