@@ -5,7 +5,7 @@ Main API router that includes all endpoint routers.
 from fastapi import APIRouter
 
 # Import endpoint routers
-from app.api.endpoints import strategies, templates, datasets, training, backtesting
+from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution
 
 # Create main API router
 api_router = APIRouter()
@@ -22,7 +22,12 @@ api_router.include_router(training.router, tags=["Model Training"])
 
 # Include Phase 5 endpoint routers
 api_router.include_router(backtesting.router, tags=["Backtesting"])
-# api_router.include_router(paper_trading.router, prefix="/paper-trading", tags=["paper-trading"])
+
+# Include Phase 6 endpoint routers
+api_router.include_router(paper_trading.router, tags=["Paper Trading"])
+
+# Include Phase 7 endpoint routers
+api_router.include_router(live_execution.router, tags=["Live Execution"])
 # api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
 
 # Basic health check endpoint
@@ -33,5 +38,5 @@ async def api_status():
         "status": "operational",
         "service": "ai-ml-strategy-service",
         "version": "1.0.0",
-        "phase": "5 - Backtesting Engine"
+        "phase": "7 - Live Strategy Execution Engine"
     }
