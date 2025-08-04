@@ -15,6 +15,7 @@ handler class into the registry.
 from datetime import datetime
 from typing import Dict, Any, List, Tuple, Set
 import os
+import json
 from textwrap import dedent
 
 # ``code_generator`` sits alongside the ``node_handlers`` package.  Import the
@@ -274,13 +275,48 @@ joblib.dump(model, 'trained_model.joblib')
         with open(os.path.join(output_dir, "requirements.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(requirements_list))
 
+        # Metadata -----------------------------------------------------------
+        metadata = {
+            "name": name,
+            "description": "Auto-generated training script",
+            "generatedAt": datetime.utcnow().isoformat(),
+            "complexity": {
+                "nodes": len(nodes),
+                "edges": len(edges),
+                "linesOfCode": len(code.splitlines()),
+            },
+        }
+        with open(os.path.join(output_dir, "metadata.json"), "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2)
+
+        # README -------------------------------------------------------------
+        readme_content = dedent(
+            f"""
+            # Generated Trainer
+
+            This directory contains an auto-generated training script `trainer.py`.
+
+            ## Inputs
+            * Data loading, feature engineering and label generation logic embedded in `trainer.py`.
+
+            ## Outputs
+            * Trained model saved as `trained_model.joblib`.
+            * Evaluation report printed to the console.
+
+            ## Usage
+            ```bash
+            pip install -r requirements.txt
+            python trainer.py
+            ```
+            """
+        ).strip() + "\n"
+        with open(os.path.join(output_dir, "README.md"), "w", encoding="utf-8") as f:
+            f.write(readme_content)
+
         return {
             "code": code,
             "requirements": requirements_list,
-            "metadata": {
-                "name": name,
-                "generatedAt": datetime.utcnow().isoformat(),
-            },
+            "metadata": metadata,
             "success": True,
             "warnings": validation["warnings"],
         }
