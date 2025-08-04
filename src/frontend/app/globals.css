@@ -247,6 +247,18 @@
   .btn-icon {
     @apply h-10 w-10;
   }
+
+  .btn-glass {
+    @apply btn liquid-glass text-foreground h-10 px-4 py-2 hover:bg-white/20 disabled:bg-white/10;
+  }
+
+  .tab-glass {
+    @apply liquid-glass text-foreground hover:bg-white/20 data-[state=active]:bg-white/30 data-[state=active]:text-foreground;
+  }
+
+  .input-glass {
+    @apply liquid-glass bg-background/30 text-foreground placeholder:text-foreground/70 focus:bg-white/20 disabled:bg-white/5;
+  }
 }
 
 /* Scrollbar Styles */
