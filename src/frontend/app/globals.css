@@ -32,6 +32,15 @@
   -webkit-text-fill-color: transparent;
 }
 
+/* Liquid glass utility
+   Usage: add `liquid-glass` to panels or cards for a frosted translucent surface */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -106,6 +115,13 @@
     --profit: 120 100% 50%; /* Bright green */
     --loss: 0 100% 60%; /* Bright red */
     --warning: 30 100% 60%; /* Bright orange */
+  }
+
+  /* Dark mode liquid glass tweaks */
+  .dark .liquid-glass {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
   }
 }
 
