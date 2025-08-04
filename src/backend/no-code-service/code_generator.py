@@ -33,6 +33,11 @@ class Generator:
     def __init__(self) -> None:
         # Handlers are stored in a simple dictionary registry.
         self.handlers: Dict[str, NodeHandler] = dict(HANDLER_REGISTRY)
+        # Store workflow structure so handlers can resolve connections between
+        # nodes when emitting code.
+        self.nodes: List[Dict[str, Any]] = []
+        self.node_map: Dict[str, Dict[str, Any]] = {}
+        self.edges: List[Dict[str, Any]] = []
 
     # ------------------------------------------------------------------
     # Registry management
@@ -46,6 +51,14 @@ class Generator:
         """Return handler for ``node_type`` if it exists."""
 
         return self.handlers.get(node_type)
+
+    # ------------------------------------------------------------------
+    # Graph helpers
+    # ------------------------------------------------------------------
+    def get_incoming(self, node_id: str) -> List[str]:
+        """Return IDs of nodes with edges leading to ``node_id``."""
+
+        return [e.get("source") for e in self.edges if e.get("target") == node_id]
 
     # ------------------------------------------------------------------
     # Parsing & Validation helpers
@@ -138,6 +151,11 @@ class Generator:
         """Generate Python code for a given workflow after validation."""
 
         nodes, edges, graph, in_degree = self.parse_workflow(workflow)
+        # Persist structure for handlers requiring edge information
+        self.nodes = nodes
+        self.node_map = {n.get("id"): n for n in nodes}
+        self.edges = edges
+
         validation = self.validate_workflow(nodes, edges, graph, in_degree)
         if validation["errors"]:
             return {

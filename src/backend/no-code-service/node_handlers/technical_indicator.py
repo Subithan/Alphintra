@@ -12,9 +12,13 @@ class TechnicalIndicatorHandler(NodeHandler):
         params = node.get("data", {}).get("parameters", {})
         indicator = params.get("indicator", "SMA")
         period = params.get("period", 20)
-        source = params.get("source", "close")
-        var_name = f"{indicator.lower()}_{node['id'].replace('-', '_')}"
+        source_col = params.get("source", "close")
+
+        inputs = generator.get_incoming(node["id"])
+        df_var = f"data_{self.sanitize_id(inputs[0])}" if inputs else "data"
+        col_name = f"feature_{self.sanitize_id(node['id'])}"
+
         return (
-            f"self.indicators['{var_name}'] = "
-            f"ta.{indicator}(self.data['{source}'], timeperiod={period})"
+            f"{df_var}['{col_name}'] = "
+            f"ta.{indicator}({df_var}['{source_col}'], timeperiod={period})"
         )

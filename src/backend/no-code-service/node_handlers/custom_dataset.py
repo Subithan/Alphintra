@@ -10,4 +10,5 @@ class CustomDatasetHandler(NodeHandler):
 
     def handle(self, node: Dict[str, Any], generator) -> str:
         path = node.get("data", {}).get("parameters", {}).get("fileName", "dataset.csv")
-        return f"# Custom dataset from {path}"
+        var_name = f"data_{self.sanitize_id(node['id'])}"
+        return f"{var_name} = pd.read_csv('{path}')"

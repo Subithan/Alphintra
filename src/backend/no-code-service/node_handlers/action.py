@@ -10,4 +10,5 @@ class ActionHandler(NodeHandler):
 
     def handle(self, node: Dict[str, Any], generator) -> str:
         label = node.get("data", {}).get("label", "action")
-        return f"# Execute action: {label}"
+        var_name = f"action_{self.sanitize_id(node['id'])}"
+        return f"{var_name} = '{label}'  # placeholder for action execution"
