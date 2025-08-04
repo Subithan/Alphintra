@@ -114,6 +114,15 @@
 
 /* Trading Platform Specific Styles */
 @layer components {
+  .glass-panel {
+    @apply bg-white/30 dark:bg-black/30 backdrop-blur-lg border border-white/20 dark:border-white/10 shadow-lg;
+    will-change: transform;
+  }
+
+  .glass-card {
+    @apply glass-panel rounded-xl;
+  }
+
   .profit-text {
     @apply text-profit font-medium;
   }

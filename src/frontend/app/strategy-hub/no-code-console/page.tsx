@@ -24,6 +24,7 @@ import { noCodeApiClient } from '@/lib/api/no-code-api';
 import { timescaleMarketData, formatTimescaleDate, getTimescaleTimeframe } from '@/lib/api/market-data-timescale';
 import { EnvDebug } from '@/components/debug/EnvDebug';
 import { EditableTitle } from '@/components/no-code/EditableTitle';
+import { GlassPanel, GlassCard } from '@/components/no-code/Glass';
 
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
@@ -1150,7 +1151,7 @@ if __name__ == "__main__":
     <div className="h-screen flex flex-col dark:bg-black">
       <EnvDebug />
       {/* Header */}
-      <div className="border-b bg-white dark:bg-black border-gray-200 dark:border-gray-600">
+      <GlassPanel className="border-b">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center space-x-4">
             <EditableTitle 
@@ -1215,7 +1216,7 @@ if __name__ == "__main__":
             </Button>
           </div>
         </div>
-      </div>
+      </GlassPanel>
 
       {/* Workflow Toolbar */}
       <div className="border-b bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -2028,7 +2029,7 @@ if __name__ == "__main__":
 
         {currentStep === 'testing' && (
           <div className="flex-1 p-6">
-            <Card>
+            <GlassCard>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Zap className="h-5 w-5 mr-2" />
@@ -2060,7 +2061,7 @@ if __name__ == "__main__":
                   </Button>
                 </div>
               </CardContent>
-            </Card>
+            </GlassCard>
           </div>
         )}
       </div>
