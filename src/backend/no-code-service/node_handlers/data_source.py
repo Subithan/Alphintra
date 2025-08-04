@@ -12,4 +12,7 @@ class DataSourceHandler(NodeHandler):
         params = node.get("data", {}).get("parameters", {})
         symbol = params.get("symbol", "AAPL")
         timeframe = params.get("timeframe", "1h")
-        return f"# Data source for {symbol} ({timeframe})"
+        var_name = f"data_{self.sanitize_id(node['id'])}"
+        return (
+            f"{var_name} = pd.DataFrame()  # TODO load {symbol} ({timeframe})"
+        )
