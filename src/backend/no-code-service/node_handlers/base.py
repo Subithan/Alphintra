@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import re
-from typing import Dict, Any, List
+from typing import List
+
+from ir import Node
 
 
 class NodeHandler(ABC):
@@ -14,13 +16,14 @@ class NodeHandler(ABC):
     node_type: str
 
     @abstractmethod
-    def handle(self, node: Dict[str, Any], generator: "Generator") -> str:
+    def handle(self, node: Node, generator: "Generator") -> str:
         """Return code snippet for *node*.
 
         Parameters
         ----------
         node:
-            The node dictionary from the workflow definition.
+            The :class:`~no-code-service.ir.Node` instance representing the
+            workflow node.
         generator:
             Instance of :class:`Generator` requesting the code.  This allows
             handlers to access shared context or register additional handlers

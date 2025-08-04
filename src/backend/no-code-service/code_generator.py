@@ -13,7 +13,7 @@ handler class into the registry.
 """
 
 from datetime import datetime
-from typing import Dict, Any, List, Tuple, Set
+from typing import Dict, Any, List, Set
 import os
 import json
 from textwrap import dedent
@@ -22,6 +22,7 @@ from textwrap import dedent
 # registry and base class directly so this module can be used as a standalone
 # script or as part of the package.
 from node_handlers import HANDLER_REGISTRY, NodeHandler, FALLBACK_HANDLER
+from ir import Node, Edge, Workflow
 
 BASE_REQUIREMENTS = {"pandas", "numpy", "scikit-learn", "joblib"}
 
@@ -42,9 +43,9 @@ class Generator:
         self.fallback_handler: NodeHandler = FALLBACK_HANDLER
         # Store workflow structure so handlers can resolve connections between
         # nodes when emitting code.
-        self.nodes: List[Dict[str, Any]] = []
-        self.node_map: Dict[str, Dict[str, Any]] = {}
-        self.edges: List[Dict[str, Any]] = []
+        self.nodes: List[Node] = []
+        self.node_map: Dict[str, Node] = {}
+        self.edges: List[Edge] = []
 
     # ------------------------------------------------------------------
     # Registry management
@@ -65,42 +66,17 @@ class Generator:
     def get_incoming(self, node_id: str) -> List[str]:
         """Return IDs of nodes with edges leading to ``node_id``."""
 
-        return [e.get("source") for e in self.edges if e.get("target") == node_id]
+        return [e.source for e in self.edges if e.target == node_id]
 
     # ------------------------------------------------------------------
     # Parsing & Validation helpers
     # ------------------------------------------------------------------
-    def parse_workflow(self, workflow: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, List[str]], Dict[str, int]]:
-        """Read workflow definition and build adjacency lists.
+    def parse_workflow(self, workflow: Dict[str, Any]) -> Workflow:
+        """Convert workflow JSON definition into internal IR."""
 
-        Returns the nodes, edges, adjacency list mapping node IDs to their
-        outbound neighbours and a dictionary containing the in-degree for each
-        node.  Edges referencing unknown nodes are ignored during parsing and
-        will be reported during validation.
-        """
+        return Workflow.from_json(workflow)
 
-        nodes = workflow.get("nodes", []) or []
-        edges = workflow.get("edges", []) or []
-
-        graph: Dict[str, List[str]] = {node.get("id"): [] for node in nodes}
-        in_degree: Dict[str, int] = {node.get("id"): 0 for node in nodes}
-
-        for edge in edges:
-            source = edge.get("source")
-            target = edge.get("target")
-            if source in graph and target in graph:
-                graph[source].append(target)
-                in_degree[target] += 1
-
-        return nodes, edges, graph, in_degree
-
-    def validate_workflow(
-        self,
-        nodes: List[Dict[str, Any]],
-        edges: List[Dict[str, Any]],
-        graph: Dict[str, List[str]],
-        in_degree: Dict[str, int],
-    ) -> Dict[str, List[str]]:
+    def validate_workflow(self, ir: Workflow) -> Dict[str, List[str]]:
         """Validate basic workflow structure.
 
         Checks for required node types, disconnected nodes and cycles.  Returns
@@ -108,26 +84,29 @@ class Generator:
         surfaced to calling services.
         """
 
+        nodes = list(ir.nodes.values())
+        edges = ir.edges
+        graph = ir.adjacency()
+        in_degree = ir.in_degree()
+
         errors: List[str] = []
         warnings: List[str] = []
 
         # Required node types -------------------------------------------------
-        if not any(node.get("type") == "dataSource" for node in nodes):
+        if not any(node.type == "dataSource" for node in nodes):
             errors.append("Workflow must include at least one data source node")
 
-        if not any(node.get("type") == "action" for node in nodes):
+        if not any(node.type == "action" for node in nodes):
             warnings.append("Workflow should include at least one action node")
 
         # Disconnected nodes --------------------------------------------------
         connected: set[str] = set()
         for edge in edges:
-            src = edge.get("source")
-            tgt = edge.get("target")
-            if src in graph and tgt in graph:
-                connected.add(src)
-                connected.add(tgt)
+            if edge.source in graph and edge.target in graph:
+                connected.add(edge.source)
+                connected.add(edge.target)
 
-        disconnected = [node["id"] for node in nodes if node["id"] not in connected]
+        disconnected = [node.id for node in nodes if node.id not in connected]
         if disconnected and len(nodes) > 1:
             warnings.append(
                 "Disconnected nodes: " + ", ".join(disconnected)
@@ -165,13 +144,13 @@ class Generator:
         returned to the caller as a string.
         """
 
-        nodes, edges, graph, in_degree = self.parse_workflow(workflow)
+        ir = self.parse_workflow(workflow)
         # Persist structure for handlers requiring edge information
-        self.nodes = nodes
-        self.node_map = {n.get("id"): n for n in nodes}
-        self.edges = edges
+        self.nodes = list(ir.nodes.values())
+        self.node_map = ir.nodes
+        self.edges = ir.edges
 
-        validation = self.validate_workflow(nodes, edges, graph, in_degree)
+        validation = self.validate_workflow(ir)
         if validation["errors"]:
             return {
                 "code": "",
@@ -193,8 +172,8 @@ class Generator:
         df_name: str | None = None
         requirements: Set[str] = set(BASE_REQUIREMENTS)
 
-        for node in nodes:
-            handler = self.get_handler(node.get("type", ""))
+        for node in self.nodes:
+            handler = self.get_handler(node.type)
             if not handler:
                 handler = self.fallback_handler
             snippet = handler.handle(node, self)
@@ -203,17 +182,17 @@ class Generator:
 
             requirements.update(handler.required_packages())
 
-            ntype = node.get("type")
+            ntype = node.type
             if ntype == "dataSource":
                 data_lines.append(snippet)
                 if df_name is None:
-                    df_name = f"data_{NodeHandler.sanitize_id(node['id'])}"
+                    df_name = f"data_{NodeHandler.sanitize_id(node.id)}"
             elif ntype == "technicalIndicator":
                 feature_lines.append(snippet)
-                feature_cols.append(f"feature_{NodeHandler.sanitize_id(node['id'])}")
+                feature_cols.append(f"feature_{NodeHandler.sanitize_id(node.id)}")
             elif ntype == "condition":
                 label_lines.append(snippet)
-                label_cols.append(f"target_{NodeHandler.sanitize_id(node['id'])}")
+                label_cols.append(f"target_{NodeHandler.sanitize_id(node.id)}")
 
         df_name = df_name or "data"
         label_col = label_cols[0] if label_cols else "target"
@@ -283,8 +262,8 @@ joblib.dump(model, 'trained_model.joblib')
             "description": "Auto-generated training script",
             "generatedAt": datetime.utcnow().isoformat(),
             "complexity": {
-                "nodes": len(nodes),
-                "edges": len(edges),
+                "nodes": len(self.nodes),
+                "edges": len(self.edges),
                 "linesOfCode": len(code.splitlines()),
             },
         }
