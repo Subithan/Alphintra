@@ -41,6 +41,26 @@
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
+@keyframes liquid-gradient {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.liquid-bg {
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15), transparent 60%),
+              radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1), transparent 60%),
+              linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  background-size: 200% 200%;
+  animation: liquid-gradient 30s ease-in-out infinite;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -235,7 +255,11 @@
   .btn-link {
     @apply btn text-primary underline-offset-4 hover:underline h-10 px-4 py-2;
   }
-  
+
+  .btn-glass {
+    @apply btn liquid-glass h-10 px-4 py-2 hover:bg-white/30 dark:hover:bg-black/30;
+  }
+
   .btn-sm {
     @apply h-9 rounded-md px-3;
   }
