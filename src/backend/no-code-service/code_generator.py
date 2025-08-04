@@ -17,6 +17,7 @@ from typing import Dict, Any, List, Set
 import os
 import json
 from textwrap import dedent
+import textwrap
 
 # ``code_generator`` sits alongside the ``node_handlers`` package.  Import the
 # registry and base class directly so this module can be used as a standalone
@@ -108,9 +109,7 @@ class Generator:
 
         disconnected = [node.id for node in nodes if node.id not in connected]
         if disconnected and len(nodes) > 1:
-            warnings.append(
-                "Disconnected nodes: " + ", ".join(disconnected)
-            )
+            warnings.append("Disconnected nodes: " + ", ".join(disconnected))
 
         # Cycle detection using Kahn's algorithm -----------------------------
         local_in_degree = dict(in_degree)
@@ -133,7 +132,9 @@ class Generator:
     # ------------------------------------------------------------------
     # Generation
     # ------------------------------------------------------------------
-    def generate_strategy_code(self, workflow: Dict[str, Any], name: str = "GeneratedStrategy") -> Dict[str, Any]:
+    def generate_strategy_code(
+        self, workflow: Dict[str, Any], name: str = "GeneratedStrategy"
+    ) -> Dict[str, Any]:
         """Generate a training script for a given workflow.
 
         The generator walks through the workflow collecting code snippets for
@@ -196,6 +197,12 @@ class Generator:
 
         label_col = label_cols[0] if label_cols else "target"
 
+        # Extract model configuration from workflow
+        model_cfg = workflow.get("config", {}).get("model", {})
+        model_type = str(model_cfg.get("type", "random_forest")).lower()
+        hyperparameters = model_cfg.get("hyperparameters", {})
+        model_config = {"model_type": model_type, "hyperparameters": hyperparameters}
+
         template = dedent(
             '''"""Auto-generated training script."""
 
@@ -204,45 +211,93 @@ import pandas as pd
 import numpy as np
 import talib as ta
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 import joblib
 
-# Data Loading
+
+class FeaturePipeline:
+    def run(self):
+        # Data Loading
 {data_loading}
 
-# Feature Generation
+        # Feature Generation
 {feature_generation}
 
-# Label Generation
+        # Label Generation
 {label_generation}
 
-# Model Training
-feature_cols = {feature_cols}
-label_col = '{label_col}'
-df = {df_name}
-X = df[feature_cols]
-y = df[label_col]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
+        feature_cols = {feature_cols}
+        label_col = '{label_col}'
+        df = {df_name}
+        return df, feature_cols, label_col
 
-# Evaluation
-y_pred = model.predict(X_test)
-print(classification_report(y_test, y_pred))
 
-# Model Persistence
-joblib.dump(model, 'trained_model.joblib')
+class ModelWrapper:
+    def __init__(self, model_type, hyperparameters):
+        model_map = {{
+            'random_forest': RandomForestClassifier,
+            'gradient_boosting': GradientBoostingClassifier,
+            'logistic_regression': LogisticRegression,
+            'svc': SVC,
+        }}
+        model_cls = model_map.get(model_type, RandomForestClassifier)
+        self.model = model_cls(**hyperparameters)
+
+    def train(self, X, y):
+        self.model.fit(X, y)
+
+    def predict(self, X):
+        return self.model.predict(X)
+
+
+class TrainingOrchestrator:
+    def __init__(self, config):
+        self.pipeline = FeaturePipeline()
+        self.model_wrapper = ModelWrapper(
+            config.get('model_type', 'random_forest'),
+            config.get('hyperparameters', {{}}),
+        )
+
+    def run(self):
+        df, feature_cols, label_col = self.pipeline.run()
+        X = df[feature_cols]
+        y = df[label_col]
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+        self.model_wrapper.train(X_train, y_train)
+        y_pred = self.model_wrapper.predict(X_test)
+        print(classification_report(y_test, y_pred))
+        joblib.dump(self.model_wrapper.model, 'trained_model.joblib')
+
+
+if __name__ == '__main__':
+    config = {model_config}
+    TrainingOrchestrator(config).run()
 '''
         )
 
+        data_loading_block = textwrap.indent(
+            "\n".join(data_lines) or "# TODO: load data", "        "
+        )
+        feature_generation_block = textwrap.indent(
+            "\n".join(feature_lines) or "# TODO: generate features", "        "
+        )
+        label_generation_block = textwrap.indent(
+            "\n".join(label_lines) or "# TODO: generate labels", "        "
+        )
+
         code = template.format(
-            data_loading="\n".join(data_lines) or "# TODO: load data",
-            feature_generation="\n".join(feature_lines) or "# TODO: generate features",
-            label_generation="\n".join(label_lines) or "# TODO: generate labels",
+            data_loading=data_loading_block,
+            feature_generation=feature_generation_block,
+            label_generation=label_generation_block,
             feature_cols=feature_cols,
             label_col=label_col,
             df_name=df_name,
+            model_config=json.dumps(model_config, indent=4),
         )
 
         requirements_list = sorted(requirements)
@@ -252,7 +307,9 @@ joblib.dump(model, 'trained_model.joblib')
         os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, "trainer.py"), "w", encoding="utf-8") as f:
             f.write(code)
-        with open(os.path.join(output_dir, "requirements.txt"), "w", encoding="utf-8") as f:
+        with open(
+            os.path.join(output_dir, "requirements.txt"), "w", encoding="utf-8"
+        ) as f:
             f.write("\n".join(requirements_list))
 
         # Metadata -----------------------------------------------------------
@@ -266,13 +323,15 @@ joblib.dump(model, 'trained_model.joblib')
                 "linesOfCode": len(code.splitlines()),
             },
         }
-        with open(os.path.join(output_dir, "metadata.json"), "w", encoding="utf-8") as f:
+        with open(
+            os.path.join(output_dir, "metadata.json"), "w", encoding="utf-8"
+        ) as f:
             json.dump(metadata, f, indent=2)
 
         # README -------------------------------------------------------------
-        readme_content = dedent(
-            f"""
-            # Generated Trainer
+        readme_content = (
+            dedent(
+                f"""# Generated Trainer
 
             This directory contains an auto-generated training script `trainer.py`.
 
@@ -289,7 +348,9 @@ joblib.dump(model, 'trained_model.joblib')
             python trainer.py
             ```
             """
-        ).strip() + "\n"
+            ).strip()
+            + "\n"
+        )
         with open(os.path.join(output_dir, "README.md"), "w", encoding="utf-8") as f:
             f.write(readme_content)
 
