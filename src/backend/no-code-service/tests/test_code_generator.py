@@ -23,9 +23,9 @@ def test_generate_and_compile(workflow_file: Path):
     workflow = load_workflow(workflow_file)
     generator = Generator()
     result = generator.generate_strategy_code(workflow, name="TestStrategy")
-    assert result["success"], (
-        f"Generation failed for {workflow_file.name}: {result.get('errors')}"
-    )
+    assert result[
+        "success"
+    ], f"Generation failed for {workflow_file.name}: {result.get('errors')}"
 
     output_dir = BASE_DIR / "generated"
     trainer = output_dir / "trainer.py"
@@ -108,3 +108,32 @@ def test_handlers_add_dataframe_columns():
     assert "df['action_a1']" in code
     assert "df['risk_r1']" in code
     assert "df['output_o1']" in code
+
+
+def test_model_selection_and_hyperparameters():
+    """Model type and hyperparameters from workflow config are reflected in code."""
+
+    workflow = {
+        "nodes": [
+            {"id": "ds1", "type": "dataSource", "data": {"parameters": {}}},
+            {"id": "ti1", "type": "technicalIndicator", "data": {"parameters": {}}},
+            {"id": "c1", "type": "condition", "data": {"parameters": {}}},
+        ],
+        "edges": [
+            {"source": "ds1", "target": "ti1"},
+            {"source": "ti1", "target": "c1"},
+        ],
+        "config": {
+            "model": {
+                "type": "logistic_regression",
+                "hyperparameters": {"C": 0.5},
+            }
+        },
+    }
+
+    generator = Generator()
+    result = generator.generate_strategy_code(workflow)
+    code = result["code"]
+    assert "LogisticRegression" in code
+    assert '"model_type": "logistic_regression"' in code
+    assert '"C": 0.5' in code
