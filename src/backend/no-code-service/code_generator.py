@@ -14,6 +14,8 @@ handler class into the registry.
 
 from datetime import datetime
 from typing import Dict, Any, List, Tuple
+import os
+from textwrap import dedent
 
 # ``code_generator`` sits alongside the ``node_handlers`` package.  Import the
 # registry and base class directly so this module can be used as a standalone
@@ -148,7 +150,15 @@ class Generator:
     # Generation
     # ------------------------------------------------------------------
     def generate_strategy_code(self, workflow: Dict[str, Any], name: str = "GeneratedStrategy") -> Dict[str, Any]:
-        """Generate Python code for a given workflow after validation."""
+        """Generate a training script for a given workflow.
+
+        The generator walks through the workflow collecting code snippets for
+        data loading, feature engineering and target generation.  These pieces
+        are then inserted into a trainer template containing additional model
+        training, evaluation and persistence boilerplate.  The final script is
+        written to ``generated/trainer.py`` for convenience and the code is
+        returned to the caller as a string.
+        """
 
         nodes, edges, graph, in_degree = self.parse_workflow(workflow)
         # Persist structure for handlers requiring edge information
@@ -170,14 +180,90 @@ class Generator:
                 "warnings": validation["warnings"],
             }
 
-        code_lines: List[str] = []
+        data_lines: List[str] = []
+        feature_lines: List[str] = []
+        label_lines: List[str] = []
+        feature_cols: List[str] = []
+        label_cols: List[str] = []
+        df_name: str | None = None
+
         for node in nodes:
             handler = self.get_handler(node.get("type", ""))
-            if handler:
-                snippet = handler.handle(node, self)
-                if snippet:
-                    code_lines.append(snippet)
-        code = "\n".join(code_lines)
+            if not handler:
+                continue
+            snippet = handler.handle(node, self)
+            if not snippet:
+                continue
+
+            ntype = node.get("type")
+            if ntype == "dataSource":
+                data_lines.append(snippet)
+                if df_name is None:
+                    df_name = f"data_{NodeHandler.sanitize_id(node['id'])}"
+            elif ntype == "technicalIndicator":
+                feature_lines.append(snippet)
+                feature_cols.append(f"feature_{NodeHandler.sanitize_id(node['id'])}")
+            elif ntype == "condition":
+                label_lines.append(snippet)
+                label_cols.append(f"target_{NodeHandler.sanitize_id(node['id'])}")
+
+        df_name = df_name or "data"
+        label_col = label_cols[0] if label_cols else "target"
+
+        template = dedent(
+            '''"""Auto-generated training script."""
+
+# Imports
+import pandas as pd
+import numpy as np
+import talib as ta
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+import joblib
+
+# Data Loading
+{data_loading}
+
+# Feature Generation
+{feature_generation}
+
+# Label Generation
+{label_generation}
+
+# Model Training
+feature_cols = {feature_cols}
+label_col = '{label_col}'
+df = {df_name}
+X = df[feature_cols]
+y = df[label_col]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+
+# Evaluation
+y_pred = model.predict(X_test)
+print(classification_report(y_test, y_pred))
+
+# Model Persistence
+joblib.dump(model, 'trained_model.joblib')
+'''
+        )
+
+        code = template.format(
+            data_loading="\n".join(data_lines) or "# TODO: load data",
+            feature_generation="\n".join(feature_lines) or "# TODO: generate features",
+            label_generation="\n".join(label_lines) or "# TODO: generate labels",
+            feature_cols=feature_cols,
+            label_col=label_col,
+            df_name=df_name,
+        )
+
+        # Persist trainer script to disk for convenience
+        output_dir = os.path.join(os.path.dirname(__file__), "generated")
+        os.makedirs(output_dir, exist_ok=True)
+        with open(os.path.join(output_dir, "trainer.py"), "w", encoding="utf-8") as f:
+            f.write(code)
 
         return {
             "code": code,
