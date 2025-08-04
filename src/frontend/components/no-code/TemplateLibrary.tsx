@@ -198,7 +198,7 @@ export function TemplateLibrary({ onTemplateSelect, className }: TemplateLibrary
             </div>
           ) : (
             filteredTemplates.map((template) => (
-              <Card key={template.id} className="hover:shadow-md transition-shadow cursor-pointer group">
+              <Card variant="glass" key={template.id} className="hover:shadow-md transition-shadow cursor-pointer group">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="space-y-2">

@@ -223,7 +223,7 @@ export function ConditionNode({ id, selected }: NodeProps<ConditionNodeData>) {
   };
 
   return (
-    <Card className={`${getNodeWidth(actualComplexity)} ${selected ? 'ring-2 ring-blue-500 shadow-lg' : ''} dark:bg-card dark:border-border transition-all duration-200`} suppressHydrationWarning>
+    <Card variant="glass" className={`${getNodeWidth(actualComplexity)} ${selected ? 'ring-2 ring-blue-500 shadow-lg' : ''} dark:bg-card dark:border-border transition-all duration-200`} suppressHydrationWarning>
       <CardContent className="p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">

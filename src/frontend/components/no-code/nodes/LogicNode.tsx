@@ -51,7 +51,7 @@ export function LogicNode({ id, selected }: NodeProps<LogicNodeData>) {
   };
 
   return (
-    <Card className={`min-w-[140px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
+    <Card variant="glass" className={`min-w-[140px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           <GitBranch className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />

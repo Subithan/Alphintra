@@ -339,7 +339,7 @@ export function RealTimeControlCenter({
     const isSelected = selectedMetric === metric.id;
     
     return (
-      <Card 
+      <Card variant="glass" 
         key={metric.id}
         className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
           isSelected ? 'ring-2 ring-blue-500' : ''
@@ -398,7 +398,7 @@ export function RealTimeControlCenter({
     const alerts = filteredAlerts();
     
     return (
-      <Card className="col-span-full">
+      <Card variant="glass" className="col-span-full">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
@@ -480,7 +480,7 @@ export function RealTimeControlCenter({
 
   const renderConnectionStatus = () => {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Wifi className="h-5 w-5" />
@@ -527,7 +527,7 @@ export function RealTimeControlCenter({
 
   const renderControlPanel = () => {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Settings className="h-5 w-5" />
@@ -674,7 +674,7 @@ export function RealTimeControlCenter({
           {renderControlPanel()}
           
           {/* Quick Actions */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Zap className="h-5 w-5" />

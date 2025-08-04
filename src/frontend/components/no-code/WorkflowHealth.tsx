@@ -81,7 +81,7 @@ export function WorkflowHealthComponent({ health, onNodeSelect, className }: Wor
   };
 
   return (
-    <Card className={className}>
+    <Card variant="glass" className={className}>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold flex items-center space-x-2">
@@ -293,7 +293,7 @@ export function WorkflowHealthComponent({ health, onNodeSelect, className }: Wor
                   </div>
                 ) : (
                   health.suggestions.map((suggestion) => (
-                    <Card
+                    <Card variant="glass"
                       key={suggestion.id}
                       className="cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() => handleSuggestionClick(suggestion)}
@@ -361,7 +361,7 @@ export function WorkflowHealthComponent({ health, onNodeSelect, className }: Wor
 
           <TabsContent value="metrics" className="mt-4">
             <div className="grid grid-cols-2 gap-4">
-              <Card>
+              <Card variant="glass">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">Structure Metrics</CardTitle>
                 </CardHeader>
@@ -385,7 +385,7 @@ export function WorkflowHealthComponent({ health, onNodeSelect, className }: Wor
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card variant="glass">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">Complexity Metrics</CardTitle>
                 </CardHeader>

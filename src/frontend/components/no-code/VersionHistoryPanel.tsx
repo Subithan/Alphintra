@@ -272,7 +272,7 @@ const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Versions List */}
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <GitBranch className="h-5 w-5" />
@@ -365,7 +365,7 @@ const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
         </Card>
 
         {/* Activity Timeline */}
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
@@ -419,7 +419,7 @@ const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
 
       {/* Version Comparison */}
       {versions.length > 1 && (
-        <Card>
+        <Card variant="glass">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <GitMerge className="h-5 w-5" />

@@ -186,7 +186,7 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
   const availableOutputs = getAvailableOutputs();
 
   return (
-    <Card 
+    <Card variant="glass" 
       className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} 
       suppressHydrationWarning
     >

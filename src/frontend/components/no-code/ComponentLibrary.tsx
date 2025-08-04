@@ -674,7 +674,7 @@ export function ComponentLibrary() {
             <AccordionContent>
               <div className="space-y-2">
                 {components.map((component) => (
-                  <Card
+                  <Card variant="glass"
                     key={component.id}
                     className={`cursor-grab active:cursor-grabbing shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-white/20 dark:border-gray-700/50 hover:border-blue-300/50 dark:hover:border-blue-500/50 rounded-xl relative overflow-hidden ${
                       draggedItem === component.type ? 'opacity-50 scale-95' : 'hover:scale-[1.03] hover:-translate-y-1'

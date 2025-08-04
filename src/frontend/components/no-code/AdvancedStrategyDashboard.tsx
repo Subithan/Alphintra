@@ -305,7 +305,7 @@ export function AdvancedStrategyDashboard({
 
       {/* System Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -318,7 +318,7 @@ export function AdvancedStrategyDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -333,7 +333,7 @@ export function AdvancedStrategyDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -348,7 +348,7 @@ export function AdvancedStrategyDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -378,7 +378,7 @@ export function AdvancedStrategyDashboard({
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Alerts */}
-            <Card>
+            <Card variant="glass">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <AlertTriangle className="h-5 w-5" />
@@ -433,7 +433,7 @@ export function AdvancedStrategyDashboard({
             </Card>
 
             {/* System Resource Usage */}
-            <Card>
+            <Card variant="glass">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Cpu className="h-5 w-5" />
@@ -523,7 +523,7 @@ export function AdvancedStrategyDashboard({
               if (!card) return null;
 
               return (
-                <Card key={strategy.instance_id} className="overflow-hidden">
+                <Card variant="glass" key={strategy.instance_id} className="overflow-hidden">
                   <CardHeader 
                     className="cursor-pointer hover:bg-gray-50"
                     onClick={() => toggleStrategyExpansion(strategy.instance_id)}
@@ -725,7 +725,7 @@ export function AdvancedStrategyDashboard({
             })}
 
             {strategies.length === 0 && (
-              <Card>
+              <Card variant="glass">
                 <CardContent className="text-center py-12">
                   <Plus className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                   <h3 className="text-lg font-medium mb-2">No Strategies</h3>
@@ -745,7 +745,7 @@ export function AdvancedStrategyDashboard({
         {/* Performance Tab */}
         <TabsContent value="performance" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card variant="glass">
               <CardHeader>
                 <CardTitle>Portfolio Performance</CardTitle>
               </CardHeader>
@@ -788,7 +788,7 @@ export function AdvancedStrategyDashboard({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader>
                 <CardTitle>Execution Metrics</CardTitle>
               </CardHeader>
@@ -831,7 +831,7 @@ export function AdvancedStrategyDashboard({
 
         {/* Risk Tab */}
         <TabsContent value="risk" className="space-y-4">
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Shield className="h-5 w-5" />
@@ -875,7 +875,7 @@ export function AdvancedStrategyDashboard({
         {/* System Tab */}
         <TabsContent value="system" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card variant="glass">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Database className="h-5 w-5" />
@@ -936,7 +936,7 @@ export function AdvancedStrategyDashboard({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Memory className="h-5 w-5" />

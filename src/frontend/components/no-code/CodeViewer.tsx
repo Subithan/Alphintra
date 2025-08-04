@@ -164,7 +164,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
+        <Card variant="glass">
           <CardContent className="pt-4">
             <div className="flex items-center space-x-3">
               <Zap className="h-5 w-5 text-blue-500" />
@@ -180,7 +180,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="pt-4">
             <div className="flex items-center space-x-3">
               <Settings className="h-5 w-5 text-green-500" />
@@ -193,7 +193,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="pt-4">
             <div className="flex items-center space-x-3">
               <FileText className="h-5 w-5 text-purple-500" />
@@ -206,7 +206,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardContent className="pt-4">
             <div className="flex items-center space-x-3">
               {isScanning ? (
@@ -234,7 +234,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className={`w-full max-w-6xl max-h-[90vh] ${className}`}>
+      <Card variant="glass" className={`w-full max-w-6xl max-h-[90vh] ${className}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold flex items-center space-x-2">
@@ -314,7 +314,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
                   <div className="space-y-6">
                     {/* Security Overview */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Card>
+                      <Card variant="glass">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base flex items-center space-x-2">
                             {getSecurityIcon()}
@@ -333,7 +333,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
                         </CardContent>
                       </Card>
 
-                      <Card>
+                      <Card variant="glass">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base">Issue Summary</CardTitle>
                         </CardHeader>
@@ -393,7 +393,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
                         <h4 className="text-lg font-medium mb-4">Security Issues</h4>
                         <div className="space-y-3">
                           {securityScan.issues.map((issue) => (
-                            <Card key={issue.id} className={`border-l-4 ${
+                            <Card variant="glass" key={issue.id} className={`border-l-4 ${
                               issue.riskLevel === SecurityRiskLevel.CRITICAL ? 'border-l-red-500' :
                               issue.riskLevel === SecurityRiskLevel.HIGH ? 'border-l-orange-500' :
                               issue.riskLevel === SecurityRiskLevel.MEDIUM ? 'border-l-yellow-500' :
@@ -456,7 +456,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
                     {securityScan && securityScan.recommendations.length > 0 && (
                       <div>
                         <h4 className="text-lg font-medium mb-4">Security Recommendations</h4>
-                        <Card>
+                        <Card variant="glass">
                           <CardContent className="pt-4">
                             <div className="space-y-2">
                               {securityScan.recommendations.map((recommendation, index) => (
@@ -475,7 +475,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
                     {securityScan && (
                       <div>
                         <h4 className="text-lg font-medium mb-4">Scan Details</h4>
-                        <Card>
+                        <Card variant="glass">
                           <CardContent className="pt-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
@@ -658,7 +658,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
                   <div className="space-y-4">
                     <h4 className="text-lg font-medium">Generated Classes</h4>
                     {code.classes.map((cls, index) => (
-                      <Card key={index}>
+                      <Card variant="glass" key={index}>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base">{cls.name}</CardTitle>
                           <p className="text-sm text-muted-foreground">{cls.description}</p>
@@ -697,7 +697,7 @@ export function CodeViewer({ isOpen, onClose, generatedCode, className }: CodeVi
                   <div className="space-y-4">
                     <h4 className="text-lg font-medium">Helper Functions</h4>
                     {code.functions.map((func, index) => (
-                      <Card key={index}>
+                      <Card variant="glass" key={index}>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base flex items-center space-x-2">
                             <span>{func.name}()</span>

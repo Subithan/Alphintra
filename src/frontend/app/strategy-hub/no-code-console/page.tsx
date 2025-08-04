@@ -2028,7 +2028,7 @@ if __name__ == "__main__":
 
         {currentStep === 'testing' && (
           <div className="flex-1 p-6">
-            <Card>
+            <Card variant="glass">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Zap className="h-5 w-5 mr-2" />

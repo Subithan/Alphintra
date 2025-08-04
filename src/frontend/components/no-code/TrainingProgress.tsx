@@ -100,7 +100,7 @@ export function TrainingProgress({ onComplete, onCancel }: TrainingProgressProps
 
       {/* Training Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card variant="glass">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center">
               <Activity className="h-4 w-4 mr-2" />
@@ -124,7 +124,7 @@ export function TrainingProgress({ onComplete, onCancel }: TrainingProgressProps
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center">
               <Clock className="h-4 w-4 mr-2" />
@@ -149,7 +149,7 @@ export function TrainingProgress({ onComplete, onCancel }: TrainingProgressProps
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center">
               <TrendingUp className="h-4 w-4 mr-2" />
@@ -176,7 +176,7 @@ export function TrainingProgress({ onComplete, onCancel }: TrainingProgressProps
       </div>
 
       {/* Training Controls */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
           <CardTitle className="text-lg">Training Controls</CardTitle>
           <CardDescription>
@@ -240,7 +240,7 @@ export function TrainingProgress({ onComplete, onCancel }: TrainingProgressProps
         </TabsList>
 
         <TabsContent value="metrics">
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle>Training History</CardTitle>
               <CardDescription>
@@ -269,7 +269,7 @@ export function TrainingProgress({ onComplete, onCancel }: TrainingProgressProps
         </TabsContent>
 
         <TabsContent value="logs">
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle>Training Logs</CardTitle>
               <CardDescription>
@@ -295,7 +295,7 @@ export function TrainingProgress({ onComplete, onCancel }: TrainingProgressProps
         </TabsContent>
 
         <TabsContent value="resources">
-          <Card>
+          <Card variant="glass">
             <CardHeader>
               <CardTitle>Resource Monitoring</CardTitle>
               <CardDescription>
