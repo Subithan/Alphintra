@@ -7,10 +7,13 @@ Tests all components working together
 import subprocess
 import sys
 import time
-import requests
 import json
 import threading
 from pathlib import Path
+
+import pytest
+
+requests = pytest.importorskip("requests")
 
 def test_backend_server():
     """Test backend server with real API calls"""
