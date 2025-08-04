@@ -51,11 +51,16 @@ export function ActionNode({ id, selected }: NodeProps<ActionNodeData>) {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'entry': return 'bg-green-100 text-green-800 border-green-300';
-      case 'exit': return 'bg-red-100 text-red-800 border-red-300';
-      case 'management': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'portfolio': return 'bg-purple-100 text-purple-800 border-purple-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'entry':
+        return 'bg-green-100 text-green-800 dark:text-green-200 border-green-300';
+      case 'exit':
+        return 'bg-red-100 text-red-800 dark:text-red-200 border-red-300';
+      case 'management':
+        return 'bg-blue-100 text-blue-800 dark:text-blue-200 border-blue-300';
+      case 'portfolio':
+        return 'bg-purple-100 text-purple-800 dark:text-purple-200 border-purple-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:text-gray-200 border-gray-300';
     }
   };
 
@@ -78,27 +83,31 @@ export function ActionNode({ id, selected }: NodeProps<ActionNodeData>) {
   };
 
   return (
-    <Card variant="glass" className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
+    <Card
+      variant="glass"
+      className={`min-w-[200px] node-glow ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      suppressHydrationWarning
+    >
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           {getCategoryIcon(actionCategory)}
-          <span className="font-medium text-sm dark:text-foreground">{label}</span>
+          <span className="font-medium text-sm text-foreground">{label}</span>
         </div>
         
         <div className="space-y-1.5">
           <div className="flex items-center space-x-2">
-            <Badge variant="default" className="text-xs font-semibold">
+            <Badge variant="default" className="glass-badge text-xs font-semibold">
               {getActionIcon(action)}
               <span className="ml-1">{action.replace('_', ' ').toUpperCase()}</span>
             </Badge>
             {positionSizing && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="glass-badge text-xs">
                 {positionSizing}
               </Badge>
             )}
           </div>
-          
-          <div className={`text-xs px-1.5 py-0.5 rounded border ${getCategoryColor(actionCategory)}`}>
+
+          <div className={`text-xs px-1.5 py-0.5 rounded border glass-badge ${getCategoryColor(actionCategory)}`}>
             {actionCategory.toUpperCase()}
           </div>
           

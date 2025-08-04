@@ -587,7 +587,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
           defaultEdgeOptions={{
             type: 'default',
             markerEnd: { type: MarkerType.ArrowClosed },
-            style: { strokeWidth: 2, stroke: '#6B7280' },
+            style: { strokeWidth: 2, stroke: 'hsl(var(--foreground) / 0.4)' },
           }}
         >
         <Controls className="dark:bg-background dark:border-border" />
@@ -603,10 +603,11 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
             }
           }}
         />
-        <Background 
-          variant={BackgroundVariant.Dots} 
-          gap={12} 
-          size={1} 
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={12}
+          size={1}
+          color="hsl(var(--foreground) / 0.1)"
           className="dark:bg-background"
         />
         </ReactFlow>

@@ -105,24 +105,28 @@ export function ConditionNode({ id, selected }: NodeProps<ConditionNodeData>) {
     
     // Different intensity based on complexity
     switch (complexity) {
-      case 'expert': return `bg-${color}-200 text-${color}-900 border-${color}-400 font-bold`;
-      case 'advanced': return `bg-${color}-200 text-${color}-900 border-${color}-400 font-semibold`;
-      case 'medium': return `bg-${color}-100 text-${color}-800 border-${color}-300`;
-      default: return `bg-${color}-50 text-${color}-700 border-${color}-200`;
+      case 'expert':
+        return `bg-${color}-200 text-${color}-900 dark:text-${color}-200 border-${color}-400 font-bold`;
+      case 'advanced':
+        return `bg-${color}-200 text-${color}-900 dark:text-${color}-200 border-${color}-400 font-semibold`;
+      case 'medium':
+        return `bg-${color}-100 text-${color}-800 dark:text-${color}-200 border-${color}-300`;
+      default:
+        return `bg-${color}-50 text-${color}-700 dark:text-${color}-200 border-${color}-200`;
     }
   };
   
   const getComplexityBadge = (complexity: string) => {
     const complexityConfig = {
-      simple: { icon: <CheckCircle2 className="h-3 w-3" />, color: 'bg-green-100 text-green-700', label: 'Basic' },
-      medium: { icon: <Gauge className="h-3 w-3" />, color: 'bg-blue-100 text-blue-700', label: 'Medium' },
-      advanced: { icon: <Eye className="h-3 w-3" />, color: 'bg-purple-100 text-purple-700', label: 'Advanced' },
-      expert: { icon: <Brain className="h-3 w-3" />, color: 'bg-red-100 text-red-700', label: 'Expert' }
+      simple: { icon: <CheckCircle2 className="h-3 w-3" />, color: 'bg-green-100 text-green-700 dark:text-green-200', label: 'Basic' },
+      medium: { icon: <Gauge className="h-3 w-3" />, color: 'bg-blue-100 text-blue-700 dark:text-blue-200', label: 'Medium' },
+      advanced: { icon: <Eye className="h-3 w-3" />, color: 'bg-purple-100 text-purple-700 dark:text-purple-200', label: 'Advanced' },
+      expert: { icon: <Brain className="h-3 w-3" />, color: 'bg-red-100 text-red-700 dark:text-red-200', label: 'Expert' }
     };
     
     const config = complexityConfig[complexity as keyof typeof complexityConfig] || complexityConfig.simple;
     return (
-      <div className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-xs border ${config.color}`}>
+      <div className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-xs border glass-badge ${config.color}`}>
         {config.icon}
         <span>{config.label}</span>
       </div>
@@ -223,34 +227,38 @@ export function ConditionNode({ id, selected }: NodeProps<ConditionNodeData>) {
   };
 
   return (
-    <Card variant="glass" className={`${getNodeWidth(actualComplexity)} ${selected ? 'ring-2 ring-blue-500 shadow-lg' : ''} dark:bg-card dark:border-border transition-all duration-200`} suppressHydrationWarning>
+    <Card
+      variant="glass"
+      className={`${getNodeWidth(actualComplexity)} node-glow ${selected ? 'ring-2 ring-blue-500 shadow-lg' : ''} transition-all duration-200`}
+      suppressHydrationWarning
+    >
       <CardContent className="p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
             {getCategoryIcon(conditionType, actualComplexity)}
-            <span className="font-medium text-sm dark:text-foreground truncate">{label}</span>
+            <span className="font-medium text-sm text-foreground truncate">{label}</span>
           </div>
           {getComplexityBadge(actualComplexity)}
         </div>
         
         <div className="space-y-1.5">
           <div className="flex items-center space-x-2 flex-wrap gap-1">
-            <Badge variant="default" className={`text-xs font-semibold ${actualComplexity === 'expert' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : ''}`}>
+            <Badge variant="default" className={`glass-badge text-xs font-semibold ${actualComplexity === 'expert' ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : ''}`}>
               {getConditionDisplay(condition)} {getValueDisplay()}
             </Badge>
             {confirmationBars && confirmationBars > 0 && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="glass-badge text-xs">
                 {confirmationBars}b
               </Badge>
             )}
             {higherTimeframe && conditionType === 'timeframe' && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="glass-badge text-xs">
                 {higherTimeframe}
               </Badge>
             )}
           </div>
-          
-          <div className={`text-xs px-1.5 py-0.5 rounded border ${getCategoryColor(conditionType, actualComplexity)}`}>
+
+          <div className={`text-xs px-1.5 py-0.5 rounded border glass-badge ${getCategoryColor(conditionType, actualComplexity)}`}>
             {conditionType.toUpperCase()}
           </div>
           
