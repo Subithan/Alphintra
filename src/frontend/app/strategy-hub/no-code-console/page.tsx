@@ -24,6 +24,19 @@ import { timescaleMarketData } from '@/lib/api/market-data-timescale';
 import { EnvDebug } from '@/components/debug/EnvDebug';
 import { EditableTitle } from '@/components/no-code/EditableTitle';
 
+interface ExecutionResult {
+  total_return: number;
+  sharpe_ratio: number;
+  max_drawdown: number;
+  win_rate: number;
+  trades_count: number;
+  volatility: number;
+  profit_factor: number;
+  daily_returns: number[];
+  data_source: string;
+  data_quality: number;
+}
+
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
   const { user } = useUser();
@@ -36,8 +49,8 @@ export default function NoCodeConsolePage() {
   const [currentStep, setCurrentStep] = useState<'design' | 'dataset' | 'training' | 'testing'>('design');
   const [leftSidebar, setLeftSidebar] = useState<'components' | 'templates'>('components');
 
-  const [, _setNodeCount] = useState(2);
-  const [, _setConnectionCount] = useState(1);
+  // const [, _setNodeCount] = useState(2);
+  // const [, _setConnectionCount] = useState(1);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +60,7 @@ export default function NoCodeConsolePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showVisual, setShowVisual] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [executionResults, setExecutionResults] = useState<{status: string, results: any} | null>(null);
+  const [executionResults, setExecutionResults] = useState<{status: string, results: ExecutionResult} | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [modelSettings, setModelSettings] = useState({
@@ -430,15 +443,7 @@ export default function NoCodeConsolePage() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Load workflow from URL parameter
-  useEffect(() => {
-    const workflowId = searchParams.get('workflow');
-    if (workflowId && user) {
-      loadWorkflowById(workflowId);
-    }
-  }, [searchParams, user]);
-
-  const loadWorkflowById = async (workflowId: string) => {
+  const loadWorkflowById = useCallback(async (workflowId: string) => {
     try {
       const workflow = await noCodeApiClient.getWorkflow(workflowId);
       // Convert API workflow to NoCodeWorkflow format
@@ -466,7 +471,15 @@ export default function NoCodeConsolePage() {
         variant: "destructive",
       });
     }
-  };
+  }, [loadWorkflow, toast]);
+
+  // Load workflow from URL parameter
+  useEffect(() => {
+    const workflowId = searchParams.get('workflow');
+    if (workflowId && user) {
+      loadWorkflowById(workflowId);
+    }
+  }, [searchParams, user, loadWorkflowById]);
 
   const handleRunExecution = useCallback(async () => {
     if (!currentWorkflow) {
@@ -514,8 +527,8 @@ export default function NoCodeConsolePage() {
 
         if (!dataValidation.available) {
           const unavailableSymbols = Object.entries(dataValidation.symbols_status)
-            .filter(([_, status]) => !status.available)
-            .map(([symbol, _]) => symbol);
+            .filter(([, status]) => !status.available)
+            .map(([symbol]) => symbol);
 
           toast({
             title: "Data Availability Issue",
@@ -731,93 +744,7 @@ export default function NoCodeConsolePage() {
     }
   }, [currentWorkflow, modelSettings, toast]);
 
-  const handleCodeGeneration = useCallback(async () => {
-    if (!showCodeGeneration) {
-      setShowCodeGeneration(true);
-      
-      if (!currentWorkflow || currentWorkflow.nodes.length === 0) {
-        setGeneratedCode('# No workflow nodes to generate code from\n# Please add some nodes to your model first.');
-        return;
-      }
-
-      setIsGeneratingCode(true);
-      
-      try {
-        // Generate code from backend
-        const codeResponse = await noCodeApiClient.generateCode(currentWorkflow.id, {
-          language: 'python',
-          framework: 'backtesting.py',
-          includeComments: true
-        });
-
-        setGeneratedCode(codeResponse.code);
-
-        // Save the trainer file to backend if it's a saved model
-        if (currentWorkflow.id !== 'default' && user) {
-          try {
-            const trainerData = {
-              model_id: currentWorkflow.id,
-              code: codeResponse.code,
-              language: 'python',
-              framework: 'backtesting.py',
-              created_by: user.username,
-              user_id: user.id,
-              file_name: `${currentWorkflow.name.replace(/\s+/g, '_')}_trainer.py`,
-              file_type: 'trainer',
-              metadata: {
-                nodes_count: currentWorkflow.nodes.length,
-                edges_count: currentWorkflow.edges.length,
-                generation_timestamp: new Date().toISOString()
-              }
-            };
-
-            // Save trainer file via fetch since request is protected
-            await fetch('/api/code-files', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(trainerData)
-            });
-
-            toast({
-              title: "Success",
-              description: "Code generated and trainer file saved successfully",
-            });
-          } catch (saveError) {
-            console.warn('Failed to save trainer file:', saveError);
-            toast({
-              title: "Warning",
-              description: "Code generated but failed to save trainer file",
-              variant: "destructive",
-            });
-          }
-        } else {
-          toast({
-            title: "Success",
-            description: "Code generated successfully",
-          });
-        }
-      } catch (error) {
-        console.error('Code generation failed:', error);
-        
-        // Fallback to local code generation
-        const fallbackCode = generateFallbackCode(currentWorkflow);
-        setGeneratedCode(fallbackCode);
-        
-        toast({
-          title: "Warning",
-          description: "Using fallback code generation. Backend service unavailable.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsGeneratingCode(false);
-      }
-    } else {
-      setShowCodeGeneration(false);
-    }
-  }, [showCodeGeneration, currentWorkflow, user, toast]);
-
-  // Fallback code generation for when backend is unavailable
-  const generateFallbackCode = useCallback((workflow: any) => {
+  const generateFallbackCode = useCallback((workflow: {name: string, nodes: any[], edges: any[], parameters: any}) => {
     if (!workflow || !workflow.nodes.length) {
       return '# No workflow nodes available for code generation';
     }
@@ -866,7 +793,7 @@ class ${workflow.name.replace(/\s+/g, '')}Model:
         signals = pd.DataFrame(index=data.index)
         
         # Process workflow nodes
-${workflow.nodes.map((node: any, index: number) => {
+${workflow.nodes.map((node: {type: string, data: {label: string}}, index: number) => {
   const nodeType = node.type || 'unknown';
   const nodeData = node.data || {};
   
@@ -936,7 +863,7 @@ ${workflow.nodes.map((node: any, index: number) => {
             )
             print(f"SELL order placed for {abs(current_position)} shares of {symbol}")
     
-    def backtest(self, symbols: List[str], start_date: str, end_date: str) -> Dict[str, Any]:
+    def backtest(self, symbols: List[str], start_date: str, end_date: str) -> Dict[str, dict]:
         """
         Backtest the model
         """
@@ -990,6 +917,91 @@ if __name__ == "__main__":
         print(f"{symbol}: {metrics}")
 `;
   }, []);
+
+  const handleCodeGeneration = useCallback(async () => {
+    if (!showCodeGeneration) {
+      setShowCodeGeneration(true);
+
+      if (!currentWorkflow || currentWorkflow.nodes.length === 0) {
+        setGeneratedCode('# No workflow nodes to generate code from\n# Please add some nodes to your model first.');
+        return;
+      }
+
+      setIsGeneratingCode(true);
+
+      try {
+        // Generate code from backend
+        const codeResponse = await noCodeApiClient.generateCode(currentWorkflow.id, {
+          language: 'python',
+          framework: 'backtesting.py',
+          includeComments: true
+        });
+
+        setGeneratedCode(codeResponse.code);
+
+        // Save the trainer file to backend if it's a saved model
+        if (currentWorkflow.id !== 'default' && user) {
+          try {
+            const trainerData = {
+              model_id: currentWorkflow.id,
+              code: codeResponse.code,
+              language: 'python',
+              framework: 'backtesting.py',
+              created_by: user.username,
+              user_id: user.id,
+              file_name: `${currentWorkflow.name.replace(/\s+/g, '_')}_trainer.py`,
+              file_type: 'trainer',
+              metadata: {
+                nodes_count: currentWorkflow.nodes.length,
+                edges_count: currentWorkflow.edges.length,
+                generation_timestamp: new Date().toISOString()
+              }
+            };
+
+            // Save trainer file via fetch since request is protected
+            await fetch('/api/code-files', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(trainerData)
+            });
+
+            toast({
+              title: "Success",
+              description: "Code generated and trainer file saved successfully",
+            });
+          } catch (saveError) {
+            console.warn('Failed to save trainer file:', saveError);
+            toast({
+              title: "Warning",
+              description: "Code generated but failed to save trainer file",
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Success",
+            description: "Code generated successfully",
+          });
+        }
+      } catch (error) {
+        console.error('Code generation failed:', error);
+
+        // Fallback to local code generation
+        const fallbackCode = generateFallbackCode(currentWorkflow);
+        setGeneratedCode(fallbackCode);
+
+        toast({
+          title: "Warning",
+          description: "Using fallback code generation. Backend service unavailable.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGeneratingCode(false);
+      }
+    } else {
+      setShowCodeGeneration(false);
+    }
+  }, [showCodeGeneration, currentWorkflow, user, toast, generateFallbackCode]);
 
   const handleTest = useCallback(async () => {
     if (!currentWorkflow) {
