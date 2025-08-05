@@ -8,12 +8,11 @@ import { TemplateLibrary } from '@/components/no-code/TemplateLibrary';
 import { ClientOnly } from '@/components/no-code/ClientOnly';
 import { DatasetSelector } from '@/components/no-code/DatasetSelector';
 import { TrainingProgress } from '@/components/no-code/TrainingProgress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
 import { Button } from '@/components/ui/no-code/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/no-code/card';
 import { Badge } from '@/components/ui/no-code/badge';
 import { Input } from '@/components/ui/no-code/input';
-import { Icon } from '@iconify/react';
 import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X } from 'lucide-react';
 import { useWorkflow, useWorkflowExecution } from '@/hooks/useWorkflow';
 import { useWorkflowSearch } from '@/hooks/useWorkflowSearch';
@@ -21,7 +20,7 @@ import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { useToast } from '@/components/ui/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { noCodeApiClient } from '@/lib/api/no-code-api';
-import { timescaleMarketData, formatTimescaleDate, getTimescaleTimeframe } from '@/lib/api/market-data-timescale';
+import { timescaleMarketData } from '@/lib/api/market-data-timescale';
 import { EnvDebug } from '@/components/debug/EnvDebug';
 import { EditableTitle } from '@/components/no-code/EditableTitle';
 
@@ -33,12 +32,12 @@ export default function NoCodeConsolePage() {
   
   // Local state
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [isTraining, setIsTraining] = useState(false);
+  const [, setIsTraining] = useState(false);
   const [currentStep, setCurrentStep] = useState<'design' | 'dataset' | 'training' | 'testing'>('design');
   const [leftSidebar, setLeftSidebar] = useState<'components' | 'templates'>('components');
 
-  const [nodeCount, setNodeCount] = useState(2);
-  const [connectionCount, setConnectionCount] = useState(1);
+  const [, _setNodeCount] = useState(2);
+  const [, _setConnectionCount] = useState(1);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +47,7 @@ export default function NoCodeConsolePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showVisual, setShowVisual] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [executionResults, setExecutionResults] = useState<any>(null);
+  const [executionResults, setExecutionResults] = useState<{status: string, results: any} | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [modelSettings, setModelSettings] = useState({
@@ -72,7 +71,7 @@ export default function NoCodeConsolePage() {
   const { currentWorkflow, loadWorkflow } = useNoCodeStore();
   
   // Workflow hooks
-  const [workflowState, workflowActions] = useWorkflow({
+  useWorkflow({
     workflowId: currentWorkflow?.id !== 'default' ? currentWorkflow?.id : undefined,
     autoSave: true,
     autoSaveInterval: 30000
@@ -173,7 +172,7 @@ export default function NoCodeConsolePage() {
           parameters: currentWorkflow.parameters || {}
         };
 
-        const updatedModel = await noCodeApiClient.updateWorkflow(currentWorkflow.id, updateData);
+        await noCodeApiClient.updateWorkflow(currentWorkflow.id, updateData);
         
         // Clear unsaved changes flag
         const { updateWorkflow } = useNoCodeStore.getState();
@@ -298,23 +297,6 @@ export default function NoCodeConsolePage() {
       fileInputRef.current.value = '';
     }
   }, [toast]);
-
-  const handleRun = useCallback(async () => {
-    if (!currentWorkflow) return;
-    
-    try {
-      await workflowExecution.startExecution({
-        execution_type: 'backtest',
-        symbols: ['AAPL', 'GOOGL'],
-        timeframe: '1d' as '1d',
-        initial_capital: 100000,
-        start_date: '2023-01-01',
-        end_date: '2023-12-31'
-      });
-    } catch (error) {
-      console.error('Execution failed:', error);
-    }
-  }, [currentWorkflow, workflowExecution]);
 
   const handleStop = useCallback(async () => {
     try {
@@ -1083,7 +1065,7 @@ if __name__ == "__main__":
             }
           };
 
-          const testResult = await noCodeApiClient.testWorkflow(currentWorkflow.id, testConfig);
+        await noCodeApiClient.testWorkflow(currentWorkflow.id, testConfig);
           
           toast({
             title: "Test Completed",
@@ -1128,14 +1110,6 @@ if __name__ == "__main__":
     }
   }, [currentWorkflow, toast]);
 
-  const handleStepChange = (step: 'design' | 'dataset' | 'training' | 'testing') => {
-    setCurrentStep(step);
-  };
-
-  const handleCompileAndTrain = () => {
-    setCurrentStep('dataset');
-  };
-
   const handleStartTraining = () => {
     setIsTraining(true);
     setCurrentStep('training');
@@ -1150,13 +1124,13 @@ if __name__ == "__main__":
     <div className="h-screen flex flex-col dark:bg-black">
       <EnvDebug />
       {/* Header */}
-      <div className="border-b bg-white dark:bg-black border-gray-200 dark:border-gray-600">
-        <div className="flex h-14 items-center justify-between px-4">
+      <div className="border-b bg-background/80 dark:bg-background/80 backdrop-blur-xl border-border/50">
+        <div className="flex h-16 items-center justify-between px-6">
           <div className="flex items-center space-x-4">
             <EditableTitle 
               workflowId={currentWorkflow?.id || 'default'}
               initialTitle={workflowName}
-              className="text-xl font-semibold text-gray-900 dark:text-gray-100"
+              className="text-2xl font-bold tracking-tight text-foreground"
               readOnly={false}
             />
             <Badge variant={currentStep === 'design' ? 'default' : 'secondary'}>
@@ -1168,19 +1142,154 @@ if __name__ == "__main__":
           </div>
           <div className="flex items-center space-x-2">
             <Button 
-              variant="secondary" 
-              size="sm"
+              variant="ghost"
+              size="icon"
               onClick={toggleTheme}
-              className="p-2"
             >
               {isDarkMode ? (
-                <Sun className="h-4 w-4" />
+                <Sun className="h-5 w-5" />
               ) : (
-                <Moon className="h-4 w-4" />
+                <Moon className="h-5 w-5" />
               )}
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Workflow Toolbar */}
+      <div className="border-b bg-muted/50 border-border/50">
+        <div className="flex h-14 items-center justify-between px-6">
+          {/* Left Section - Control Buttons */}
+          <div className="flex items-center space-x-2">
             <Button 
-              variant="secondary" 
+              size="sm" 
+              variant="secondary"
+              onClick={handleRunExecution}
+              disabled={isExecuting || !currentWorkflow}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              {isExecuting ? 'Running...' : 'Run'}
+            </Button>
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={handleStop}
+              disabled={!workflowExecution.execution || workflowExecution.execution.status !== 'running'}
+            >
+              <Pause className="h-4 w-4 mr-2" />
+              Stop
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={handleReset}
+              disabled={!currentWorkflow}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+            
+            <div className="w-px h-6 bg-border mx-2"></div>
+            
+            <Button 
+              size="sm" 
+              variant={showSearch ? "default" : "ghost"}
+              onClick={handleSearch}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+            
+            <div className="w-px h-6 bg-border mx-2"></div>
+            
+            <Button 
+              size="icon"
+              variant="ghost"
+              onClick={handleZoomIn}
+              title="Zoom In"
+            >
+              <ZoomIn className="h-5 w-5" />
+            </Button>
+            <Button 
+              size="icon"
+              variant="ghost"
+              onClick={handleZoomOut}
+              title="Zoom Out"
+            >
+              <ZoomOut className="h-5 w-5" />
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={handleResetZoom}
+              title="Reset Zoom (100%)"
+            >
+              <span className="text-sm font-mono">{Math.round(zoomLevel * 100)}%</span>
+            </Button>
+            <Button 
+              size="icon"
+              variant={isFullscreen ? "default" : "ghost"}
+              onClick={handleFullscreen}
+              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+              <Maximize className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Center Section - View Controls */}
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant={showVisual ? "default" : "secondary"}
+              onClick={handleVisual}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Visual
+            </Button>
+            <Button
+              size="sm"
+              variant={showCodeGeneration ? "default" : "secondary"}
+              onClick={handleCodeGeneration}
+            >
+              <Code className="h-4 w-4 mr-2" />
+              Code
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleTest}
+              disabled={!currentWorkflow}
+            >
+              <TestTube className="h-4 w-4 mr-2" />
+              Test
+            </Button>
+          </div>
+
+          {/* Right Section - Additional Actions */}
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+              <div className="flex items-center space-x-1">
+                <span className="font-medium">{currentWorkflow?.nodes.length || 0}</span>
+                <span>nodes</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span className="font-medium">{currentWorkflow?.edges.length || 0}</span>
+                <span>connections</span>
+              </div>
+              {currentWorkflow?.hasUnsavedChanges && (
+                <Badge variant="destructive" className="text-xs">
+                  Unsaved
+                </Badge>
+              )}
+              {currentWorkflow && !currentWorkflow.hasUnsavedChanges && (
+                <Badge variant="secondary" className="text-xs">
+                  Saved
+                </Badge>
+              )}
+            </div>
+            <div className="w-px h-6 bg-border mx-2"></div>
+            <Button 
+              variant="secondary"
               size="sm"
               onClick={handleSave}
               disabled={!currentWorkflow}
@@ -1206,188 +1315,11 @@ if __name__ == "__main__":
               Export
             </Button>
             <Button 
-              onClick={handleCompileAndTrain}
-              disabled={isTraining}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Compile & Train
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Workflow Toolbar */}
-      <div className="border-b bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-        <div className="flex h-12 items-center justify-between px-4">
-          {/* Left Section - Control Buttons */}
-          <div className="flex items-center space-x-3">
-            <Button 
-              size="sm" 
-              className="bg-green-600 hover:bg-green-700"
-              onClick={handleRunExecution}
-              disabled={isExecuting || !currentWorkflow}
-            >
-              <Play className="h-4 w-4 mr-1" />
-              {isExecuting ? 'Running...' : 'Run'}
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary"
-              onClick={handleStop}
-              disabled={!workflowExecution.execution || workflowExecution.execution.status !== 'running'}
-            >
-              <Pause className="h-4 w-4 mr-1" />
-              Stop
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary"
-              onClick={handleReset}
-              disabled={!currentWorkflow}
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset
-            </Button>
-            
-            <div className="w-px h-6 bg-border mx-2"></div>
-            
-            <Button 
-              size="sm" 
-              variant={showSearch ? "default" : "secondary"} 
-              className="p-2"
-              onClick={handleSearch}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-            
-            <div className="w-px h-6 bg-border mx-2"></div>
-            
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleZoomIn}
-              title="Zoom In"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleZoomOut}
-              title="Zoom Out"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleResetZoom}
-              title="Reset Zoom (100%)"
-            >
-              <span className="text-xs font-mono">{Math.round(zoomLevel * 100)}%</span>
-            </Button>
-            <Button 
-              size="sm" 
-              variant={isFullscreen ? "default" : "secondary"} 
-              className="p-2"
-              onClick={handleFullscreen}
-              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-            >
-              <Maximize className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Center Section - View Controls */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Button 
-                size="sm" 
-                variant={showVisual ? "default" : "secondary"}
-                onClick={handleVisual}
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                Visual
-              </Button>
-              <Button 
-                size="sm" 
-                variant={showCodeGeneration ? "default" : "secondary"}
-                onClick={handleCodeGeneration}
-              >
-                <Code className="h-4 w-4 mr-1" />
-                Generate Code
-              </Button>
-            </div>
-            
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <div className="flex items-center space-x-1">
-                <span className="font-medium">{currentWorkflow?.nodes.length || 0}</span>
-                <span>nodes</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="font-medium">{currentWorkflow?.edges.length || 0}</span>
-                <span>connections</span>
-              </div>
-              {currentWorkflow?.hasUnsavedChanges && (
-                <Badge variant="destructive" className="text-xs">
-                  Unsaved Changes
-                </Badge>
-              )}
-              {currentWorkflow && !currentWorkflow.hasUnsavedChanges && (
-                <Badge variant="secondary" className="text-xs">
-                  Saved
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          {/* Right Section - Additional Actions */}
-          <div className="flex items-center space-x-2">
-            <Button 
-              size="sm" 
-              variant="secondary"
-              onClick={handleTest}
-              disabled={!currentWorkflow}
-            >
-              <TestTube className="h-4 w-4 mr-1" />
-              Test
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary"
-              onClick={handleSave}
-              disabled={!currentWorkflow}
-            >
-              <Save className="h-4 w-4 mr-1" />
-              Save
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleExport}
-              disabled={!currentWorkflow}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleImport}
-            >
-              <Upload className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant={showSettings ? "default" : "secondary"} 
-              className="p-2"
+              size="icon"
+              variant={showSettings ? "default" : "ghost"}
               onClick={handleSettings}
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -1948,24 +1880,21 @@ if __name__ == "__main__":
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {currentStep === 'design' && (
           <>
             {/* Left Sidebar - Components/Templates */}
-            <div className="w-96 border-r bg-white/80 dark:bg-black/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-600/50 flex flex-col shadow-2xl relative overflow-hidden">
-              {/* Glass effect overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-white/10 pointer-events-none"></div>
-              <div className="relative z-10 flex flex-col h-full">
+            <div className="w-[400px] border-r bg-background/80 dark:bg-background/80 backdrop-blur-xl border-border/50 flex flex-col shadow-2xl z-10">
               {/* Sidebar Tabs */}
-              <div className="border-b border-gray-200 dark:border-gray-600">
+              <div className="border-b border-border/50">
                 <Tabs value={leftSidebar} onValueChange={(value) => setLeftSidebar(value as 'components' | 'templates')} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 rounded-none">
-                    <TabsTrigger value="components" className="flex items-center space-x-2">
-                      <Database className="h-4 w-4" />
+                  <TabsList className="grid w-full grid-cols-2 rounded-none h-14">
+                    <TabsTrigger value="components" className="flex items-center space-x-2 text-base">
+                      <Database className="h-5 w-5" />
                       <span>Components</span>
                     </TabsTrigger>
-                    <TabsTrigger value="templates" className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4" />
+                    <TabsTrigger value="templates" className="flex items-center space-x-2 text-base">
+                      <FileText className="h-5 w-5" />
                       <span>Templates</span>
                     </TabsTrigger>
                   </TabsList>
@@ -1973,29 +1902,28 @@ if __name__ == "__main__":
               </div>
 
                 {/* Sidebar Content */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto">
                   {leftSidebar === 'components' && (
-                    <ClientOnly fallback={<div className="p-4">Loading components...</div>}>
+                    <ClientOnly fallback={<div className="p-6">Loading components...</div>}>
                       <ComponentLibrary />
                     </ClientOnly>
                   )}
                   {leftSidebar === 'templates' && (
-                    <ClientOnly fallback={<div className="p-4">Loading templates...</div>}>
+                    <ClientOnly fallback={<div className="p-6">Loading templates...</div>}>
                       <TemplateLibrary onTemplateSelect={() => setLeftSidebar('components')} />
                     </ClientOnly>
                   )}
                 </div>
-              </div>
             </div>
 
             {/* Main Workflow Editor */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 bg-muted/20">
               <div className="flex-1 relative overflow-hidden">
                 <ClientOnly fallback={
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-sm text-muted-foreground">Loading workflow editor...</p>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Loading Workflow Editor...</p>
                     </div>
                   </div>
                 }>
