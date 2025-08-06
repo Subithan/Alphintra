@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/no-code/badge';
 import { Input } from '@/components/ui/no-code/input';
 import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X, MoreHorizontal, ChevronDown, Cpu, Brain, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/no-code/dropdown-menu';
 import { useWorkflow, useWorkflowExecution } from '@/hooks/useWorkflow';
 import { useWorkflowSearch } from '@/hooks/useWorkflowSearch';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
@@ -1377,63 +1378,53 @@ if __name__ == "__main__":
               Save
             </Button>
             
-            {/* More Actions Select */}
-            <Select onValueChange={(value) => {
-              switch(value) {
-                case 'import': handleImport(); break;
-                case 'export': if (currentWorkflow) handleExport(); break;
-                case 'compile': handleCompile(); break;
-                case 'train': handleTrain(); break;
-                case 'settings': handleSettings(); break;
-                case 'theme': toggleTheme(); break;
-              }
-            }}>
-              <SelectTrigger className="h-8 w-8 p-0 border-none bg-transparent hover:bg-accent">
-                <MoreHorizontal className="h-4 w-4" />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value="import">
-                  <div className="flex items-center w-full">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import Workflow
-                  </div>
-                </SelectItem>
-                <SelectItem value="export" disabled={!currentWorkflow}>
-                  <div className="flex items-center w-full">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Workflow
-                  </div>
-                </SelectItem>
-                <SelectItem value="compile" disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}>
-                  <div className="flex items-center w-full">
-                    <Cpu className="h-4 w-4 mr-2" />
-                    Compile Workflow
-                  </div>
-                </SelectItem>
-                <SelectItem value="train" disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}>
-                  <div className="flex items-center w-full">
-                    <Brain className="h-4 w-4 mr-2" />
-                    Train Model
-                  </div>
-                </SelectItem>
-                <SelectItem value="settings">
-                  <div className="flex items-center w-full">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </div>
-                </SelectItem>
-                <SelectItem value="theme">
-                  <div className="flex items-center w-full">
-                    {isDarkMode ? (
-                      <Sun className="h-4 w-4 mr-2" />
-                    ) : (
-                      <Moon className="h-4 w-4 mr-2" />
-                    )}
-                    Toggle Theme
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            {/* More Actions Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border-none bg-transparent hover:bg-accent text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleImport}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import Workflow
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => currentWorkflow && handleExport()}
+                  disabled={!currentWorkflow}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Workflow
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleCompile}
+                  disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
+                >
+                  <Cpu className="h-4 w-4 mr-2" />
+                  Compile Workflow
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleTrain}
+                  disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  Train Model
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSettings}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleTheme}>
+                  {isDarkMode ? (
+                    <Sun className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Moon className="h-4 w-4 mr-2" />
+                  )}
+                  Toggle Theme
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
