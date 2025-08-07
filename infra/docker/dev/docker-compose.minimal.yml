@@ -184,8 +184,10 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: standalone
       REDIS_HOST: redis
+      REDIS_PORT: 6379
       REDIS_PASSWORD: redis123
       DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra_trading_engine?user=alphintra&password=alphintra123
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       postgres:
         condition: service_healthy

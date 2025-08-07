@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/no-code/card';
+import { Button } from '@/components/ui/no-code/button';
+import { Badge } from '@/components/ui/no-code/badge';
+import { ScrollArea } from '@/components/ui/no-code/scroll-area';
+import { Separator } from '@/components/ui/no-code/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/no-code/dialog';
+import { Input } from '@/components/ui/no-code/input';
+import { Textarea } from '@/components/ui/no-code/textarea';
+import { useToast } from '@/components/ui/no-code/use-toast';
 import { noCodeApiClient, WorkflowVersion, WorkflowVersionDetails } from '@/lib/api/no-code-api';
 import { 
   Clock, 

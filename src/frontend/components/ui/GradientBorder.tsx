@@ -1,24 +1,28 @@
+"use client";
+
 import React from 'react';
+import clsx from 'clsx';
 
 interface GradientBorderProps {
   children: React.ReactNode;
   gradientAngle: '45deg' | '135deg' | '225deg' | '275deg' | '315deg';
-  backgroundColor?: string;
   className?: string;
 }
 
 const GradientBorder: React.FC<GradientBorderProps> = ({
   children,
   gradientAngle,
-  backgroundColor = 'bg-[#060819]',
   className = '',
 }) => {
   return (
     <div
-      className={`w-full  rounded-2xl border border-transparent ${backgroundColor} ${className}`}
+      className={clsx(
+        'w-full rounded-2xl border border-transparent bg-background',
+        className
+      )}
       style={{
         backgroundImage: `
-          linear-gradient(${gradientAngle}, #060819, #060819 100%),
+          linear-gradient(${gradientAngle}, hsl(var(--background)), hsl(var(--background)) 100%),
           conic-gradient(
             from ${gradientAngle},
             rgba(71, 85, 105, 0.48) 80%,
