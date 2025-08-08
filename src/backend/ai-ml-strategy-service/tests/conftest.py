@@ -1,20 +1,34 @@
 """Pytest configuration and fixtures for the AI/ML Strategy Service."""
+import os
 import pytest
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# Load test environment variables
+load_dotenv('.env.test')
+
+# Ensure we're using test database
+os.environ['TESTING'] = 'True'
+
+# Import app after environment is set
 from main import app
 from app.core.config import settings
-from app.db.base_class import Base
-from app.db.session import get_db
+from app.models.base import Base
+from app.core.database import get_db
 
 # Test database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args={"check_same_thread": False},
+    echo=True  # Enable SQL logging for tests
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Override the database URL in settings
+settings.DATABASE_URL = SQLALCHEMY_DATABASE_URL
 
 # Create test database tables
 Base.metadata.create_all(bind=engine)

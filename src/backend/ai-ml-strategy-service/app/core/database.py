@@ -13,13 +13,23 @@ from app.core.config import settings
 logger = structlog.get_logger(__name__)
 
 # Create async database engine
+# SQLite doesn't support pool_size and max_overflow parameters
+engine_kwargs = {
+    "pool_pre_ping": True,
+    "poolclass": NullPool if settings.is_development else None,
+    "echo": settings.DEBUG,
+}
+
+# Only add pool settings for non-SQLite databases
+if not settings.DATABASE_URL.startswith("sqlite"):
+    engine_kwargs.update({
+        "pool_size": settings.DATABASE_POOL_SIZE,
+        "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+    })
+
 engine = create_async_engine(
     settings.DATABASE_URL,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_pre_ping=True,
-    poolclass=NullPool if settings.is_development else None,
-    echo=settings.DEBUG,
+    **engine_kwargs
 )
 
 # Create async session maker
@@ -88,12 +98,22 @@ timescale_engine = None
 TimescaleSessionLocal = None
 
 if settings.TIMESCALE_DATABASE_URL:
+    # Configure TimescaleDB engine with conditional pool settings
+    timescale_kwargs = {
+        "pool_pre_ping": True,
+        "echo": settings.DEBUG,
+    }
+    
+    # Only add pool settings for non-SQLite databases
+    if not settings.TIMESCALE_DATABASE_URL.startswith("sqlite"):
+        timescale_kwargs.update({
+            "pool_size": settings.DATABASE_POOL_SIZE,
+            "max_overflow": settings.DATABASE_MAX_OVERFLOW,
+        })
+    
     timescale_engine = create_async_engine(
         settings.TIMESCALE_DATABASE_URL,
-        pool_size=settings.DATABASE_POOL_SIZE,
-        max_overflow=settings.DATABASE_MAX_OVERFLOW,
-        pool_pre_ping=True,
-        echo=settings.DEBUG,
+        **timescale_kwargs
     )
     
     TimescaleSessionLocal = async_sessionmaker(

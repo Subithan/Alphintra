@@ -3,7 +3,7 @@ import pytest
 import json
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from app.main import app
+from main import app
 from app.core.config import settings
 
 # Test client

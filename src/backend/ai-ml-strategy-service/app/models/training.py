@@ -6,11 +6,12 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Dict, Any, List
 
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, Enum, ForeignKey, BigInteger, DateTime, Index
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
+from sqlalchemy import Column, String, Text, Boolean, Integer, BigInteger, Float, Enum, ForeignKey, DateTime, Index
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, UserMixin, MetadataMixin
+from app.models.types import StringArray
 
 
 class JobType(PyEnum):
@@ -122,7 +123,7 @@ class TrainingJob(BaseModel, UserMixin, MetadataMixin):
     # Results
     final_metrics = Column(JSON, default=dict)
     best_metrics = Column(JSON, default=dict)
-    training_logs = Column(ARRAY(String), default=list)
+    training_logs = Column(StringArray(), default=list)
     error_message = Column(Text)
     
     # Resource usage
@@ -162,8 +163,8 @@ class ModelArtifact(BaseModel):
     model_type = Column(String(100))  # e.g., 'neural_network', 'random_forest'
     input_shape = Column(JSON)
     output_shape = Column(JSON)
-    feature_names = Column(ARRAY(String), default=list)
-    target_names = Column(ARRAY(String), default=list)
+    feature_names = Column(StringArray(), default=list)
+    target_names = Column(StringArray(), default=list)
     
     # Performance metrics
     training_accuracy = Column(Float)
@@ -304,7 +305,7 @@ class ModelRegistry(BaseModel, UserMixin):
     success_rate = Column(Float, default=1.0)
     
     # Tags and labels
-    tags = Column(ARRAY(String), default=list)
+    tags = Column(StringArray(), default=list)
     labels = Column(JSON, default=dict)
     
     # Relationships
@@ -529,7 +530,7 @@ class TrainingTemplate(BaseModel, UserMixin, MetadataMixin):
     parent_template_id = Column(UUID(as_uuid=True), ForeignKey("training_templates.id"))
     
     # Tags and metadata
-    tags = Column(ARRAY(String), default=list)
+    tags = Column(StringArray(), default=list)
     documentation = Column(Text)
     example_code = Column(Text)
     

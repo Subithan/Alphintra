@@ -19,3 +19,4 @@ python-dotenv==1.0.0
 strawberry-graphql[fastapi]==0.219.0
 strawberry-graphql[subscriptions]==0.219.0
 prometheus-fastapi-instrumentator==6.1.0
+tenacity==8.2.3

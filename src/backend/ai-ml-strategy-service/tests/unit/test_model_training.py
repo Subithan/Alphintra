@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from unittest.mock import patch, MagicMock
-from app.services.hyperparameter_tuning import HyperparameterTuner
+from app.services.hyperparameter_tuning import HyperparameterTuningService
 from app.services.model_validator import ModelValidator
 
 class TestModelTraining:
@@ -11,7 +11,7 @@ class TestModelTraining:
     
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.tuner = HyperparameterTuner()
+        self.tuner = HyperparameterTuningService()
         self.validator = ModelValidator()
         
         # Generate sample data

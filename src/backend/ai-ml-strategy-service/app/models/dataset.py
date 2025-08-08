@@ -7,10 +7,11 @@ from enum import Enum as PyEnum
 from typing import Dict, Any, List
 
 from sqlalchemy import Column, String, Text, Boolean, Integer, BigInteger, Float, Enum, ForeignKey, DateTime, Index
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, UserMixin, MetadataMixin
+from app.models.types import StringArray
 
 
 class DataSource(PyEnum):
@@ -79,11 +80,11 @@ class Dataset(BaseModel, UserMixin, MetadataMixin):
     description = Column(Text)
     source = Column(Enum(DataSource), nullable=False, index=True)
     asset_class = Column(Enum(AssetClass), nullable=False, index=True)
-    symbols = Column(ARRAY(String), default=list)
+    symbols = Column(StringArray(), default=list)
     frequency = Column(Enum(DataFrequency))
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
-    columns = Column(ARRAY(String), default=list)
+    columns = Column(StringArray(), default=list)
     row_count = Column(BigInteger, default=0)
     file_size = Column(BigInteger, default=0)  # in bytes
     data_format = Column(Enum(DataFormat), nullable=False)
@@ -120,7 +121,7 @@ class Dataset(BaseModel, UserMixin, MetadataMixin):
     last_accessed = Column(DateTime)
     
     # Tags and categorization
-    tags = Column(ARRAY(String), default=list)
+    tags = Column(StringArray(), default=list)
     category = Column(String(100))
     is_public = Column(Boolean, default=False)
     
@@ -219,7 +220,7 @@ class MarketDataStream(BaseModel):
     __tablename__ = "market_data_streams"
     
     name = Column(String(255), nullable=False, index=True)
-    symbols = Column(ARRAY(String), nullable=False)
+    symbols = Column(StringArray(), nullable=False)
     data_source = Column(String(100), nullable=False)  # e.g., 'binance', 'polygon', 'alpaca'
     timeframe = Column(String(20), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
@@ -333,7 +334,7 @@ class DataIngestionJob(BaseModel, UserMixin, MetadataMixin):
     # Job configuration
     job_name = Column(String(255), nullable=False)
     data_source = Column(String(100), nullable=False)  # binance, coinbase, yahoo_finance, etc.
-    symbols = Column(ARRAY(String), nullable=False)  # List of symbols to collect
+    symbols = Column(StringArray(), nullable=False)  # List of symbols to collect
     frequency = Column(Enum(DataFrequency), nullable=False)
     
     # Date range
@@ -405,4 +406,42 @@ class DataQualityRule(BaseModel, MetadataMixin):
     __table_args__ = (
         Index('idx_quality_rules_type', 'rule_type'),
         Index('idx_quality_rules_active', 'is_active'),
+    )
+
+
+class DataProcessingJob(BaseModel, UserMixin):
+    """
+    Data processing job for transforming and cleaning datasets.
+    """
+    __tablename__ = "data_processing_jobs"
+    
+    # Job identification
+    name = Column(String(255), nullable=False, index=True)
+    description = Column(Text)
+    job_type = Column(String(50), nullable=False)  # cleaning, transformation, feature_engineering
+    
+    # Job configuration
+    input_dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
+    output_dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"))
+    processing_config = Column(JSON, default=dict)
+    
+    # Status and execution
+    status = Column(String(50), default="pending", nullable=False, index=True)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    error_message = Column(Text)
+    
+    # Progress tracking
+    progress_percentage = Column(Float, default=0.0)
+    records_processed = Column(BigInteger, default=0)
+    
+    # Relationships
+    input_dataset = relationship("Dataset", foreign_keys=[input_dataset_id])
+    output_dataset = relationship("Dataset", foreign_keys=[output_dataset_id])
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_processing_jobs_status', 'status'),
+        Index('idx_processing_jobs_user_id', 'user_id'),
+        Index('idx_processing_jobs_type', 'job_type'),
     )

@@ -57,10 +57,10 @@ class ExecutionResponse(BaseModel):
 
 class SubmitSignalRequest(BaseModel):
     strategy_execution_id: int
-    signal_type: str = Field(..., regex="^(entry_long|entry_short|exit_long|exit_short|position_adjust|risk_management)$")
+    signal_type: str = Field(..., pattern="^(entry_long|entry_short|exit_long|exit_short|position_adjust|risk_management)$")
     symbol: str
     timeframe: str
-    action: str = Field(..., regex="^(buy|sell|hold)$")
+    action: str = Field(..., pattern="^(buy|sell|hold)$")
     quantity: Optional[Decimal] = Field(None, gt=0)
     price: Optional[Decimal] = Field(None, gt=0)
     confidence: Optional[float] = Field(None, ge=0, le=1)
@@ -70,8 +70,8 @@ class SubmitSignalRequest(BaseModel):
     features: Optional[Dict[str, Any]] = None
     model_output: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
-    priority: str = Field(default="medium", regex="^(low|medium|high|critical)$")
-    processing_mode: str = Field(default="real_time", regex="^(real_time|batch|stream)$")
+    priority: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
+    processing_mode: str = Field(default="real_time", pattern="^(real_time|batch|stream)$")
 
 
 class SignalResponse(BaseModel):
@@ -87,7 +87,7 @@ class DeploymentRequest(BaseModel):
     strategy_id: int
     environment_id: int
     deployment_name: str
-    deployment_type: str = Field(default="paper_trading", regex="^(paper_trading|live_trading|simulation)$")
+    deployment_type: str = Field(default="paper_trading", pattern="^(paper_trading|live_trading|simulation)$")
     allocated_capital: Decimal = Field(..., gt=0)
     symbols: List[str] = Field(..., min_items=1)
     timeframes: List[str] = Field(default=["1h"])
