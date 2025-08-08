@@ -29,10 +29,12 @@ import { LogicNode } from './nodes/LogicNode';
 import { RiskManagementNode } from './nodes/RiskManagementNode';
 import { SmartEdge } from './edges/SmartEdge';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { useExecutionStore } from '@/lib/stores/execution-store';
 import { connectionManager } from '@/lib/connection-manager';
 import { validateWorkflow, ValidationResult } from '@/lib/workflow-validation';
 import { ConfigurationPanel } from './ConfigurationPanel';
-import { X, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { ExecutionModeSelector } from './ExecutionModeSelector';
+import { X, AlertTriangle, CheckCircle, Info, Play, Save } from 'lucide-react';
 import { Button } from '@/components/ui/no-code/button';
 
 const nodeTypes = {
@@ -65,7 +67,10 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const [modalSelectedNode, setModalSelectedNode] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [showValidationPanel, setShowValidationPanel] = useState(false);
+  const [showExecutionModal, setShowExecutionModal] = useState(false);
+  const [isWorkflowSaved, setIsWorkflowSaved] = useState(false);
   const { currentWorkflow, updateWorkflow, addNode, removeNode } = useNoCodeStore();
+  const { openExecutionModal, closeExecutionModal, isExecutionModalOpen } = useExecutionStore();
   const { screenToFlowPosition } = useReactFlow();
   
   // Use ReactFlow state as primary, sync to store when needed
@@ -432,8 +437,110 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
     }
   };
 
+  const handleSaveWorkflow = useCallback(async () => {
+    try {
+      // Save current workflow state
+      updateWorkflow({ nodes, edges });
+      
+      // Here you would typically make an API call to save to backend
+      // For now, we'll just update the local state
+      setIsWorkflowSaved(true);
+      
+      // Reset save status after a delay
+      setTimeout(() => setIsWorkflowSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to save workflow:', error);
+    }
+  }, [nodes, edges, updateWorkflow]);
+
+  const handleExecuteWorkflow = useCallback(() => {
+    // First validate the workflow
+    if (!validationResult || validationResult.errors.length > 0) {
+      alert('Please fix all validation errors before executing the workflow.');
+      return;
+    }
+
+    // Save the workflow before execution
+    handleSaveWorkflow();
+    
+    // Show execution mode selector
+    setShowExecutionModal(true);
+  }, [validationResult, handleSaveWorkflow]);
+
+  const handleModeSelect = useCallback(async (mode: 'strategy' | 'model', config: any) => {
+    try {
+      // Mock workflow ID - in real implementation, this would come from saved workflow
+      const workflowId = currentWorkflow?.id || Date.now();
+      
+      const response = await fetch(`/api/workflows/${workflowId}/execution-mode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mode,
+          config
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to execute workflow');
+      }
+
+      const result = await response.json();
+      
+      // Handle different execution modes
+      if (mode === 'strategy') {
+        // Redirect to strategy results or show strategy code
+        console.log('Strategy execution result:', result);
+        alert('Strategy generated successfully! Check the console for details.');
+      } else {
+        // Redirect to training dashboard
+        console.log('Training job created:', result);
+        // In a real app, you'd navigate to the training dashboard
+        alert(`Training job created with ID: ${result.training_job_id}`);
+      }
+      
+      setShowExecutionModal(false);
+    } catch (error) {
+      console.error('Execution failed:', error);
+      alert('Failed to execute workflow. Please try again.');
+    }
+  }, [currentWorkflow]);
+
+  const isWorkflowExecutable = () => {
+    return nodes.length > 0 && 
+           validationResult && 
+           validationResult.errors.length === 0;
+  };
+
   return (
     <div className="w-full h-full relative" suppressHydrationWarning>
+      {/* Toolbar */}
+      <div className="absolute top-4 right-4 z-40 flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSaveWorkflow}
+          disabled={nodes.length === 0}
+          className="flex items-center space-x-1"
+        >
+          <Save className="h-4 w-4" />
+          <span>{isWorkflowSaved ? 'Saved!' : 'Save'}</span>
+        </Button>
+        
+        <Button
+          variant="default"
+          size="sm"
+          onClick={handleExecuteWorkflow}
+          disabled={!isWorkflowExecutable()}
+          className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700"
+        >
+          <Play className="h-4 w-4" />
+          <span>Execute Workflow</span>
+        </Button>
+      </div>
+
       {/* Validation Status Bar */}
       {validationResult && (
         <div className="absolute top-4 left-4 z-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg">
@@ -647,6 +754,55 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                   } else {
                     handleCloseModal();
                   }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Execution Mode Selector Modal */}
+      {showExecutionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in-0 duration-200">
+          {/* Background Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-in fade-in-0 duration-200"
+            onClick={() => setShowExecutionModal(false)}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-[95vw] max-w-6xl max-h-[95vh] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Execute Workflow</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowExecutionModal(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="overflow-y-auto max-h-[calc(95vh-120px)] p-6">
+              <ExecutionModeSelector
+                workflowId={currentWorkflow?.id || Date.now()}
+                workflowName={currentWorkflow?.name || 'Untitled Workflow'}
+                workflowComplexity={
+                  validationResult?.performance?.estimatedComplexity === 'high' ? 'complex' :
+                  validationResult?.performance?.estimatedComplexity === 'medium' ? 'medium' : 'simple'
+                }
+                onModeSelect={handleModeSelect}
+                onCancel={() => setShowExecutionModal(false)}
+                estimatedDuration={{
+                  strategy: '< 1 minute',
+                  model: validationResult?.performance?.estimatedComplexity === 'complex' ? '8-24 hours' :
+                         validationResult?.performance?.estimatedComplexity === 'medium' ? '2-8 hours' : '1-4 hours'
                 }}
               />
             </div>
