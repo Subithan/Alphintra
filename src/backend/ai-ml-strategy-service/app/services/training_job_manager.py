@@ -872,3 +872,203 @@ class TrainingJobManager:
     async def get_queue_status(self, db: AsyncSession) -> Dict[str, Any]:
         """Get current training queue status."""
         return await self.queue.get_queue_status(db)
+    
+    async def create_job_from_workflow(self, workflow_metadata: Dict[str, Any], 
+                                     user_id: str, db: AsyncSession) -> Dict[str, Any]:
+        """
+        Create training job from workflow metadata.
+        Enhanced method specifically for workflow-generated jobs.
+        """
+        try:
+            self.logger.info(f"Creating training job from workflow {workflow_metadata.get('workflow_id')}")
+            
+            # Extract workflow information
+            workflow_id = workflow_metadata.get('workflow_id')
+            workflow_name = workflow_metadata.get('workflow_name', 'Unknown Workflow')
+            workflow_definition = workflow_metadata.get('workflow_definition', {})
+            training_config = workflow_metadata.get('training_config', {})
+            
+            # Import workflow services
+            from .workflow_parser import WorkflowParser, validate_workflow_for_training
+            from .strategy_generator import generate_strategy_from_workflow_definition
+            
+            # Validate workflow for training
+            is_valid, validation_errors = validate_workflow_for_training(workflow_definition)
+            if not is_valid:
+                return {
+                    "success": False,
+                    "error": f"Workflow validation failed: {'; '.join(validation_errors)}"
+                }
+            
+            # Generate strategy code from workflow
+            strategy_result = generate_strategy_from_workflow_definition(
+                workflow_definition, workflow_metadata
+            )
+            
+            if not strategy_result.get('success'):
+                return {
+                    "success": False,
+                    "error": f"Strategy generation failed: {strategy_result.get('error')}"
+                }
+            
+            # Create dataset entry for workflow if needed
+            dataset_id = workflow_metadata.get('dataset_id')
+            if not dataset_id:
+                dataset_id = await self._create_workflow_dataset(workflow_definition, db)
+            
+            # Create strategy entry in database
+            strategy_id = await self._create_strategy_from_workflow(
+                strategy_result, workflow_metadata, user_id, db
+            )
+            
+            # Prepare training job data
+            job_data = {
+                "strategy_id": str(strategy_id),
+                "dataset_id": dataset_id,
+                "job_name": f"Workflow_{workflow_name}_{workflow_id}",
+                "job_type": JobType.TRAINING.value,
+                "instance_type": workflow_metadata.get('instance_type', InstanceType.CPU_MEDIUM.value),
+                "timeout_hours": workflow_metadata.get('timeout_hours', 12),
+                "priority": workflow_metadata.get('priority', TrainingPriority.NORMAL.value),
+                "hyperparameters": strategy_result.get('optimization_config', {}).get('parameters', {}),
+                "training_config": {
+                    "workflow_metadata": workflow_metadata,
+                    "optimization_objective": workflow_metadata.get('optimization_objective', 'sharpe_ratio'),
+                    "max_trials": workflow_metadata.get('max_trials', 50),
+                    "parameter_bounds": strategy_result.get('optimization_config', {}).get('parameter_bounds', {}),
+                    "constraint_functions": strategy_result.get('optimization_config', {}).get('constraint_functions', [])
+                },
+                "ml_model_config": {
+                    "model_type": "ensemble",
+                    "optimization_algorithm": "bayesian",
+                    "early_stopping": True,
+                    "cross_validation": {"folds": 5, "method": "time_series_split"}
+                }
+            }
+            
+            # Create the training job using existing method
+            result = await self.create_training_job(job_data, user_id, db)
+            
+            if result.get('success'):
+                # Add workflow-specific metadata to response
+                result['workflow_info'] = {
+                    'workflow_id': workflow_id,
+                    'workflow_name': workflow_name,
+                    'strategy_code_lines': strategy_result['metadata']['code_lines'],
+                    'complexity_score': strategy_result['metadata']['complexity_score'],
+                    'optimization_parameters': len(strategy_result['optimization_config']['parameters']),
+                    'generated_at': datetime.now().isoformat()
+                }
+                
+                self.logger.info(f"Successfully created training job from workflow {workflow_id}")
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create job from workflow: {str(e)}")
+            return {
+                "success": False,
+                "error": f"Workflow job creation failed: {str(e)}"
+            }
+    
+    async def _create_workflow_dataset(self, workflow_definition: Dict[str, Any], 
+                                     db: AsyncSession) -> str:
+        """Create or find dataset for workflow training."""
+        try:
+            # Extract data source information from workflow
+            nodes = workflow_definition.get('nodes', [])
+            data_sources = [node for node in nodes if node.get('type') == 'dataSource']
+            
+            if not data_sources:
+                return "platform_default_1d"  # Default dataset
+            
+            # Use first data source for dataset identification
+            data_source = data_sources[0]
+            symbol = data_source.get('data', {}).get('symbol', 'DEFAULT')
+            timeframe = data_source.get('data', {}).get('timeframe', '1d')
+            exchange = data_source.get('data', {}).get('exchange', 'binance')
+            
+            dataset_id = f"platform_{symbol.lower()}_{timeframe}_{exchange}"
+            
+            # Check if dataset exists
+            result = await db.execute(
+                select(Dataset).where(Dataset.id == dataset_id)
+            )
+            existing_dataset = result.scalar_one_or_none()
+            
+            if not existing_dataset:
+                # Create new dataset entry
+                new_dataset = Dataset(
+                    id=dataset_id,
+                    name=f"{symbol} {timeframe} OHLCV Data",
+                    description=f"Market data for {symbol} on {exchange} at {timeframe} intervals",
+                    type="platform",
+                    dataset_metadata={
+                        "symbol": symbol,
+                        "timeframe": timeframe,
+                        "exchange": exchange,
+                        "data_type": "ohlcv",
+                        "features": ["open", "high", "low", "close", "volume"],
+                        "lookback_periods": 1000
+                    },
+                    is_public=True
+                )
+                
+                db.add(new_dataset)
+                await db.commit()
+                
+                self.logger.info(f"Created new dataset: {dataset_id}")
+            
+            return dataset_id
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create workflow dataset: {str(e)}")
+            return "platform_default_1d"  # Fallback to default
+    
+    async def _create_strategy_from_workflow(self, strategy_result: Dict[str, Any], 
+                                           workflow_metadata: Dict[str, Any], 
+                                           user_id: str, db: AsyncSession) -> UUID:
+        """Create strategy database entry from generated code."""
+        try:
+            from app.models.strategy import Strategy, StrategyType, AssetClass
+            
+            # Create new strategy entry
+            new_strategy = Strategy(
+                id=uuid4(),
+                user_id=UUID(user_id),
+                name=f"Workflow_{workflow_metadata.get('workflow_name', 'Unknown')}_{workflow_metadata.get('workflow_id', '')}",
+                description=f"Auto-generated strategy from visual workflow {workflow_metadata.get('workflow_id')}",
+                strategy_type=StrategyType.QUANTITATIVE,
+                asset_class=AssetClass.CRYPTO,  # Default, would need to be extracted from workflow
+                is_active=True,
+                
+                # Strategy code and metadata
+                strategy_code=strategy_result['strategy_code'],
+                entry_point="create_strategy_instance",
+                requirements=["pandas", "numpy", "ta-lib"],
+                
+                # Configuration
+                configuration={
+                    "workflow_id": workflow_metadata.get('workflow_id'),
+                    "workflow_definition": workflow_metadata.get('workflow_definition'),
+                    "optimization_config": strategy_result.get('optimization_config', {}),
+                    "generated_metadata": strategy_result.get('metadata', {})
+                },
+                
+                # Performance tracking (will be updated after training)
+                expected_return=0.0,
+                expected_volatility=0.0,
+                max_drawdown=0.0,
+                sharpe_ratio=0.0
+            )
+            
+            db.add(new_strategy)
+            await db.commit()
+            await db.refresh(new_strategy)
+            
+            self.logger.info(f"Created strategy from workflow: {new_strategy.id}")
+            return new_strategy.id
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create strategy from workflow: {str(e)}")
+            raise

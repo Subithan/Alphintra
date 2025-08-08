@@ -10,7 +10,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Date, Text, JSON, ForeignKey, Index, CheckConstraint, DECIMAL
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
@@ -91,7 +91,7 @@ class BacktestJob(Base):
     commission_rate = Column(DECIMAL(10, 6), nullable=False, default=Decimal('0.001'))
     slippage_rate = Column(DECIMAL(10, 6), nullable=False, default=Decimal('0.0005'))
     position_sizing = Column(String(50), nullable=False, default=PositionSizing.FIXED_PERCENTAGE.value)
-    position_sizing_config = Column(JSONB, default={})
+    position_sizing_config = Column(JSON, default={})
     
     # Risk management
     max_position_size = Column(DECIMAL(10, 6), default=Decimal('0.1'))  # 10% max per position
@@ -132,7 +132,7 @@ class BacktestJob(Base):
     beta = Column(DECIMAL(10, 6))
     
     # Metadata
-    backtest_config = Column(JSONB, default={})
+    backtest_config = Column(JSON, default={})
     error_details = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -216,7 +216,7 @@ class BacktestTrade(Base):
     # Strategy context
     signal_strength = Column(DECIMAL(5, 4))
     confidence_score = Column(DECIMAL(5, 4))
-    strategy_context = Column(JSONB, default={})
+    strategy_context = Column(JSON, default={})
     
     # Execution details
     fill_time_ms = Column(Integer)  # Simulated fill time
@@ -321,7 +321,7 @@ class PortfolioSnapshot(Base):
     cash_balance = Column(DECIMAL(20, 8), nullable=False)
     
     # Holdings breakdown
-    holdings = Column(JSONB, default={})  # {"AAPL": {"quantity": 100, "value": 15000, "weight": 0.15}}
+    holdings = Column(JSON, default={})  # {"AAPL": {"quantity": 100, "value": 15000, "weight": 0.15}}
     positions_count = Column(Integer, default=0)
     
     # Risk metrics at snapshot
@@ -336,7 +336,7 @@ class PortfolioSnapshot(Base):
     
     # Strategy context
     signal_count = Column(Integer, default=0)
-    active_signals = Column(JSONB, default={})
+    active_signals = Column(JSON, default={})
     
     # Metadata
     snapshot_trigger = Column(String(50))  # 'daily', 'trade', 'signal', 'manual'
@@ -364,14 +364,14 @@ class BacktestComparison(Base):
     description = Column(Text)
     
     # Backtest IDs being compared
-    backtest_ids = Column(JSONB, nullable=False)  # List of backtest job IDs
+    backtest_ids = Column(JSON, nullable=False)  # List of backtest job IDs
     
     # Comparison metrics
-    comparison_results = Column(JSONB, default={})
-    winner_criteria = Column(JSONB, default={})  # Criteria used to determine winner
+    comparison_results = Column(JSON, default={})
+    winner_criteria = Column(JSON, default={})  # Criteria used to determine winner
     
     # Statistical tests
-    statistical_tests = Column(JSONB, default={})  # T-tests, chi-square, etc.
+    statistical_tests = Column(JSON, default={})  # T-tests, chi-square, etc.
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -394,7 +394,7 @@ class BacktestTemplate(Base):
     description = Column(Text)
     
     # Template configuration
-    template_config = Column(JSONB, nullable=False)
+    template_config = Column(JSON, nullable=False)
     methodology = Column(String(50), nullable=False)
     
     # Usage tracking
@@ -403,7 +403,7 @@ class BacktestTemplate(Base):
     
     # Sharing
     is_public = Column(Boolean, default=False)
-    tags = Column(JSONB, default=[])
+    tags = Column(JSON, default=[])
     
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -432,10 +432,10 @@ class PerformanceMetric(Base):
     # Calculation details
     calculation_period = Column(String(50))  # 'daily', 'monthly', 'yearly', 'full_period'
     calculation_method = Column(String(100))  # Method used to calculate
-    calculation_parameters = Column(JSONB, default={})
+    calculation_parameters = Column(JSON, default={})
     
     # Confidence and stability
-    confidence_interval_95 = Column(JSONB)  # {"lower": 0.05, "upper": 0.15}
+    confidence_interval_95 = Column(JSON)  # {"lower": 0.05, "upper": 0.15}
     statistical_significance = Column(DECIMAL(5, 4))
     
     # Benchmark comparison
@@ -473,8 +473,8 @@ class BacktestAlert(Base):
     alert_timestamp = Column(DateTime(timezone=True), nullable=False)
     
     # Context
-    context_data = Column(JSONB, default={})
-    affected_symbols = Column(JSONB, default=[])
+    context_data = Column(JSON, default={})
+    affected_symbols = Column(JSON, default=[])
     
     # Resolution
     resolved = Column(Boolean, default=False)
@@ -492,4 +492,117 @@ class BacktestAlert(Base):
         Index('idx_alert_backtest_type', 'backtest_job_id', 'alert_type'),
         Index('idx_alert_severity_timestamp', 'severity', 'alert_timestamp'),
         Index('idx_alert_resolved', 'resolved'),
+    )
+
+
+class BacktestResult(Base):
+    """Consolidated backtest results."""
+    
+    __tablename__ = "backtest_results"
+    
+    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
+    backtest_job_id = Column(PostgresUUID(as_uuid=True), ForeignKey('backtest_jobs.id'), nullable=False)
+    
+    # Summary metrics
+    total_return = Column(DECIMAL(15, 8), nullable=False)
+    total_return_pct = Column(DECIMAL(10, 6), nullable=False)
+    annualized_return = Column(DECIMAL(10, 6), nullable=False)
+    volatility = Column(DECIMAL(10, 6), nullable=False)
+    sharpe_ratio = Column(DECIMAL(10, 6))
+    max_drawdown = Column(DECIMAL(10, 6), nullable=False)
+    
+    # Trade statistics
+    total_trades = Column(Integer, nullable=False)
+    winning_trades = Column(Integer, nullable=False)
+    losing_trades = Column(Integer, nullable=False)
+    win_rate = Column(DECIMAL(5, 4), nullable=False)
+    
+    # Additional metrics
+    profit_factor = Column(DECIMAL(10, 6))
+    sortino_ratio = Column(DECIMAL(10, 6))
+    calmar_ratio = Column(DECIMAL(10, 6))
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    # Relationships
+    backtest_job = relationship("BacktestJob")
+
+
+class Trade(Base):
+    """Alias for BacktestTrade for backward compatibility."""
+    
+    __tablename__ = "trades"
+    
+    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
+    backtest_job_id = Column(PostgresUUID(as_uuid=True), ForeignKey('backtest_jobs.id'), nullable=False)
+    symbol = Column(String(20), nullable=False)
+    side = Column(String(10), nullable=False)
+    entry_date = Column(DateTime(timezone=True), nullable=False)
+    entry_price = Column(DECIMAL(20, 8), nullable=False)
+    quantity = Column(DECIMAL(20, 8), nullable=False)
+    exit_date = Column(DateTime(timezone=True))
+    exit_price = Column(DECIMAL(20, 8))
+    pnl = Column(DECIMAL(20, 8), default=Decimal('0.0'))
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    # Relationships
+    backtest_job = relationship("BacktestJob")
+
+
+class EquityCurvePoint(Base):
+    """Points on the equity curve for visualization."""
+    
+    __tablename__ = "equity_curve_points"
+    
+    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
+    backtest_job_id = Column(PostgresUUID(as_uuid=True), ForeignKey('backtest_jobs.id'), nullable=False)
+    
+    timestamp = Column(DateTime(timezone=True), nullable=False)
+    portfolio_value = Column(DECIMAL(20, 8), nullable=False)
+    cash_balance = Column(DECIMAL(20, 8), nullable=False)
+    unrealized_pnl = Column(DECIMAL(20, 8), default=Decimal('0.0'))
+    realized_pnl = Column(DECIMAL(20, 8), default=Decimal('0.0'))
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    # Relationships
+    backtest_job = relationship("BacktestJob")
+    
+    __table_args__ = (
+        Index('idx_equity_curve_backtest_timestamp', 'backtest_job_id', 'timestamp'),
+    )
+
+
+class WalkForwardAnalysis(Base):
+    """Walk-forward analysis results."""
+    
+    __tablename__ = "walk_forward_analysis"
+    
+    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=uuid4)
+    backtest_job_id = Column(PostgresUUID(as_uuid=True), ForeignKey('backtest_jobs.id'), nullable=False)
+    
+    window_start = Column(Date, nullable=False)
+    window_end = Column(Date, nullable=False)
+    training_start = Column(Date, nullable=False)
+    training_end = Column(Date, nullable=False)
+    testing_start = Column(Date, nullable=False)
+    testing_end = Column(Date, nullable=False)
+    
+    # Performance metrics for this window
+    return_pct = Column(DECIMAL(10, 6), nullable=False)
+    sharpe_ratio = Column(DECIMAL(10, 6))
+    max_drawdown = Column(DECIMAL(10, 6))
+    trades_count = Column(Integer, default=0)
+    
+    # Model/strategy parameters used
+    parameters = Column(JSON, default={})
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    # Relationships
+    backtest_job = relationship("BacktestJob")
+    
+    __table_args__ = (
+        Index('idx_walk_forward_backtest_window', 'backtest_job_id', 'window_start', 'window_end'),
     )

@@ -3,7 +3,7 @@ Risk management components for trading strategies.
 """
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Union, Callable
+from typing import Dict, List, Optional, Union, Callable, Any
 from decimal import Decimal, ROUND_HALF_UP
 from enum import Enum
 import logging

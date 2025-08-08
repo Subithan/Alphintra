@@ -5,11 +5,12 @@ Experiment tracking and ML lifecycle management models.
 from enum import Enum as PyEnum
 from typing import Dict, Any, List
 
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, Enum, ForeignKey, BigInteger
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
+from sqlalchemy import Column, String, Text, Boolean, Integer, BigInteger, Float, Enum, ForeignKey, DateTime, Index, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, UserMixin, MetadataMixin
+from app.models.types import StringArray
 
 
 class ExperimentStatus(PyEnum):
@@ -228,6 +229,7 @@ class ModelVersion(BaseModel, UserMixin):
     Individual model version in the registry.
     """
     __tablename__ = "model_versions"
+    __table_args__ = {'extend_existing': True}
     
     model_registry_id = Column(UUID(as_uuid=True), ForeignKey("model_registry_entries.id"), nullable=False, index=True)
     
@@ -339,12 +341,12 @@ class ExperimentComparison(BaseModel, UserMixin):
     description = Column(Text)
     
     # Items being compared
-    experiment_ids = Column(ARRAY(String))  # List of experiment UUIDs
-    run_ids = Column(ARRAY(String))         # List of run UUIDs
+    experiment_ids = Column(StringArray())  # List of experiment UUIDs
+    run_ids = Column(StringArray())         # List of run UUIDs
     
     # Comparison configuration
-    comparison_metrics = Column(ARRAY(String))  # Metrics to compare
-    comparison_parameters = Column(ARRAY(String))  # Parameters to compare
+    comparison_metrics = Column(StringArray())  # Metrics to compare
+    comparison_parameters = Column(StringArray())  # Parameters to compare
     
     # Results
     comparison_results = Column(JSON, default=dict)
@@ -357,7 +359,7 @@ class ExperimentComparison(BaseModel, UserMixin):
     
     # Sharing
     is_public = Column(Boolean, default=False)
-    shared_with = Column(ARRAY(String), default=list)  # User IDs
+    shared_with = Column(StringArray(), default=list)  # User IDs
 
 
 class HyperparameterOptimization(BaseModel, UserMixin):

@@ -4,6 +4,9 @@ Database models for the AI/ML Strategy Service.
 
 from app.models.base import BaseModel, UUIDMixin, TimestampMixin, UserMixin, MetadataMixin
 
+# Import User model
+from app.models.user import User
+
 # Import all model classes to ensure they're registered with SQLAlchemy
 from app.models.strategy import (
     Strategy,
@@ -95,6 +98,9 @@ __all__ = [
     "TimestampMixin",
     "UserMixin",
     "MetadataMixin",
+    
+    # User model
+    "User",
     
     # Strategy models
     "Strategy",

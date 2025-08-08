@@ -49,12 +49,12 @@ class SessionResponse(BaseModel):
 
 class SubmitOrderRequest(BaseModel):
     symbol: str
-    side: str = Field(..., regex="^(buy|sell)$")
-    order_type: str = Field(..., regex="^(market|limit|stop|stop_limit)$")
+    side: str = Field(..., pattern="^(buy|sell)$")
+    order_type: str = Field(..., pattern="^(market|limit|stop|stop_limit)$")
     quantity: Decimal = Field(..., gt=0)
     price: Optional[Decimal] = Field(None, gt=0)
     stop_price: Optional[Decimal] = Field(None, gt=0)
-    time_in_force: str = Field(default="DAY", regex="^(DAY|GTC|IOC|FOK)$")
+    time_in_force: str = Field(default="DAY", pattern="^(DAY|GTC|IOC|FOK)$")
     client_order_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -108,7 +108,7 @@ class RiskSummaryResponse(BaseModel):
 
 class PositionSizingRequest(BaseModel):
     symbol: str
-    side: str = Field(..., regex="^(buy|sell)$")
+    side: str = Field(..., pattern="^(buy|sell)$")
     risk_percentage: Decimal = Field(default=Decimal("0.01"), gt=0, le=1)
     stop_loss_pct: Optional[Decimal] = Field(None, gt=0, lt=1)
 

@@ -6,11 +6,12 @@ from decimal import Decimal
 from enum import Enum as PyEnum
 from typing import Dict, Any, List
 
-from sqlalchemy import Column, String, Text, Boolean, Integer, Float, Enum, ForeignKey, DECIMAL
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
+from sqlalchemy import Column, String, Text, Boolean, Integer, Float, Enum, ForeignKey, DateTime, Index, DECIMAL
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, UserMixin, MetadataMixin
+from app.models.types import StringArray, FloatArray
 
 
 class AccountStatus(PyEnum):
@@ -25,6 +26,20 @@ class PositionSide(PyEnum):
     """Position side enumeration."""
     LONG = "long"
     SHORT = "short"
+
+
+class OrderType(PyEnum):
+    """Order type enumeration."""
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+    STOP_LIMIT = "stop_limit"
+
+
+class OrderSide(PyEnum):
+    """Order side enumeration."""
+    BUY = "buy"
+    SELL = "sell"
 
 
 class OrderStatus(PyEnum):
@@ -157,6 +172,7 @@ class PaperTrade(BaseModel):
     
     account_id = Column(UUID(as_uuid=True), ForeignKey("paper_accounts.id"), nullable=False, index=True)
     strategy_id = Column(UUID(as_uuid=True), ForeignKey("strategies.id"), index=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("paper_trading_sessions.id"), index=True)
     
     # Trade identification
     trade_id = Column(String(100), nullable=False, unique=True, index=True)
@@ -260,6 +276,7 @@ class PaperOrder(BaseModel):
     # Relationships
     account = relationship("PaperAccount", back_populates="orders")
     strategy = relationship("Strategy")
+    session = relationship("PaperTradingSession", back_populates="orders")
     trades = relationship("PaperTrade", back_populates="order", cascade="all, delete-orphan")
 
 
@@ -284,7 +301,7 @@ class StrategyDeployment(BaseModel, UserMixin):
     risk_parameters = Column(JSON, default=dict)
     
     # Execution settings
-    symbols = Column(ARRAY(String), nullable=False)
+    symbols = Column(StringArray(), nullable=False)
     timeframe = Column(String(20), nullable=False)
     execution_mode = Column(String(50), default="live")  # live, simulation
     
@@ -392,5 +409,154 @@ class PaperTradingSettings(BaseModel, UserMixin):
     market_impact_simulation = Column(Boolean, default=False)
     
     # Performance benchmarks
-    benchmark_symbols = Column(ARRAY(String), default=list)
-    benchmark_weights = Column(ARRAY(Float), default=list)
+    benchmark_symbols = Column(StringArray(), default=list)
+    benchmark_weights = Column(FloatArray(), default=list)
+
+
+class PaperTradingSession(BaseModel, UserMixin):
+    """
+    Paper trading session for tracking trading activities.
+    """
+    __tablename__ = "paper_trading_sessions"
+    
+    # Session identification
+    session_name = Column(String(255), nullable=False, index=True)
+    description = Column(Text)
+    
+    # Session configuration
+    account_id = Column(UUID(as_uuid=True), ForeignKey("paper_accounts.id"), nullable=False)
+    strategy_id = Column(UUID(as_uuid=True), index=True)
+    
+    # Session status
+    status = Column(String(50), default="active", nullable=False, index=True)
+    started_at = Column(String(30), nullable=False)  # ISO datetime string
+    ended_at = Column(String(30))  # ISO datetime string
+    
+    # Trading parameters
+    initial_balance = Column(DECIMAL(20, 8), nullable=False)
+    current_balance = Column(DECIMAL(20, 8), nullable=False)
+    max_drawdown = Column(DECIMAL(10, 4), default=0.0)
+    
+    # Performance metrics
+    total_trades = Column(Integer, default=0)
+    winning_trades = Column(Integer, default=0)
+    losing_trades = Column(Integer, default=0)
+    total_pnl = Column(DECIMAL(20, 8), default=0.0)
+    
+    # Risk metrics
+    max_position_size = Column(DECIMAL(20, 8))
+    leverage_used = Column(Float, default=1.0)
+    
+    # Session settings
+    session_config = Column(JSON, default=dict)
+    
+    # Relationships
+    account = relationship("PaperAccount")
+    orders = relationship("PaperOrder", back_populates="session")
+    positions = relationship("PaperPosition", back_populates="session")
+    transactions = relationship("PaperTransaction", back_populates="session")
+
+
+class PaperPosition(BaseModel, UserMixin):
+    """
+    Paper trading position model.
+    """
+    __tablename__ = "paper_positions"
+    
+    # Position identification
+    session_id = Column(UUID(as_uuid=True), ForeignKey("paper_trading_sessions.id"), nullable=False)
+    symbol = Column(String(50), nullable=False, index=True)
+    
+    # Position details
+    side = Column(Enum(PositionSide), nullable=False)
+    quantity = Column(DECIMAL(20, 8), nullable=False)
+    avg_entry_price = Column(DECIMAL(20, 8), nullable=False)
+    current_price = Column(DECIMAL(20, 8))
+    
+    # P&L
+    unrealized_pnl = Column(DECIMAL(20, 8), default=0.0)
+    realized_pnl = Column(DECIMAL(20, 8), default=0.0)
+    
+    # Risk metrics
+    stop_loss = Column(DECIMAL(20, 8))
+    take_profit = Column(DECIMAL(20, 8))
+    
+    # Timestamps
+    opened_at = Column(String(30), nullable=False)
+    closed_at = Column(String(30))
+    
+    # Relationships
+    session = relationship("PaperTradingSession", back_populates="positions")
+
+
+class PaperTransaction(BaseModel, UserMixin):
+    """
+    Paper trading transaction model.
+    """
+    __tablename__ = "paper_transactions"
+    
+    # Transaction identification
+    session_id = Column(UUID(as_uuid=True), ForeignKey("paper_trading_sessions.id"), nullable=False)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("paper_orders.id"))
+    
+    # Transaction details
+    symbol = Column(String(50), nullable=False, index=True)
+    side = Column(Enum(OrderSide), nullable=False)
+    quantity = Column(DECIMAL(20, 8), nullable=False)
+    price = Column(DECIMAL(20, 8), nullable=False)
+    
+    # Fees and costs
+    commission = Column(DECIMAL(20, 8), default=0.0)
+    slippage = Column(DECIMAL(20, 8), default=0.0)
+    
+    # Timestamps
+    executed_at = Column(String(30), nullable=False)
+    
+    # Relationships
+    session = relationship("PaperTradingSession", back_populates="transactions")
+    order = relationship("PaperOrder")
+
+
+class PaperPortfolioSnapshot(BaseModel, UserMixin):
+    """
+    Paper trading portfolio snapshot model.
+    """
+    __tablename__ = "paper_portfolio_snapshots"
+    
+    # Snapshot identification
+    session_id = Column(UUID(as_uuid=True), ForeignKey("paper_trading_sessions.id"), nullable=False)
+    
+    # Portfolio metrics
+    total_value = Column(DECIMAL(20, 8), nullable=False)
+    cash_balance = Column(DECIMAL(20, 8), nullable=False)
+    positions_value = Column(DECIMAL(20, 8), default=0.0)
+    
+    # Performance metrics
+    total_pnl = Column(DECIMAL(20, 8), default=0.0)
+    daily_pnl = Column(DECIMAL(20, 8), default=0.0)
+    
+    # Timestamp
+    snapshot_time = Column(String(30), nullable=False)
+    
+    # Relationships
+    session = relationship("PaperTradingSession")
+
+
+class MarketDataSnapshot(BaseModel):
+    """
+    Market data snapshot for paper trading.
+    """
+    __tablename__ = "market_data_snapshots"
+    
+    # Market data
+    symbol = Column(String(50), nullable=False, index=True)
+    price = Column(DECIMAL(20, 8), nullable=False)
+    bid = Column(DECIMAL(20, 8))
+    ask = Column(DECIMAL(20, 8))
+    volume = Column(DECIMAL(20, 8))
+    
+    # Timestamp
+    timestamp = Column(String(30), nullable=False, index=True)
+    
+    # Market context
+    market_data = Column(JSON, default=dict)

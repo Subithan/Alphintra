@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, Dict, Any, List
-from sqlalchemy import Column, Integer, String, Decimal, DateTime, ForeignKey, Boolean, Text, JSON, Float
+from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, ForeignKey, Boolean, Text, JSON, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -57,14 +57,14 @@ class ExecutionEnvironment(Base):
     api_credentials = Column(JSON, default=dict)  # Encrypted
     
     # Trading parameters
-    default_commission_rate = Column(Decimal(8, 6), default=0.001)
-    default_slippage_rate = Column(Decimal(8, 6), default=0.0001)
+    default_commission_rate = Column(DECIMAL(8, 6), default=0.001)
+    default_slippage_rate = Column(DECIMAL(8, 6), default=0.0001)
     max_leverage = Column(Float, default=1.0)
     
     # Risk limits
-    max_daily_loss = Column(Decimal(15, 2))
-    max_position_size = Column(Decimal(15, 2))
-    max_order_size = Column(Decimal(15, 2))
+    max_daily_loss = Column(DECIMAL(15, 2))
+    max_position_size = Column(DECIMAL(15, 2))
+    max_order_size = Column(DECIMAL(15, 2))
     
     # Execution settings
     order_timeout_seconds = Column(Integer, default=300)
@@ -98,8 +98,8 @@ class StrategyExecution(Base):
     description = Column(Text)
     
     # Capital allocation
-    allocated_capital = Column(Decimal(15, 2), nullable=False)
-    current_capital = Column(Decimal(15, 2))
+    allocated_capital = Column(DECIMAL(15, 2), nullable=False)
+    current_capital = Column(DECIMAL(15, 2))
     
     # Trading parameters
     symbols = Column(JSON, nullable=False)  # List of symbols to trade
@@ -108,10 +108,10 @@ class StrategyExecution(Base):
     position_size_config = Column(JSON, default=dict)
     
     # Risk management
-    max_position_size = Column(Decimal(15, 2))
-    max_daily_loss = Column(Decimal(15, 2))
-    stop_loss_pct = Column(Decimal(8, 4))
-    take_profit_pct = Column(Decimal(8, 4))
+    max_position_size = Column(DECIMAL(15, 2))
+    max_daily_loss = Column(DECIMAL(15, 2))
+    stop_loss_pct = Column(DECIMAL(8, 4))
+    take_profit_pct = Column(DECIMAL(8, 4))
     
     # Execution status
     status = Column(String(20), nullable=False, default="inactive")
@@ -121,9 +121,9 @@ class StrategyExecution(Base):
     last_execution_time = Column(DateTime)
     
     # Performance tracking
-    total_pnl = Column(Decimal(15, 2), default=0)
-    realized_pnl = Column(Decimal(15, 2), default=0)
-    unrealized_pnl = Column(Decimal(15, 2), default=0)
+    total_pnl = Column(DECIMAL(15, 2), default=0)
+    realized_pnl = Column(DECIMAL(15, 2), default=0)
+    unrealized_pnl = Column(DECIMAL(15, 2), default=0)
     total_trades = Column(Integer, default=0)
     winning_trades = Column(Integer, default=0)
     
@@ -140,7 +140,7 @@ class StrategyExecution(Base):
     
     # Configuration
     config = Column(JSON, default=dict)
-    metadata = Column(JSON, default=dict)
+    extra_metadata = Column(JSON, default=dict)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -173,14 +173,14 @@ class ExecutionSignal(Base):
     
     # Signal details
     action = Column(String(20), nullable=False)  # buy, sell, hold
-    quantity = Column(Decimal(15, 8))
-    price = Column(Decimal(15, 8))
+    quantity = Column(DECIMAL(15, 8))
+    price = Column(DECIMAL(15, 8))
     confidence = Column(Float)  # 0.0 to 1.0
     
     # Risk parameters
-    stop_loss = Column(Decimal(15, 8))
-    take_profit = Column(Decimal(15, 8))
-    position_size_pct = Column(Decimal(8, 4))
+    stop_loss = Column(DECIMAL(15, 8))
+    take_profit = Column(DECIMAL(15, 8))
+    position_size_pct = Column(DECIMAL(8, 4))
     
     # Signal context
     indicators = Column(JSON, default=dict)  # Technical indicator values
@@ -200,7 +200,7 @@ class ExecutionSignal(Base):
     # Metadata
     strategy_version = Column(String(50))
     model_version = Column(String(50))
-    metadata = Column(JSON, default=dict)
+    extra_metadata = Column(JSON, default=dict)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -227,20 +227,20 @@ class ExecutionOrder(Base):
     symbol = Column(String(20), nullable=False, index=True)
     side = Column(String(10), nullable=False)  # buy, sell
     order_type = Column(String(20), nullable=False)  # market, limit, stop
-    quantity = Column(Decimal(15, 8), nullable=False)
-    price = Column(Decimal(15, 8))
-    stop_price = Column(Decimal(15, 8))
+    quantity = Column(DECIMAL(15, 8), nullable=False)
+    price = Column(DECIMAL(15, 8))
+    stop_price = Column(DECIMAL(15, 8))
     
     # Execution details
     status = Column(String(20), nullable=False, default="pending")
-    filled_quantity = Column(Decimal(15, 8), default=0)
-    remaining_quantity = Column(Decimal(15, 8))
-    avg_fill_price = Column(Decimal(15, 8))
+    filled_quantity = Column(DECIMAL(15, 8), default=0)
+    remaining_quantity = Column(DECIMAL(15, 8))
+    avg_fill_price = Column(DECIMAL(15, 8))
     
     # Costs
-    commission = Column(Decimal(10, 4), default=0)
-    slippage = Column(Decimal(10, 4), default=0)
-    total_cost = Column(Decimal(15, 2))
+    commission = Column(DECIMAL(10, 4), default=0)
+    slippage = Column(DECIMAL(10, 4), default=0)
+    total_cost = Column(DECIMAL(15, 2))
     
     # Timing
     submitted_at = Column(DateTime, nullable=False)
@@ -262,7 +262,7 @@ class ExecutionOrder(Base):
     retry_count = Column(Integer, default=0)
     
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_metadata = Column(JSON, default=dict)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -285,22 +285,22 @@ class ExecutionPosition(Base):
     # Position details
     symbol = Column(String(20), nullable=False, index=True)
     side = Column(String(10), nullable=False)  # long, short
-    quantity = Column(Decimal(15, 8), nullable=False)
+    quantity = Column(DECIMAL(15, 8), nullable=False)
     
-    # Cost basis
-    avg_entry_price = Column(Decimal(15, 8), nullable=False)
-    total_cost = Column(Decimal(15, 2), nullable=False)
+    # Entry details
+    avg_entry_price = Column(DECIMAL(15, 8), nullable=False)
+    total_cost = Column(DECIMAL(15, 2), nullable=False)
     
     # Current valuation
-    current_price = Column(Decimal(15, 8))
-    market_value = Column(Decimal(15, 2))
-    unrealized_pnl = Column(Decimal(15, 2), default=0)
-    unrealized_pnl_pct = Column(Decimal(8, 4), default=0)
+    current_price = Column(DECIMAL(15, 8))
+    market_value = Column(DECIMAL(15, 2))
+    unrealized_pnl = Column(DECIMAL(15, 2), default=0)
+    unrealized_pnl_pct = Column(DECIMAL(8, 4), default=0)
     
     # Risk management
-    stop_loss_price = Column(Decimal(15, 8))
-    take_profit_price = Column(Decimal(15, 8))
-    trailing_stop_pct = Column(Decimal(8, 4))
+    stop_loss_price = Column(DECIMAL(15, 8))
+    take_profit_price = Column(DECIMAL(15, 8))
+    trailing_stop_pct = Column(DECIMAL(8, 4))
     
     # Position tracking
     opened_at = Column(DateTime, nullable=False)
@@ -309,8 +309,8 @@ class ExecutionPosition(Base):
     closed_at = Column(DateTime)
     
     # Performance (when closed)
-    realized_pnl = Column(Decimal(15, 2))
-    realized_pnl_pct = Column(Decimal(8, 4))
+    realized_pnl = Column(DECIMAL(15, 2))
+    realized_pnl_pct = Column(DECIMAL(8, 4))
     holding_period_hours = Column(Integer)
     
     # Strategy context
@@ -320,7 +320,7 @@ class ExecutionPosition(Base):
     exit_reason = Column(String(255))
     
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_metadata = Column(JSON, default=dict)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -342,20 +342,20 @@ class ExecutionPositionUpdate(Base):
     
     # Update details
     update_type = Column(String(20), nullable=False)  # open, add, reduce, close
-    quantity_change = Column(Decimal(15, 8), nullable=False)
-    price = Column(Decimal(15, 8), nullable=False)
+    quantity_change = Column(DECIMAL(15, 8), nullable=False)
+    price = Column(DECIMAL(15, 8), nullable=False)
     
     # Position state after update
-    new_quantity = Column(Decimal(15, 8), nullable=False)
-    new_avg_price = Column(Decimal(15, 8), nullable=False)
-    new_market_value = Column(Decimal(15, 2), nullable=False)
+    new_quantity = Column(DECIMAL(15, 8), nullable=False)
+    new_avg_price = Column(DECIMAL(15, 8), nullable=False)
+    new_market_value = Column(DECIMAL(15, 2), nullable=False)
     
     # PnL impact
-    realized_pnl = Column(Decimal(15, 2), default=0)
-    unrealized_pnl_change = Column(Decimal(15, 2), default=0)
+    realized_pnl = Column(DECIMAL(15, 2), default=0)
+    unrealized_pnl_change = Column(DECIMAL(15, 2), default=0)
     
     # Metadata
-    metadata = Column(JSON, default=dict)
+    extra_metadata = Column(JSON, default=dict)
     
     # Timestamp
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -378,22 +378,22 @@ class ExecutionMetrics(Base):
     period_type = Column(String(20), nullable=False)  # minute, hour, day
     
     # Portfolio metrics
-    total_value = Column(Decimal(15, 2), nullable=False)
-    cash_balance = Column(Decimal(15, 2), nullable=False)
-    positions_value = Column(Decimal(15, 2), nullable=False)
+    total_value = Column(DECIMAL(15, 2), nullable=False)
+    cash_balance = Column(DECIMAL(15, 2), nullable=False)
+    positions_value = Column(DECIMAL(15, 2), nullable=False)
     
     # Performance metrics
-    period_pnl = Column(Decimal(15, 2), default=0)
-    period_return_pct = Column(Decimal(8, 4), default=0)
-    cumulative_pnl = Column(Decimal(15, 2), default=0)
-    cumulative_return_pct = Column(Decimal(8, 4), default=0)
+    period_pnl = Column(DECIMAL(15, 2), default=0)
+    period_return_pct = Column(DECIMAL(8, 4), default=0)
+    cumulative_pnl = Column(DECIMAL(15, 2), default=0)
+    cumulative_return_pct = Column(DECIMAL(8, 4), default=0)
     
     # Risk metrics
-    max_drawdown = Column(Decimal(8, 4), default=0)
-    current_drawdown = Column(Decimal(8, 4), default=0)
-    volatility = Column(Decimal(8, 4))
+    max_drawdown = Column(DECIMAL(8, 4), default=0)
+    current_drawdown = Column(DECIMAL(8, 4), default=0)
+    volatility = Column(DECIMAL(8, 4))
     sharpe_ratio = Column(Float)
-    var_95 = Column(Decimal(15, 2))  # Value at Risk 95%
+    var_95 = Column(DECIMAL(15, 2))  # Value at Risk 95%
     
     # Trading activity
     signals_generated = Column(Integer, default=0)
@@ -404,12 +404,12 @@ class ExecutionMetrics(Base):
     # Execution quality
     avg_fill_latency_ms = Column(Integer)
     avg_slippage_bps = Column(Integer)  # Basis points
-    fill_rate_pct = Column(Decimal(8, 4))
+    fill_rate_pct = Column(DECIMAL(8, 4))
     
     # Position metrics
     active_positions = Column(Integer, default=0)
     avg_position_duration_hours = Column(Float)
-    win_rate_pct = Column(Decimal(8, 4))
+    win_rate_pct = Column(DECIMAL(8, 4))
     profit_factor = Column(Float)
     
     # System metrics

@@ -7,10 +7,11 @@ from enum import Enum as PyEnum
 from typing import Dict, Any, List, Optional
 
 from sqlalchemy import Column, String, Text, Boolean, Integer, Float, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel, UserMixin, MetadataMixin
+from app.models.types import StringArray, IntegerArray
 
 
 class StrategyStatus(PyEnum):
@@ -50,7 +51,7 @@ class Strategy(BaseModel, UserMixin, MetadataMixin):
     sdk_version = Column(String(50), nullable=False)
     parameters = Column(JSON, default=dict)
     status = Column(Enum(StrategyStatus), default=StrategyStatus.DRAFT, nullable=False, index=True)
-    tags = Column(ARRAY(String), default=list)
+    tags = Column(StringArray(), default=list)
     
     # Performance metrics (if backtested)
     total_return = Column(Float)
@@ -81,7 +82,7 @@ class StrategyTemplate(BaseModel, MetadataMixin):
     author_id = Column(UUID(as_uuid=True), nullable=False)
     usage_count = Column(Integer, default=0, nullable=False)
     rating = Column(Float, default=0.0)
-    tags = Column(ARRAY(String), default=list)
+    tags = Column(StringArray(), default=list)
 
 
 class DebugSession(BaseModel, UserMixin):
@@ -94,7 +95,7 @@ class DebugSession(BaseModel, UserMixin):
     dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     start_date = Column(String(20), nullable=False)  # ISO date string
     end_date = Column(String(20), nullable=False)    # ISO date string
-    breakpoints = Column(ARRAY(Integer), default=list)
+    breakpoints = Column(IntegerArray(), default=list)
     variables = Column(JSON, default=dict)
     status = Column(Enum(DebugStatus), default=DebugStatus.ACTIVE, nullable=False)
     current_timestamp = Column(String(20))  # Current position in debug session

@@ -47,7 +47,47 @@ class TrainingJobRequest(BaseModel):
     priority: TrainingPriority = Field(default=TrainingPriority.NORMAL)
     hyperparameters: Dict[str, Any] = Field(default_factory=dict)
     training_config: Dict[str, Any] = Field(default_factory=dict)
-    model_config: Dict[str, Any] = Field(default_factory=dict)
+    ml_model_config: Dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkflowTrainingRequest(BaseModel):
+    workflow_id: int = Field(..., description="No-code workflow ID")
+    workflow_name: str = Field(..., min_length=1, max_length=255)
+    workflow_definition: Dict[str, Any] = Field(..., description="Visual workflow definition (nodes/edges)")
+    training_config: Dict[str, Any] = Field(default_factory=dict, description="Training configuration from no-code service")
+    dataset_id: Optional[str] = Field(None, description="Dataset ID override")
+    instance_type: InstanceType = Field(default=InstanceType.CPU_MEDIUM, description="Compute instance type")
+    timeout_hours: int = Field(default=12, ge=1, le=48, description="Training timeout in hours")
+    priority: TrainingPriority = Field(default=TrainingPriority.NORMAL)
+    optimization_objective: str = Field(default="sharpe_ratio", description="Metric to optimize")
+    max_trials: int = Field(default=50, ge=1, le=500, description="Maximum optimization trials")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "workflow_id": 123,
+                "workflow_name": "RSI Strategy Optimization",
+                "workflow_definition": {
+                    "nodes": [
+                        {"id": "data-1", "type": "dataSource", "data": {"symbol": "BTCUSDT"}},
+                        {"id": "rsi-1", "type": "technicalIndicator", "data": {"indicator": "rsi", "period": 14}},
+                        {"id": "condition-1", "type": "condition", "data": {"threshold": 30, "operator": "<"}},
+                        {"id": "action-1", "type": "action", "data": {"signal": "buy", "quantity": 100}}
+                    ],
+                    "edges": [
+                        {"source": "data-1", "target": "rsi-1"},
+                        {"source": "rsi-1", "target": "condition-1"},
+                        {"source": "condition-1", "target": "action-1"}
+                    ]
+                },
+                "training_config": {
+                    "optimization_parameters": ["rsi_period", "buy_threshold", "sell_threshold"],
+                    "parameter_bounds": {"rsi_period": [10, 20], "buy_threshold": [20, 35], "sell_threshold": [65, 80]}
+                },
+                "optimization_objective": "sharpe_ratio",
+                "max_trials": 100
+            }
+        }
 
 
 class HyperparameterTuningRequest(BaseModel):
@@ -88,7 +128,7 @@ class TrialResultData(BaseModel):
 class ResourceRecommendationRequest(BaseModel):
     job_type: str = Field(default="training")
     dataset_size_mb: float = Field(default=100, ge=1)
-    model_complexity: str = Field(default="medium", regex="^(low|medium|high)$")
+    model_complexity: str = Field(default="medium", pattern="^(low|medium|high)$")
     estimated_duration_hours: float = Field(default=4, ge=0.1, le=72)
     priority: TrainingPriority = Field(default=TrainingPriority.NORMAL)
     max_budget: Optional[float] = Field(None, ge=0)
@@ -123,6 +163,92 @@ async def create_training_job(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
+        )
+
+
+@router.post("/from-workflow", status_code=status.HTTP_201_CREATED)
+async def create_training_from_workflow(
+    request: WorkflowTrainingRequest,
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    _: UUID = Depends(rate_limit)
+):
+    """Create a training job from a no-code workflow definition."""
+    try:
+        # Validate workflow definition structure
+        workflow_def = request.workflow_definition
+        if not workflow_def or "nodes" not in workflow_def or "edges" not in workflow_def:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid workflow definition: must contain 'nodes' and 'edges'"
+            )
+        
+        # Check for required node types
+        nodes = workflow_def["nodes"]
+        node_types = {node.get("type") for node in nodes}
+        
+        required_types = {"dataSource", "technicalIndicator", "condition", "action"}
+        missing_types = required_types - node_types
+        if missing_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Workflow missing required node types: {', '.join(missing_types)}"
+            )
+        
+        # Prepare training job data
+        training_job_data = {
+            "job_name": f"Workflow_{request.workflow_name}_{request.workflow_id}",
+            "job_type": JobType.TRAINING.value,
+            "instance_type": request.instance_type.value,
+            "timeout_hours": request.timeout_hours,
+            "priority": request.priority.value,
+            "user_id": str(user_id),
+            "workflow_metadata": {
+                "workflow_id": request.workflow_id,
+                "workflow_name": request.workflow_name,
+                "workflow_definition": request.workflow_definition,
+                "training_config": request.training_config,
+                "optimization_objective": request.optimization_objective,
+                "max_trials": request.max_trials
+            }
+        }
+        
+        # Generate dataset ID if not provided
+        if not request.dataset_id:
+            # Extract symbol from dataSource nodes for dataset identification
+            data_sources = [node for node in nodes if node.get("type") == "dataSource"]
+            if data_sources:
+                symbol = data_sources[0].get("data", {}).get("symbol", "default")
+                training_job_data["dataset_id"] = f"platform_{symbol.lower()}_1d"
+            else:
+                training_job_data["dataset_id"] = "platform_default_1d"
+        else:
+            training_job_data["dataset_id"] = request.dataset_id
+        
+        # Create training job using existing manager
+        result = await training_manager.create_training_job(training_job_data, str(user_id), db)
+        
+        if result.get("success"):
+            # Add workflow-specific response data
+            result["workflow_info"] = {
+                "workflow_id": request.workflow_id,
+                "workflow_name": request.workflow_name,
+                "optimization_objective": request.optimization_objective,
+                "max_trials": request.max_trials
+            }
+            return result
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result.get("error", "Failed to create training job from workflow")
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating training job from workflow: {str(e)}"
         )
 
 
