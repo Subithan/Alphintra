@@ -29,9 +29,12 @@ import { LogicNode } from './nodes/LogicNode';
 import { RiskManagementNode } from './nodes/RiskManagementNode';
 import { SmartEdge } from './edges/SmartEdge';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
+import { useExecutionStore } from '@/lib/stores/execution-store';
 import { connectionManager } from '@/lib/connection-manager';
+import { validateWorkflow, ValidationResult } from '@/lib/workflow-validation';
 import { ConfigurationPanel } from './ConfigurationPanel';
-import { X } from 'lucide-react';
+import { ExecutionModeSelector } from './ExecutionModeSelector';
+import { X, AlertTriangle, CheckCircle, Info, Play, Save } from 'lucide-react';
 import { Button } from '@/components/ui/no-code/button';
 
 const nodeTypes = {
@@ -62,7 +65,12 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [modalSelectedNode, setModalSelectedNode] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [showValidationPanel, setShowValidationPanel] = useState(false);
+  const [showExecutionModal, setShowExecutionModal] = useState(false);
+  const [isWorkflowSaved, setIsWorkflowSaved] = useState(false);
   const { currentWorkflow, updateWorkflow, addNode, removeNode } = useNoCodeStore();
+  const { openExecutionModal, closeExecutionModal, isExecutionModalOpen } = useExecutionStore();
   const { screenToFlowPosition } = useReactFlow();
   
   // Use ReactFlow state as primary, sync to store when needed
@@ -76,6 +84,67 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
       setEdges(currentWorkflow.edges);
     }
   }, [currentWorkflow?.nodes?.length, currentWorkflow?.edges?.length, setNodes, setEdges]);
+
+  // Run validation when workflow changes
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      const result = validateWorkflow(nodes, edges);
+      setValidationResult(result);
+    } else {
+      setValidationResult(null);
+    }
+  }, [nodes, edges]);
+
+  // Validate connection before ReactFlow attempts to create it
+  const isValidConnection = useCallback(
+    (connection: Connection) => {
+      // Find source and target nodes for validation
+      const sourceNode = nodes.find(n => n.id === connection.source);
+      const targetNode = nodes.find(n => n.id === connection.target);
+      
+      if (!sourceNode || !targetNode) {
+        console.warn('Source or target node not found for validation');
+        return false;
+      }
+
+      // For technical indicators, check if the handle should exist based on the indicator type
+      if (sourceNode.type === 'technicalIndicator' && connection.sourceHandle) {
+        const indicator = sourceNode.data?.parameters?.indicator;
+        console.log(`🔍 Checking handle ${connection.sourceHandle} for indicator ${indicator}`);
+        
+        // List of valid handles for each indicator (full handle IDs)
+        const validHandles: Record<string, string[]> = {
+          'ADX': ['adx-output', 'di_plus-output', 'di_minus-output'],
+          'BB': ['upper-output', 'middle-output', 'lower-output', 'width-output'],
+          'MACD': ['macd-output', 'signal-output', 'histogram-output'],
+          'STOCH': ['k-output', 'd-output'],
+          'Stochastic': ['k-output', 'd-output'],
+        };
+
+        const expectedHandles = validHandles[indicator] || ['value-output', 'signal-output'];
+        if (!expectedHandles.includes(connection.sourceHandle)) {
+          console.warn(`Handle ${connection.sourceHandle} not valid for indicator ${indicator}`);
+          return false;
+        }
+      }
+
+      // Validate connection using connection manager
+      const validation = connectionManager.validateConnection(
+        sourceNode,
+        connection.sourceHandle || 'default',
+        targetNode,
+        connection.targetHandle || 'default'
+      );
+
+      if (!validation.valid) {
+        console.warn('Invalid connection attempt:', validation.reason);
+        return false;
+      }
+
+      return true;
+    },
+    [nodes]
+  );
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -100,7 +169,6 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
 
       if (!validation.valid) {
         console.warn('Invalid connection:', validation.reason);
-        // You could show a toast notification here
         return;
       }
 
@@ -111,7 +179,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
         target: params.target!,
         sourceHandle: params.sourceHandle,
         targetHandle: params.targetHandle,
-        type: 'smart', // Use our custom smart edge
+        type: 'smart',
         markerEnd: { type: MarkerType.ArrowClosed },
         ...connectionManager.getConnectionStyle(validation.rule),
         animated: validation.rule?.dataType === 'signal',
@@ -345,8 +413,233 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
     }
   }, []);
 
+  const getValidationIcon = () => {
+    if (!validationResult) return null;
+    
+    if (validationResult.errors.length > 0) {
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    } else if (validationResult.warnings.length > 0) {
+      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+    } else {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    }
+  };
+
+  const getValidationStatus = () => {
+    if (!validationResult) return 'No validation';
+    
+    if (validationResult.errors.length > 0) {
+      return `${validationResult.errors.length} error${validationResult.errors.length > 1 ? 's' : ''}`;
+    } else if (validationResult.warnings.length > 0) {
+      return `${validationResult.warnings.length} warning${validationResult.warnings.length > 1 ? 's' : ''}`;
+    } else {
+      return 'Valid workflow';
+    }
+  };
+
+  const handleSaveWorkflow = useCallback(async () => {
+    try {
+      // Save current workflow state
+      updateWorkflow({ nodes, edges });
+      
+      // Here you would typically make an API call to save to backend
+      // For now, we'll just update the local state
+      setIsWorkflowSaved(true);
+      
+      // Reset save status after a delay
+      setTimeout(() => setIsWorkflowSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to save workflow:', error);
+    }
+  }, [nodes, edges, updateWorkflow]);
+
+  const handleExecuteWorkflow = useCallback(() => {
+    // First validate the workflow
+    if (!validationResult || validationResult.errors.length > 0) {
+      alert('Please fix all validation errors before executing the workflow.');
+      return;
+    }
+
+    // Save the workflow before execution
+    handleSaveWorkflow();
+    
+    // Show execution mode selector
+    setShowExecutionModal(true);
+  }, [validationResult, handleSaveWorkflow]);
+
+  const handleModeSelect = useCallback(async (mode: 'strategy' | 'model', config: any) => {
+    try {
+      // Mock workflow ID - in real implementation, this would come from saved workflow
+      const workflowId = currentWorkflow?.id || Date.now();
+      
+      const response = await fetch(`/api/workflows/${workflowId}/execution-mode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mode,
+          config
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to execute workflow');
+      }
+
+      const result = await response.json();
+      
+      // Handle different execution modes
+      if (mode === 'strategy') {
+        // Redirect to strategy results or show strategy code
+        console.log('Strategy execution result:', result);
+        alert('Strategy generated successfully! Check the console for details.');
+      } else {
+        // Redirect to training dashboard
+        console.log('Training job created:', result);
+        // In a real app, you'd navigate to the training dashboard
+        alert(`Training job created with ID: ${result.training_job_id}`);
+      }
+      
+      setShowExecutionModal(false);
+    } catch (error) {
+      console.error('Execution failed:', error);
+      alert('Failed to execute workflow. Please try again.');
+    }
+  }, [currentWorkflow]);
+
+  const isWorkflowExecutable = () => {
+    return nodes.length > 0 && 
+           validationResult && 
+           validationResult.errors.length === 0;
+  };
+
   return (
     <div className="w-full h-full relative" suppressHydrationWarning>
+      {/* Toolbar */}
+      <div className="absolute top-4 right-4 z-40 flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSaveWorkflow}
+          disabled={nodes.length === 0}
+          className="flex items-center space-x-1"
+        >
+          <Save className="h-4 w-4" />
+          <span>{isWorkflowSaved ? 'Saved!' : 'Save'}</span>
+        </Button>
+        
+        <Button
+          variant="default"
+          size="sm"
+          onClick={handleExecuteWorkflow}
+          disabled={!isWorkflowExecutable()}
+          className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700"
+        >
+          <Play className="h-4 w-4" />
+          <span>Execute Workflow</span>
+        </Button>
+      </div>
+
+      {/* Validation Status Bar */}
+      {validationResult && (
+        <div className="absolute top-4 left-4 z-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 shadow-lg">
+          <div className="flex items-center space-x-2">
+            {getValidationIcon()}
+            <span className="text-sm font-medium">{getValidationStatus()}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowValidationPanel(!showValidationPanel)}
+              className="h-6 px-2 text-xs"
+            >
+              {showValidationPanel ? 'Hide' : 'Details'}
+            </Button>
+          </div>
+          
+          {/* Performance Metrics */}
+          {validationResult.performance && (
+            <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              Complexity: {validationResult.performance.estimatedComplexity} | 
+              Logic Depth: {validationResult.performance.logicDepth} | 
+              Indicators: {validationResult.performance.indicatorCount}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Validation Panel */}
+      {showValidationPanel && validationResult && (
+        <div className="absolute top-20 left-4 z-40 w-96 max-h-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-sm">Workflow Validation</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowValidationPanel(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="overflow-y-auto max-h-80">
+            {/* Errors */}
+            {validationResult.errors.length > 0 && (
+              <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-medium text-red-600 dark:text-red-400 mb-2">
+                  Errors ({validationResult.errors.length})
+                </h4>
+                {validationResult.errors.map((error, index) => (
+                  <div key={index} className="mb-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs">
+                    <div className="font-medium text-red-800 dark:text-red-300">{error.message}</div>
+                    {error.suggestion && (
+                      <div className="text-red-600 dark:text-red-400 mt-1">{error.suggestion}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Warnings */}
+            {validationResult.warnings.length > 0 && (
+              <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">
+                  Warnings ({validationResult.warnings.length})
+                </h4>
+                {validationResult.warnings.map((warning, index) => (
+                  <div key={index} className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs">
+                    <div className="font-medium text-yellow-800 dark:text-yellow-300">{warning.message}</div>
+                    {warning.suggestion && (
+                      <div className="text-yellow-600 dark:text-yellow-400 mt-1">{warning.suggestion}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Suggestions */}
+            {validationResult.suggestions && validationResult.suggestions.length > 0 && (
+              <div className="p-3">
+                <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
+                  Suggestions ({validationResult.suggestions.length})
+                </h4>
+                {validationResult.suggestions.map((suggestion, index) => (
+                  <div key={index} className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
+                    <div className="font-medium text-blue-800 dark:text-blue-300">{suggestion.message}</div>
+                    <div className="text-blue-600 dark:text-blue-400 mt-1 capitalize">
+                      {suggestion.type} • Priority: {suggestion.priority}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {isDragOver && (
         <div className="absolute inset-0 bg-blue-100/20 dark:bg-blue-900/20 border-2 border-dashed border-blue-400 dark:border-blue-600 z-50 flex items-center justify-center pointer-events-none">
           <div className="bg-blue-50 dark:bg-blue-900/50 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-700">
@@ -461,6 +754,55 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                   } else {
                     handleCloseModal();
                   }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Execution Mode Selector Modal */}
+      {showExecutionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in-0 duration-200">
+          {/* Background Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-in fade-in-0 duration-200"
+            onClick={() => setShowExecutionModal(false)}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-[95vw] max-w-6xl max-h-[95vh] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Execute Workflow</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowExecutionModal(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="overflow-y-auto max-h-[calc(95vh-120px)] p-6">
+              <ExecutionModeSelector
+                workflowId={currentWorkflow?.id || Date.now()}
+                workflowName={currentWorkflow?.name || 'Untitled Workflow'}
+                workflowComplexity={
+                  validationResult?.performance?.estimatedComplexity === 'high' ? 'complex' :
+                  validationResult?.performance?.estimatedComplexity === 'medium' ? 'medium' : 'simple'
+                }
+                onModeSelect={handleModeSelect}
+                onCancel={() => setShowExecutionModal(false)}
+                estimatedDuration={{
+                  strategy: '< 1 minute',
+                  model: validationResult?.performance?.estimatedComplexity === 'complex' ? '8-24 hours' :
+                         validationResult?.performance?.estimatedComplexity === 'medium' ? '2-8 hours' : '1-4 hours'
                 }}
               />
             </div>

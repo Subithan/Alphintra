@@ -100,6 +100,7 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
           { id: 'histogram', label: 'Histogram', color: 'bg-orange-500', position: 75 }
         );
         break;
+      case 'STOCH': // Stochastic
       case 'Stochastic':
         outputs.push(
           { id: 'k', label: '%K', color: 'bg-blue-500', position: 35 },
@@ -111,6 +112,65 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
           { id: 'adx', label: 'ADX', color: 'bg-blue-500', position: 25 },
           { id: 'di_plus', label: 'DI+', color: 'bg-green-500', position: 50 },
           { id: 'di_minus', label: 'DI-', color: 'bg-red-500', position: 75 }
+        );
+        break;
+      case 'KC': // Keltner Channels
+        outputs.push(
+          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 25 },
+          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 50 },
+          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 75 }
+        );
+        break;
+      case 'DC': // Donchian Channels
+        outputs.push(
+          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 25 },
+          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 50 },
+          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 75 }
+        );
+        break;
+      case 'AROON':
+        outputs.push(
+          { id: 'aroon_up', label: 'Aroon Up', color: 'bg-green-500', position: 35 },
+          { id: 'aroon_down', label: 'Aroon Down', color: 'bg-red-500', position: 65 }
+        );
+        break;
+      case 'STOCHRSI': // Stochastic RSI
+        outputs.push(
+          { id: 'k', label: '%K', color: 'bg-blue-500', position: 35 },
+          { id: 'd', label: '%D', color: 'bg-green-500', position: 65 }
+        );
+        break;
+      case 'DMI': // Directional Movement Index
+        outputs.push(
+          { id: 'dmi_plus', label: 'DMI+', color: 'bg-green-500', position: 25 },
+          { id: 'dmi_minus', label: 'DMI-', color: 'bg-red-500', position: 50 },
+          { id: 'adx', label: 'ADX', color: 'bg-blue-500', position: 75 }
+        );
+        break;
+      case 'PPO': // Percentage Price Oscillator
+        outputs.push(
+          { id: 'ppo', label: 'PPO', color: 'bg-blue-500', position: 25 },
+          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 50 },
+          { id: 'histogram', label: 'Histogram', color: 'bg-orange-500', position: 75 }
+        );
+        break;
+      case 'TSI': // True Strength Index
+        outputs.push(
+          { id: 'tsi', label: 'TSI', color: 'bg-blue-500', position: 35 },
+          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 65 }
+        );
+        break;
+      case 'KDJ':
+        outputs.push(
+          { id: 'k', label: '%K', color: 'bg-blue-500', position: 25 },
+          { id: 'd', label: '%D', color: 'bg-green-500', position: 50 },
+          { id: 'j', label: '%J', color: 'bg-orange-500', position: 75 }
+        );
+        break;
+      case 'VORTEX':
+        outputs.push(
+          { id: 'vi_plus', label: 'VI+', color: 'bg-green-500', position: 35 },
+          { id: 'vi_minus', label: 'VI-', color: 'bg-red-500', position: 65 }
         );
         break;
       default:
@@ -126,7 +186,10 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
   const availableOutputs = getAvailableOutputs();
 
   return (
-    <Card className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} suppressHydrationWarning>
+    <Card 
+      className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} 
+      suppressHydrationWarning
+    >
       <CardContent className="p-3">
         <div className="flex items-center space-x-2 mb-2">
           {getCategoryIcon(indicatorCategory)}
@@ -165,32 +228,71 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
           style={{ left: -6 }}
         />
 
-        {/* Dynamic Output Handles */}
-        {availableOutputs.map((output, index) => (
-          <React.Fragment key={output.id}>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={`${output.id}-output`}
-              className={`w-3 h-3 ${output.color.replace('bg-', 'bg-')}`}
-              style={{ 
-                right: -6, 
-                top: `${output.position}%`
-              }}
-            />
-            {/* Output label */}
-            <div
-              className="absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none"
-              style={{
-                right: -45,
-                top: `calc(${output.position}% - 8px)`,
-                fontSize: '10px'
-              }}
-            >
-              {output.label}
-            </div>
-          </React.Fragment>
-        ))}
+        {/* 4 STATIC OUTPUT HANDLES - ALWAYS PRESENT FOR ALL TECHNICAL INDICATORS */}
+        
+        {/* Output 1 - Always at 25% */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="output-1"
+          className={`w-3 h-3 ${availableOutputs[0] ? availableOutputs[0].color : 'opacity-0 pointer-events-none'}`}
+          style={{ 
+            right: -6, 
+            top: '25%'
+          }}
+        />
+        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[0] ? '' : 'opacity-0'}`} 
+             style={{ right: -45, top: 'calc(25% - 8px)', fontSize: '10px' }}>
+          {availableOutputs[0] ? availableOutputs[0].label : ''}
+        </div>
+        
+        {/* Output 2 - Always at 50% */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="output-2"
+          className={`w-3 h-3 ${availableOutputs[1] ? availableOutputs[1].color : 'opacity-0 pointer-events-none'}`}
+          style={{ 
+            right: -6, 
+            top: '50%'
+          }}
+        />
+        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[1] ? '' : 'opacity-0'}`} 
+             style={{ right: -45, top: 'calc(50% - 8px)', fontSize: '10px' }}>
+          {availableOutputs[1] ? availableOutputs[1].label : ''}
+        </div>
+        
+        {/* Output 3 - Always at 75% */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="output-3"
+          className={`w-3 h-3 ${availableOutputs[2] ? availableOutputs[2].color : 'opacity-0 pointer-events-none'}`}
+          style={{ 
+            right: -6, 
+            top: '75%'
+          }}
+        />
+        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[2] ? '' : 'opacity-0'}`} 
+             style={{ right: -45, top: 'calc(75% - 8px)', fontSize: '10px' }}>
+          {availableOutputs[2] ? availableOutputs[2].label : ''}
+        </div>
+        
+        {/* Output 4 - Always at 90% */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="output-4"
+          className={`w-3 h-3 ${availableOutputs[3] ? availableOutputs[3].color : 'opacity-0 pointer-events-none'}`}
+          style={{ 
+            right: -6, 
+            top: '90%'
+          }}
+        />
+        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[3] ? '' : 'opacity-0'}`} 
+             style={{ right: -45, top: 'calc(90% - 8px)', fontSize: '10px' }}>
+          {availableOutputs[3] ? availableOutputs[3].label : ''}
+        </div>
       </CardContent>
     </Card>
   );

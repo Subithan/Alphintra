@@ -53,6 +53,10 @@ class NoCodeWorkflow(Base):
     deployment_status = Column(String(20), default='draft')
     execution_mode = Column(String(20), default='backtest')
     
+    # New fields for dual-mode execution
+    execution_metadata = Column(JSON, default={})
+    aiml_training_job_id = Column(String, nullable=True)
+    
     # Versioning
     version = Column(Integer, default=1)
     parent_workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"))
@@ -316,6 +320,23 @@ class WorkflowExecution(Base):
     start_time = Column(DateTime)
     end_time = Column(DateTime)
     created_at = Column(DateTime, default=func.now())
+
+class ExecutionHistory(Base):
+    __tablename__ = "execution_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, index=True)
+    workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"), nullable=False, index=True)
+    execution_mode = Column(String(20), nullable=False)  # 'strategy' | 'model'
+    status = Column(String(20), nullable=False)  # 'pending', 'running', 'completed', 'failed'
+    execution_config = Column(JSON, default={})
+    results = Column(JSON, default={})
+    error_logs = Column(JSON, default=[])
+    created_at = Column(DateTime, server_default=func.now())
+    completed_at = Column(DateTime)
+    
+    # Relationships
+    workflow = relationship("NoCodeWorkflow")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

@@ -8,22 +8,36 @@ import { TemplateLibrary } from '@/components/no-code/TemplateLibrary';
 import { ClientOnly } from '@/components/no-code/ClientOnly';
 import { DatasetSelector } from '@/components/no-code/DatasetSelector';
 import { TrainingProgress } from '@/components/no-code/TrainingProgress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/no-code/tabs';
 import { Button } from '@/components/ui/no-code/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/no-code/card';
 import { Badge } from '@/components/ui/no-code/badge';
 import { Input } from '@/components/ui/no-code/input';
-import { Icon } from '@iconify/react';
-import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X } from 'lucide-react';
+import { Play, Save, Download, Upload, Settings, Database, Zap, FileText, Pause, RotateCcw, Search, ZoomIn, ZoomOut, Maximize, Eye, Code, TestTube, Sun, Moon, X, MoreHorizontal, ChevronDown, Cpu, Brain, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/no-code/dropdown-menu';
 import { useWorkflow, useWorkflowExecution } from '@/hooks/useWorkflow';
 import { useWorkflowSearch } from '@/hooks/useWorkflowSearch';
 import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { useToast } from '@/components/ui/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { noCodeApiClient } from '@/lib/api/no-code-api';
-import { timescaleMarketData, formatTimescaleDate, getTimescaleTimeframe } from '@/lib/api/market-data-timescale';
+import { timescaleMarketData } from '@/lib/api/market-data-timescale';
 import { EnvDebug } from '@/components/debug/EnvDebug';
 import { EditableTitle } from '@/components/no-code/EditableTitle';
+
+interface ExecutionResult {
+  total_return: number;
+  sharpe_ratio: number;
+  max_drawdown: number;
+  win_rate: number;
+  trades_count: number;
+  volatility: number;
+  profit_factor: number;
+  daily_returns: number[];
+  data_source: string;
+  data_quality: number;
+}
 
 export default function NoCodeConsolePage() {
   const { toast } = useToast();
@@ -33,12 +47,13 @@ export default function NoCodeConsolePage() {
   
   // Local state
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [isTraining, setIsTraining] = useState(false);
+  const [, setIsTraining] = useState(false);
   const [currentStep, setCurrentStep] = useState<'design' | 'dataset' | 'training' | 'testing'>('design');
   const [leftSidebar, setLeftSidebar] = useState<'components' | 'templates'>('components');
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  const [nodeCount, setNodeCount] = useState(2);
-  const [connectionCount, setConnectionCount] = useState(1);
+  // const [, _setNodeCount] = useState(2);
+  // const [, _setConnectionCount] = useState(1);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +63,7 @@ export default function NoCodeConsolePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showVisual, setShowVisual] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [executionResults, setExecutionResults] = useState<any>(null);
+  const [executionResults, setExecutionResults] = useState<{status: string, results: ExecutionResult} | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [modelSettings, setModelSettings] = useState({
@@ -72,7 +87,7 @@ export default function NoCodeConsolePage() {
   const { currentWorkflow, loadWorkflow } = useNoCodeStore();
   
   // Workflow hooks
-  const [workflowState, workflowActions] = useWorkflow({
+  useWorkflow({
     workflowId: currentWorkflow?.id !== 'default' ? currentWorkflow?.id : undefined,
     autoSave: true,
     autoSaveInterval: 30000
@@ -173,7 +188,7 @@ export default function NoCodeConsolePage() {
           parameters: currentWorkflow.parameters || {}
         };
 
-        const updatedModel = await noCodeApiClient.updateWorkflow(currentWorkflow.id, updateData);
+        await noCodeApiClient.updateWorkflow(currentWorkflow.id, updateData);
         
         // Clear unsaved changes flag
         const { updateWorkflow } = useNoCodeStore.getState();
@@ -298,23 +313,6 @@ export default function NoCodeConsolePage() {
       fileInputRef.current.value = '';
     }
   }, [toast]);
-
-  const handleRun = useCallback(async () => {
-    if (!currentWorkflow) return;
-    
-    try {
-      await workflowExecution.startExecution({
-        execution_type: 'backtest',
-        symbols: ['AAPL', 'GOOGL'],
-        timeframe: '1d' as '1d',
-        initial_capital: 100000,
-        start_date: '2023-01-01',
-        end_date: '2023-12-31'
-      });
-    } catch (error) {
-      console.error('Execution failed:', error);
-    }
-  }, [currentWorkflow, workflowExecution]);
 
   const handleStop = useCallback(async () => {
     try {
@@ -448,15 +446,7 @@ export default function NoCodeConsolePage() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Load workflow from URL parameter
-  useEffect(() => {
-    const workflowId = searchParams.get('workflow');
-    if (workflowId && user) {
-      loadWorkflowById(workflowId);
-    }
-  }, [searchParams, user]);
-
-  const loadWorkflowById = async (workflowId: string) => {
+  const loadWorkflowById = useCallback(async (workflowId: string) => {
     try {
       const workflow = await noCodeApiClient.getWorkflow(workflowId);
       // Convert API workflow to NoCodeWorkflow format
@@ -484,7 +474,15 @@ export default function NoCodeConsolePage() {
         variant: "destructive",
       });
     }
-  };
+  }, [loadWorkflow, toast]);
+
+  // Load workflow from URL parameter
+  useEffect(() => {
+    const workflowId = searchParams.get('workflow');
+    if (workflowId && user) {
+      loadWorkflowById(workflowId);
+    }
+  }, [searchParams, user, loadWorkflowById]);
 
   const handleRunExecution = useCallback(async () => {
     if (!currentWorkflow) {
@@ -532,8 +530,8 @@ export default function NoCodeConsolePage() {
 
         if (!dataValidation.available) {
           const unavailableSymbols = Object.entries(dataValidation.symbols_status)
-            .filter(([_, status]) => !status.available)
-            .map(([symbol, _]) => symbol);
+            .filter(([, status]) => !status.available)
+            .map(([symbol]) => symbol);
 
           toast({
             title: "Data Availability Issue",
@@ -575,7 +573,21 @@ export default function NoCodeConsolePage() {
             const executionStatus = await noCodeApiClient.getExecution(execution.uuid);
             
             if (executionStatus.status === 'completed') {
-              setExecutionResults(executionStatus);
+              setExecutionResults({
+                status: executionStatus.status,
+                results: (executionStatus as any).results || {
+                  total_return: 0,
+                  sharpe_ratio: 0,
+                  max_drawdown: 0,
+                  win_rate: 0,
+                  trades_count: 0,
+                  volatility: 0,
+                  profit_factor: 0,
+                  daily_returns: [],
+                  data_source: 'unknown',
+                  data_quality: 0
+                }
+              });
               toast({
                 title: "Execution Completed",
                 description: `Model executed successfully!`,
@@ -749,93 +761,7 @@ export default function NoCodeConsolePage() {
     }
   }, [currentWorkflow, modelSettings, toast]);
 
-  const handleCodeGeneration = useCallback(async () => {
-    if (!showCodeGeneration) {
-      setShowCodeGeneration(true);
-      
-      if (!currentWorkflow || currentWorkflow.nodes.length === 0) {
-        setGeneratedCode('# No workflow nodes to generate code from\n# Please add some nodes to your model first.');
-        return;
-      }
-
-      setIsGeneratingCode(true);
-      
-      try {
-        // Generate code from backend
-        const codeResponse = await noCodeApiClient.generateCode(currentWorkflow.id, {
-          language: 'python',
-          framework: 'backtesting.py',
-          includeComments: true
-        });
-
-        setGeneratedCode(codeResponse.code);
-
-        // Save the trainer file to backend if it's a saved model
-        if (currentWorkflow.id !== 'default' && user) {
-          try {
-            const trainerData = {
-              model_id: currentWorkflow.id,
-              code: codeResponse.code,
-              language: 'python',
-              framework: 'backtesting.py',
-              created_by: user.username,
-              user_id: user.id,
-              file_name: `${currentWorkflow.name.replace(/\s+/g, '_')}_trainer.py`,
-              file_type: 'trainer',
-              metadata: {
-                nodes_count: currentWorkflow.nodes.length,
-                edges_count: currentWorkflow.edges.length,
-                generation_timestamp: new Date().toISOString()
-              }
-            };
-
-            // Save trainer file via fetch since request is protected
-            await fetch('/api/code-files', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(trainerData)
-            });
-
-            toast({
-              title: "Success",
-              description: "Code generated and trainer file saved successfully",
-            });
-          } catch (saveError) {
-            console.warn('Failed to save trainer file:', saveError);
-            toast({
-              title: "Warning",
-              description: "Code generated but failed to save trainer file",
-              variant: "destructive",
-            });
-          }
-        } else {
-          toast({
-            title: "Success",
-            description: "Code generated successfully",
-          });
-        }
-      } catch (error) {
-        console.error('Code generation failed:', error);
-        
-        // Fallback to local code generation
-        const fallbackCode = generateFallbackCode(currentWorkflow);
-        setGeneratedCode(fallbackCode);
-        
-        toast({
-          title: "Warning",
-          description: "Using fallback code generation. Backend service unavailable.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsGeneratingCode(false);
-      }
-    } else {
-      setShowCodeGeneration(false);
-    }
-  }, [showCodeGeneration, currentWorkflow, user, toast]);
-
-  // Fallback code generation for when backend is unavailable
-  const generateFallbackCode = useCallback((workflow: any) => {
+  const generateFallbackCode = useCallback((workflow: {name: string, nodes: any[], edges: any[], parameters: any}) => {
     if (!workflow || !workflow.nodes.length) {
       return '# No workflow nodes available for code generation';
     }
@@ -884,7 +810,7 @@ class ${workflow.name.replace(/\s+/g, '')}Model:
         signals = pd.DataFrame(index=data.index)
         
         # Process workflow nodes
-${workflow.nodes.map((node: any, index: number) => {
+${workflow.nodes.map((node: {type: string, data: {label: string}}, index: number) => {
   const nodeType = node.type || 'unknown';
   const nodeData = node.data || {};
   
@@ -954,7 +880,7 @@ ${workflow.nodes.map((node: any, index: number) => {
             )
             print(f"SELL order placed for {abs(current_position)} shares of {symbol}")
     
-    def backtest(self, symbols: List[str], start_date: str, end_date: str) -> Dict[str, Any]:
+    def backtest(self, symbols: List[str], start_date: str, end_date: str) -> Dict[str, dict]:
         """
         Backtest the model
         """
@@ -1008,6 +934,91 @@ if __name__ == "__main__":
         print(f"{symbol}: {metrics}")
 `;
   }, []);
+
+  const handleCodeGeneration = useCallback(async () => {
+    if (!showCodeGeneration) {
+      setShowCodeGeneration(true);
+
+      if (!currentWorkflow || currentWorkflow.nodes.length === 0) {
+        setGeneratedCode('# No workflow nodes to generate code from\n# Please add some nodes to your model first.');
+        return;
+      }
+
+      setIsGeneratingCode(true);
+
+      try {
+        // Generate code from backend
+        const codeResponse = await noCodeApiClient.generateCode(currentWorkflow.id, {
+          language: 'python',
+          framework: 'backtesting.py',
+          includeComments: true
+        });
+
+        setGeneratedCode(codeResponse.code);
+
+        // Save the trainer file to backend if it's a saved model
+        if (currentWorkflow.id !== 'default' && user) {
+          try {
+            const trainerData = {
+              model_id: currentWorkflow.id,
+              code: codeResponse.code,
+              language: 'python',
+              framework: 'backtesting.py',
+              created_by: user.username,
+              user_id: user.id,
+              file_name: `${currentWorkflow.name.replace(/\s+/g, '_')}_trainer.py`,
+              file_type: 'trainer',
+              metadata: {
+                nodes_count: currentWorkflow.nodes.length,
+                edges_count: currentWorkflow.edges.length,
+                generation_timestamp: new Date().toISOString()
+              }
+            };
+
+            // Save trainer file via fetch since request is protected
+            await fetch('/api/code-files', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(trainerData)
+            });
+
+            toast({
+              title: "Success",
+              description: "Code generated and trainer file saved successfully",
+            });
+          } catch (saveError) {
+            console.warn('Failed to save trainer file:', saveError);
+            toast({
+              title: "Warning",
+              description: "Code generated but failed to save trainer file",
+              variant: "destructive",
+            });
+          }
+        } else {
+          toast({
+            title: "Success",
+            description: "Code generated successfully",
+          });
+        }
+      } catch (error) {
+        console.error('Code generation failed:', error);
+
+        // Fallback to local code generation
+        const fallbackCode = generateFallbackCode(currentWorkflow);
+        setGeneratedCode(fallbackCode);
+
+        toast({
+          title: "Warning",
+          description: "Using fallback code generation. Backend service unavailable.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGeneratingCode(false);
+      }
+    } else {
+      setShowCodeGeneration(false);
+    }
+  }, [showCodeGeneration, currentWorkflow, user, toast, generateFallbackCode]);
 
   const handleTest = useCallback(async () => {
     if (!currentWorkflow) {
@@ -1083,7 +1094,7 @@ if __name__ == "__main__":
             }
           };
 
-          const testResult = await noCodeApiClient.testWorkflow(currentWorkflow.id, testConfig);
+        await noCodeApiClient.testWorkflow(currentWorkflow.id, testConfig);
           
           toast({
             title: "Test Completed",
@@ -1128,18 +1139,69 @@ if __name__ == "__main__":
     }
   }, [currentWorkflow, toast]);
 
-  const handleStepChange = (step: 'design' | 'dataset' | 'training' | 'testing') => {
-    setCurrentStep(step);
-  };
-
-  const handleCompileAndTrain = () => {
-    setCurrentStep('dataset');
-  };
-
   const handleStartTraining = () => {
     setIsTraining(true);
     setCurrentStep('training');
   };
+
+  const handleCompile = useCallback(async () => {
+    if (!currentWorkflow || currentWorkflow.nodes.length === 0) {
+      toast({
+        title: "Error",
+        description: "No workflow to compile. Please add some nodes first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const compileResponse = await noCodeApiClient.compileWorkflow(currentWorkflow.id);
+      
+      toast({
+        title: "Success",
+        description: "Workflow compiled successfully",
+      });
+      
+      console.log('Compilation result:', compileResponse);
+    } catch (error) {
+      console.error('Compilation failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to compile workflow",
+        variant: "destructive",
+      });
+    }
+  }, [currentWorkflow, toast]);
+
+  const handleTrain = useCallback(async () => {
+    if (!currentWorkflow || currentWorkflow.nodes.length === 0) {
+      toast({
+        title: "Error",
+        description: "No workflow to train. Please add some nodes first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsTraining(true);
+      setCurrentStep('training');
+      
+      toast({
+        title: "Training Started",
+        description: "Model training has been initiated",
+      });
+    } catch (error) {
+      console.error('Training failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start training",
+        variant: "destructive",
+      });
+      setIsTraining(false);
+      setCurrentStep('design');
+    }
+  }, [currentWorkflow, toast]);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -1149,86 +1211,35 @@ if __name__ == "__main__":
   return (
     <div className="h-screen flex flex-col dark:bg-black">
       <EnvDebug />
-      {/* Header */}
-      <div className="border-b bg-white dark:bg-black border-gray-200 dark:border-gray-600">
+      {/* Unified Header & Toolbar */}
+      <div className="border-b bg-background/80 dark:bg-background/80 backdrop-blur-xl border-border/50">
         <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center space-x-4">
+          {/* Title & Status */}
+          <div className="flex items-center space-x-3">
             <EditableTitle 
               workflowId={currentWorkflow?.id || 'default'}
               initialTitle={workflowName}
-              className="text-xl font-semibold text-gray-900 dark:text-gray-100"
+              className="text-lg font-bold tracking-tight text-foreground"
               readOnly={false}
             />
-            <Badge variant={currentStep === 'design' ? 'default' : 'secondary'}>
+            <Badge variant={currentStep === 'design' ? 'default' : 'secondary'} className="text-xs h-5">
               {currentStep === 'design' && 'Design'}
               {currentStep === 'dataset' && 'Dataset Selection'}
               {currentStep === 'training' && 'Training'}
               {currentStep === 'testing' && 'Testing'}
             </Badge>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={toggleTheme}
-              className="p-2"
-            >
-              {isDarkMode ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={handleSave}
-              disabled={!currentWorkflow}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </Button>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={handleImport}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={handleExport}
-              disabled={!currentWorkflow}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-            <Button 
-              onClick={handleCompileAndTrain}
-              disabled={isTraining}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Compile & Train
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      {/* Workflow Toolbar */}
-      <div className="border-b bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-        <div className="flex h-12 items-center justify-between px-4">
-          {/* Left Section - Control Buttons */}
-          <div className="flex items-center space-x-3">
+          {/* Primary Actions */}
+          <div className="flex items-center space-x-1">
             <Button 
               size="sm" 
-              className="bg-green-600 hover:bg-green-700"
+              variant="secondary"
               onClick={handleRunExecution}
               disabled={isExecuting || !currentWorkflow}
+              className="h-8 px-3"
             >
-              <Play className="h-4 w-4 mr-1" />
+              <Play className="h-3 w-3 mr-1" />
               {isExecuting ? 'Running...' : 'Run'}
             </Button>
             <Button 
@@ -1236,93 +1247,107 @@ if __name__ == "__main__":
               variant="secondary"
               onClick={handleStop}
               disabled={!workflowExecution.execution || workflowExecution.execution.status !== 'running'}
+              className="h-8 px-3"
             >
-              <Pause className="h-4 w-4 mr-1" />
+              <Pause className="h-3 w-3 mr-1" />
               Stop
             </Button>
             <Button 
               size="sm" 
-              variant="secondary"
+              variant="ghost"
               onClick={handleReset}
               disabled={!currentWorkflow}
+              className="h-8 px-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
             >
-              <RotateCcw className="h-4 w-4 mr-1" />
+              <RotateCcw className="h-3 w-3 mr-1" />
               Reset
             </Button>
-            
-            <div className="w-px h-6 bg-border mx-2"></div>
-            
             <Button 
               size="sm" 
-              variant={showSearch ? "default" : "secondary"} 
-              className="p-2"
+              variant={showSearch ? "default" : "ghost"}
               onClick={handleSearch}
+              className={showSearch ? "h-8 px-3" : "h-8 px-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"}
             >
-              <Search className="h-4 w-4" />
+              <Search className="h-3 w-3 mr-1" />
+              Search
             </Button>
-            
-            <div className="w-px h-6 bg-border mx-2"></div>
-            
+          </div>
+
+          {/* Zoom & View Controls */}
+          <div className="flex items-center space-x-1">
             <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleZoomIn}
-              title="Zoom In"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
+              size="sm"
+              variant="ghost"
               onClick={handleZoomOut}
               title="Zoom Out"
+              className="h-8 w-8 p-0 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
             >
-              <ZoomOut className="h-4 w-4" />
+              <ZoomOut className="h-3 w-3" />
             </Button>
             <Button 
               size="sm" 
-              variant="secondary" 
-              className="p-2"
+              variant="ghost"
               onClick={handleResetZoom}
               title="Reset Zoom (100%)"
+              className="h-8 px-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
             >
               <span className="text-xs font-mono">{Math.round(zoomLevel * 100)}%</span>
             </Button>
             <Button 
-              size="sm" 
-              variant={isFullscreen ? "default" : "secondary"} 
-              className="p-2"
+              size="sm"
+              variant="ghost"
+              onClick={handleZoomIn}
+              title="Zoom In"
+              className="h-8 w-8 p-0 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+            >
+              <ZoomIn className="h-3 w-3" />
+            </Button>
+            <Button 
+              size="sm"
+              variant={isFullscreen ? "default" : "ghost"}
               onClick={handleFullscreen}
               title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              className={isFullscreen ? "h-8 w-8 p-0" : "h-8 w-8 p-0 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"}
             >
-              <Maximize className="h-4 w-4" />
+              <Maximize className="h-3 w-3" />
             </Button>
           </div>
 
-          {/* Center Section - View Controls */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Button 
-                size="sm" 
-                variant={showVisual ? "default" : "secondary"}
-                onClick={handleVisual}
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                Visual
-              </Button>
-              <Button 
-                size="sm" 
-                variant={showCodeGeneration ? "default" : "secondary"}
-                onClick={handleCodeGeneration}
-              >
-                <Code className="h-4 w-4 mr-1" />
-                Generate Code
-              </Button>
-            </div>
-            
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+          {/* View Toggles */}
+          <div className="flex items-center space-x-1">
+            <Button
+              size="sm"
+              variant={showVisual ? "default" : "ghost"}
+              onClick={handleVisual}
+              className={showVisual ? "h-8 px-3" : "h-8 px-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"}
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              Visual
+            </Button>
+            <Button
+              size="sm"
+              variant={showCodeGeneration ? "default" : "ghost"}
+              onClick={handleCodeGeneration}
+              className={showCodeGeneration ? "h-8 px-3" : "h-8 px-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"}
+            >
+              <Code className="h-3 w-3 mr-1" />
+              Code
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleTest}
+              disabled={!currentWorkflow}
+              className="h-8 px-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 disabled:bg-gray-50 disabled:text-gray-400 dark:disabled:bg-gray-900 dark:disabled:text-gray-600"
+            >
+              <TestTube className="h-3 w-3 mr-1" />
+              Test
+            </Button>
+          </div>
+
+          {/* Status & Quick Actions */}
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 text-xs text-muted-foreground">
               <div className="flex items-center space-x-1">
                 <span className="font-medium">{currentWorkflow?.nodes.length || 0}</span>
                 <span>nodes</span>
@@ -1332,63 +1357,74 @@ if __name__ == "__main__":
                 <span>connections</span>
               </div>
               {currentWorkflow?.hasUnsavedChanges && (
-                <Badge variant="destructive" className="text-xs">
-                  Unsaved Changes
+                <Badge variant="destructive" className="text-xs h-5">
+                  Unsaved
                 </Badge>
               )}
               {currentWorkflow && !currentWorkflow.hasUnsavedChanges && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs h-5">
                   Saved
                 </Badge>
               )}
             </div>
-          </div>
-
-          {/* Right Section - Additional Actions */}
-          <div className="flex items-center space-x-2">
             <Button 
-              size="sm" 
               variant="secondary"
-              onClick={handleTest}
-              disabled={!currentWorkflow}
-            >
-              <TestTube className="h-4 w-4 mr-1" />
-              Test
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary"
+              size="sm"
               onClick={handleSave}
               disabled={!currentWorkflow}
+              className="h-8 px-3"
             >
-              <Save className="h-4 w-4 mr-1" />
+              <Save className="h-3 w-3 mr-1" />
               Save
             </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleExport}
-              disabled={!currentWorkflow}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="p-2"
-              onClick={handleImport}
-            >
-              <Upload className="h-4 w-4" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant={showSettings ? "default" : "secondary"} 
-              className="p-2"
-              onClick={handleSettings}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+            
+            {/* More Actions Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 border-none bg-transparent hover:bg-accent text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleImport}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import Workflow
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => currentWorkflow && handleExport()}
+                  disabled={!currentWorkflow}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Workflow
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleCompile}
+                  disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
+                >
+                  <Cpu className="h-4 w-4 mr-2" />
+                  Compile Workflow
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleTrain}
+                  disabled={!currentWorkflow || currentWorkflow.nodes.length === 0}
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  Train Model
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSettings}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleTheme}>
+                  {isDarkMode ? (
+                    <Sun className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Moon className="h-4 w-4 mr-2" />
+                  )}
+                  Toggle Theme
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -1521,11 +1557,12 @@ if __name__ == "__main__":
       {showSettings && (
         <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium">Model Settings</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Model Settings</h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowSettings(false)}
+              className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -1534,10 +1571,10 @@ if __name__ == "__main__":
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* General Settings */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm">General</h4>
+              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">General</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm">Auto Save</label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">Auto Save</label>
                   <input
                     type="checkbox"
                     checked={modelSettings.autoSave}
@@ -1549,7 +1586,7 @@ if __name__ == "__main__":
                   />
                 </div>
                 <div>
-                  <label className="text-sm block mb-1">Auto Save Interval (seconds)</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Auto Save Interval (seconds)</label>
                   <Input
                     type="number"
                     value={modelSettings.autoSaveInterval / 1000}
@@ -1557,13 +1594,13 @@ if __name__ == "__main__":
                       ...modelSettings,
                       autoSaveInterval: parseInt(e.target.value) * 1000
                     })}
-                    className="w-full"
+                    className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     min="5"
                     max="300"
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <label className="text-sm">Validation on Save</label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">Validation on Save</label>
                   <input
                     type="checkbox"
                     checked={modelSettings.validationOnSave}
@@ -1579,17 +1616,17 @@ if __name__ == "__main__":
 
             {/* Code Generation */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm">Code Generation</h4>
+              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">Code Generation</h4>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm block mb-1">Framework</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Framework</label>
                   <select
                     value={modelSettings.codeGenerationFramework}
                     onChange={(e) => handleSettingsUpdate({
                       ...modelSettings,
                       codeGenerationFramework: e.target.value
                     })}
-                    className="w-full p-2 border rounded text-sm"
+                    className="w-full p-2 border rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                   >
                     <option value="alpaca">Alpaca Trading</option>
                     <option value="quantlib">QuantLib</option>
@@ -1598,14 +1635,14 @@ if __name__ == "__main__":
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm block mb-1">Default Backtest Period</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Default Backtest Period</label>
                   <select
                     value={modelSettings.backtestPeriod}
                     onChange={(e) => handleSettingsUpdate({
                       ...modelSettings,
                       backtestPeriod: e.target.value
                     })}
-                    className="w-full p-2 border rounded text-sm"
+                    className="w-full p-2 border rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                   >
                     <option value="1month">1 Month</option>
                     <option value="3months">3 Months</option>
@@ -1616,7 +1653,7 @@ if __name__ == "__main__":
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm block mb-1">Default Symbols</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Default Symbols</label>
                   <Input
                     value={modelSettings.defaultSymbols.join(', ')}
                     onChange={(e) => handleSettingsUpdate({
@@ -1624,7 +1661,7 @@ if __name__ == "__main__":
                       defaultSymbols: e.target.value.split(',').map(s => s.trim()).filter(s => s)
                     })}
                     placeholder="AAPL, GOOGL, MSFT"
-                    className="w-full"
+                    className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                   />
                 </div>
               </div>
@@ -1632,10 +1669,10 @@ if __name__ == "__main__":
 
             {/* Market Data Settings */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm">Market Data (TimescaleDB)</h4>
+              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">Market Data (TimescaleDB)</h4>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm block mb-1">Data Quality Threshold (%)</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Data Quality Threshold (%)</label>
                   <Input
                     type="number"
                     value={(modelSettings.dataQualityThreshold || 0.95) * 100}
@@ -1643,14 +1680,14 @@ if __name__ == "__main__":
                       ...modelSettings,
                       dataQualityThreshold: parseFloat(e.target.value) / 100
                     })}
-                    className="w-full"
+                    className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     min="50"
                     max="100"
                     step="1"
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <label className="text-sm">Use Real-time Data</label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">Use Real-time Data</label>
                   <input
                     type="checkbox"
                     checked={modelSettings.useRealTimeData || false}
@@ -1662,7 +1699,7 @@ if __name__ == "__main__":
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <label className="text-sm">Cache Market Data</label>
+                  <label className="text-sm text-gray-700 dark:text-gray-300">Cache Market Data</label>
                   <input
                     type="checkbox"
                     checked={modelSettings.cacheMarketData || true}
@@ -1678,10 +1715,10 @@ if __name__ == "__main__":
 
             {/* Risk Management */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm">Risk Management</h4>
+              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">Risk Management</h4>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm block mb-1">Max Drawdown (%)</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Max Drawdown (%)</label>
                   <Input
                     type="number"
                     value={modelSettings.riskManagement.maxDrawdown * 100}
@@ -1692,14 +1729,14 @@ if __name__ == "__main__":
                         maxDrawdown: parseFloat(e.target.value) / 100
                       }
                     })}
-                    className="w-full"
+                    className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     min="1"
                     max="50"
                     step="0.1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm block mb-1">Position Size (%)</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Position Size (%)</label>
                   <Input
                     type="number"
                     value={modelSettings.riskManagement.positionSize * 100}
@@ -1710,14 +1747,14 @@ if __name__ == "__main__":
                         positionSize: parseFloat(e.target.value) / 100
                       }
                     })}
-                    className="w-full"
+                    className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     min="1"
                     max="100"
                     step="0.1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm block mb-1">Stop Loss (%)</label>
+                  <label className="text-sm block mb-1 text-gray-700 dark:text-gray-300">Stop Loss (%)</label>
                   <Input
                     type="number"
                     value={modelSettings.riskManagement.stopLoss * 100}
@@ -1728,7 +1765,7 @@ if __name__ == "__main__":
                         stopLoss: parseFloat(e.target.value) / 100
                       }
                     })}
-                    className="w-full"
+                    className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
                     min="0.1"
                     max="20"
                     step="0.1"
@@ -1739,7 +1776,7 @@ if __name__ == "__main__":
           </div>
 
           <div className="mt-6 flex justify-between items-center">
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
               Settings are automatically saved when changed
             </div>
             <div className="flex space-x-2">
@@ -1778,11 +1815,12 @@ if __name__ == "__main__":
       {showVisual && (
         <div className="border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium">Visual Overview</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Visual Overview</h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowVisual(false)}
+              className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -1791,25 +1829,25 @@ if __name__ == "__main__":
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Model Statistics */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm">Model Statistics</h4>
+              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">Model Statistics</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Nodes</div>
-                  <div className="text-2xl font-bold">{currentWorkflow?.nodes.length || 0}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Nodes</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentWorkflow?.nodes.length || 0}</div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Connections</div>
-                  <div className="text-2xl font-bold">{currentWorkflow?.edges.length || 0}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Connections</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{currentWorkflow?.edges.length || 0}</div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Node Types</div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Node Types</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {new Set(currentWorkflow?.nodes?.map(n => n.type) || []).size || 0}
                   </div>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <div className="text-sm text-muted-foreground">Complexity</div>
-                  <div className="text-2xl font-bold">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Complexity</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {!currentWorkflow?.nodes || currentWorkflow.nodes.length === 0 ? 'Empty' :
                      currentWorkflow.nodes.length < 5 ? 'Low' :
                      currentWorkflow.nodes.length < 15 ? 'Medium' : 'High'}
@@ -1820,7 +1858,7 @@ if __name__ == "__main__":
 
             {/* Execution Results */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm">Latest Execution Results</h4>
+              <h4 className="font-medium text-sm text-gray-800 dark:text-gray-200">Latest Execution Results</h4>
               {executionResults?.results ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
@@ -1948,54 +1986,86 @@ if __name__ == "__main__":
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {currentStep === 'design' && (
           <>
             {/* Left Sidebar - Components/Templates */}
-            <div className="w-96 border-r bg-white/80 dark:bg-black/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-600/50 flex flex-col shadow-2xl relative overflow-hidden">
-              {/* Glass effect overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/5 dark:from-white/5 dark:via-transparent dark:to-white/10 pointer-events-none"></div>
-              <div className="relative z-10 flex flex-col h-full">
-              {/* Sidebar Tabs */}
-              <div className="border-b border-gray-200 dark:border-gray-600">
-                <Tabs value={leftSidebar} onValueChange={(value) => setLeftSidebar(value as 'components' | 'templates')} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 rounded-none">
-                    <TabsTrigger value="components" className="flex items-center space-x-2">
-                      <Database className="h-4 w-4" />
-                      <span>Components</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="templates" className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4" />
-                      <span>Templates</span>
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
+            <div className={`border-r bg-background/80 dark:bg-background/80 backdrop-blur-xl border-border/50 flex flex-col shadow-2xl z-10 transition-all duration-300 ease-in-out overflow-hidden ${
+              isSidebarVisible ? 'w-[400px] opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full'
+            }`}>
+                {/* Sidebar Header with Hide Button */}
+                <div className="border-b border-border/50">
+                  <div className="flex items-center justify-between px-2 py-2">
+                    <Tabs value={leftSidebar} onValueChange={(value) => setLeftSidebar(value as 'components' | 'templates')} className="flex-1">
+                      <TabsList className="grid w-full grid-cols-2 rounded-none h-12 transition-all duration-200">
+                        <TabsTrigger value="components" className="flex items-center space-x-2 text-base transition-all duration-200 hover:scale-[1.02]">
+                          <Database className="h-4 w-4 transition-transform duration-200" />
+                          <span>Components</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="templates" className="flex items-center space-x-2 text-base transition-all duration-200 hover:scale-[1.02]">
+                          <FileText className="h-4 w-4 transition-transform duration-200" />
+                          <span>Templates</span>
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsSidebarVisible(false)}
+                      className="ml-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:scale-105 hover:rotate-3"
+                      title="Hide sidebar"
+                    >
+                      <PanelLeftClose className="h-4 w-4 transition-transform duration-200" />
+                    </Button>
+                  </div>
+                </div>
 
                 {/* Sidebar Content */}
-                <div className="flex-1 overflow-hidden">
-                  {leftSidebar === 'components' && (
-                    <ClientOnly fallback={<div className="p-4">Loading components...</div>}>
-                      <ComponentLibrary />
-                    </ClientOnly>
-                  )}
-                  {leftSidebar === 'templates' && (
-                    <ClientOnly fallback={<div className="p-4">Loading templates...</div>}>
-                      <TemplateLibrary onTemplateSelect={() => setLeftSidebar('components')} />
-                    </ClientOnly>
-                  )}
+                <div className="flex-1 overflow-y-auto relative">
+                  <div className={`absolute inset-0 transition-all duration-300 ease-in-out ${
+                    leftSidebar === 'components' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
+                  }`}>
+                    {leftSidebar === 'components' && (
+                      <ClientOnly fallback={<div className="p-6 animate-pulse">Loading components...</div>}>
+                        <ComponentLibrary />
+                      </ClientOnly>
+                    )}
+                  </div>
+                  <div className={`absolute inset-0 transition-all duration-300 ease-in-out ${
+                    leftSidebar === 'templates' ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'
+                  }`}>
+                    {leftSidebar === 'templates' && (
+                      <ClientOnly fallback={<div className="p-6 animate-pulse">Loading templates...</div>}>
+                        <TemplateLibrary onTemplateSelect={() => setLeftSidebar('components')} />
+                      </ClientOnly>
+                    )}
+                  </div>
                 </div>
               </div>
+
+            {/* Show Sidebar Button (when hidden) */}
+            <div className={`border-r bg-background/80 dark:bg-background/80 backdrop-blur-xl border-border/50 flex flex-col items-center py-4 shadow-lg z-10 transition-all duration-300 ease-in-out ${
+              !isSidebarVisible ? 'w-12 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full pointer-events-none'
+            }`}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSidebarVisible(true)}
+                className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:scale-110 hover:-rotate-3 shadow-lg"
+                title="Show sidebar"
+              >
+                <PanelLeft className="h-4 w-4 transition-transform duration-200" />
+              </Button>
             </div>
 
             {/* Main Workflow Editor */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 bg-muted/20">
               <div className="flex-1 relative overflow-hidden">
                 <ClientOnly fallback={
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-sm text-muted-foreground">Loading workflow editor...</p>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Loading Workflow Editor...</p>
                     </div>
                   </div>
                 }>
