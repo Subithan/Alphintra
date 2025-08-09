@@ -108,6 +108,19 @@ interface ExecutionActions {
   reset: () => void
   getTrainingJob: (jobId: string) => TrainingJobState | undefined
   getExecutionRecord: (id: string) => ExecutionRecord | undefined
+  
+  // URL state management
+  syncFromURL: (params: URLSearchParams) => void
+  getURLState: () => string
+  
+  // Browser storage for training job caching
+  cacheTrainingJobStatus: (jobId: string) => void
+  loadCachedTrainingJob: (jobId: string) => any | null
+  clearTrainingJobCache: (jobId: string) => void
+  
+  // Deep linking support
+  generateShareableLink: (jobId: string) => string | null
+  isSharedSession: () => boolean
 }
 
 type ExecutionStore = ExecutionState & ExecutionActions
@@ -307,7 +320,91 @@ export const useExecutionStore = create<ExecutionStore>()(
       // Utility actions
       reset: () => set(initialState),
       getTrainingJob: (jobId: string) => get().trainingJobs[jobId],
-      getExecutionRecord: (id: string) => get().executionHistory.find(r => r.id === id)
+      getExecutionRecord: (id: string) => get().executionHistory.find(r => r.id === id),
+      
+      // URL state management
+      syncFromURL: (params: URLSearchParams) => {
+        const workflowId = params.get('workflow')
+        const jobId = params.get('jobId')
+        const mode = params.get('mode') as 'strategy' | 'model' | null
+        const status = params.get('status') as ExecutionState['currentExecutionStatus'] | null
+        
+        if (workflowId) set({ currentWorkflowId: parseInt(workflowId) })
+        if (jobId) set({ currentJobId: jobId })
+        if (mode) set({ currentExecutionMode: mode })
+        if (status) set({ currentExecutionStatus: status })
+      },
+      
+      getURLState: () => {
+        const state = get()
+        const params = new URLSearchParams()
+        
+        if (state.currentWorkflowId) params.set('workflow', state.currentWorkflowId.toString())
+        if (state.currentJobId) params.set('jobId', state.currentJobId)
+        if (state.currentExecutionMode) params.set('mode', state.currentExecutionMode)
+        if (state.currentExecutionStatus !== 'idle') params.set('status', state.currentExecutionStatus)
+        
+        return params.toString()
+      },
+      
+      // Browser storage for training job caching
+      cacheTrainingJobStatus: (jobId: string) => {
+        const job = get().trainingJobs[jobId]
+        if (job) {
+          try {
+            localStorage.setItem(`training_job_${jobId}`, JSON.stringify({
+              status: job.status,
+              progress: job.progress,
+              lastUpdated: job.lastUpdated,
+              cached: true
+            }))
+          } catch (error) {
+            console.warn('Failed to cache training job status:', error)
+          }
+        }
+      },
+      
+      loadCachedTrainingJob: (jobId: string) => {
+        try {
+          const cached = localStorage.getItem(`training_job_${jobId}`)
+          if (cached) {
+            const data = JSON.parse(cached)
+            // Only use cached data if it's recent (within 5 minutes)
+            const cacheAge = Date.now() - new Date(data.lastUpdated).getTime()
+            if (cacheAge < 5 * 60 * 1000) { // 5 minutes
+              return data
+            } else {
+              // Remove stale cache
+              localStorage.removeItem(`training_job_${jobId}`)
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to load cached training job:', error)
+        }
+        return null
+      },
+      
+      clearTrainingJobCache: (jobId: string) => {
+        try {
+          localStorage.removeItem(`training_job_${jobId}`)
+        } catch (error) {
+          console.warn('Failed to clear training job cache:', error)
+        }
+      },
+      
+      // Deep linking support
+      generateShareableLink: (jobId: string) => {
+        const job = get().trainingJobs[jobId]
+        if (!job) return null
+        
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+        return `${baseUrl}/workflows/${job.workflowId}/training/${jobId}?shared=true`
+      },
+      
+      isSharedSession: () => {
+        if (typeof window === 'undefined') return false
+        return new URLSearchParams(window.location.search).get('shared') === 'true'
+      }
     }),
     {
       name: 'execution-store',

@@ -5,7 +5,7 @@ Main API router that includes all endpoint routers.
 from fastapi import APIRouter
 
 # Import endpoint routers
-from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution
+from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution, ai_code, model_registry, model_deployment, prediction, model_monitoring, model_lifecycle
 
 # Create main API router
 api_router = APIRouter()
@@ -29,6 +29,24 @@ api_router.include_router(paper_trading.router, tags=["Paper Trading"])
 # Include Phase 7 endpoint routers
 api_router.include_router(live_execution.router, tags=["Live Execution"])
 # api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
+
+# Include AI Code endpoints
+api_router.include_router(ai_code.router, tags=["AI Code Assistant"])
+
+# Include Model Registry endpoints  
+api_router.include_router(model_registry.router, tags=["Model Registry"])
+
+# Include Model Deployment endpoints
+api_router.include_router(model_deployment.router, tags=["Model Deployment"])
+
+# Include Prediction Service endpoints
+api_router.include_router(prediction.router, tags=["Real-time Predictions"])
+
+# Include Model Monitoring endpoints
+api_router.include_router(model_monitoring.router, tags=["Model Monitoring"])
+
+# Include Model Lifecycle endpoints
+api_router.include_router(model_lifecycle.router, tags=["Model Lifecycle"])
 
 # Basic health check endpoint
 @api_router.get("/status")
