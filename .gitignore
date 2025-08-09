@@ -610,3 +610,5 @@ Alphintra Project Proposal (1).pdf
 infra/.secrets/
 infra/backups/
 .vercel
+.claude-flow/
+.swarm

@@ -34,8 +34,10 @@ import { connectionManager } from '@/lib/connection-manager';
 import { validateWorkflow, ValidationResult } from '@/lib/workflow-validation';
 import { ConfigurationPanel } from './ConfigurationPanel';
 import { ExecutionModeSelector } from './ExecutionModeSelector';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { X, AlertTriangle, CheckCircle, Info, Play, Save } from 'lucide-react';
-import { Button } from '@/components/ui/no-code/button';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const nodeTypes = {
   technicalIndicator: TechnicalIndicatorNode,
@@ -70,7 +72,14 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [isWorkflowSaved, setIsWorkflowSaved] = useState(false);
   const { currentWorkflow, updateWorkflow, addNode, removeNode } = useNoCodeStore();
-  const { openExecutionModal, closeExecutionModal, isExecutionModalOpen } = useExecutionStore();
+  const { 
+    openExecutionModal, 
+    closeExecutionModal, 
+    isExecutionModalOpen,
+    currentExecutionMode,
+    currentExecutionStatus,
+    setExecutionStatus
+  } = useExecutionStore();
   const { screenToFlowPosition } = useReactFlow();
   
   // Use ReactFlow state as primary, sync to store when needed
@@ -439,19 +448,38 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
 
   const handleSaveWorkflow = useCallback(async () => {
     try {
-      // Save current workflow state
-      updateWorkflow({ nodes, edges });
+      // Prepare workflow data for saving
+      const workflowData = {
+        nodes,
+        edges,
+        name: currentWorkflow?.name || 'Untitled Workflow',
+        id: currentWorkflow?.id || Date.now(),
+        description: currentWorkflow?.description,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Update local store
+      updateWorkflow(workflowData);
       
-      // Here you would typically make an API call to save to backend
-      // For now, we'll just update the local state
+      // Save to backend (mock implementation for now)
+      console.log('Saving workflow to backend...', workflowData);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       setIsWorkflowSaved(true);
       
-      // Reset save status after a delay
-      setTimeout(() => setIsWorkflowSaved(false), 2000);
+      // Reset save status after delay
+      setTimeout(() => setIsWorkflowSaved(false), 3000);
+      
+      console.log('Workflow saved successfully');
+      return workflowData;
     } catch (error) {
       console.error('Failed to save workflow:', error);
+      alert('Failed to save workflow. Please try again.');
+      throw error;
     }
-  }, [nodes, edges, updateWorkflow]);
+  }, [nodes, edges, updateWorkflow, currentWorkflow]);
 
   const handleExecuteWorkflow = useCallback(() => {
     // First validate the workflow
@@ -469,7 +497,8 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
 
   const handleModeSelect = useCallback(async (mode: 'strategy' | 'model', config: any) => {
     try {
-      // Mock workflow ID - in real implementation, this would come from saved workflow
+      setExecutionStatus('executing');
+      
       const workflowId = currentWorkflow?.id || Date.now();
       
       const response = await fetch(`/api/workflows/${workflowId}/execution-mode`, {
@@ -489,24 +518,30 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
 
       const result = await response.json();
       
-      // Handle different execution modes
+      // Handle different execution modes with proper navigation
       if (mode === 'strategy') {
-        // Redirect to strategy results or show strategy code
+        // Navigate to strategy results page
+        setExecutionStatus('completed');
+        setShowExecutionModal(false);
+        // In a real implementation, use Next.js router
         console.log('Strategy execution result:', result);
-        alert('Strategy generated successfully! Check the console for details.');
+        window.location.href = `/workflows/${workflowId}/results/strategy?executionId=${Date.now()}`;
       } else {
-        // Redirect to training dashboard
+        // Navigate to training dashboard
+        setExecutionStatus('monitoring');
+        setShowExecutionModal(false);
+        const trainingJobId = result.training_job_id;
         console.log('Training job created:', result);
-        // In a real app, you'd navigate to the training dashboard
-        alert(`Training job created with ID: ${result.training_job_id}`);
+        // In a real implementation, use Next.js router
+        window.location.href = `/workflows/${workflowId}/training/${trainingJobId}?from=execute`;
       }
-      
-      setShowExecutionModal(false);
     } catch (error) {
       console.error('Execution failed:', error);
+      setExecutionStatus('failed');
+      // Keep modal open on error so user can try again
       alert('Failed to execute workflow. Please try again.');
     }
-  }, [currentWorkflow]);
+  }, [currentWorkflow, setExecutionStatus]);
 
   const isWorkflowExecutable = () => {
     return nodes.length > 0 && 
@@ -514,8 +549,54 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
            validationResult.errors.length === 0;
   };
 
+  const getExecutionStatusBadge = () => {
+    switch (currentExecutionStatus) {
+      case 'executing':
+        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Executing...</Badge>;
+      case 'monitoring':
+        return <Badge variant="secondary" className="bg-purple-100 text-purple-800">Training in Progress</Badge>;
+      case 'completed':
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">Completed</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Execution Failed</Badge>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="w-full h-full relative" suppressHydrationWarning>
+      {/* Breadcrumb Navigation */}
+      <div className="absolute top-4 left-4 z-40">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/strategy-hub">Strategy Hub</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink>
+                {currentWorkflow?.name || 'Workflow Designer'}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {currentExecutionMode && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink className="capitalize">
+                    {currentExecutionMode} Mode
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </>
+            )}
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
+      {/* Execution Status Indicator */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40">
+        {getExecutionStatusBadge()}
+      </div>
       {/* Toolbar */}
       <div className="absolute top-4 right-4 z-40 flex items-center space-x-2">
         <Button
