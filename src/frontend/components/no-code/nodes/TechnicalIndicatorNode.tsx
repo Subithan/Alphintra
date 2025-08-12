@@ -173,6 +173,30 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
           { id: 'vi_minus', label: 'VI-', color: 'bg-red-500', position: 65 }
         );
         break;
+      case 'Ichimoku':
+        outputs.push(
+          { id: 'tenkan', label: 'Tenkan', color: 'bg-blue-500', position: 15 },
+          { id: 'kijun', label: 'Kijun', color: 'bg-red-500', position: 30 },
+          { id: 'senkou_a', label: 'Senkou A', color: 'bg-green-500', position: 45 },
+          { id: 'senkou_b', label: 'Senkou B', color: 'bg-purple-500', position: 60 },
+          { id: 'chikou', label: 'Chikou', color: 'bg-yellow-500', position: 75 },
+        );
+        break;
+      case 'VolumeProfile':
+        outputs.push(
+          { id: 'poc', label: 'POC', color: 'bg-blue-500', position: 25 },
+          { id: 'vah', label: 'VAH', color: 'bg-green-500', position: 50 },
+          { id: 'val', label: 'VAL', color: 'bg-red-500', position: 75 },
+        );
+        break;
+      case 'MarketStructure':
+        outputs.push(
+          { id: 'higher_high', label: 'Higher High', color: 'bg-green-500', position: 20 },
+          { id: 'lower_low', label: 'Lower Low', color: 'bg-red-500', position: 40 },
+          { id: 'support', label: 'Support', color: 'bg-blue-500', position: 60 },
+          { id: 'resistance', label: 'Resistance', color: 'bg-purple-500', position: 80 },
+        );
+        break;
       default:
         outputs.push(
           { id: 'value', label: 'Value', color: 'bg-blue-500', position: 40 },
@@ -190,7 +214,7 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
       className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} 
       suppressHydrationWarning
     >
-      <CardContent className="p-3">
+      <CardContent className="p-3 relative">
         <div className="flex items-center space-x-2 mb-2">
           {getCategoryIcon(indicatorCategory)}
           <span className="font-medium text-sm dark:text-foreground">{label}</span>
@@ -228,71 +252,31 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
           style={{ left: -6 }}
         />
 
-        {/* 4 STATIC OUTPUT HANDLES - ALWAYS PRESENT FOR ALL TECHNICAL INDICATORS */}
-        
-        {/* Output 1 - Always at 25% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-1"
-          className={`w-3 h-3 ${availableOutputs[0] ? availableOutputs[0].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '25%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[0] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(25% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[0] ? availableOutputs[0].label : ''}
-        </div>
-        
-        {/* Output 2 - Always at 50% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-2"
-          className={`w-3 h-3 ${availableOutputs[1] ? availableOutputs[1].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '50%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[1] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(50% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[1] ? availableOutputs[1].label : ''}
-        </div>
-        
-        {/* Output 3 - Always at 75% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-3"
-          className={`w-3 h-3 ${availableOutputs[2] ? availableOutputs[2].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '75%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[2] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(75% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[2] ? availableOutputs[2].label : ''}
-        </div>
-        
-        {/* Output 4 - Always at 90% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-4"
-          className={`w-3 h-3 ${availableOutputs[3] ? availableOutputs[3].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '90%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[3] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(90% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[3] ? availableOutputs[3].label : ''}
-        </div>
+        {/* Dynamic Output Handles */}
+        {availableOutputs.map((output, index) => (
+          <React.Fragment key={output.id}>
+            <Handle
+              type="source"
+              position={Position.Right}
+              id={output.id}
+              className={`w-3 h-3 ${output.color}`}
+              style={{
+                right: -6,
+                top: `${output.position}%`
+              }}
+            />
+            <div
+              className="absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none"
+              style={{
+                right: 12, // Adjusted for better alignment
+                top: `calc(${output.position}% - 8px)`,
+                fontSize: '10px'
+              }}
+            >
+              {output.label}
+            </div>
+          </React.Fragment>
+        ))}
       </CardContent>
     </Card>
   );

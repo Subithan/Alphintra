@@ -819,6 +819,122 @@ export class ConnectionManager {
       label: 'Logic Output',
       description: 'Logic gate result triggers action'
     });
+
+    // Ichimoku Cloud connections
+    const ichimokuOutputs = [
+      { id: 'tenkan', label: 'Tenkan' },
+      { id: 'kijun', label: 'Kijun' },
+      { id: 'senkou_a', label: 'Senkou A' },
+      { id: 'senkou_b', label: 'Senkou B' },
+      { id: 'chikou', label: 'Chikou' },
+    ];
+    ichimokuOutputs.forEach(output => {
+      this.addRule({
+        id: `ichimoku-${output.id}-to-condition`,
+        sourceType: 'technicalIndicator',
+        targetType: 'condition',
+        sourceHandle: `${output.id}-output`,
+        targetHandle: 'data-input',
+        dataType: 'numeric',
+        label: `Ichimoku ${output.label}`,
+        description: `Ichimoku ${output.label} value`
+      });
+    });
+
+    // Volume Profile connections
+    const volumeProfileOutputs = [
+      { id: 'poc', label: 'POC' },
+      { id: 'vah', label: 'VAH' },
+      { id: 'val', label: 'VAL' },
+    ];
+    volumeProfileOutputs.forEach(output => {
+      this.addRule({
+        id: `volumeprofile-${output.id}-to-condition`,
+        sourceType: 'technicalIndicator',
+        targetType: 'condition',
+        sourceHandle: `${output.id}-output`,
+        targetHandle: 'data-input',
+        dataType: 'numeric',
+        label: `Volume Profile ${output.label}`,
+        description: `Volume Profile ${output.label} value`
+      });
+    });
+
+    // Market Structure connections
+    const marketStructureOutputs = [
+      { id: 'higher_high', label: 'Higher High' },
+      { id: 'lower_low', label: 'Lower Low' },
+      { id: 'support', label: 'Support' },
+      { id: 'resistance', label: 'Resistance' },
+    ];
+    marketStructureOutputs.forEach(output => {
+      this.addRule({
+        id: `marketstructure-${output.id}-to-condition`,
+        sourceType: 'technicalIndicator',
+        targetType: 'condition',
+        sourceHandle: `${output.id}-output`,
+        targetHandle: 'data-input',
+        dataType: 'numeric',
+        label: `Market Structure ${output.label}`,
+        description: `Market Structure ${output.label} value`
+      });
+    });
+
+    // Market Regime Detection connections
+    this.addRule({
+      id: 'marketregime-to-condition',
+      sourceType: 'marketRegimeDetection',
+      targetType: 'condition',
+      sourceHandle: 'trend-output',
+      targetHandle: 'data-input',
+      dataType: 'signal',
+    });
+    this.addRule({
+      id: 'marketregime-to-action',
+      sourceType: 'marketRegimeDetection',
+      targetType: 'action',
+      sourceHandle: 'trend-output',
+      targetHandle: 'signal-input',
+      dataType: 'signal',
+    });
+
+    // Multi-Timeframe Analysis connections
+    this.addRule({
+      id: 'multitimeframe-to-indicator',
+      sourceType: 'multiTimeframeAnalysis',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'output',
+      targetHandle: 'data-input',
+      dataType: 'ohlcv',
+    });
+
+    // Correlation Analysis connections
+    this.addRule({
+      id: 'correlation-to-condition',
+      sourceType: 'correlationAnalysis',
+      targetType: 'condition',
+      sourceHandle: 'output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+    });
+
+    // Sentiment Analysis connections
+    this.addRule({
+      id: 'sentiment-to-condition',
+      sourceType: 'sentimentAnalysis',
+      targetType: 'condition',
+      sourceHandle: 'positive-output',
+      targetHandle: 'data-input',
+      dataType: 'signal',
+    });
+    this.addRule({
+      id: 'sentiment-to-action',
+      sourceType: 'sentimentAnalysis',
+      targetType: 'action',
+      sourceHandle: 'positive-output',
+      targetHandle: 'signal-input',
+      dataType: 'signal',
+    });
   }
 
   addRule(rule: ConnectionRule): void {
