@@ -87,120 +87,120 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
     switch (indicator) {
       case 'BB': // Bollinger Bands
         outputs.push(
-          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 20 },
-          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 40 },
-          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 60 },
-          { id: 'width', label: 'Width', color: 'bg-purple-500', position: 80 }
+          { label: 'Upper', color: 'bg-red-500' },
+          { label: 'Middle', color: 'bg-blue-500' },
+          { label: 'Lower', color: 'bg-green-500' },
+          { label: 'Width', color: 'bg-purple-500' }
         );
         break;
       case 'MACD':
         outputs.push(
-          { id: 'macd', label: 'MACD', color: 'bg-blue-500', position: 25 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 50 },
-          { id: 'histogram', label: 'Histogram', color: 'bg-orange-500', position: 75 }
+          { label: 'MACD', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' },
+          { label: 'Histogram', color: 'bg-orange-500' }
         );
         break;
       case 'STOCH': // Stochastic
       case 'Stochastic':
         outputs.push(
-          { id: 'k', label: '%K', color: 'bg-blue-500', position: 35 },
-          { id: 'd', label: '%D', color: 'bg-green-500', position: 65 }
+          { label: '%K', color: 'bg-blue-500' },
+          { label: '%D', color: 'bg-green-500' }
         );
         break;
       case 'ADX':
         outputs.push(
-          { id: 'adx', label: 'ADX', color: 'bg-blue-500', position: 25 },
-          { id: 'di_plus', label: 'DI+', color: 'bg-green-500', position: 50 },
-          { id: 'di_minus', label: 'DI-', color: 'bg-red-500', position: 75 }
+          { label: 'ADX', color: 'bg-blue-500' },
+          { label: 'DI+', color: 'bg-green-500' },
+          { label: 'DI-', color: 'bg-red-500' }
         );
         break;
       case 'KC': // Keltner Channels
         outputs.push(
-          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 25 },
-          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 50 },
-          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 75 }
+          { label: 'Upper', color: 'bg-red-500' },
+          { label: 'Middle', color: 'bg-blue-500' },
+          { label: 'Lower', color: 'bg-green-500' }
         );
         break;
       case 'DC': // Donchian Channels
         outputs.push(
-          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 25 },
-          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 50 },
-          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 75 }
+          { label: 'Upper', color: 'bg-red-500' },
+          { label: 'Middle', color: 'bg-blue-500' },
+          { label: 'Lower', color: 'bg-green-500' }
         );
         break;
       case 'AROON':
         outputs.push(
-          { id: 'aroon_up', label: 'Aroon Up', color: 'bg-green-500', position: 35 },
-          { id: 'aroon_down', label: 'Aroon Down', color: 'bg-red-500', position: 65 }
+          { label: 'Aroon Up', color: 'bg-green-500' },
+          { label: 'Aroon Down', color: 'bg-red-500' }
         );
         break;
       case 'STOCHRSI': // Stochastic RSI
         outputs.push(
-          { id: 'k', label: '%K', color: 'bg-blue-500', position: 35 },
-          { id: 'd', label: '%D', color: 'bg-green-500', position: 65 }
+          { label: '%K', color: 'bg-blue-500' },
+          { label: '%D', color: 'bg-green-500' }
         );
         break;
       case 'DMI': // Directional Movement Index
         outputs.push(
-          { id: 'dmi_plus', label: 'DMI+', color: 'bg-green-500', position: 25 },
-          { id: 'dmi_minus', label: 'DMI-', color: 'bg-red-500', position: 50 },
-          { id: 'adx', label: 'ADX', color: 'bg-blue-500', position: 75 }
+          { label: 'DMI+', color: 'bg-green-500' },
+          { label: 'DMI-', color: 'bg-red-500' },
+          { label: 'ADX', color: 'bg-blue-500' }
         );
         break;
       case 'PPO': // Percentage Price Oscillator
         outputs.push(
-          { id: 'ppo', label: 'PPO', color: 'bg-blue-500', position: 25 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 50 },
-          { id: 'histogram', label: 'Histogram', color: 'bg-orange-500', position: 75 }
+          { label: 'PPO', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' },
+          { label: 'Histogram', color: 'bg-orange-500' }
         );
         break;
       case 'TSI': // True Strength Index
         outputs.push(
-          { id: 'tsi', label: 'TSI', color: 'bg-blue-500', position: 35 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 65 }
+          { label: 'TSI', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' }
         );
         break;
       case 'KDJ':
         outputs.push(
-          { id: 'k', label: '%K', color: 'bg-blue-500', position: 25 },
-          { id: 'd', label: '%D', color: 'bg-green-500', position: 50 },
-          { id: 'j', label: '%J', color: 'bg-orange-500', position: 75 }
+          { label: '%K', color: 'bg-blue-500' },
+          { label: '%D', color: 'bg-green-500' },
+          { label: '%J', color: 'bg-orange-500' }
         );
         break;
       case 'VORTEX':
         outputs.push(
-          { id: 'vi_plus', label: 'VI+', color: 'bg-green-500', position: 35 },
-          { id: 'vi_minus', label: 'VI-', color: 'bg-red-500', position: 65 }
+          { label: 'VI+', color: 'bg-green-500' },
+          { label: 'VI-', color: 'bg-red-500' }
         );
         break;
       case 'Ichimoku':
         outputs.push(
-          { id: 'tenkan', label: 'Tenkan', color: 'bg-blue-500', position: 15 },
-          { id: 'kijun', label: 'Kijun', color: 'bg-red-500', position: 30 },
-          { id: 'senkou_a', label: 'Senkou A', color: 'bg-green-500', position: 45 },
-          { id: 'senkou_b', label: 'Senkou B', color: 'bg-purple-500', position: 60 },
-          { id: 'chikou', label: 'Chikou', color: 'bg-yellow-500', position: 75 },
+          { label: 'Tenkan', color: 'bg-blue-500' },
+          { label: 'Kijun', color: 'bg-red-500' },
+          { label: 'Senkou A', color: 'bg-green-500' },
+          { label: 'Senkou B', color: 'bg-purple-500' },
+          { label: 'Chikou', color: 'bg-yellow-500' },
         );
         break;
       case 'VolumeProfile':
         outputs.push(
-          { id: 'poc', label: 'POC', color: 'bg-blue-500', position: 25 },
-          { id: 'vah', label: 'VAH', color: 'bg-green-500', position: 50 },
-          { id: 'val', label: 'VAL', color: 'bg-red-500', position: 75 },
+          { label: 'POC', color: 'bg-blue-500' },
+          { label: 'VAH', color: 'bg-green-500' },
+          { label: 'VAL', color: 'bg-red-500' },
         );
         break;
       case 'MarketStructure':
         outputs.push(
-          { id: 'higher_high', label: 'Higher High', color: 'bg-green-500', position: 20 },
-          { id: 'lower_low', label: 'Lower Low', color: 'bg-red-500', position: 40 },
-          { id: 'support', label: 'Support', color: 'bg-blue-500', position: 60 },
-          { id: 'resistance', label: 'Resistance', color: 'bg-purple-500', position: 80 },
+          { label: 'Higher High', color: 'bg-green-500' },
+          { label: 'Lower Low', color: 'bg-red-500' },
+          { label: 'Support', color: 'bg-blue-500' },
+          { label: 'Resistance', color: 'bg-purple-500' },
         );
         break;
       default:
         outputs.push(
-          { id: 'value', label: 'Value', color: 'bg-blue-500', position: 40 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 70 }
+          { label: 'Value', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' }
         );
     }
 
@@ -208,6 +208,7 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
   };
 
   const availableOutputs = getAvailableOutputs();
+  const outputPositions = [20, 35, 50, 65, 80];
 
   return (
     <Card 
@@ -252,31 +253,34 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
           style={{ left: -6 }}
         />
 
-        {/* Dynamic Output Handles */}
-        {availableOutputs.map((output, index) => (
-          <React.Fragment key={output.id}>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={output.id}
-              className={`w-3 h-3 ${output.color}`}
-              style={{
-                right: -6,
-                top: `${output.position}%`
-              }}
-            />
-            <div
-              className="absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none"
-              style={{
-                right: 12, // Adjusted for better alignment
-                top: `calc(${output.position}% - 8px)`,
-                fontSize: '10px'
-              }}
-            >
-              {output.label}
-            </div>
-          </React.Fragment>
-        ))}
+        {/* 5 Static Output Handles */}
+        {outputPositions.map((top, index) => {
+          const output = availableOutputs[index];
+          return (
+            <React.Fragment key={index}>
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`output-${index + 1}`}
+                className={`w-3 h-3 ${output ? output.color : 'opacity-0 pointer-events-none'}`}
+                style={{
+                  right: -6,
+                  top: `${top}%`
+                }}
+              />
+              <div
+                className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${output ? '' : 'opacity-0'}`}
+                style={{
+                  right: 12,
+                  top: `calc(${top}% - 8px)`,
+                  fontSize: '10px'
+                }}
+              >
+                {output ? output.label : ''}
+              </div>
+            </React.Fragment>
+          );
+        })}
       </CardContent>
     </Card>
   );

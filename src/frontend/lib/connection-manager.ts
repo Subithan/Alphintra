@@ -820,66 +820,6 @@ export class ConnectionManager {
       description: 'Logic gate result triggers action'
     });
 
-    // Ichimoku Cloud connections
-    const ichimokuOutputs = [
-      { id: 'tenkan', label: 'Tenkan' },
-      { id: 'kijun', label: 'Kijun' },
-      { id: 'senkou_a', label: 'Senkou A' },
-      { id: 'senkou_b', label: 'Senkou B' },
-      { id: 'chikou', label: 'Chikou' },
-    ];
-    ichimokuOutputs.forEach(output => {
-      this.addRule({
-        id: `ichimoku-${output.id}-to-condition`,
-        sourceType: 'technicalIndicator',
-        targetType: 'condition',
-        sourceHandle: `${output.id}-output`,
-        targetHandle: 'data-input',
-        dataType: 'numeric',
-        label: `Ichimoku ${output.label}`,
-        description: `Ichimoku ${output.label} value`
-      });
-    });
-
-    // Volume Profile connections
-    const volumeProfileOutputs = [
-      { id: 'poc', label: 'POC' },
-      { id: 'vah', label: 'VAH' },
-      { id: 'val', label: 'VAL' },
-    ];
-    volumeProfileOutputs.forEach(output => {
-      this.addRule({
-        id: `volumeprofile-${output.id}-to-condition`,
-        sourceType: 'technicalIndicator',
-        targetType: 'condition',
-        sourceHandle: `${output.id}-output`,
-        targetHandle: 'data-input',
-        dataType: 'numeric',
-        label: `Volume Profile ${output.label}`,
-        description: `Volume Profile ${output.label} value`
-      });
-    });
-
-    // Market Structure connections
-    const marketStructureOutputs = [
-      { id: 'higher_high', label: 'Higher High' },
-      { id: 'lower_low', label: 'Lower Low' },
-      { id: 'support', label: 'Support' },
-      { id: 'resistance', label: 'Resistance' },
-    ];
-    marketStructureOutputs.forEach(output => {
-      this.addRule({
-        id: `marketstructure-${output.id}-to-condition`,
-        sourceType: 'technicalIndicator',
-        targetType: 'condition',
-        sourceHandle: `${output.id}-output`,
-        targetHandle: 'data-input',
-        dataType: 'numeric',
-        label: `Market Structure ${output.label}`,
-        description: `Market Structure ${output.label} value`
-      });
-    });
-
     // Market Regime Detection connections
     this.addRule({
       id: 'marketregime-to-condition',
@@ -934,6 +874,18 @@ export class ConnectionManager {
       sourceHandle: 'positive-output',
       targetHandle: 'signal-input',
       dataType: 'signal',
+    });
+
+    // Add generic rule for output-5
+    this.addRule({
+      id: 'output-5-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'output-5',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 5 to Condition',
+      description: 'Use fifth output for condition evaluation'
     });
   }
 

@@ -31,7 +31,7 @@
 - button "Test":
   - img
   - text: Test
-- text: 0 nodes 0 connections Saved
+- text: 1 nodes 0 connections Unsaved
 - button "Save":
   - img
   - text: Save
@@ -416,9 +416,9 @@
 - button "Details"
 - text: "Complexity: 30 | Logic Depth: 0 | Indicators: 1"
 - img
-- 'button "Technical Indicator SMA TREND Period: 20 Value Signal"':
+- 'button "Simple Moving Average SMA TREND Period: 20 Value Signal"':
   - img
-  - text: "Technical Indicator SMA TREND Period: 20 Value Signal"
+  - text: "Simple Moving Average SMA TREND Period: 20 Value Signal"
 - button "zoom in" [disabled]:
   - img
 - button "zoom out":
@@ -432,9 +432,43 @@
 - link "React Flow attribution":
   - /url: https://reactflow.dev
   - text: React Flow
-- img
-- heading "No Node Selected" [level=3]
-- paragraph: Select a node to configure its parameters
+- heading "Node Configuration" [level=2]
+- button:
+  - img
+- button:
+  - img
+- text: technicalIndicator Simple Moving Average
+- paragraph: "ID: technicalIndicator-1754982781869"
+- tablist:
+  - tab "Parameters" [selected]:
+    - img
+    - text: Parameters
+  - tab "Inputs":
+    - img
+    - text: Inputs
+  - tab "Outputs":
+    - img
+    - text: Outputs
+  - tab "Validation 3":
+    - img
+    - text: Validation 3
+- tabpanel "Parameters":
+  - heading "Node Parameters" [level=3]
+  - text: Indicator Category
+  - combobox: Trend Indicators
+  - paragraph: Select the category of technical indicator
+  - text: Indicator Type
+  - combobox: Simple Moving Average
+  - paragraph: Select the technical indicator to calculate
+  - text: Period
+  - spinbutton "Period": "20"
+  - paragraph: Number of periods for calculation
+  - text: Price Source
+  - combobox: Close
+  - paragraph: Which price to use for calculation
+- button "Test Node":
+  - img
+  - text: Test Node
 - alert
 - button "Open Next.js Dev Tools":
   - img
