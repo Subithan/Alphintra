@@ -271,7 +271,7 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
               <div
                 className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${output ? '' : 'opacity-0'}`}
                 style={{
-                  right: 12,
+                  right: -45,
                   top: `calc(${top}% - 8px)`,
                   fontSize: '10px'
                 }}
