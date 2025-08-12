@@ -87,96 +87,120 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
     switch (indicator) {
       case 'BB': // Bollinger Bands
         outputs.push(
-          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 20 },
-          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 40 },
-          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 60 },
-          { id: 'width', label: 'Width', color: 'bg-purple-500', position: 80 }
+          { label: 'Upper', color: 'bg-red-500' },
+          { label: 'Middle', color: 'bg-blue-500' },
+          { label: 'Lower', color: 'bg-green-500' },
+          { label: 'Width', color: 'bg-purple-500' }
         );
         break;
       case 'MACD':
         outputs.push(
-          { id: 'macd', label: 'MACD', color: 'bg-blue-500', position: 25 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 50 },
-          { id: 'histogram', label: 'Histogram', color: 'bg-orange-500', position: 75 }
+          { label: 'MACD', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' },
+          { label: 'Histogram', color: 'bg-orange-500' }
         );
         break;
       case 'STOCH': // Stochastic
       case 'Stochastic':
         outputs.push(
-          { id: 'k', label: '%K', color: 'bg-blue-500', position: 35 },
-          { id: 'd', label: '%D', color: 'bg-green-500', position: 65 }
+          { label: '%K', color: 'bg-blue-500' },
+          { label: '%D', color: 'bg-green-500' }
         );
         break;
       case 'ADX':
         outputs.push(
-          { id: 'adx', label: 'ADX', color: 'bg-blue-500', position: 25 },
-          { id: 'di_plus', label: 'DI+', color: 'bg-green-500', position: 50 },
-          { id: 'di_minus', label: 'DI-', color: 'bg-red-500', position: 75 }
+          { label: 'ADX', color: 'bg-blue-500' },
+          { label: 'DI+', color: 'bg-green-500' },
+          { label: 'DI-', color: 'bg-red-500' }
         );
         break;
       case 'KC': // Keltner Channels
         outputs.push(
-          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 25 },
-          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 50 },
-          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 75 }
+          { label: 'Upper', color: 'bg-red-500' },
+          { label: 'Middle', color: 'bg-blue-500' },
+          { label: 'Lower', color: 'bg-green-500' }
         );
         break;
       case 'DC': // Donchian Channels
         outputs.push(
-          { id: 'upper', label: 'Upper', color: 'bg-red-500', position: 25 },
-          { id: 'middle', label: 'Middle', color: 'bg-blue-500', position: 50 },
-          { id: 'lower', label: 'Lower', color: 'bg-green-500', position: 75 }
+          { label: 'Upper', color: 'bg-red-500' },
+          { label: 'Middle', color: 'bg-blue-500' },
+          { label: 'Lower', color: 'bg-green-500' }
         );
         break;
       case 'AROON':
         outputs.push(
-          { id: 'aroon_up', label: 'Aroon Up', color: 'bg-green-500', position: 35 },
-          { id: 'aroon_down', label: 'Aroon Down', color: 'bg-red-500', position: 65 }
+          { label: 'Aroon Up', color: 'bg-green-500' },
+          { label: 'Aroon Down', color: 'bg-red-500' }
         );
         break;
       case 'STOCHRSI': // Stochastic RSI
         outputs.push(
-          { id: 'k', label: '%K', color: 'bg-blue-500', position: 35 },
-          { id: 'd', label: '%D', color: 'bg-green-500', position: 65 }
+          { label: '%K', color: 'bg-blue-500' },
+          { label: '%D', color: 'bg-green-500' }
         );
         break;
       case 'DMI': // Directional Movement Index
         outputs.push(
-          { id: 'dmi_plus', label: 'DMI+', color: 'bg-green-500', position: 25 },
-          { id: 'dmi_minus', label: 'DMI-', color: 'bg-red-500', position: 50 },
-          { id: 'adx', label: 'ADX', color: 'bg-blue-500', position: 75 }
+          { label: 'DMI+', color: 'bg-green-500' },
+          { label: 'DMI-', color: 'bg-red-500' },
+          { label: 'ADX', color: 'bg-blue-500' }
         );
         break;
       case 'PPO': // Percentage Price Oscillator
         outputs.push(
-          { id: 'ppo', label: 'PPO', color: 'bg-blue-500', position: 25 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 50 },
-          { id: 'histogram', label: 'Histogram', color: 'bg-orange-500', position: 75 }
+          { label: 'PPO', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' },
+          { label: 'Histogram', color: 'bg-orange-500' }
         );
         break;
       case 'TSI': // True Strength Index
         outputs.push(
-          { id: 'tsi', label: 'TSI', color: 'bg-blue-500', position: 35 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 65 }
+          { label: 'TSI', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' }
         );
         break;
       case 'KDJ':
         outputs.push(
-          { id: 'k', label: '%K', color: 'bg-blue-500', position: 25 },
-          { id: 'd', label: '%D', color: 'bg-green-500', position: 50 },
-          { id: 'j', label: '%J', color: 'bg-orange-500', position: 75 }
+          { label: '%K', color: 'bg-blue-500' },
+          { label: '%D', color: 'bg-green-500' },
+          { label: '%J', color: 'bg-orange-500' }
         );
         break;
       case 'VORTEX':
         outputs.push(
-          { id: 'vi_plus', label: 'VI+', color: 'bg-green-500', position: 35 },
-          { id: 'vi_minus', label: 'VI-', color: 'bg-red-500', position: 65 }
+          { label: 'VI+', color: 'bg-green-500' },
+          { label: 'VI-', color: 'bg-red-500' }
+        );
+        break;
+      case 'Ichimoku':
+        outputs.push(
+          { label: 'Tenkan', color: 'bg-blue-500' },
+          { label: 'Kijun', color: 'bg-red-500' },
+          { label: 'Senkou A', color: 'bg-green-500' },
+          { label: 'Senkou B', color: 'bg-purple-500' },
+          { label: 'Chikou', color: 'bg-yellow-500' },
+        );
+        break;
+      case 'VolumeProfile':
+        outputs.push(
+          { label: 'POC', color: 'bg-blue-500' },
+          { label: 'VAH', color: 'bg-green-500' },
+          { label: 'VAL', color: 'bg-red-500' },
+        );
+        break;
+      case 'MarketStructure':
+        outputs.push(
+          { label: 'Higher High', color: 'bg-green-500' },
+          { label: 'Lower Low', color: 'bg-red-500' },
+          { label: 'Support', color: 'bg-blue-500' },
+          { label: 'Resistance', color: 'bg-purple-500' },
         );
         break;
       default:
         outputs.push(
-          { id: 'value', label: 'Value', color: 'bg-blue-500', position: 40 },
-          { id: 'signal', label: 'Signal', color: 'bg-green-500', position: 70 }
+          { label: 'Value', color: 'bg-blue-500' },
+          { label: 'Signal', color: 'bg-green-500' }
         );
     }
 
@@ -184,13 +208,14 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
   };
 
   const availableOutputs = getAvailableOutputs();
+  const outputPositions = [20, 35, 50, 65, 80];
 
   return (
     <Card 
       className={`min-w-[200px] ${selected ? 'ring-2 ring-blue-500' : ''} dark:bg-card dark:border-border`} 
       suppressHydrationWarning
     >
-      <CardContent className="p-3">
+      <CardContent className="p-3 relative">
         <div className="flex items-center space-x-2 mb-2">
           {getCategoryIcon(indicatorCategory)}
           <span className="font-medium text-sm dark:text-foreground">{label}</span>
@@ -228,71 +253,34 @@ export function TechnicalIndicatorNode({ id, selected }: NodeProps<TechnicalIndi
           style={{ left: -6 }}
         />
 
-        {/* 4 STATIC OUTPUT HANDLES - ALWAYS PRESENT FOR ALL TECHNICAL INDICATORS */}
-        
-        {/* Output 1 - Always at 25% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-1"
-          className={`w-3 h-3 ${availableOutputs[0] ? availableOutputs[0].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '25%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[0] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(25% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[0] ? availableOutputs[0].label : ''}
-        </div>
-        
-        {/* Output 2 - Always at 50% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-2"
-          className={`w-3 h-3 ${availableOutputs[1] ? availableOutputs[1].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '50%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[1] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(50% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[1] ? availableOutputs[1].label : ''}
-        </div>
-        
-        {/* Output 3 - Always at 75% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-3"
-          className={`w-3 h-3 ${availableOutputs[2] ? availableOutputs[2].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '75%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[2] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(75% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[2] ? availableOutputs[2].label : ''}
-        </div>
-        
-        {/* Output 4 - Always at 90% */}
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="output-4"
-          className={`w-3 h-3 ${availableOutputs[3] ? availableOutputs[3].color : 'opacity-0 pointer-events-none'}`}
-          style={{ 
-            right: -6, 
-            top: '90%'
-          }}
-        />
-        <div className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${availableOutputs[3] ? '' : 'opacity-0'}`} 
-             style={{ right: -45, top: 'calc(90% - 8px)', fontSize: '10px' }}>
-          {availableOutputs[3] ? availableOutputs[3].label : ''}
-        </div>
+        {/* 5 Static Output Handles */}
+        {outputPositions.map((top, index) => {
+          const output = availableOutputs[index];
+          return (
+            <React.Fragment key={index}>
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`output-${index + 1}`}
+                className={`w-3 h-3 ${output ? output.color : 'opacity-0 pointer-events-none'}`}
+                style={{
+                  right: -6,
+                  top: `${top}%`
+                }}
+              />
+              <div
+                className={`absolute text-xs font-medium text-gray-600 dark:text-gray-300 pointer-events-none ${output ? '' : 'opacity-0'}`}
+                style={{
+                  right: -45,
+                  top: `calc(${top}% - 8px)`,
+                  fontSize: '10px'
+                }}
+              >
+                {output ? output.label : ''}
+              </div>
+            </React.Fragment>
+          );
+        })}
       </CardContent>
     </Card>
   );
