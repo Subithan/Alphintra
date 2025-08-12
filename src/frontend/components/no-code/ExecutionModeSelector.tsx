@@ -10,11 +10,23 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight } from 'lucide-react'
+import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight, Blend, History, ClipboardCopy, Beaker, ShieldCheck, AreaChart, Server, Layers } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
+type ExecutionMode = 'strategy' | 'model' | 'hybrid' | 'backtesting' | 'paper_trading' | 'research';
+
 interface ExecutionModeConfig {
-  // Strategy Mode Config
+  // Common
+  risk_management?: {
+    max_drawdown?: number;
+    stop_loss_percent?: number;
+    take_profit_percent?: number;
+  };
+  data_frequency?: 'tick' | '1min' | '5min' | '15min' | '1h' | '4h' | '1d';
+  resource_allocation?: 'low' | 'medium' | 'high';
+  custom_environment?: string;
+
+  // Strategy/Backtesting Mode Config
   backtest_start?: string
   backtest_end?: string
   initial_capital?: number
@@ -32,18 +44,34 @@ interface ExecutionModeConfig {
     validation_split?: number
     parameter_space_reduction?: boolean
   }
+
+  // Hybrid Mode Config
+  strategy_weight?: number;
+  model_confidence_threshold?: number;
+
+  // Paper Trading Config
+  paper_initial_capital?: number;
+  reset_on_new_signal?: boolean;
+
+  // Research Mode Config
+  notebook_template?: 'data_exploration' | 'feature_engineering' | 'model_analysis';
+  export_data_format?: 'csv' | 'json' | 'parquet';
 }
 
 interface ExecutionModeSelectorProps {
   workflowId: number
   workflowName: string
   workflowComplexity?: 'simple' | 'medium' | 'complex'
-  onModeSelect: (mode: 'strategy' | 'model', config: ExecutionModeConfig) => void
+  onModeSelect: (mode: ExecutionMode, config: ExecutionModeConfig) => void
   onCancel?: () => void
   isLoading?: boolean
   estimatedDuration?: {
     strategy: string
     model: string
+    hybrid: string
+    backtesting: string
+    paper_trading: string
+    research: string
   }
 }
 
@@ -54,15 +82,24 @@ export function ExecutionModeSelector({
   onModeSelect,
   onCancel,
   isLoading = false,
-  estimatedDuration = { strategy: '< 1 minute', model: '2-6 hours' }
+  estimatedDuration = {
+    strategy: '< 1 minute',
+    model: '2-6 hours',
+    hybrid: 'Varies',
+    backtesting: '5-30 minutes',
+    paper_trading: 'Live',
+    research: 'Instant'
+  }
 }: ExecutionModeSelectorProps) {
-  const [selectedMode, setSelectedMode] = useState<'strategy' | 'model' | null>(null)
+  const [selectedMode, setSelectedMode] = useState<ExecutionMode | null>(null)
+
   const [strategyConfig, setStrategyConfig] = useState<ExecutionModeConfig>({
     backtest_start: '2023-01-01',
     backtest_end: '2023-12-31',
     initial_capital: 10000,
     commission: 0.001
   })
+
   const [modelConfig, setModelConfig] = useState<ExecutionModeConfig>({
     optimization_objective: 'sharpe_ratio',
     max_trials: 100,
@@ -76,12 +113,58 @@ export function ExecutionModeSelector({
       parameter_space_reduction: false
     }
   })
+
+  const [hybridConfig, setHybridConfig] = useState<ExecutionModeConfig>({
+    strategy_weight: 0.5,
+    model_confidence_threshold: 0.7,
+    risk_management: { max_drawdown: 20, stop_loss_percent: 5 },
+  })
+
+  const [backtestingConfig, setBacktestingConfig] = useState<ExecutionModeConfig>({
+    backtest_start: '2022-01-01',
+    backtest_end: '2023-12-31',
+    initial_capital: 100000,
+    commission: 0.00075,
+    data_frequency: '1h',
+  })
+
+  const [paperTradingConfig, setPaperTradingConfig] = useState<ExecutionModeConfig>({
+    paper_initial_capital: 50000,
+    reset_on_new_signal: false,
+    data_frequency: '1min',
+  })
+
+  const [researchConfig, setResearchConfig] = useState<ExecutionModeConfig>({
+    notebook_template: 'data_exploration',
+    export_data_format: 'csv',
+  })
+
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
 
   const handleExecute = () => {
     if (!selectedMode) return
     
-    const config = selectedMode === 'strategy' ? strategyConfig : modelConfig
+    let config: ExecutionModeConfig = {};
+    switch (selectedMode) {
+      case 'strategy':
+        config = strategyConfig;
+        break;
+      case 'model':
+        config = modelConfig;
+        break;
+      case 'hybrid':
+        config = hybridConfig;
+        break;
+      case 'backtesting':
+        config = backtestingConfig;
+        break;
+      case 'paper_trading':
+        config = paperTradingConfig;
+        break;
+      case 'research':
+        config = researchConfig;
+        break;
+    }
     onModeSelect(selectedMode, config)
   }
 

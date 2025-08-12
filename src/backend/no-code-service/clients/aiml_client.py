@@ -330,3 +330,23 @@ class AIMLClient:
             return response.get('status') == 'healthy'
         except Exception:
             return False
+
+    async def start_hybrid_execution(self, workflow_definition: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start a hybrid execution job."""
+        payload = {"workflow_definition": workflow_definition, "config": config}
+        return await self._make_request('POST', '/api/executions/hybrid', data=payload)
+
+    async def start_backtest(self, workflow_definition: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start a backtesting job."""
+        payload = {"workflow_definition": workflow_definition, "config": config}
+        return await self._make_request('POST', '/api/backtesting/from-workflow', data=payload)
+
+    async def start_paper_trading(self, workflow_definition: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start a paper trading job."""
+        payload = {"workflow_definition": workflow_definition, "config": config}
+        return await self._make_request('POST', '/api/paper-trading/from-workflow', data=payload)
+
+    async def start_research_session(self, workflow_definition: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+        """Start a research session."""
+        payload = {"workflow_definition": workflow_definition, "config": config}
+        return await self._make_request('POST', '/api/research/from-workflow', data=payload)
