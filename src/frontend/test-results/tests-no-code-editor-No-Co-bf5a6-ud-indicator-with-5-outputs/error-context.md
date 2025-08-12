@@ -31,7 +31,7 @@
 - button "Test":
   - img
   - text: Test
-- text: 1 nodes 0 connections Unsaved
+- text: 0 nodes 0 connections Saved
 - button "Save":
   - img
   - text: Save
@@ -416,9 +416,9 @@
 - button "Details"
 - text: "Complexity: 30 | Logic Depth: 0 | Indicators: 1"
 - img
-- 'button "Simple Moving Average SMA TREND Period: 20 Value Signal"':
+- 'button "Technical Indicator SMA TREND Period: 20 Value Signal"':
   - img
-  - text: "Simple Moving Average SMA TREND Period: 20 Value Signal"
+  - text: "Technical Indicator SMA TREND Period: 20 Value Signal"
 - button "zoom in" [disabled]:
   - img
 - button "zoom out":
@@ -432,6 +432,9 @@
 - link "React Flow attribution":
   - /url: https://reactflow.dev
   - text: React Flow
+- img
+- heading "No Node Selected" [level=3]
+- paragraph: Select a node to configure its parameters
 - alert
 - button "Open Next.js Dev Tools":
   - img
