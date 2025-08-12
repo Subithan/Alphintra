@@ -33,10 +33,14 @@ export function useWorkflowValidation(
     isValid: true,
     errors: [],
     warnings: [],
+    suggestions: [],
     performance: {
       estimatedComplexity: 0,
       estimatedExecutionTime: 0,
-      memoryUsage: 0
+      memoryUsage: 0,
+      logicDepth: 0,
+      indicatorCount: 0,
+      signalPathCount: 0
     }
   });
   

@@ -58,6 +58,7 @@ export class WorkflowValidator {
     this.validateDataTypeCompatibility();
     this.validateParameterRanges();
     this.validateCircularDependencies();
+    this.validateTimeframeConsistency();
     
     // Enhanced validations for sophisticated workflows
     this.validateSignalPaths();
@@ -647,6 +648,57 @@ export class WorkflowValidator {
     ];
 
     return suspiciousPatterns.some(pattern => pattern.test(value));
+  }
+
+  /**
+   * Validates timeframe consistency for nodes that process time-series data.
+   */
+  private validateTimeframeConsistency(): void {
+    this.nodes.forEach(node => {
+      if (node.type === 'technicalIndicator' || node.type === 'condition') {
+        const timeframes = this.getUpstreamTimeframes(node.id, new Set());
+        if (timeframes.size > 1) {
+          this.addError({
+            id: `timeframe_inconsistency_${node.id}`,
+            type: 'warning',
+            category: 'connection',
+            severity: 'medium',
+            message: `Node "${node.data.label}" receives data from multiple timeframes: ${Array.from(timeframes).join(', ')}. This can lead to unexpected results.`,
+            nodeId: node.id,
+            suggestion: 'Ensure that all data sources feeding into this node have the same timeframe, or use specific nodes to handle multi-timeframe logic.'
+          });
+        }
+      }
+    });
+  }
+
+  private getUpstreamTimeframes(nodeId: string, visited: Set<string>): Set<string> {
+    if (visited.has(nodeId)) {
+      return new Set();
+    }
+    visited.add(nodeId);
+
+    const node = this.nodes.find(n => n.id === nodeId);
+    if (!node) {
+      return new Set();
+    }
+
+    if (node.type === 'dataSource') {
+      return new Set([node.data.parameters?.timeframe].filter(Boolean));
+    }
+
+    const incomingEdges = this.edges.filter(e => e.target === nodeId);
+    if (incomingEdges.length === 0) {
+      return new Set();
+    }
+
+    const timeframes = new Set<string>();
+    for (const edge of incomingEdges) {
+      const upstreamTimeframes = this.getUpstreamTimeframes(edge.source, visited);
+      upstreamTimeframes.forEach(tf => timeframes.add(tf));
+    }
+
+    return timeframes;
   }
 
   /**
