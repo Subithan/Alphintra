@@ -108,7 +108,7 @@ class CodeGenerationRequest(BaseModel):
     includeComments: bool = True
 
 class ExecutionModeRequest(BaseModel):
-    mode: str = Field(..., regex="^(strategy|model)$", description="Execution mode: 'strategy' or 'model'")
+    mode: str = Field(..., pattern="^(strategy|model)$", description="Execution mode: 'strategy' or 'model'")
     config: Dict[str, Any] = Field(default_factory=dict, description="Configuration parameters for execution mode")
 
 # Dependencies
