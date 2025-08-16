@@ -1,13 +1,16 @@
 """Pytest configuration and fixtures for the AI/ML Strategy Service."""
 import os
 import pytest
-from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Load test environment variables
-load_dotenv('.env.test')
+try:
+    from dotenv import load_dotenv
+    load_dotenv('.env.test')
+except ModuleNotFoundError:
+    print("python-dotenv not found, skipping .env file loading.")
 
 # Ensure we're using test database
 os.environ['TESTING'] = 'True'

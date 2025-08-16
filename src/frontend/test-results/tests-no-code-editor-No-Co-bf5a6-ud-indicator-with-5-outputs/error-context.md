@@ -1,0 +1,475 @@
+# Page snapshot
+
+```yaml
+- heading "Untitled Model" [level=1]
+- text: Design
+- button "Run":
+  - img
+  - text: Run
+- button "Stop" [disabled]:
+  - img
+  - text: Stop
+- button "Reset":
+  - img
+  - text: Reset
+- button "Search":
+  - img
+  - text: Search
+- button "Zoom Out":
+  - img
+- button "100%"
+- button "Zoom In":
+  - img
+- button "Enter Fullscreen":
+  - img
+- button "Visual":
+  - img
+  - text: Visual
+- button "Code":
+  - img
+  - text: Code
+- button "Test":
+  - img
+  - text: Test
+- text: 1 nodes 0 connections Unsaved
+- button "Save":
+  - img
+  - text: Save
+- button:
+  - img
+- tablist:
+  - tab "Components" [selected]:
+    - img
+    - text: Components
+  - tab "Templates":
+    - img
+    - text: Templates
+- button "Hide sidebar":
+  - img
+- heading "Component Library" [level=2]
+- paragraph: Drag components to the canvas to build your strategy
+- heading "Data Sources (2)" [level=3]:
+  - button "Data Sources (2)" [expanded]:
+    - text: Data Sources (2)
+    - img
+- region "Data Sources (2)":
+  - img
+  - heading "Market Data" [level=4]
+  - paragraph: Real-time or historical market data feed
+  - text: data input
+  - img
+  - heading "Custom Dataset" [level=4]
+  - paragraph: Upload your own CSV/Excel dataset
+  - text: data custom
+- heading "Trend Indicators (5)" [level=3]:
+  - button "Trend Indicators (5)" [expanded]:
+    - text: Trend Indicators (5)
+    - img
+- region "Trend Indicators (5)":
+  - img
+  - heading "Simple Moving Average" [level=4]
+  - paragraph: Calculate simple moving average
+  - text: sma trend
+  - img
+  - heading "Exponential Moving Average" [level=4]
+  - paragraph: Calculate exponential moving average
+  - text: ema trend
+  - img
+  - heading "Weighted Moving Average" [level=4]
+  - paragraph: Weighted moving average
+  - text: wma trend
+  - img
+  - heading "Volume Weighted MA" [level=4]
+  - paragraph: Volume weighted moving average
+  - text: vwma trend
+  - img
+  - heading "Hull Moving Average" [level=4]
+  - paragraph: Hull moving average
+  - text: hma trend
+- heading "Momentum Indicators (5)" [level=3]:
+  - button "Momentum Indicators (5)" [expanded]:
+    - text: Momentum Indicators (5)
+    - img
+- region "Momentum Indicators (5)":
+  - img
+  - heading "RSI" [level=4]
+  - paragraph: Relative Strength Index oscillator
+  - text: rsi oscillator
+  - img
+  - heading "Stochastic" [level=4]
+  - paragraph: Stochastic momentum oscillator
+  - text: stochastic momentum
+  - img
+  - heading "Williams %R" [level=4]
+  - paragraph: Williams percent range
+  - text: williams momentum
+  - img
+  - heading "CCI" [level=4]
+  - paragraph: Commodity Channel Index
+  - text: cci momentum
+  - img
+  - heading "Rate of Change" [level=4]
+  - paragraph: Price rate of change
+  - text: roc momentum
+- heading "Volatility Indicators (4)" [level=3]:
+  - button "Volatility Indicators (4)" [expanded]:
+    - text: Volatility Indicators (4)
+    - img
+- region "Volatility Indicators (4)":
+  - img
+  - heading "Bollinger Bands" [level=4]
+  - paragraph: Volatility bands around moving average
+  - text: bollinger volatility
+  - img
+  - heading "ATR" [level=4]
+  - paragraph: Average True Range
+  - text: atr volatility
+  - img
+  - heading "Keltner Channels" [level=4]
+  - paragraph: Keltner channel bands
+  - text: keltner volatility
+  - img
+  - heading "Donchian Channels" [level=4]
+  - paragraph: Donchian channel breakouts
+  - text: donchian volatility
+- heading "Volume Indicators (3)" [level=3]:
+  - button "Volume Indicators (3)" [expanded]:
+    - text: Volume Indicators (3)
+    - img
+- region "Volume Indicators (3)":
+  - img
+  - heading "On Balance Volume" [level=4]
+  - paragraph: On balance volume indicator
+  - text: obv volume
+  - img
+  - heading "VWAP" [level=4]
+  - paragraph: Volume weighted average price
+  - text: vwap volume
+  - img
+  - heading "Money Flow Index" [level=4]
+  - paragraph: Money flow index oscillator
+  - text: mfi volume
+- heading "Oscillators (3)" [level=3]:
+  - button "Oscillators (3)" [expanded]:
+    - text: Oscillators (3)
+    - img
+- region "Oscillators (3)":
+  - img
+  - heading "MACD" [level=4]
+  - paragraph: Moving Average Convergence Divergence
+  - text: macd momentum
+  - img
+  - heading "Awesome Oscillator" [level=4]
+  - paragraph: Awesome oscillator momentum
+  - text: ao awesome
+  - img
+  - heading "ADX" [level=4]
+  - paragraph: Average Directional Index
+  - text: adx directional
+- heading "Comparison Conditions (3)" [level=3]:
+  - button "Comparison Conditions (3)" [expanded]:
+    - text: Comparison Conditions (3)
+    - img
+- region "Comparison Conditions (3)":
+  - img
+  - heading "Value Comparison" [level=4]
+  - paragraph: Compare values with operators
+  - text: comparison value
+  - img
+  - heading "Range Condition" [level=4]
+  - paragraph: Check if value is within range
+  - text: range boundary
+  - img
+  - heading "Percentage Change" [level=4]
+  - paragraph: Monitor percentage changes
+  - text: percentage change
+- heading "Crossover Conditions (3)" [level=3]:
+  - button "Crossover Conditions (3)" [expanded]:
+    - text: Crossover Conditions (3)
+    - img
+- region "Crossover Conditions (3)":
+  - img
+  - heading "Crossover" [level=4]
+  - paragraph: Detect line crossovers
+  - text: crossover intersection
+  - img
+  - heading "Golden Cross" [level=4]
+  - paragraph: Detect golden cross pattern
+  - text: golden cross
+  - img
+  - heading "Divergence" [level=4]
+  - paragraph: Detect price-indicator divergence
+  - text: divergence indicator
+- heading "Trend Conditions (2)" [level=3]:
+  - button "Trend Conditions (2)" [expanded]:
+    - text: Trend Conditions (2)
+    - img
+- region "Trend Conditions (2)":
+  - img
+  - heading "Trend Direction" [level=4]
+  - paragraph: Analyze trend direction
+  - text: trend direction
+  - img
+  - heading "Trend Strength" [level=4]
+  - paragraph: Measure trend strength
+  - text: trend strength
+- heading "Pattern Conditions (3)" [level=3]:
+  - button "Pattern Conditions (3)" [expanded]:
+    - text: Pattern Conditions (3)
+    - img
+- region "Pattern Conditions (3)":
+  - img
+  - heading "Support/Resistance" [level=4]
+  - paragraph: Detect support and resistance levels
+  - text: support resistance
+  - img
+  - heading "Breakout" [level=4]
+  - paragraph: Detect breakout patterns
+  - text: breakout pattern
+  - img
+  - heading "Overbought/Oversold" [level=4]
+  - paragraph: Detect extreme conditions
+  - text: overbought oversold
+- heading "Multi-Timeframe Conditions (1)" [level=3]:
+  - button "Multi-Timeframe Conditions (1)" [expanded]:
+    - text: Multi-Timeframe Conditions (1)
+    - img
+- region "Multi-Timeframe Conditions (1)":
+  - img
+  - heading "Multi-Timeframe" [level=4]
+  - paragraph: Multi-timeframe analysis
+  - text: timeframe alignment
+- heading "Entry Actions (4)" [level=3]:
+  - button "Entry Actions (4)" [expanded]:
+    - text: Entry Actions (4)
+    - img
+- region "Entry Actions (4)":
+  - img
+  - heading "Buy Order" [level=4]
+  - paragraph: Execute buy/long entry order
+  - text: buy order
+  - img
+  - heading "Sell Order" [level=4]
+  - paragraph: Execute sell/short entry order
+  - text: sell order
+  - img
+  - heading "Limit Entry" [level=4]
+  - paragraph: Place limit entry order
+  - text: limit entry
+  - img
+  - heading "Stop Entry" [level=4]
+  - paragraph: Place stop entry order
+  - text: stop entry
+- heading "Exit Actions (4)" [level=3]:
+  - button "Exit Actions (4)" [expanded]:
+    - text: Exit Actions (4)
+    - img
+- region "Exit Actions (4)":
+  - img
+  - heading "Close Position" [level=4]
+  - paragraph: Close open position
+  - text: close position
+  - img
+  - heading "Stop Loss" [level=4]
+  - paragraph: Set stop loss order
+  - text: stop loss
+  - img
+  - heading "Take Profit" [level=4]
+  - paragraph: Set take profit order
+  - text: take profit
+  - img
+  - heading "Trailing Stop" [level=4]
+  - paragraph: Set trailing stop order
+  - text: trailing stop
+- heading "Management Actions (3)" [level=3]:
+  - button "Management Actions (3)" [expanded]:
+    - text: Management Actions (3)
+    - img
+- region "Management Actions (3)":
+  - img
+  - heading "Scale In" [level=4]
+  - paragraph: Scale into position
+  - text: scale in
+  - img
+  - heading "Scale Out" [level=4]
+  - paragraph: Scale out of position
+  - text: scale out
+  - img
+  - heading "Modify Order" [level=4]
+  - paragraph: Modify existing order
+  - text: modify order
+- heading "Portfolio Actions (2)" [level=3]:
+  - button "Portfolio Actions (2)" [expanded]:
+    - text: Portfolio Actions (2)
+    - img
+- region "Portfolio Actions (2)":
+  - img
+  - heading "Rebalance" [level=4]
+  - paragraph: Rebalance portfolio
+  - text: rebalance portfolio
+  - img
+  - heading "Risk Off" [level=4]
+  - paragraph: Reduce portfolio risk
+  - text: risk off
+- heading "Logic (3)" [level=3]:
+  - button "Logic (3)" [expanded]:
+    - text: Logic (3)
+    - img
+- region "Logic (3)":
+  - img
+  - heading "AND Gate" [level=4]
+  - paragraph: Logical AND operation
+  - text: and logic
+  - img
+  - heading "OR Gate" [level=4]
+  - paragraph: Logical OR operation
+  - text: or logic
+  - img
+  - heading "NOT Gate" [level=4]
+  - paragraph: Logical NOT operation
+  - text: not logic
+- heading "Position Risk (3)" [level=3]:
+  - button "Position Risk (3)" [expanded]:
+    - text: Position Risk (3)
+    - img
+- region "Position Risk (3)":
+  - img
+  - heading "Position Sizing" [level=4]
+  - paragraph: Calculate optimal position size
+  - text: position size
+  - img
+  - heading "Stop Loss Management" [level=4]
+  - paragraph: Advanced stop loss controls
+  - text: stop loss
+  - img
+  - heading "Position Limits" [level=4]
+  - paragraph: Set position time and size limits
+  - text: position limits
+- heading "Portfolio Risk (3)" [level=3]:
+  - button "Portfolio Risk (3)" [expanded]:
+    - text: Portfolio Risk (3)
+    - img
+- region "Portfolio Risk (3)":
+  - img
+  - heading "Portfolio Heat" [level=4]
+  - paragraph: Monitor portfolio risk exposure
+  - text: portfolio heat
+  - img
+  - heading "Correlation Control" [level=4]
+  - paragraph: Manage position correlations
+  - text: correlation diversification
+  - img
+  - heading "Concentration Limits" [level=4]
+  - paragraph: Prevent over-concentration
+  - text: concentration limits
+- heading "Market Risk (2)" [level=3]:
+  - button "Market Risk (2)" [expanded]:
+    - text: Market Risk (2)
+    - img
+- region "Market Risk (2)":
+  - img
+  - heading "Volatility Filter" [level=4]
+  - paragraph: Filter trades by volatility
+  - text: volatility filter
+  - img
+  - heading "Liquidity Check" [level=4]
+  - paragraph: Ensure adequate liquidity
+  - text: liquidity check
+- heading "Drawdown Protection (2)" [level=3]:
+  - button "Drawdown Protection (2)" [expanded]:
+    - text: Drawdown Protection (2)
+    - img
+- region "Drawdown Protection (2)":
+  - img
+  - heading "Drawdown Protection" [level=4]
+  - paragraph: Protect against large drawdowns
+  - text: drawdown protection
+  - img
+  - heading "Emergency Controls" [level=4]
+  - paragraph: Emergency risk management
+  - text: emergency controls
+- heading "Output (1)" [level=3]:
+  - button "Output (1)" [expanded]:
+    - text: Output (1)
+    - img
+- region "Output (1)":
+  - img
+  - heading "Output Display" [level=4]
+  - paragraph: Display strategy results
+  - text: output display
+- button "Show sidebar":
+  - img
+- navigation "breadcrumb":
+  - list:
+    - listitem:
+      - link "Strategy Hub":
+        - /url: /strategy-hub
+    - listitem: Untitled Model
+- button "Save":
+  - img
+  - text: Save
+- button "Execute Workflow" [disabled]:
+  - img
+  - text: Execute Workflow
+- img
+- text: 2 errors
+- button "Details"
+- text: "Complexity: 30 | Logic Depth: 0 | Indicators: 1"
+- img
+- 'button "Simple Moving Average SMA TREND Period: 20 Value Signal"':
+  - img
+  - text: "Simple Moving Average SMA TREND Period: 20 Value Signal"
+- button "zoom in" [disabled]:
+  - img
+- button "zoom out":
+  - img
+- button "fit view":
+  - img
+- button "toggle interactivity":
+  - img
+- img "React Flow mini map"
+- img
+- link "React Flow attribution":
+  - /url: https://reactflow.dev
+  - text: React Flow
+- heading "Node Configuration" [level=2]
+- button:
+  - img
+- button:
+  - img
+- text: technicalIndicator Simple Moving Average
+- paragraph: "ID: technicalIndicator-1754982781869"
+- tablist:
+  - tab "Parameters" [selected]:
+    - img
+    - text: Parameters
+  - tab "Inputs":
+    - img
+    - text: Inputs
+  - tab "Outputs":
+    - img
+    - text: Outputs
+  - tab "Validation 3":
+    - img
+    - text: Validation 3
+- tabpanel "Parameters":
+  - heading "Node Parameters" [level=3]
+  - text: Indicator Category
+  - combobox: Trend Indicators
+  - paragraph: Select the category of technical indicator
+  - text: Indicator Type
+  - combobox: Simple Moving Average
+  - paragraph: Select the technical indicator to calculate
+  - text: Period
+  - spinbutton "Period": "20"
+  - paragraph: Number of periods for calculation
+  - text: Price Source
+  - combobox: Close
+  - paragraph: Which price to use for calculation
+- button "Test Node":
+  - img
+  - text: Test Node
+- alert
+- button "Open Next.js Dev Tools":
+  - img
+```
