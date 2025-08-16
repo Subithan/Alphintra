@@ -33,6 +33,8 @@ interface ExecutionModeConfig {
   commission?: number
   
   // Model Mode Config
+  model_type?: string;
+  search_space?: any;
   optimization_objective?: string
   max_trials?: number
   timeout_hours?: number
@@ -101,6 +103,12 @@ export function ExecutionModeSelector({
   })
 
   const [modelConfig, setModelConfig] = useState<ExecutionModeConfig>({
+    model_type: 'xgboost',
+    search_space: {
+      n_estimators: {"type": "int", "low": 100, "high": 1000},
+      max_depth: {"type": "int", "low": 3, "high": 15},
+      learning_rate: {"type": "float", "low": 0.01, "high": 0.3, "log": true},
+    },
     optimization_objective: 'sharpe_ratio',
     max_trials: 100,
     timeout_hours: 24,
@@ -574,6 +582,25 @@ export function ExecutionModeSelector({
               // Model Mode Configuration
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="model-type">Model Type</Label>
+                    <Select
+                      value={modelConfig.model_type}
+                      onValueChange={(value) => setModelConfig(prev => ({
+                        ...prev,
+                        model_type: value
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="xgboost">XGBoost</SelectItem>
+                        <SelectItem value="random_forest">Random Forest</SelectItem>
+                        <SelectItem value="lightgbm">LightGBM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="optimization-objective">Optimization Objective</Label>
                     <Select
