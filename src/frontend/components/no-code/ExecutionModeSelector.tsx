@@ -217,7 +217,7 @@ export function ExecutionModeSelector({
       </div>
 
       {/* Mode Selection Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Strategy Mode Card */}
         <Card 
           className={`cursor-pointer transition-all duration-200 ${
@@ -319,6 +319,182 @@ export function ExecutionModeSelector({
                 {complexityInfo.recommendations.model}
               </AlertDescription>
             </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Hybrid Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'hybrid'
+              ? 'ring-2 ring-teal-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('hybrid')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Blend className="h-6 w-6 text-teal-600" />
+              <CardTitle className="text-xl">Hybrid Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-teal-50">Balanced</Badge>
+            </div>
+            <CardDescription>
+              Combine strategy rules with ML predictions for robust decisions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.hybrid}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Executes strategy, then validates with ML model</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Balances execution speed and predictive accuracy</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Ideal for adapting to changing market conditions</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Backtesting Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'backtesting'
+              ? 'ring-2 ring-orange-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('backtesting')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <History className="h-6 w-6 text-orange-600" />
+              <CardTitle className="text-xl">Backtesting Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-orange-50">Simulation</Badge>
+            </div>
+            <CardDescription>
+              Simulate strategy performance on historical data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.backtesting}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>In-depth performance analysis and reporting</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>Test strategy robustness across market conditions</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>Optimize parameters without risking capital</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Paper Trading Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'paper_trading'
+              ? 'ring-2 ring-cyan-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('paper_trading')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <ClipboardCopy className="h-6 w-6 text-cyan-600" />
+              <CardTitle className="text-xl">Paper Trading</CardTitle>
+              <Badge variant="outline" className="text-xs bg-cyan-50">Live Simulation</Badge>
+            </div>
+            <CardDescription>
+              Simulate live trading with real-time market data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.paper_trading}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Test forward performance in current market</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Validate strategy logic without financial risk</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Monitor real-time execution and latency</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Research Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'research'
+              ? 'ring-2 ring-gray-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('research')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Beaker className="h-6 w-6 text-gray-600" />
+              <CardTitle className="text-xl">Research Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-gray-50">Data Exploration</Badge>
+            </div>
+            <CardDescription>
+              Explore data and prototype ideas in a notebook environment
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.research}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Generates a pre-configured Jupyter notebook</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Loads relevant data sources automatically</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Perfect for ad-hoc analysis and visualization</span>
+                </li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
