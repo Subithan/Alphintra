@@ -71,14 +71,21 @@ export class ConnectionManager {
       sourceType: 'technicalIndicator',
       targetType: 'condition',
       sourceHandle: 'upper-output',
-      targetHandle: 'threshold-input',
+      targetHandle: 'data-input',
       dataType: 'numeric',
-      condition: {
-        type: 'threshold',
-        parameters: { sourceIndicator: 'BB' }
-      },
-      label: 'Upper Band',
-      description: 'Uses Bollinger Band upper band as threshold'
+      label: 'BB Upper Band',
+      description: 'Bollinger Band upper band value'
+    });
+
+    this.addRule({
+      id: 'bb-middle-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'middle-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Middle Line',
+      description: 'Bollinger Band middle line (SMA)'
     });
 
     this.addRule({
@@ -86,17 +93,46 @@ export class ConnectionManager {
       sourceType: 'technicalIndicator',
       targetType: 'condition',
       sourceHandle: 'lower-output',
-      targetHandle: 'threshold-input',
+      targetHandle: 'data-input',
       dataType: 'numeric',
-      condition: {
-        type: 'threshold',
-        parameters: { sourceIndicator: 'BB' }
-      },
-      label: 'Lower Band',
-      description: 'Uses Bollinger Band lower band as threshold'
+      label: 'BB Lower Band',
+      description: 'Bollinger Band lower band value'
+    });
+
+    this.addRule({
+      id: 'bb-width-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'width-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Width',
+      description: 'Bollinger Band width indicator'
     });
 
     // MACD specific connections
+    this.addRule({
+      id: 'macd-line-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'macd-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'MACD Line',
+      description: 'MACD main line value'
+    });
+
+    this.addRule({
+      id: 'macd-signal-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'signal-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'MACD Signal',
+      description: 'MACD signal line value'
+    });
+
     this.addRule({
       id: 'macd-histogram-to-condition',
       sourceType: 'technicalIndicator',
@@ -104,12 +140,520 @@ export class ConnectionManager {
       sourceHandle: 'histogram-output',
       targetHandle: 'data-input',
       dataType: 'numeric',
-      transformation: {
-        type: 'filter',
-        parameters: { threshold: 0 }
-      },
       label: 'MACD Histogram',
       description: 'MACD histogram for momentum analysis'
+    });
+
+    // Generic output handles to Condition connections
+    this.addRule({
+      id: 'output-1-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'output-1',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 1 to Condition',
+      description: 'Use first output for condition evaluation'
+    });
+
+    this.addRule({
+      id: 'output-2-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'output-2',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 2 to Condition',
+      description: 'Use second output for condition evaluation'
+    });
+
+    this.addRule({
+      id: 'output-3-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'output-3',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 3 to Condition',
+      description: 'Use third output for condition evaluation'
+    });
+
+    this.addRule({
+      id: 'output-4-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'output-4',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 4 to Condition',
+      description: 'Use fourth output for condition evaluation'
+    });
+
+    // Stochastic specific connections
+    this.addRule({
+      id: 'stoch-k-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'k-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Stochastic %K',
+      description: 'Stochastic %K line value'
+    });
+
+    this.addRule({
+      id: 'stoch-d-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'd-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Stochastic %D',
+      description: 'Stochastic %D line value'
+    });
+
+    // Keltner Channels specific connections
+    this.addRule({
+      id: 'kc-upper-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'upper-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'KC Upper Band',
+      description: 'Keltner Channel upper band value'
+    });
+
+    this.addRule({
+      id: 'kc-middle-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'middle-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'KC Middle Line',
+      description: 'Keltner Channel middle line value'
+    });
+
+    this.addRule({
+      id: 'kc-lower-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'lower-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'KC Lower Band',
+      description: 'Keltner Channel lower band value'
+    });
+
+    // Donchian Channels specific connections
+    this.addRule({
+      id: 'dc-upper-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'upper-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'DC Upper Band',
+      description: 'Donchian Channel upper band value'
+    });
+
+    this.addRule({
+      id: 'dc-lower-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'lower-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'DC Lower Band',
+      description: 'Donchian Channel lower band value'
+    });
+
+    // Aroon specific connections
+    this.addRule({
+      id: 'aroon-up-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'aroon_up-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Aroon Up',
+      description: 'Aroon Up indicator value'
+    });
+
+    this.addRule({
+      id: 'aroon-down-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'aroon_down-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Aroon Down',
+      description: 'Aroon Down indicator value'
+    });
+
+    // DMI specific connections
+    this.addRule({
+      id: 'dmi-plus-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'dmi_plus-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'DMI+',
+      description: 'Positive Directional Movement Index'
+    });
+
+    this.addRule({
+      id: 'dmi-minus-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'dmi_minus-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'DMI-',
+      description: 'Negative Directional Movement Index'
+    });
+
+    // PPO specific connections
+    this.addRule({
+      id: 'ppo-line-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'ppo-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'PPO Line',
+      description: 'Percentage Price Oscillator line'
+    });
+
+    this.addRule({
+      id: 'ppo-histogram-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'histogram-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'PPO Histogram',
+      description: 'PPO histogram for momentum analysis'
+    });
+
+    // TSI specific connections
+    this.addRule({
+      id: 'tsi-line-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'tsi-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'TSI Line',
+      description: 'True Strength Index line'
+    });
+
+    // KDJ specific connections
+    this.addRule({
+      id: 'kdj-k-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'k-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'KDJ %K',
+      description: 'KDJ %K line value'
+    });
+
+    this.addRule({
+      id: 'kdj-d-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'd-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'KDJ %D',
+      description: 'KDJ %D line value'
+    });
+
+    this.addRule({
+      id: 'kdj-j-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'j-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'KDJ %J',
+      description: 'KDJ %J line value'
+    });
+
+    // Vortex specific connections
+    this.addRule({
+      id: 'vortex-plus-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'vi_plus-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'VI+',
+      description: 'Positive Vortex Indicator'
+    });
+
+    this.addRule({
+      id: 'vortex-minus-to-condition',
+      sourceType: 'technicalIndicator',
+      targetType: 'condition',
+      sourceHandle: 'vi_minus-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'VI-',
+      description: 'Negative Vortex Indicator'
+    });
+
+    // Technical Indicator to Technical Indicator connections (for indicator-based indicators)
+    this.addRule({
+      id: 'ti-value-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'value-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Indicator Chain',
+      description: 'Chain technical indicators together'
+    });
+
+    this.addRule({
+      id: 'ti-signal-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'signal-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Signal Chain',
+      description: 'Chain technical indicator signals together'
+    });
+
+    // Generic output handles to Technical Indicator connections
+    this.addRule({
+      id: 'output-1-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'output-1',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 1 Chain',
+      description: 'Use first output as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'output-2-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'output-2',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 2 Chain',
+      description: 'Use second output as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'output-3-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'output-3',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 3 Chain',
+      description: 'Use third output as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'output-4-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'output-4',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Output 4 Chain',
+      description: 'Use fourth output as input to another indicator'
+    });
+
+    // MACD to Technical Indicator connections
+    this.addRule({
+      id: 'macd-line-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'macd-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'MACD Chain',
+      description: 'Use MACD line as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'macd-signal-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'signal-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'MACD Signal Chain',
+      description: 'Use MACD signal as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'macd-histogram-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'histogram-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'MACD Histogram Chain',
+      description: 'Use MACD histogram as input to another indicator'
+    });
+
+    // Bollinger Bands to Technical Indicator connections
+    this.addRule({
+      id: 'bb-upper-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'upper-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Upper Chain',
+      description: 'Use BB upper band as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'bb-middle-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'middle-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Middle Chain',
+      description: 'Use BB middle line as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'bb-lower-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'lower-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Lower Chain',
+      description: 'Use BB lower band as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'bb-width-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'width-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Width Chain',
+      description: 'Use BB width as input to another indicator'
+    });
+
+    // Stochastic to Technical Indicator connections
+    this.addRule({
+      id: 'stoch-k-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'k-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Stoch %K Chain',
+      description: 'Use Stochastic %K as input to another indicator'
+    });
+
+    this.addRule({
+      id: 'stoch-d-to-ti',
+      sourceType: 'technicalIndicator',
+      targetType: 'technicalIndicator',
+      sourceHandle: 'd-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Stoch %D Chain',
+      description: 'Use Stochastic %D as input to another indicator'
+    });
+
+    // Multi-output to Action connections
+    this.addRule({
+      id: 'bb-upper-to-action',
+      sourceType: 'technicalIndicator',
+      targetType: 'action',
+      sourceHandle: 'upper-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Upper to Action',
+      description: 'Use Bollinger Band upper band for action trigger'
+    });
+
+    this.addRule({
+      id: 'bb-lower-to-action',
+      sourceType: 'technicalIndicator',
+      targetType: 'action',
+      sourceHandle: 'lower-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Lower to Action',
+      description: 'Use Bollinger Band lower band for action trigger'
+    });
+
+    this.addRule({
+      id: 'macd-histogram-to-action',
+      sourceType: 'technicalIndicator',
+      targetType: 'action',
+      sourceHandle: 'histogram-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'MACD Histogram to Action',
+      description: 'Use MACD histogram for action trigger'
+    });
+
+    this.addRule({
+      id: 'adx-to-action',
+      sourceType: 'technicalIndicator',
+      targetType: 'action',
+      sourceHandle: 'adx-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'ADX to Action',
+      description: 'Use ADX strength for action trigger'
+    });
+
+    this.addRule({
+      id: 'stoch-k-to-action',
+      sourceType: 'technicalIndicator',
+      targetType: 'action',
+      sourceHandle: 'k-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'Stochastic %K to Action',
+      description: 'Use Stochastic %K for action trigger'
+    });
+
+    // Multi-output to Risk Management connections
+    this.addRule({
+      id: 'bb-width-to-risk',
+      sourceType: 'technicalIndicator',
+      targetType: 'risk',
+      sourceHandle: 'width-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'BB Width to Risk',
+      description: 'Use Bollinger Band width for volatility-based risk management'
+    });
+
+    this.addRule({
+      id: 'adx-to-risk',
+      sourceType: 'technicalIndicator',
+      targetType: 'risk',
+      sourceHandle: 'adx-output',
+      targetHandle: 'data-input',
+      dataType: 'numeric',
+      label: 'ADX to Risk',
+      description: 'Use ADX trend strength for risk assessment'
     });
 
     // Condition to Action connections
@@ -173,6 +717,96 @@ export class ConnectionManager {
       dataType: 'signal',
       label: 'Logic Input',
       description: 'Condition signal to logic gate'
+    });
+
+    // Condition to Logic specific input handles
+    this.addRule({
+      id: 'condition-to-logic-input-0',
+      sourceType: 'condition',
+      targetType: 'logic',
+      sourceHandle: 'signal-output',
+      targetHandle: 'input-0',
+      dataType: 'signal',
+      label: 'Logic Input 1',
+      description: 'Condition signal to logic gate input 1'
+    });
+
+    this.addRule({
+      id: 'condition-to-logic-input-1',
+      sourceType: 'condition',
+      targetType: 'logic',
+      sourceHandle: 'signal-output',
+      targetHandle: 'input-1',
+      dataType: 'signal',
+      label: 'Logic Input 2',
+      description: 'Condition signal to logic gate input 2'
+    });
+
+    this.addRule({
+      id: 'condition-to-logic-input-2',
+      sourceType: 'condition',
+      targetType: 'logic',
+      sourceHandle: 'signal-output',
+      targetHandle: 'input-2',
+      dataType: 'signal',
+      label: 'Logic Input 3',
+      description: 'Condition signal to logic gate input 3'
+    });
+
+    this.addRule({
+      id: 'condition-to-logic-input-3',
+      sourceType: 'condition',
+      targetType: 'logic',
+      sourceHandle: 'signal-output',
+      targetHandle: 'input-3',
+      dataType: 'signal',
+      label: 'Logic Input 4',
+      description: 'Condition signal to logic gate input 4'
+    });
+
+    // Logic to Logic connections (for nested logic operations)
+    this.addRule({
+      id: 'logic-to-logic-input-0',
+      sourceType: 'logic',
+      targetType: 'logic',
+      sourceHandle: 'output',
+      targetHandle: 'input-0',
+      dataType: 'signal',
+      label: 'Logic Chain Input 1',
+      description: 'Connect logic gate output to another logic gate input 1'
+    });
+
+    this.addRule({
+      id: 'logic-to-logic-input-1',
+      sourceType: 'logic',
+      targetType: 'logic',
+      sourceHandle: 'output',
+      targetHandle: 'input-1',
+      dataType: 'signal',
+      label: 'Logic Chain Input 2',
+      description: 'Connect logic gate output to another logic gate input 2'
+    });
+
+    this.addRule({
+      id: 'logic-to-logic-input-2',
+      sourceType: 'logic',
+      targetType: 'logic',
+      sourceHandle: 'output',
+      targetHandle: 'input-2',
+      dataType: 'signal',
+      label: 'Logic Chain Input 3',
+      description: 'Connect logic gate output to another logic gate input 3'
+    });
+
+    this.addRule({
+      id: 'logic-to-logic-input-3',
+      sourceType: 'logic',
+      targetType: 'logic',
+      sourceHandle: 'output',
+      targetHandle: 'input-3',
+      dataType: 'signal',
+      label: 'Logic Chain Input 4',
+      description: 'Connect logic gate output to another logic gate input 4'
     });
 
     this.addRule({

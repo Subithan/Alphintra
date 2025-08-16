@@ -14,6 +14,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import { theme } from "../theme";
 
 interface PriceChartProps {
   price: number;
@@ -33,14 +34,14 @@ export default function PriceChart({ price }: PriceChartProps) {
   const chartConfig = {
     price: {
       label: "Bitcoin Price",
-      color: "#eab308",
+      color: theme.colors.gold,
     },
   };
 
   return (
     <Card
       className="p-0 rounded-lg shadow-lg text-white"
-      style={{ backgroundColor: '#060819', border: '#060819' }}
+      style={{ backgroundColor: theme.colors.dark.card, border: theme.colors.dark.card }}
     >
       <CardHeader className="flex justify-between items-center mb-2 px-2 pt-2 pb-0">
         <CardTitle className="text-xl font-bold">BITCOIN</CardTitle>
@@ -53,8 +54,8 @@ export default function PriceChart({ price }: PriceChartProps) {
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="fillPrice" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="2%" stopColor="#eab308" stopOpacity={0.5} />
-                <stop offset="45%" stopColor="#eab308" stopOpacity={0} />
+                <stop offset="2%" stopColor={theme.colors.gold} stopOpacity={0.5} />
+                <stop offset="45%" stopColor={theme.colors.gold} stopOpacity={0} />
               </linearGradient>
             </defs>
             <ChartTooltip
@@ -65,7 +66,7 @@ export default function PriceChart({ price }: PriceChartProps) {
               dataKey="y"
               type="natural"
               fill="url(#fillPrice)"
-              stroke="#eab308"
+              stroke={theme.colors.gold}
             />
           </AreaChart>
         </ChartContainer>
