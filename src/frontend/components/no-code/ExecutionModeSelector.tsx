@@ -10,11 +10,23 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight } from 'lucide-react'
+import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight, GitMerge, History, Clipboard, Search, ShieldCheck, AreaChart, Server, Layers } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
+type ExecutionMode = 'strategy' | 'model' | 'hybrid' | 'backtesting' | 'paper_trading' | 'research';
+
 interface ExecutionModeConfig {
-  // Strategy Mode Config
+  // Common
+  risk_management?: {
+    max_drawdown?: number;
+    stop_loss_percent?: number;
+    take_profit_percent?: number;
+  };
+  data_frequency?: 'tick' | '1min' | '5min' | '15min' | '1h' | '4h' | '1d';
+  resource_allocation?: 'low' | 'medium' | 'high';
+  custom_environment?: string;
+
+  // Strategy/Backtesting Mode Config
   backtest_start?: string
   backtest_end?: string
   initial_capital?: number
@@ -32,18 +44,34 @@ interface ExecutionModeConfig {
     validation_split?: number
     parameter_space_reduction?: boolean
   }
+
+  // Hybrid Mode Config
+  strategy_weight?: number;
+  model_confidence_threshold?: number;
+
+  // Paper Trading Config
+  paper_initial_capital?: number;
+  reset_on_new_signal?: boolean;
+
+  // Research Mode Config
+  notebook_template?: 'data_exploration' | 'feature_engineering' | 'model_analysis';
+  export_data_format?: 'csv' | 'json' | 'parquet';
 }
 
 interface ExecutionModeSelectorProps {
   workflowId: number
   workflowName: string
   workflowComplexity?: 'simple' | 'medium' | 'complex'
-  onModeSelect: (mode: 'strategy' | 'model', config: ExecutionModeConfig) => void
+  onModeSelect: (mode: ExecutionMode, config: ExecutionModeConfig) => void
   onCancel?: () => void
   isLoading?: boolean
   estimatedDuration?: {
     strategy: string
     model: string
+    hybrid: string
+    backtesting: string
+    paper_trading: string
+    research: string
   }
 }
 
@@ -54,15 +82,24 @@ export function ExecutionModeSelector({
   onModeSelect,
   onCancel,
   isLoading = false,
-  estimatedDuration = { strategy: '< 1 minute', model: '2-6 hours' }
+  estimatedDuration = {
+    strategy: '< 1 minute',
+    model: '2-6 hours',
+    hybrid: 'Varies',
+    backtesting: '5-30 minutes',
+    paper_trading: 'Live',
+    research: 'Instant'
+  }
 }: ExecutionModeSelectorProps) {
-  const [selectedMode, setSelectedMode] = useState<'strategy' | 'model' | null>(null)
+  const [selectedMode, setSelectedMode] = useState<ExecutionMode | null>(null)
+
   const [strategyConfig, setStrategyConfig] = useState<ExecutionModeConfig>({
     backtest_start: '2023-01-01',
     backtest_end: '2023-12-31',
     initial_capital: 10000,
     commission: 0.001
   })
+
   const [modelConfig, setModelConfig] = useState<ExecutionModeConfig>({
     optimization_objective: 'sharpe_ratio',
     max_trials: 100,
@@ -76,12 +113,58 @@ export function ExecutionModeSelector({
       parameter_space_reduction: false
     }
   })
+
+  const [hybridConfig, setHybridConfig] = useState<ExecutionModeConfig>({
+    strategy_weight: 0.5,
+    model_confidence_threshold: 0.7,
+    risk_management: { max_drawdown: 20, stop_loss_percent: 5 },
+  })
+
+  const [backtestingConfig, setBacktestingConfig] = useState<ExecutionModeConfig>({
+    backtest_start: '2022-01-01',
+    backtest_end: '2023-12-31',
+    initial_capital: 100000,
+    commission: 0.00075,
+    data_frequency: '1h',
+  })
+
+  const [paperTradingConfig, setPaperTradingConfig] = useState<ExecutionModeConfig>({
+    paper_initial_capital: 50000,
+    reset_on_new_signal: false,
+    data_frequency: '1min',
+  })
+
+  const [researchConfig, setResearchConfig] = useState<ExecutionModeConfig>({
+    notebook_template: 'data_exploration',
+    export_data_format: 'csv',
+  })
+
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
 
   const handleExecute = () => {
     if (!selectedMode) return
     
-    const config = selectedMode === 'strategy' ? strategyConfig : modelConfig
+    let config: ExecutionModeConfig = {};
+    switch (selectedMode) {
+      case 'strategy':
+        config = strategyConfig;
+        break;
+      case 'model':
+        config = modelConfig;
+        break;
+      case 'hybrid':
+        config = hybridConfig;
+        break;
+      case 'backtesting':
+        config = backtestingConfig;
+        break;
+      case 'paper_trading':
+        config = paperTradingConfig;
+        break;
+      case 'research':
+        config = researchConfig;
+        break;
+    }
     onModeSelect(selectedMode, config)
   }
 
@@ -134,7 +217,7 @@ export function ExecutionModeSelector({
       </div>
 
       {/* Mode Selection Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Strategy Mode Card */}
         <Card 
           className={`cursor-pointer transition-all duration-200 ${
@@ -236,6 +319,182 @@ export function ExecutionModeSelector({
                 {complexityInfo.recommendations.model}
               </AlertDescription>
             </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Hybrid Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'hybrid'
+              ? 'ring-2 ring-teal-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('hybrid')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <GitMerge className="h-6 w-6 text-teal-600" />
+              <CardTitle className="text-xl">Hybrid Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-teal-50">Balanced</Badge>
+            </div>
+            <CardDescription>
+              Combine strategy rules with ML predictions for robust decisions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.hybrid}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Executes strategy, then validates with ML model</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Balances execution speed and predictive accuracy</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Ideal for adapting to changing market conditions</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Backtesting Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'backtesting'
+              ? 'ring-2 ring-orange-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('backtesting')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <History className="h-6 w-6 text-orange-600" />
+              <CardTitle className="text-xl">Backtesting Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-orange-50">Simulation</Badge>
+            </div>
+            <CardDescription>
+              Simulate strategy performance on historical data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.backtesting}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>In-depth performance analysis and reporting</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>Test strategy robustness across market conditions</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>Optimize parameters without risking capital</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Paper Trading Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'paper_trading'
+              ? 'ring-2 ring-cyan-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('paper_trading')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Clipboard className="h-6 w-6 text-cyan-600" />
+              <CardTitle className="text-xl">Paper Trading</CardTitle>
+              <Badge variant="outline" className="text-xs bg-cyan-50">Live Simulation</Badge>
+            </div>
+            <CardDescription>
+              Simulate live trading with real-time market data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.paper_trading}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Test forward performance in current market</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Validate strategy logic without financial risk</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Monitor real-time execution and latency</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Research Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'research'
+              ? 'ring-2 ring-gray-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('research')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Search className="h-6 w-6 text-gray-600" />
+              <CardTitle className="text-xl">Research Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-gray-50">Data Exploration</Badge>
+            </div>
+            <CardDescription>
+              Explore data and prototype ideas in a notebook environment
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.research}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Generates a pre-configured Jupyter notebook</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Loads relevant data sources automatically</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Perfect for ad-hoc analysis and visualization</span>
+                </li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
