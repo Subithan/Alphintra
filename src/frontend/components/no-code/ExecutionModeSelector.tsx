@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight, Blend, History, ClipboardCopy, Beaker, ShieldCheck, AreaChart, Server, Layers } from 'lucide-react'
+import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight, GitMerge, History, Clipboard, Search, ShieldCheck, AreaChart, Server, Layers } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 type ExecutionMode = 'strategy' | 'model' | 'hybrid' | 'backtesting' | 'paper_trading' | 'research';
@@ -333,7 +333,7 @@ export function ExecutionModeSelector({
         >
           <CardHeader>
             <div className="flex items-center space-x-2">
-              <Blend className="h-6 w-6 text-teal-600" />
+              <GitMerge className="h-6 w-6 text-teal-600" />
               <CardTitle className="text-xl">Hybrid Mode</CardTitle>
               <Badge variant="outline" className="text-xs bg-teal-50">Balanced</Badge>
             </div>
@@ -421,7 +421,7 @@ export function ExecutionModeSelector({
         >
           <CardHeader>
             <div className="flex items-center space-x-2">
-              <ClipboardCopy className="h-6 w-6 text-cyan-600" />
+              <Clipboard className="h-6 w-6 text-cyan-600" />
               <CardTitle className="text-xl">Paper Trading</CardTitle>
               <Badge variant="outline" className="text-xs bg-cyan-50">Live Simulation</Badge>
             </div>
@@ -465,7 +465,7 @@ export function ExecutionModeSelector({
         >
           <CardHeader>
             <div className="flex items-center space-x-2">
-              <Beaker className="h-6 w-6 text-gray-600" />
+              <Search className="h-6 w-6 text-gray-600" />
               <CardTitle className="text-xl">Research Mode</CardTitle>
               <Badge variant="outline" className="text-xs bg-gray-50">Data Exploration</Badge>
             </div>
