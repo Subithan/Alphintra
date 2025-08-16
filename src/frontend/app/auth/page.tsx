@@ -78,8 +78,8 @@ const AuthPage: React.FC = () => {
         login(response.token, {
           id: response.user.id.toString(),
           email: response.user.email,
-          firstName: response.user.first_name || '',
-          lastName: response.user.last_name || '',
+          firstName: response.user.firstName || '',
+          lastName: response.user.lastName || '',
           role: 'USER',
           isVerified: response.user.kyc_status !== 'NOT_STARTED',
           twoFactorEnabled: false,
@@ -93,19 +93,8 @@ const AuthPage: React.FC = () => {
           username: formData.username!,
           email: formData.email,
           password: formData.password,
-          first_name: formData.firstName,
-          last_name: formData.lastName
-        });
-        login(response.token, {
-          id: response.user.id.toString(),
-          email: response.user.email,
-          firstName: response.user.first_name || '',
-          lastName: response.user.last_name || '',
-          role: 'USER',
-          isVerified: response.user.kyc_status !== 'NOT_STARTED',
-          twoFactorEnabled: false,
-          createdAt: response.user.created_at,
-          updatedAt: response.user.updated_at
+          firstName: formData.firstName,
+          lastName: formData.lastName
         });
         setMessage({ type: 'success', text: 'Account creation successful! Welcome to trading!' });
         window.location.href = '/dashboard';

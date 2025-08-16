@@ -32,7 +32,7 @@ public class AuthService {
         this.jwtExpiration = jwtExpiration;
     }
 
-    public User register(String username, String email, String password) {
+    public User register(String username, String email, String password, String firstName , String lastName ) {
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);

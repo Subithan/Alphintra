@@ -1,14 +1,16 @@
-//file path :"D:\Alphintra\Alphintra\src\frontend\lib\api\auth-service-api.ts"
+// file path: "D:\Alphintra\Alphintra\src\frontend\lib\api\auth-service-api.ts"
 
-import { BaseApiClient } from './api-client';
+import axios from 'axios';
+import type { AxiosInstance } from 'axios';
+
 
 // Types for Auth API
 export interface User {
   id: number;
   username: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
+  firstName?: string;
+  lastName?: string;
   date_of_birth?: string;
   phone_number?: string;
   address?: string;
@@ -22,12 +24,12 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface registerCredentials {
+export interface RegisterCredentials {
   username: string;
   email: string;
   password: string;
-  first_name?: string;
-  last_name?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface GoogleLoginCredentials {
@@ -39,38 +41,46 @@ export interface AuthResponse {
   token: string;
 }
 
-export class AuthServiceApiClient extends BaseApiClient {
+export class AuthServiceApiClient {
+  private api: AxiosInstance;
+
   constructor() {
-    super({
-      baseUrl: process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8009',
+    this.api = axios.create({
+      baseURL: process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8009',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
     if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEBUG_API === 'true') {
       console.log('🔧 AuthServiceApiClient Debug:', {
-        baseUrl: this.config.baseUrl,
+        baseUrl: this.api.defaults.baseURL,
       });
     }
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return this.requestWithRetry<AuthResponse>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
+    const response = await this.api.post<AuthResponse>('/api/auth/login', credentials);
+    return response.data;
   }
 
-  async register(credentials: registerCredentials): Promise<AuthResponse> {
-    return this.requestWithRetry<AuthResponse>('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
+  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+    // Make sure keys match backend DTO fields
+    const payload = {
+      username: credentials.username,
+      email: credentials.email,
+      password: credentials.password,
+      firstName: credentials.firstName,
+      lastName: credentials.lastName,
+    };
+
+    const response = await this.api.post<AuthResponse>('/api/auth/register', payload);
+    return response.data;
   }
 
   async googleLogin(credentials: GoogleLoginCredentials): Promise<AuthResponse> {
-    return this.requestWithRetry<AuthResponse>('/api/auth/google', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
+    const response = await this.api.post<AuthResponse>('/api/auth/google', credentials);
+    return response.data;
   }
 }
 

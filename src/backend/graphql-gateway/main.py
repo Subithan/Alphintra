@@ -45,7 +45,7 @@ SERVICES = {
 
 # Redis configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-
+ 
 # Global HTTP client and Redis client
 http_client = None
 redis_client = None
