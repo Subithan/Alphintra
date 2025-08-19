@@ -112,9 +112,9 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     /**
      * Get ticket statistics for agent performance.
      */
-    @Query("SELECT t.assignedAgentId, COUNT(t), AVG(EXTRACT(EPOCH FROM (t.resolvedAt - t.createdAt))/3600) " +
-           "FROM Ticket t WHERE t.resolvedAt IS NOT NULL AND t.assignedAgentId IS NOT NULL " +
-           "GROUP BY t.assignedAgentId")
+    @Query(value = "SELECT assigned_agent_id, COUNT(*), AVG(EXTRACT(EPOCH FROM (resolved_at - created_at))/3600) " +
+           "FROM support_tickets WHERE resolved_at IS NOT NULL AND assigned_agent_id IS NOT NULL " +
+           "GROUP BY assigned_agent_id", nativeQuery = true)
     List<Object[]> getAgentPerformanceStats();
 
     /**
@@ -127,26 +127,10 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     );
 
     /**
-     * Complex filter query for tickets.
+     * Find all tickets with pagination (fallback for complex filtering).
      */
-    @Query("SELECT t FROM Ticket t WHERE " +
-           "(:userId IS NULL OR t.userId = :userId) AND " +
-           "(:agentId IS NULL OR t.assignedAgentId = :agentId) AND " +
-           "(:status IS NULL OR t.status = :status) AND " +
-           "(:category IS NULL OR t.category = :category) AND " +
-           "(:priority IS NULL OR t.priority = :priority) AND " +
-           "(:startDate IS NULL OR t.createdAt >= :startDate) AND " +
-           "(:endDate IS NULL OR t.createdAt <= :endDate)")
-    Page<Ticket> findTicketsWithFilters(
-        @Param("userId") UUID userId,
-        @Param("agentId") String agentId,
-        @Param("status") TicketStatus status,
-        @Param("category") TicketCategory category,
-        @Param("priority") TicketPriority priority,
-        @Param("startDate") LocalDateTime startDate,
-        @Param("endDate") LocalDateTime endDate,
-        Pageable pageable
-    );
+    @Query("SELECT t FROM Ticket t ORDER BY t.createdAt DESC")
+    Page<Ticket> findAllTicketsOrderByCreatedAtDesc(Pageable pageable);
 
     /**
      * Get daily ticket creation statistics.

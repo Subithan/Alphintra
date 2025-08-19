@@ -1,55 +1,63 @@
-# Multi-stage Docker build for Customer Support Service
+# Multi-stage Docker build for Customer Support Service with optimized caching
 
-# Build stage
-FROM maven:3.9-openjdk-17-slim AS builder
+# Build stage with Maven cache optimization
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
 
 WORKDIR /app
 
-# Copy pom.xml first for better caching
+# Copy pom.xml first for dependency caching
 COPY pom.xml .
 
-# Download dependencies (this layer will be cached if pom.xml hasn't changed)
+# Download and cache dependencies in separate layers
 RUN mvn dependency:go-offline -B
+RUN mvn dependency:resolve -B
+RUN mvn dependency:sources -B
 
-# Copy source code
+# Copy source code last to maximize cache hits on code changes
 COPY src ./src
 
-# Build the application
-RUN mvn clean package -DskipTests -B
+# Build with optimizations - skip clean for faster incremental builds
+RUN mvn package -DskipTests -B \
+    -Dmaven.javadoc.skip=true \
+    -Dmaven.compile.fork=true \
+    -Dmaven.compiler.maxmem=1024m
 
-# Runtime stage
-FROM openjdk:17-jdk-slim
+# Extract JAR layers for better Docker layer caching
+WORKDIR /app/target/dependency
+RUN jar -xf ../*.jar
 
-# Create non-root user for security
-RUN groupadd -r alphintra && useradd --no-log-init -r -g alphintra alphintra
+# Runtime stage using Google's distroless image (minimal and secure)
+FROM gcr.io/distroless/java17-debian12:nonroot
+
+# Copy dependencies and classes in separate layers for better caching
+COPY --from=builder /app/target/dependency/BOOT-INF/lib /app/lib
+COPY --from=builder /app/target/dependency/META-INF /app/META-INF
+COPY --from=builder /app/target/dependency/BOOT-INF/classes /app
 
 # Set working directory
 WORKDIR /app
 
-# Copy the built JAR from builder stage
-COPY --from=builder /app/target/customer-support-service-*.jar app.jar
+# Expose ports
+EXPOSE 8010 8085
 
-# Change ownership to non-root user
-RUN chown alphintra:alphintra app.jar
+# Set JVM options optimized for containers and minimal memory usage
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+                -XX:MaxRAMPercentage=75.0 \
+                -XX:+UseG1GC \
+                -XX:+UseStringDeduplication \
+                -XX:+OptimizeStringConcat \
+                -Xss256k \
+                -XX:MetaspaceSize=64m \
+                -XX:MaxMetaspaceSize=128m \
+                -XX:+TieredCompilation \
+                -XX:TieredStopAtLevel=1"
 
-# Switch to non-root user
-USER alphintra
-
-# Expose port
-EXPOSE 8085
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8085/api/support/actuator/health || exit 1
-
-# Set JVM options for containerized environment
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
-
-# Run the application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# Run the application using the classpath (more efficient than fat JAR)
+ENTRYPOINT ["java", "-cp", "/app:/app/lib/*", "com.alphintra.customersupport.CustomerSupportApplication"]
 
 # Labels for metadata
 LABEL org.opencontainers.image.title="Alphintra Customer Support Service"
-LABEL org.opencontainers.image.description="Customer Support Service for Alphintra Trading Platform"
+LABEL org.opencontainers.image.description="Customer Support Service for Alphintra Trading Platform (Distroless)"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.vendor="Alphintra"
+LABEL org.opencontainers.image.base.name="gcr.io/distroless/java17-debian12:nonroot"

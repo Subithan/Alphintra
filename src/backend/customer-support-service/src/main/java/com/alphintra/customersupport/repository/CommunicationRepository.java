@@ -122,15 +122,17 @@ public interface CommunicationRepository extends JpaRepository<Communication, Lo
     /**
      * Get response time statistics for agents.
      */
-    @Query("SELECT c1.ticket.assignedAgentId, " +
-           "AVG(EXTRACT(EPOCH FROM (c2.createdAt - c1.createdAt))/60) as avgResponseMinutes " +
-           "FROM Communication c1 JOIN Communication c2 ON c1.ticket.ticketId = c2.ticket.ticketId " +
-           "WHERE c1.senderType = 'USER' AND c2.senderType = 'AGENT' " +
-           "AND c2.createdAt > c1.createdAt " +
-           "AND c2.createdAt = (SELECT MIN(c3.createdAt) FROM Communication c3 " +
-           "WHERE c3.ticket.ticketId = c1.ticket.ticketId AND c3.senderType = 'AGENT' " +
-           "AND c3.createdAt > c1.createdAt) " +
-           "GROUP BY c1.ticket.assignedAgentId")
+    @Query(value = "SELECT t.assigned_agent_id, " +
+           "AVG(EXTRACT(EPOCH FROM (c2.created_at - c1.created_at))/60) as avgResponseMinutes " +
+           "FROM communications c1 " +
+           "JOIN communications c2 ON c1.ticket_id = c2.ticket_id " +
+           "JOIN support_tickets t ON c1.ticket_id = t.ticket_id " +
+           "WHERE c1.sender_type = 'USER' AND c2.sender_type = 'AGENT' " +
+           "AND c2.created_at > c1.created_at " +
+           "AND c2.created_at = (SELECT MIN(c3.created_at) FROM communications c3 " +
+           "WHERE c3.ticket_id = c1.ticket_id AND c3.sender_type = 'AGENT' " +
+           "AND c3.created_at > c1.created_at) " +
+           "GROUP BY t.assigned_agent_id", nativeQuery = true)
     List<Object[]> getAgentResponseTimeStats();
 
     /**

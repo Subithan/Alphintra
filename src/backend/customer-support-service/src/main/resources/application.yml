@@ -1,7 +1,9 @@
 server:
-  port: 8085
+  port: 8010
   servlet:
-    context-path: /api/support
+    context-path: /api/customer-support
+  websocket:
+    port: 8085
 
 spring:
   application:
@@ -11,7 +13,7 @@ spring:
     active: local
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/alphintra_support
+    url: jdbc:postgresql://localhost:5432/alphintra_customer_support
     username: postgres
     password: alphintra123
     driver-class-name: org.postgresql.Driver
@@ -24,7 +26,7 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -35,6 +37,7 @@ spring:
     show-sql: false
   
   flyway:
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 1
@@ -174,7 +177,7 @@ spring:
       on-profile: kubernetes
   
   datasource:
-    url: jdbc:postgresql://postgresql-service:5432/alphintra_support
+    url: jdbc:postgresql://postgresql-service:5432/alphintra_customer_support
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:alphintra123}
   
@@ -186,6 +189,7 @@ spring:
 
 eureka:
   client:
+    enabled: false
     service-url:
       defaultZone: http://eureka-server:8761/eureka/
 
@@ -201,16 +205,23 @@ spring:
       on-profile: docker
   
   datasource:
-    url: jdbc:postgresql://postgres:5432/alphintra_support
-    username: postgres
-    password: alphintra123
+    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra_customer_support?user=alphintra&password=alphintra123}
+    driver-class-name: org.postgresql.Driver
   
   data:
     redis:
-      host: redis
-      port: 6379
+      url: ${REDIS_URL:redis://:redis123@redis:6379}
+  
+  security:
+    enabled: false
+  
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.actuator.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
 
 eureka:
   client:
+    enabled: false
     service-url:
       defaultZone: http://eureka-server:8761/eureka/

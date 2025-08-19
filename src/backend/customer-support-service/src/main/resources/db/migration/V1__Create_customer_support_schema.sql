@@ -1,6 +1,11 @@
 -- Customer Support Service Database Schema
 -- This script creates the initial schema for the customer support system
 
+-- Create the customer support database if it doesn't exist (handled by Spring Boot)
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- Create support agents table
 CREATE TABLE support_agents (
     agent_id VARCHAR(50) PRIMARY KEY,
