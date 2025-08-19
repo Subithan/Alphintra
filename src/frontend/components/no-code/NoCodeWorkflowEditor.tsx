@@ -32,6 +32,7 @@ import { useNoCodeStore } from '@/lib/stores/no-code-store';
 import { useExecutionStore } from '@/lib/stores/execution-store';
 import { connectionManager } from '@/lib/connection-manager';
 import { validateWorkflow, ValidationResult } from '@/lib/workflow-validation';
+import { getWorkflowOptimizations, OptimizationSuggestion } from '@/lib/workflow-optimizer';
 import { ConfigurationPanel } from './ConfigurationPanel';
 import { ExecutionModeSelector } from './ExecutionModeSelector';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -68,6 +69,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [modalSelectedNode, setModalSelectedNode] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [optimizationSuggestions, setOptimizationSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [showValidationPanel, setShowValidationPanel] = useState(false);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [isWorkflowSaved, setIsWorkflowSaved] = useState(false);
@@ -99,8 +101,11 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
     if (nodes.length > 0 || edges.length > 0) {
       const result = validateWorkflow(nodes, edges);
       setValidationResult(result);
+      const optimizations = getWorkflowOptimizations(nodes, edges);
+      setOptimizationSuggestions(optimizations);
     } else {
       setValidationResult(null);
+      setOptimizationSuggestions([]);
     }
   }, [nodes, edges]);
 
@@ -549,6 +554,32 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
            validationResult.errors.length === 0;
   };
 
+  const handleApplyOptimization = (action: any) => {
+    if (action.type === 'CONSOLIDATE_NODES') {
+      const { nodesToRemove, nodeToKeep } = action.payload;
+
+      // Re-wire the edges from the removed nodes to the node to keep
+      const updatedEdges = edges.map(edge => {
+        if (nodesToRemove.includes(edge.source)) {
+          return { ...edge, source: nodeToKeep };
+        }
+        return edge;
+      }).filter(edge => !nodesToRemove.includes(edge.target)); // also remove edges going to the removed nodes
+
+      // Filter out duplicate edges
+      const uniqueEdges = updatedEdges.filter((edge, index, self) =>
+        index === self.findIndex((e) => (
+          e.source === edge.source && e.target === edge.target && e.sourceHandle === edge.sourceHandle && e.targetHandle === edge.targetHandle
+        ))
+      );
+
+      setEdges(uniqueEdges);
+
+      // Remove the redundant nodes
+      setNodes(currentNodes => currentNodes.filter(n => !nodesToRemove.includes(n.id)));
+    }
+  };
+
   const getExecutionStatusBadge = () => {
     switch (currentExecutionStatus) {
       case 'executing':
@@ -713,6 +744,33 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                     <div className="text-blue-600 dark:text-blue-400 mt-1 capitalize">
                       {suggestion.type} • Priority: {suggestion.priority}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Optimizations */}
+            {optimizationSuggestions.length > 0 && (
+              <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">
+                  Optimizations ({optimizationSuggestions.length})
+                </h4>
+                {optimizationSuggestions.map((suggestion, index) => (
+                  <div key={index} className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs">
+                    <div className="font-medium text-green-800 dark:text-green-300">{suggestion.message}</div>
+                    <div className="text-green-600 dark:text-green-400 mt-1 capitalize">
+                      {suggestion.type} • Priority: {suggestion.priority}
+                    </div>
+                    {suggestion.action && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 text-xs h-6 px-2"
+                        onClick={() => handleApplyOptimization(suggestion.action)}
+                      >
+                        Apply
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

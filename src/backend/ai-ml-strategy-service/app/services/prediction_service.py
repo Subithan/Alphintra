@@ -20,6 +20,7 @@ from app.models.model_registry import ModelDeployment, DeploymentStatus
 from app.core.database import get_db_session
 from app.core.config import get_settings
 from sqlalchemy.orm import Session
+from app.services.model_monitor import model_monitor, PredictionLog
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -74,6 +75,8 @@ class ModelMetrics:
     successful_requests: int = 0
     failed_requests: int = 0
     avg_latency_ms: float = 0.0
+    p50_latency_ms: float = 0.0
+    p90_latency_ms: float = 0.0
     p95_latency_ms: float = 0.0
     p99_latency_ms: float = 0.0
     last_prediction_time: Optional[float] = None
@@ -219,6 +222,17 @@ class PredictionService:
             
             # Update metrics
             await self._update_metrics(request.model_deployment_id, response, start_time)
+
+            # Log prediction for monitoring
+            if response.error is None:
+                log = PredictionLog(
+                    deployment_id=request.model_deployment_id,
+                    request_id=request.request_id,
+                    features=request.features,
+                    prediction=response.prediction,
+                    # ground_truth is not available here, will be None
+                )
+                await model_monitor.log_prediction(log)
             
             response.processing_time_ms = (time.time() - start_time) * 1000
             return response
@@ -589,6 +603,8 @@ class PredictionService:
                     count = len(sorted_latencies)
                     
                     metrics.avg_latency_ms = sum(sorted_latencies) / count
+                    metrics.p50_latency_ms = sorted_latencies[int(count * 0.50)] if count > 0 else 0
+                    metrics.p90_latency_ms = sorted_latencies[int(count * 0.90)] if count > 0 else 0
                     metrics.p95_latency_ms = sorted_latencies[int(count * 0.95)] if count > 0 else 0
                     metrics.p99_latency_ms = sorted_latencies[int(count * 0.99)] if count > 0 else 0
                     
