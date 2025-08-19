@@ -34,8 +34,11 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@tanstack/react-query": "^5.81.5",
     "@types/pg": "^8.15.4",
+
     "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",
+
+   
     "clsx": "^2.1.1",
     "date-fns": "^2.30.0",
     "framer-motion": "^10.16.0",
@@ -65,7 +68,6 @@
     "@testing-library/jest-dom": "^6.1.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^14.5.0",
-    "@types/axios": "^0.9.36",
     "@types/node": "20.19.9",
     "@types/react": "18.3.23",
     "@types/react-dom": "^18.2.0",

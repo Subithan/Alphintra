@@ -89,13 +89,13 @@ const AuthPage: React.FC = () => {
         setMessage({ type: 'success', text: 'Login successful! Welcome to trading!' });
         window.location.href = '/dashboard';
       } else {
-        const response = await authServiceApiClient.register({
-          username: formData.username!,
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName
-        });
+        // const response = await authServiceApiClient.register({
+        //   username: formData.username!,
+        //   email: formData.email,
+        //   password: formData.password,
+        //   firstName: formData.firstName,
+        //   lastName: formData.lastName
+        // });
         setMessage({ type: 'success', text: 'Account creation successful! Welcome to trading!' });
         window.location.href = '/dashboard';
       }

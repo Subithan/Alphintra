@@ -37,7 +37,7 @@ public class AuthService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setKycStatus("NOT_STARTED");
+        user.setKycStatus("NOT_STARTED");                                               
         return userRepository.save(user);
     }
 
