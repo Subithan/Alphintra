@@ -436,6 +436,79 @@ services:
       timeout: 10s
       retries: 3
 
+  # Customer Support Service
+  customer-support-service:
+    build:
+      context: ./src/backend/customer-support-service
+      dockerfile: Dockerfile
+    container_name: alphintra-customer-support
+    ports:
+      - "8010:8010"
+      - "8085:8085"  # WebSocket port
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra
+      POSTGRES_USER: alphintra
+      POSTGRES_PASSWORD: alphintra123
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis123
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWT_SECRET: your-jwt-secret-key-here
+      JWT_EXPIRATION: 86400
+      WEBSOCKET_CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics,prometheus
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: alphintra-frontend
+    ports:
+      - "3001:3000"  # Map to 3001 to avoid conflict with Grafana
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: http://gateway:8080
+      NEXT_PUBLIC_SUPPORT_API_URL: http://customer-support-service:8010/api/customer-support
+      NEXT_PUBLIC_WS_BASE_URL: ws://customer-support-service:8085/ws
+      NEXT_PUBLIC_WS_SUPPORT_URL: ws://customer-support-service:8085/ws/support
+      NEXT_PUBLIC_NOCODE_API_URL: http://no-code-service:8006
+      NEXT_PUBLIC_AUTH_API_URL: http://auth-service:8001
+      NEXT_PUBLIC_TIMESCALE_API_URL: http://strategy-engine:8003
+      NEXT_PUBLIC_ENABLE_WEBSOCKET: true
+      NEXT_PUBLIC_ENABLE_AI_ASSISTANT: true
+      NEXT_PUBLIC_ENABLE_ANALYTICS: true
+      NEXT_PUBLIC_ENABLE_REAL_TIME_CHAT: true
+    depends_on:
+      - gateway
+      - customer-support-service
+      - auth-service
+      - no-code-service
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 # ===============================
 # VOLUMES
 # ===============================
