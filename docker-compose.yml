@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+
   # Infrastructure Services
   postgres:
     image: postgres:15-alpine
@@ -103,6 +104,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+      
 
   # ===============================
   # ML/AI SERVICES (Vertex AI Simulation)
@@ -435,6 +438,24 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+
+  wallet-service:
+    build:
+      context: ./src/backend/wallet-service
+      dockerfile: Dockerfile
+    container_name: alphintra-wallet-service
+    ports:
+      - "8008:8008"
+    environment:
+      - ENVIRONMENT=development
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3    
 
   # Customer Support Service
   customer-support-service:
