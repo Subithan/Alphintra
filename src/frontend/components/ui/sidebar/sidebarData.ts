@@ -28,17 +28,16 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/marketplace",
   },
   {
-    id: "wallet",
-    name: "Wallet",
-    icon: "solar:wallet-line-duotone",
-    url: "/wallet",
+    id: "ticketing",
+    name: "Ticketing",
+    icon:  "solar:ticket-line-duotone",
+    url: "/userTicketing",
   },
   {
     id: "no-code-console",
     name: "No-Code",
     icon: "solar:programming-line-duotone",
-    url: "/strategy-hub/no-code-console",
-    external: true,
+    url: "/strategy-hub",
   },
 ];
 

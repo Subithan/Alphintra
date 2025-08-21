@@ -15,11 +15,23 @@ export interface ValidationResult {
   isValid: boolean;
   errors: ValidationError[];
   warnings: ValidationError[];
+  suggestions: ValidationSuggestion[];
   performance: {
     estimatedComplexity: number;
     estimatedExecutionTime: number;
     memoryUsage: number;
+    logicDepth: number;
+    indicatorCount: number;
+    signalPathCount: number;
   };
+}
+
+export interface ValidationSuggestion {
+  id: string;
+  type: 'optimization' | 'best_practice' | 'alternative_approach';
+  message: string;
+  nodeIds: string[];
+  priority: 'high' | 'medium' | 'low';
 }
 
 export class WorkflowValidator {
@@ -46,6 +58,12 @@ export class WorkflowValidator {
     this.validateDataTypeCompatibility();
     this.validateParameterRanges();
     this.validateCircularDependencies();
+    this.validateTimeframeConsistency();
+    
+    // Enhanced validations for sophisticated workflows
+    this.validateSignalPaths();
+    this.validateLogicGateIntegrity();
+    this.validateMultiOutputIndicators();
     
     // Performance and security checks
     this.validatePerformanceImpact();
@@ -53,12 +71,14 @@ export class WorkflowValidator {
 
     const errors = this.errors.filter(e => e.type === 'error');
     const warnings = this.errors.filter(e => e.type === 'warning');
+    const suggestions = this.generateOptimizationSuggestions();
 
     return {
       isValid: errors.length === 0,
       errors,
       warnings,
-      performance: this.calculatePerformanceMetrics()
+      suggestions,
+      performance: this.calculateEnhancedPerformanceMetrics()
     };
   }
 
@@ -407,6 +427,14 @@ export class WorkflowValidator {
         return 1;
       case 'output':
         return 1;
+      case 'marketRegimeDetection':
+        return 1;
+      case 'multiTimeframeAnalysis':
+        return 1;
+      case 'correlationAnalysis':
+        return 2;
+      case 'sentimentAnalysis':
+        return 1;
       default:
         return 0;
     }
@@ -420,6 +448,8 @@ export class WorkflowValidator {
         return 2; // data + value inputs
       case 'risk':
         return 2; // data + signal inputs
+      case 'correlationAnalysis':
+        return 2;
       default:
         return this.getRequiredInputs(node);
     }
@@ -432,17 +462,56 @@ export class WorkflowValidator {
         return 'ohlcv';
       case 'technicalIndicator':
         if (!handle) return 'value';
+        
+        // Channel-based outputs
+        if (handle.includes('upper') || handle.includes('lower') || handle.includes('middle') || handle.includes('width')) return 'numeric';
+        
+        // MACD and PPO outputs  
+        if (handle.includes('histogram') || handle.includes('macd') || handle.includes('ppo')) return 'numeric';
+        
+        // For MACD, PPO, TSI signal outputs, we need to check the node's indicator type
+        if (handle === 'signal-output') {
+          // This would need node context to determine indicator type, defaulting to numeric for multi-output indicators
+          return 'numeric';
+        }
+        
+        // Stochastic outputs (including KDJ)
+        if (handle.includes('k') || handle.includes('d') || handle.includes('j')) return 'numeric';
+        
+        // Directional indicators
+        if (handle.includes('adx') || handle.includes('di_plus') || handle.includes('di_minus') || 
+            handle.includes('dmi_plus') || handle.includes('dmi_minus')) return 'numeric';
+        
+        // Aroon outputs
+        if (handle.includes('aroon_up') || handle.includes('aroon_down')) return 'numeric';
+        
+        // Vortex outputs
+        if (handle.includes('vi_plus') || handle.includes('vi_minus')) return 'numeric';
+        
+        // TSI output
+        if (handle.includes('tsi')) return 'numeric';
+        
+        // Default value output
+        if (handle.includes('value')) return 'value';
+        
+        // Generic signal outputs (for simple indicators that just have signal/value outputs)
         if (handle.includes('signal')) return 'signal';
-        if (handle.includes('upper') || handle.includes('lower') || handle.includes('middle')) return 'numeric';
-        if (handle.includes('histogram') || handle.includes('macd') || handle.includes('k') || handle.includes('d')) return 'numeric';
-        if (handle.includes('width') || handle.includes('adx') || handle.includes('di')) return 'numeric';
-        return 'value';
+        
+        return 'numeric'; // Default for all other technical indicator outputs
       case 'condition':
         return 'signal';
       case 'logic':
         return 'signal';
       case 'risk':
         return 'risk';
+      case 'marketRegimeDetection':
+        return 'signal';
+      case 'multiTimeframeAnalysis':
+        return 'ohlcv';
+      case 'correlationAnalysis':
+        return 'numeric';
+      case 'sentimentAnalysis':
+        return 'signal';
       default:
         return 'unknown';
     }
@@ -465,6 +534,14 @@ export class WorkflowValidator {
         if (handle.includes('signal') || handle.includes('trigger')) return 'signal';
         return 'ohlcv';
       case 'output':
+        return 'any';
+      case 'marketRegimeDetection':
+        return 'ohlcv';
+      case 'multiTimeframeAnalysis':
+        return 'ohlcv';
+      case 'correlationAnalysis':
+        return 'ohlcv';
+      case 'sentimentAnalysis':
         return 'any';
       default:
         return 'unknown';
@@ -597,6 +674,410 @@ export class WorkflowValidator {
     ];
 
     return suspiciousPatterns.some(pattern => pattern.test(value));
+  }
+
+  /**
+   * Validates timeframe consistency for nodes that process time-series data.
+   */
+  private validateTimeframeConsistency(): void {
+    this.nodes.forEach(node => {
+      if (node.type === 'technicalIndicator' || node.type === 'condition') {
+        const timeframes = this.getUpstreamTimeframes(node.id, new Set());
+        if (timeframes.size > 1) {
+          this.addError({
+            id: `timeframe_inconsistency_${node.id}`,
+            type: 'warning',
+            category: 'connection',
+            severity: 'medium',
+            message: `Node "${node.data.label}" receives data from multiple timeframes: ${Array.from(timeframes).join(', ')}. This can lead to unexpected results.`,
+            nodeId: node.id,
+            suggestion: 'Ensure that all data sources feeding into this node have the same timeframe, or use specific nodes to handle multi-timeframe logic.'
+          });
+        }
+      }
+    });
+  }
+
+  private getUpstreamTimeframes(nodeId: string, visited: Set<string>): Set<string> {
+    if (visited.has(nodeId)) {
+      return new Set();
+    }
+    visited.add(nodeId);
+
+    const node = this.nodes.find(n => n.id === nodeId);
+    if (!node) {
+      return new Set();
+    }
+
+    if (node.type === 'dataSource') {
+      return new Set([node.data.parameters?.timeframe].filter(Boolean));
+    }
+
+    const incomingEdges = this.edges.filter(e => e.target === nodeId);
+    if (incomingEdges.length === 0) {
+      return new Set();
+    }
+
+    const timeframes = new Set<string>();
+    for (const edge of incomingEdges) {
+      const upstreamTimeframes = this.getUpstreamTimeframes(edge.source, visited);
+      upstreamTimeframes.forEach(tf => timeframes.add(tf));
+    }
+
+    return timeframes;
+  }
+
+  /**
+   * Validate complete signal paths from data sources to actions
+   */
+  private validateSignalPaths(): void {
+    const dataSources = this.nodes.filter(n => n.type === 'dataSource' || n.type === 'customDataset');
+    const actions = this.nodes.filter(n => n.type === 'action');
+    
+    if (dataSources.length === 0 || actions.length === 0) return;
+
+    dataSources.forEach(dataSource => {
+      actions.forEach(action => {
+        const pathExists = this.hasPathBetweenNodes(dataSource.id, action.id);
+        if (!pathExists) {
+          this.addError({
+            id: `no_signal_path_${dataSource.id}_${action.id}`,
+            type: 'warning',
+            category: 'structure',
+            severity: 'medium',
+            message: `No signal path from "${dataSource.data?.label}" to "${action.data?.label}"`,
+            nodeId: dataSource.id,
+            suggestion: 'Ensure there is a complete path from data source through indicators and conditions to action'
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Validate logic gate connections and configurations
+   */
+  private validateLogicGateIntegrity(): void {
+    const logicNodes = this.nodes.filter(n => n.type === 'logic');
+    
+    logicNodes.forEach(logicNode => {
+      const incomingEdges = this.edges.filter(e => e.target === logicNode.id);
+      const expectedInputs = logicNode.data?.parameters?.inputs || 2;
+      
+      if (incomingEdges.length < expectedInputs) {
+        this.addError({
+          id: `logic_insufficient_inputs_${logicNode.id}`,
+          type: 'error',
+          category: 'connection',
+          severity: 'high',
+          message: `Logic gate "${logicNode.data?.label}" needs ${expectedInputs} inputs, has ${incomingEdges.length}`,
+          nodeId: logicNode.id,
+          suggestion: 'Connect the required number of condition signals to this logic gate'
+        });
+      }
+
+      // Check for logic depth (nested logic gates)
+      const logicDepth = this.calculateLogicDepth(logicNode.id, new Set());
+      if (logicDepth > 5) {
+        this.addError({
+          id: `deep_logic_nesting_${logicNode.id}`,
+          type: 'warning',
+          category: 'performance',
+          severity: 'medium',
+          message: `Deep logic nesting detected (depth: ${logicDepth})`,
+          nodeId: logicNode.id,
+          suggestion: 'Consider simplifying nested logic for better performance and maintainability'
+        });
+      }
+    });
+  }
+
+  /**
+   * Validate multi-output technical indicators
+   */
+  private validateMultiOutputIndicators(): void {
+    const multiOutputIndicators = this.nodes.filter(n => 
+      n.type === 'technicalIndicator' && 
+      ['ADX', 'BB', 'MACD', 'STOCH', 'KDJ', 'Ichimoku', 'VolumeProfile', 'MarketStructure'].includes(n.data?.parameters?.indicator)
+    );
+
+    multiOutputIndicators.forEach(indicator => {
+      const outgoingEdges = this.edges.filter(e => e.source === indicator.id);
+      const indicatorType = indicator.data?.parameters?.indicator;
+      
+      // Check if all outputs are properly utilized
+      const expectedOutputs = this.getExpectedOutputCount(indicatorType);
+      const usedOutputs = new Set(outgoingEdges.map(e => e.sourceHandle).filter(Boolean));
+      
+      if (usedOutputs.size < expectedOutputs) {
+        this.addError({
+          id: `underutilized_outputs_${indicator.id}`,
+          type: 'info',
+          category: 'structure',
+          severity: 'low',
+          message: `${indicatorType} indicator has unused outputs (${usedOutputs.size}/${expectedOutputs})`,
+          nodeId: indicator.id,
+          suggestion: 'Consider using all indicator outputs or switch to a simpler indicator'
+        });
+      }
+
+      // Validate output handle correctness
+      outgoingEdges.forEach(edge => {
+        if (edge.sourceHandle && !this.isValidIndicatorHandle(indicatorType, edge.sourceHandle)) {
+          this.addError({
+            id: `invalid_output_handle_${edge.id}`,
+            type: 'error',
+            category: 'connection',
+            severity: 'high',
+            message: `Invalid output handle "${edge.sourceHandle}" for ${indicatorType}`,
+            edgeId: edge.id,
+            suggestion: 'Use valid output handles for this indicator type'
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Generate optimization suggestions based on workflow analysis
+   */
+  private generateOptimizationSuggestions(): ValidationSuggestion[] {
+    const suggestions: ValidationSuggestion[] = [];
+    
+    // Suggest indicator consolidation
+    const indicatorGroups = this.findSimilarIndicators();
+    if (indicatorGroups.length > 0) {
+      suggestions.push({
+        id: 'consolidate_similar_indicators',
+        type: 'optimization',
+        message: `Found ${indicatorGroups.length} groups of similar indicators that could be consolidated`,
+        nodeIds: indicatorGroups.flat(),
+        priority: 'medium'
+      });
+    }
+
+    // Suggest logic simplification
+    const complexLogicNodes = this.findComplexLogicNodes();
+    if (complexLogicNodes.length > 0) {
+      suggestions.push({
+        id: 'simplify_complex_logic',
+        type: 'optimization',
+        message: 'Consider simplifying complex logic gates for better performance',
+        nodeIds: complexLogicNodes,
+        priority: 'medium'
+      });
+    }
+
+    // Suggest performance optimizations
+    const performanceSuggestions = this.generatePerformanceSuggestions();
+    suggestions.push(...performanceSuggestions);
+
+    // Suggest best practices
+    const bestPracticeSuggestions = this.generateBestPracticeSuggestions();
+    suggestions.push(...bestPracticeSuggestions);
+
+    return suggestions;
+  }
+
+  /**
+   * Calculate enhanced performance metrics
+   */
+  private calculateEnhancedPerformanceMetrics() {
+    const complexity = this.calculateComplexity();
+    const logicDepth = this.calculateMaxLogicDepth();
+    const indicatorCount = this.nodes.filter(n => n.type === 'technicalIndicator').length;
+    const signalPathCount = this.calculateSignalPathCount();
+    
+    return {
+      estimatedComplexity: complexity,
+      estimatedExecutionTime: this.estimateExecutionTime(complexity, logicDepth, indicatorCount),
+      memoryUsage: this.estimateMemoryUsage(),
+      logicDepth,
+      indicatorCount,
+      signalPathCount
+    };
+  }
+
+  // Enhanced helper methods
+  private hasPathBetweenNodes(sourceId: string, targetId: string): boolean {
+    const visited = new Set<string>();
+    const queue = [sourceId];
+    
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      if (currentId === targetId) return true;
+      if (visited.has(currentId)) continue;
+      
+      visited.add(currentId);
+      const neighbors = this.edges
+        .filter(e => e.source === currentId)
+        .map(e => e.target);
+      queue.push(...neighbors);
+    }
+    
+    return false;
+  }
+
+  private calculateLogicDepth(nodeId: string, visited: Set<string>): number {
+    if (visited.has(nodeId)) return 0;
+    visited.add(nodeId);
+    
+    const children = this.edges
+      .filter(e => e.source === nodeId)
+      .map(e => e.target)
+      .filter(targetId => {
+        const targetNode = this.nodes.find(n => n.id === targetId);
+        return targetNode?.type === 'logic';
+      });
+    
+    if (children.length === 0) return 1;
+    
+    return 1 + Math.max(...children.map(childId => 
+      this.calculateLogicDepth(childId, new Set(visited))
+    ));
+  }
+
+  private calculateMaxLogicDepth(): number {
+    const logicNodes = this.nodes.filter(n => n.type === 'logic');
+    return Math.max(0, ...logicNodes.map(node => 
+      this.calculateLogicDepth(node.id, new Set())
+    ));
+  }
+
+  private getExpectedOutputCount(indicatorType: string): number {
+    const outputCounts: Record<string, number> = {
+      'ADX': 3, // ADX, DI+, DI-
+      'BB': 4,  // Upper, Middle, Lower, Width
+      'MACD': 3, // MACD, Signal, Histogram
+      'STOCH': 2, // %K, %D
+      'KDJ': 3,   // %K, %D, %J
+      'Ichimoku': 5,
+      'VolumeProfile': 3,
+      'MarketStructure': 4,
+    };
+    return outputCounts[indicatorType] || 2;
+  }
+
+  private isValidIndicatorHandle(indicatorType: string, handle: string): boolean {
+    const validHandles: Record<string, string[]> = {
+      'ADX': ['adx', 'di_plus', 'di_minus'],
+      'BB': ['upper', 'middle', 'lower', 'width'],
+      'MACD': ['macd', 'signal', 'histogram'],
+      'STOCH': ['k', 'd'],
+      'KDJ': ['k', 'd', 'j'],
+      'Ichimoku': ['tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'],
+      'VolumeProfile': ['poc', 'vah', 'val'],
+      'MarketStructure': ['higher_high', 'lower_low', 'support', 'resistance'],
+    };
+    // Also allow generic output handles
+    const genericHandles = ['output-1', 'output-2', 'output-3', 'output-4', 'output-5'];
+    const specificHandles = validHandles[indicatorType] || [];
+    return specificHandles.includes(handle) || genericHandles.includes(handle);
+  }
+
+  private findSimilarIndicators(): string[][] {
+    const groups: string[][] = [];
+    const indicatorMap = new Map<string, string[]>();
+    
+    this.nodes
+      .filter(n => n.type === 'technicalIndicator')
+      .forEach(node => {
+        const key = `${node.data?.parameters?.indicator}-${node.data?.parameters?.period}`;
+        const existing = indicatorMap.get(key) || [];
+        existing.push(node.id);
+        indicatorMap.set(key, existing);
+      });
+    
+    indicatorMap.forEach(group => {
+      if (group.length > 1) groups.push(group);
+    });
+    
+    return groups;
+  }
+
+  private findComplexLogicNodes(): string[] {
+    return this.nodes
+      .filter(n => n.type === 'logic')
+      .filter(node => {
+        const inputCount = this.edges.filter(e => e.target === node.id).length;
+        const outputCount = this.edges.filter(e => e.source === node.id).length;
+        return inputCount > 3 || outputCount > 2;
+      })
+      .map(n => n.id);
+  }
+
+  private generatePerformanceSuggestions(): ValidationSuggestion[] {
+    const suggestions: ValidationSuggestion[] = [];
+    
+    const indicatorCount = this.nodes.filter(n => n.type === 'technicalIndicator').length;
+    if (indicatorCount > 8) {
+      suggestions.push({
+        id: 'too_many_indicators',
+        type: 'optimization',
+        message: `High number of indicators (${indicatorCount}) may impact performance`,
+        nodeIds: this.nodes.filter(n => n.type === 'technicalIndicator').map(n => n.id),
+        priority: 'high'
+      });
+    }
+    
+    return suggestions;
+  }
+
+  private generateBestPracticeSuggestions(): ValidationSuggestion[] {
+    const suggestions: ValidationSuggestion[] = [];
+    
+    // Check for missing risk management
+    const riskNodes = this.nodes.filter(n => n.type === 'risk');
+    const actionNodes = this.nodes.filter(n => n.type === 'action');
+    
+    if (actionNodes.length > 0 && riskNodes.length === 0) {
+      suggestions.push({
+        id: 'add_risk_management',
+        type: 'best_practice',
+        message: 'Consider adding risk management nodes to protect your strategy',
+        nodeIds: actionNodes.map(n => n.id),
+        priority: 'high'
+      });
+    }
+    
+    return suggestions;
+  }
+
+  private calculateSignalPathCount(): number {
+    const dataSources = this.nodes.filter(n => n.type === 'dataSource' || n.type === 'customDataset');
+    const actions = this.nodes.filter(n => n.type === 'action');
+    
+    let pathCount = 0;
+    dataSources.forEach(source => {
+      actions.forEach(action => {
+        if (this.hasPathBetweenNodes(source.id, action.id)) {
+          pathCount++;
+        }
+      });
+    });
+    
+    return pathCount;
+  }
+
+  private estimateExecutionTime(complexity: number, logicDepth: number, indicatorCount: number): number {
+    // Base execution time
+    let execTime = Math.max(complexity / 100, 10);
+    
+    // Add time for indicator calculations
+    execTime += indicatorCount * 2;
+    
+    // Add time for logic depth
+    execTime += logicDepth * 5;
+    
+    return Math.round(execTime);
+  }
+
+  private estimateMemoryUsage(): number {
+    const baseMemory = this.nodes.length * 1024 + this.edges.length * 512;
+    const indicatorMemory = this.nodes.filter(n => n.type === 'technicalIndicator').length * 2048;
+    const logicMemory = this.nodes.filter(n => n.type === 'logic').length * 512;
+    
+    return baseMemory + indicatorMemory + logicMemory;
   }
 
   private addError(error: Omit<ValidationError, 'id'> & { id: string }): void {

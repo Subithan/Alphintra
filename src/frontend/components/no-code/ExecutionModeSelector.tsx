@@ -1,0 +1,816 @@
+"use client"
+
+import React, { useState } from 'react'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight, GitMerge, History, Clipboard, Search, ShieldCheck, AreaChart, Server, Layers } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+type ExecutionMode = 'strategy' | 'model' | 'hybrid' | 'backtesting' | 'paper_trading' | 'research';
+
+interface ExecutionModeConfig {
+  // Common
+  risk_management?: {
+    max_drawdown?: number;
+    stop_loss_percent?: number;
+    take_profit_percent?: number;
+  };
+  data_frequency?: 'tick' | '1min' | '5min' | '15min' | '1h' | '4h' | '1d';
+  resource_allocation?: 'low' | 'medium' | 'high';
+  custom_environment?: string;
+
+  // Strategy/Backtesting Mode Config
+  backtest_start?: string
+  backtest_end?: string
+  initial_capital?: number
+  commission?: number
+  
+  // Model Mode Config
+  model_type?: string;
+  search_space?: any;
+  optimization_objective?: string
+  max_trials?: number
+  timeout_hours?: number
+  instance_type?: string
+  priority?: string
+  advanced_options?: {
+    early_stopping?: boolean
+    cross_validation_folds?: number
+    validation_split?: number
+    parameter_space_reduction?: boolean
+  }
+
+  // Hybrid Mode Config
+  strategy_weight?: number;
+  model_confidence_threshold?: number;
+
+  // Paper Trading Config
+  paper_initial_capital?: number;
+  reset_on_new_signal?: boolean;
+
+  // Research Mode Config
+  notebook_template?: 'data_exploration' | 'feature_engineering' | 'model_analysis';
+  export_data_format?: 'csv' | 'json' | 'parquet';
+}
+
+interface ExecutionModeSelectorProps {
+  workflowId: number
+  workflowName: string
+  workflowComplexity?: 'simple' | 'medium' | 'complex'
+  onModeSelect: (mode: ExecutionMode, config: ExecutionModeConfig) => void
+  onCancel?: () => void
+  isLoading?: boolean
+  estimatedDuration?: {
+    strategy: string
+    model: string
+    hybrid: string
+    backtesting: string
+    paper_trading: string
+    research: string
+  }
+}
+
+export function ExecutionModeSelector({
+  workflowId,
+  workflowName,
+  workflowComplexity = 'medium',
+  onModeSelect,
+  onCancel,
+  isLoading = false,
+  estimatedDuration = {
+    strategy: '< 1 minute',
+    model: '2-6 hours',
+    hybrid: 'Varies',
+    backtesting: '5-30 minutes',
+    paper_trading: 'Live',
+    research: 'Instant'
+  }
+}: ExecutionModeSelectorProps) {
+  const [selectedMode, setSelectedMode] = useState<ExecutionMode | null>(null)
+
+  const [strategyConfig, setStrategyConfig] = useState<ExecutionModeConfig>({
+    backtest_start: '2023-01-01',
+    backtest_end: '2023-12-31',
+    initial_capital: 10000,
+    commission: 0.001
+  })
+
+  const [modelConfig, setModelConfig] = useState<ExecutionModeConfig>({
+    model_type: 'xgboost',
+    search_space: {
+      n_estimators: {"type": "int", "low": 100, "high": 1000},
+      max_depth: {"type": "int", "low": 3, "high": 15},
+      learning_rate: {"type": "float", "low": 0.01, "high": 0.3, "log": true},
+    },
+    optimization_objective: 'sharpe_ratio',
+    max_trials: 100,
+    timeout_hours: 24,
+    instance_type: 'CPU_MEDIUM',
+    priority: 'normal',
+    advanced_options: {
+      early_stopping: true,
+      cross_validation_folds: 5,
+      validation_split: 0.2,
+      parameter_space_reduction: false
+    }
+  })
+
+  const [hybridConfig, setHybridConfig] = useState<ExecutionModeConfig>({
+    strategy_weight: 0.5,
+    model_confidence_threshold: 0.7,
+    risk_management: { max_drawdown: 20, stop_loss_percent: 5 },
+  })
+
+  const [backtestingConfig, setBacktestingConfig] = useState<ExecutionModeConfig>({
+    backtest_start: '2022-01-01',
+    backtest_end: '2023-12-31',
+    initial_capital: 100000,
+    commission: 0.00075,
+    data_frequency: '1h',
+  })
+
+  const [paperTradingConfig, setPaperTradingConfig] = useState<ExecutionModeConfig>({
+    paper_initial_capital: 50000,
+    reset_on_new_signal: false,
+    data_frequency: '1min',
+  })
+
+  const [researchConfig, setResearchConfig] = useState<ExecutionModeConfig>({
+    notebook_template: 'data_exploration',
+    export_data_format: 'csv',
+  })
+
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
+
+  const handleExecute = () => {
+    if (!selectedMode) return
+    
+    let config: ExecutionModeConfig = {};
+    switch (selectedMode) {
+      case 'strategy':
+        config = strategyConfig;
+        break;
+      case 'model':
+        config = modelConfig;
+        break;
+      case 'hybrid':
+        config = hybridConfig;
+        break;
+      case 'backtesting':
+        config = backtestingConfig;
+        break;
+      case 'paper_trading':
+        config = paperTradingConfig;
+        break;
+      case 'research':
+        config = researchConfig;
+        break;
+    }
+    onModeSelect(selectedMode, config)
+  }
+
+  const getComplexityInfo = () => {
+    switch (workflowComplexity) {
+      case 'simple':
+        return {
+          badge: 'Simple',
+          color: 'bg-green-100 text-green-800',
+          recommendations: {
+            strategy: 'Perfect for quick testing and immediate results',
+            model: 'Basic optimization will complete quickly (1-2 hours)'
+          }
+        }
+      case 'medium':
+        return {
+          badge: 'Medium',
+          color: 'bg-yellow-100 text-yellow-800',
+          recommendations: {
+            strategy: 'Good for standard backtesting with your parameters',
+            model: 'Thorough optimization recommended (4-8 hours)'
+          }
+        }
+      case 'complex':
+        return {
+          badge: 'Complex',
+          color: 'bg-red-100 text-red-800',
+          recommendations: {
+            strategy: 'May need parameter tuning for optimal results',
+            model: 'Highly recommended for best performance (8-24 hours)'
+          }
+        }
+    }
+  }
+
+  const complexityInfo = getComplexityInfo()
+
+  return (
+    <div className="w-full max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Choose Execution Mode</h2>
+        <p className="text-muted-foreground">
+          How would you like to execute "{workflowName}"?
+        </p>
+        <div className="flex items-center justify-center space-x-2">
+          <Badge variant="outline">Workflow ID: {workflowId}</Badge>
+          <Badge className={complexityInfo.color}>{complexityInfo.badge} Complexity</Badge>
+        </div>
+      </div>
+
+      {/* Mode Selection Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Strategy Mode Card */}
+        <Card 
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'strategy' 
+              ? 'ring-2 ring-blue-500 shadow-lg' 
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('strategy')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Zap className="h-6 w-6 text-blue-600" />
+              <CardTitle className="text-xl">Strategy Mode</CardTitle>
+              <Badge variant="outline" className="text-xs">Quick</Badge>
+            </div>
+            <CardDescription>
+              Execute immediately with your specified parameters
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.strategy}</span>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span>Uses your exact parameter values</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span>Generates executable strategy code</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span>Ready for immediate backtesting</span>
+                </li>
+              </ul>
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                {complexityInfo.recommendations.strategy}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Model Mode Card */}
+        <Card 
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'model' 
+              ? 'ring-2 ring-purple-500 shadow-lg' 
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('model')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Brain className="h-6 w-6 text-purple-600" />
+              <CardTitle className="text-xl">Model Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-purple-50">AI Optimized</Badge>
+            </div>
+            <CardDescription>
+              Use ML to find optimal parameters for maximum performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.model}</span>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <TrendingUp className="h-3 w-3 text-purple-500" />
+                  <span>ML discovers optimal parameters</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <TrendingUp className="h-3 w-3 text-purple-500" />
+                  <span>Extensive backtesting & validation</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <TrendingUp className="h-3 w-3 text-purple-500" />
+                  <span>Performance-optimized strategy code</span>
+                </li>
+              </ul>
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                {complexityInfo.recommendations.model}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Hybrid Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'hybrid'
+              ? 'ring-2 ring-teal-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('hybrid')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <GitMerge className="h-6 w-6 text-teal-600" />
+              <CardTitle className="text-xl">Hybrid Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-teal-50">Balanced</Badge>
+            </div>
+            <CardDescription>
+              Combine strategy rules with ML predictions for robust decisions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.hybrid}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Executes strategy, then validates with ML model</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Balances execution speed and predictive accuracy</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Layers className="h-3 w-3 text-teal-500" />
+                  <span>Ideal for adapting to changing market conditions</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Backtesting Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'backtesting'
+              ? 'ring-2 ring-orange-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('backtesting')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <History className="h-6 w-6 text-orange-600" />
+              <CardTitle className="text-xl">Backtesting Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-orange-50">Simulation</Badge>
+            </div>
+            <CardDescription>
+              Simulate strategy performance on historical data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.backtesting}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>In-depth performance analysis and reporting</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>Test strategy robustness across market conditions</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <AreaChart className="h-3 w-3 text-orange-500" />
+                  <span>Optimize parameters without risking capital</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Paper Trading Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'paper_trading'
+              ? 'ring-2 ring-cyan-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('paper_trading')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Clipboard className="h-6 w-6 text-cyan-600" />
+              <CardTitle className="text-xl">Paper Trading</CardTitle>
+              <Badge variant="outline" className="text-xs bg-cyan-50">Live Simulation</Badge>
+            </div>
+            <CardDescription>
+              Simulate live trading with real-time market data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.paper_trading}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Test forward performance in current market</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Validate strategy logic without financial risk</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <Server className="h-3 w-3 text-cyan-500" />
+                  <span>Monitor real-time execution and latency</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Research Mode Card */}
+        <Card
+          className={`cursor-pointer transition-all duration-200 ${
+            selectedMode === 'research'
+              ? 'ring-2 ring-gray-500 shadow-lg'
+              : 'hover:shadow-md'
+          }`}
+          onClick={() => setSelectedMode('research')}
+        >
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Search className="h-6 w-6 text-gray-600" />
+              <CardTitle className="text-xl">Research Mode</CardTitle>
+              <Badge variant="outline" className="text-xs bg-gray-50">Data Exploration</Badge>
+            </div>
+            <CardDescription>
+              Explore data and prototype ideas in a notebook environment
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span>Duration: {estimatedDuration.research}</span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">What happens:</h4>
+              <ul className="text-sm space-y-1 text-muted-foreground">
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Generates a pre-configured Jupyter notebook</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Loads relevant data sources automatically</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <CheckCircle className="h-3 w-3 text-gray-500" />
+                  <span>Perfect for ad-hoc analysis and visualization</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Configuration Panel */}
+      {selectedMode && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Settings className="h-5 w-5" />
+              <span>
+                {selectedMode === 'strategy' ? 'Strategy Configuration' : 'Model Training Configuration'}
+              </span>
+            </CardTitle>
+            <CardDescription>
+              {selectedMode === 'strategy' 
+                ? 'Configure backtesting parameters for your strategy'
+                : 'Configure ML training parameters for optimization'
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {selectedMode === 'strategy' ? (
+              // Strategy Mode Configuration
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="backtest-start">Backtest Start Date</Label>
+                  <Input
+                    id="backtest-start"
+                    type="date"
+                    value={strategyConfig.backtest_start}
+                    onChange={(e) => setStrategyConfig(prev => ({
+                      ...prev,
+                      backtest_start: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="backtest-end">Backtest End Date</Label>
+                  <Input
+                    id="backtest-end"
+                    type="date"
+                    value={strategyConfig.backtest_end}
+                    onChange={(e) => setStrategyConfig(prev => ({
+                      ...prev,
+                      backtest_end: e.target.value
+                    }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="initial-capital">Initial Capital ($)</Label>
+                  <Input
+                    id="initial-capital"
+                    type="number"
+                    value={strategyConfig.initial_capital}
+                    onChange={(e) => setStrategyConfig(prev => ({
+                      ...prev,
+                      initial_capital: parseFloat(e.target.value)
+                    }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commission">Commission (%)</Label>
+                  <Input
+                    id="commission"
+                    type="number"
+                    step="0.001"
+                    value={strategyConfig.commission}
+                    onChange={(e) => setStrategyConfig(prev => ({
+                      ...prev,
+                      commission: parseFloat(e.target.value)
+                    }))}
+                  />
+                </div>
+              </div>
+            ) : (
+              // Model Mode Configuration
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="model-type">Model Type</Label>
+                    <Select
+                      value={modelConfig.model_type}
+                      onValueChange={(value) => setModelConfig(prev => ({
+                        ...prev,
+                        model_type: value
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="xgboost">XGBoost</SelectItem>
+                        <SelectItem value="random_forest">Random Forest</SelectItem>
+                        <SelectItem value="lightgbm">LightGBM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="optimization-objective">Optimization Objective</Label>
+                    <Select
+                      value={modelConfig.optimization_objective}
+                      onValueChange={(value) => setModelConfig(prev => ({
+                        ...prev,
+                        optimization_objective: value
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select objective" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sharpe_ratio">Sharpe Ratio</SelectItem>
+                        <SelectItem value="sortino_ratio">Sortino Ratio</SelectItem>
+                        <SelectItem value="calmar_ratio">Calmar Ratio</SelectItem>
+                        <SelectItem value="total_return">Total Return</SelectItem>
+                        <SelectItem value="max_drawdown">Max Drawdown</SelectItem>
+                        <SelectItem value="profit_factor">Profit Factor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="max-trials">Max Optimization Trials</Label>
+                    <Input
+                      id="max-trials"
+                      type="number"
+                      value={modelConfig.max_trials}
+                      onChange={(e) => setModelConfig(prev => ({
+                        ...prev,
+                        max_trials: parseInt(e.target.value)
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="timeout-hours">Timeout (Hours)</Label>
+                    <Input
+                      id="timeout-hours"
+                      type="number"
+                      value={modelConfig.timeout_hours}
+                      onChange={(e) => setModelConfig(prev => ({
+                        ...prev,
+                        timeout_hours: parseInt(e.target.value)
+                      }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="instance-type">Compute Instance</Label>
+                    <Select
+                      value={modelConfig.instance_type}
+                      onValueChange={(value) => setModelConfig(prev => ({
+                        ...prev,
+                        instance_type: value
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select instance" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CPU_SMALL">CPU Small (2 cores, 4GB)</SelectItem>
+                        <SelectItem value="CPU_MEDIUM">CPU Medium (4 cores, 8GB)</SelectItem>
+                        <SelectItem value="CPU_LARGE">CPU Large (8 cores, 16GB)</SelectItem>
+                        <SelectItem value="GPU_T4">GPU T4 (4 cores, 16GB, T4 GPU)</SelectItem>
+                        <SelectItem value="GPU_V100">GPU V100 (8 cores, 32GB, V100 GPU)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select
+                      value={modelConfig.priority}
+                      onValueChange={(value) => setModelConfig(prev => ({
+                        ...prev,
+                        priority: value
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Advanced Options Toggle */}
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="advanced-options"
+                    checked={showAdvancedOptions}
+                    onCheckedChange={setShowAdvancedOptions}
+                  />
+                  <Label htmlFor="advanced-options">Show Advanced Options</Label>
+                </div>
+
+                {/* Advanced Options */}
+                {showAdvancedOptions && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                    <h4 className="font-medium">Advanced Training Options</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="early-stopping"
+                          checked={modelConfig.advanced_options?.early_stopping}
+                          onCheckedChange={(checked) => setModelConfig(prev => ({
+                            ...prev,
+                            advanced_options: {
+                              ...prev.advanced_options,
+                              early_stopping: checked
+                            }
+                          }))}
+                        />
+                        <Label htmlFor="early-stopping">Early Stopping</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="param-reduction"
+                          checked={modelConfig.advanced_options?.parameter_space_reduction}
+                          onCheckedChange={(checked) => setModelConfig(prev => ({
+                            ...prev,
+                            advanced_options: {
+                              ...prev.advanced_options,
+                              parameter_space_reduction: checked
+                            }
+                          }))}
+                        />
+                        <Label htmlFor="param-reduction">Parameter Space Reduction</Label>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cv-folds">Cross-Validation Folds</Label>
+                        <Input
+                          id="cv-folds"
+                          type="number"
+                          min="3"
+                          max="10"
+                          value={modelConfig.advanced_options?.cross_validation_folds}
+                          onChange={(e) => setModelConfig(prev => ({
+                            ...prev,
+                            advanced_options: {
+                              ...prev.advanced_options,
+                              cross_validation_folds: parseInt(e.target.value)
+                            }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="validation-split">Validation Split</Label>
+                        <Input
+                          id="validation-split"
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          max="0.5"
+                          value={modelConfig.advanced_options?.validation_split}
+                          onChange={(e) => setModelConfig(prev => ({
+                            ...prev,
+                            advanced_options: {
+                              ...prev.advanced_options,
+                              validation_split: parseFloat(e.target.value)
+                            }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <AlertCircle className="h-4 w-4" />
+              <span>
+                {selectedMode === 'strategy' 
+                  ? 'Strategy will be generated and ready for backtesting'
+                  : 'Training job will be queued and you can monitor progress'
+                }
+              </span>
+            </div>
+            <div className="flex space-x-2">
+              {onCancel && (
+                <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+                  Cancel
+                </Button>
+              )}
+              <Button 
+                onClick={handleExecute} 
+                disabled={isLoading}
+                className="flex items-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Execute {selectedMode === 'strategy' ? 'Strategy' : 'Training'}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+      )}
+    </div>
+  )
+}

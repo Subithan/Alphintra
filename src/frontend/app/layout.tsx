@@ -3,6 +3,9 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
+import AuthProvider from '@/components/providers/AuthProvider';
+import SupportWebSocketProvider from '@/components/providers/SupportWebSocketProvider';
+import { Toaster as HotToaster } from 'react-hot-toast';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -90,11 +93,40 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/logo.png" />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        <AuthProvider>
+          <SupportWebSocketProvider>
+            <Providers>
+              {children}
+              <Toaster />
+              
+              {/* Support system toast notifications */}
+              <HotToaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#363636',
+                    color: '#fff',
+                  },
+                  success: {
+                    style: {
+                      background: '#10b981',
+                    },
+                  },
+                  error: {
+                    style: {
+                      background: '#ef4444',
+                    },
+                  },
+                }}
+              />
+            </Providers>
+          </SupportWebSocketProvider>
+        </AuthProvider>
       </body>
     </html>
   );

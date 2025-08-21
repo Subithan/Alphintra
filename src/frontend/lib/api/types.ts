@@ -44,14 +44,29 @@ export type Position = {
   pnlPercentage: number;
 };
 
-export type Order = {
-  asset: string;
-  type: 'Limit' | 'Market' | 'Stop Market';
-  side: 'Buy' | 'Sell';
-  price: number;
-  quantity: number;
-  status: 'Open' | 'Filled' | 'Cancelled';
-};
+export interface Order {
+  orderId: number;
+  orderUuid: string;
+  userId: number;
+  accountId: number;
+  symbol: string; // Matches backend 'symbol' instead of 'asset'
+  side: string;
+  orderType: string;
+  quantity: string; // BigDecimal as string
+  price: string;   // BigDecimal as string
+  stopPrice: string | null;
+  timeInForce: string;
+  status: string;
+  filledQuantity: string; // BigDecimal as string
+  averagePrice: string | null;
+  fee: string; // BigDecimal as string
+  exchange: string;
+  clientOrderId: string | null;
+  exchangeOrderId: string | null;
+  createdAt: string; // ISO date
+  updatedAt: string; // ISO date
+  expiresAt: string | null;
+}
 
 export type Trade = {
   asset: string;
@@ -73,7 +88,7 @@ export interface OrderRequest {
   accountId: number;
   symbol: string;
   side: 'BUY' | 'SELL';
-  orderType: 'Limit' | 'Market' | 'Stop';
+  orderType: 'LIMIT' | 'MARKET' | 'STOP';
   quantity: number;
   price: number;
   timeInForce: 'GTC' | 'FOK' | 'IOC';
