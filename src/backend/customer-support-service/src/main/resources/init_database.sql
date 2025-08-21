@@ -86,6 +86,13 @@ CREATE TABLE IF NOT EXISTS support_tickets (
     updated_by VARCHAR(255)
 );
 
+-- Ticket Tags Table (for Ticket entity @ElementCollection)
+CREATE TABLE IF NOT EXISTS ticket_tags (
+    ticket_id VARCHAR(20) NOT NULL REFERENCES support_tickets(ticket_id) ON DELETE CASCADE,
+    tag VARCHAR(255) NOT NULL,
+    PRIMARY KEY (ticket_id, tag)
+);
+
 -- Communications Table (Messages within tickets)
 CREATE TABLE IF NOT EXISTS communications (
     communication_id BIGSERIAL PRIMARY KEY,
@@ -214,6 +221,7 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_updated_at ON support_tickets(upd
 CREATE INDEX IF NOT EXISTS idx_support_tickets_sla_due_date ON support_tickets(sla_due_date);
 CREATE INDEX IF NOT EXISTS idx_communications_ticket_id ON communications(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_communications_created_at ON communications(created_at);
+CREATE INDEX IF NOT EXISTS idx_ticket_tags_ticket_id ON ticket_tags(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_history_ticket_id ON ticket_history(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_history_created_at ON ticket_history(created_at);
 CREATE INDEX IF NOT EXISTS idx_support_agents_status ON support_agents(status);
