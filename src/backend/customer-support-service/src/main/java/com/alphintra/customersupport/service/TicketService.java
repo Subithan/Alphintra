@@ -68,6 +68,7 @@ public class TicketService {
         Ticket ticket = new Ticket(
             ticketId,
             createTicketDto.getUserId(),
+            "user@example.com", // TODO: Get actual user email from user service
             createTicketDto.getTitle(),
             createTicketDto.getDescription(),
             createTicketDto.getCategory(),

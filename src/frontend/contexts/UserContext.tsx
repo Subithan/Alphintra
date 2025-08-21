@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { generateUUID } from '../utils/uuid';
 
 export interface User {
   id: string;
@@ -47,7 +48,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     // For now, use dummy user data for testing
     // In production, this would fetch from authentication service
     const dummyUser: User = {
-      id: 'user-123',
+      id: generateUUID(),
       username: 'testuser',
       email: 'test@alphintra.com',
       firstName: 'Test',

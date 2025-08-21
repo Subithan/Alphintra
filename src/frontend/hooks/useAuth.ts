@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext } from 'react';
+import { generateUUID, isValidUUID, stringToUUID } from '../utils/uuid';
 
 export interface User {
   id: string;
@@ -50,11 +51,16 @@ export const useAuthHook = (): AuthContextType => {
         const storedUser = localStorage.getItem('auth_user');
         if (storedUser) {
           const userData = JSON.parse(storedUser);
+          // Migrate old user data with invalid UUID to proper format
+          if (!isValidUUID(userData.id)) {
+            userData.id = stringToUUID(userData.id);
+            localStorage.setItem('auth_user', JSON.stringify(userData));
+          }
           setUser(userData);
         } else {
           // For development, create a mock user
           const mockUser: User = {
-            id: 'user-123',
+            id: '123e4567-e89b-12d3-a456-426614174000',
             email: 'john.doe@alphintra.com',
             name: 'John Doe',
             roles: ['USER', 'SUPPORT_AGENT'],
@@ -87,7 +93,7 @@ export const useAuthHook = (): AuthContextType => {
       // Mock login API call
       // In production, this would call your authentication API
       const mockUser: User = {
-        id: 'user-123',
+        id: generateUUID(),
         email,
         name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()),
         roles: email.includes('agent') ? ['USER', 'SUPPORT_AGENT'] : ['USER'],
