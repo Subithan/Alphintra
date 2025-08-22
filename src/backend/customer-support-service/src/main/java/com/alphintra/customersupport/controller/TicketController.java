@@ -25,7 +25,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -320,5 +322,17 @@ public class TicketController {
             return "dev-agent-001";
         }
         return authentication.getName();
+    }
+
+    /**
+     * Get all agents - temporary endpoint for testing.
+     */
+    @GetMapping("/agents")
+    @CrossOrigin(originPatterns = "*", allowCredentials = "false")
+    public ResponseEntity<Map<String, Object>> getAllAgents() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Agents endpoint is working via tickets controller");
+        response.put("data", new Object[0]);
+        return ResponseEntity.ok(response);
     }
 }
