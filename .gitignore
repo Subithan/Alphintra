@@ -609,3 +609,8 @@ Alphintra Project Proposal (1).pdf
 # Secrets and sensitive data
 infra/.secrets/
 infra/backups/
+.vercel
+.claude-flow
+**/.claude-flow/
+.swarm/
+**/.swarm/

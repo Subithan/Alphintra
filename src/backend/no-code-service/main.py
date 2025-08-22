@@ -27,10 +27,12 @@ from fastapi import Query as FastAPIQuery
 from pydantic import BaseModel
 
 # Import models and schemas
-from models import Base, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate, User
+from models import Base, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate, User, ExecutionHistory
 from schemas_updated import *
 from workflow_compiler_updated import WorkflowCompiler
 from code_generator import CodeGenerator
+from workflow_converter import WorkflowConverter
+from clients.aiml_client import AIMLClient, AIMLServiceError, AIMLServiceUnavailable
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -50,6 +52,7 @@ REDIS_URL = os.getenv(
 
 # Service URLs
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service.alphintra.svc.cluster.local:8080")
+AIML_SERVICE_URL = os.getenv("AIML_SERVICE_URL", "http://ai-ml-strategy-service.alphintra.svc.cluster.local:8000")
 
 # Development mode flag
 DEV_MODE = os.getenv("DEV_MODE", "true").lower() == "true"
@@ -96,12 +99,17 @@ security = HTTPBearer(auto_error=False)  # Don't auto-error for missing auth in 
 # Initialize services
 workflow_compiler = WorkflowCompiler()
 code_generator = CodeGenerator()
+workflow_converter = WorkflowConverter()
 
 # Request models
 class CodeGenerationRequest(BaseModel):
     language: str = "python"
     framework: str = "backtesting.py"
     includeComments: bool = True
+
+class ExecutionModeRequest(BaseModel):
+    mode: str = Field(..., pattern="^(strategy|model|hybrid|backtesting|paper_trading|research)$", description="Execution mode")
+    config: Dict[str, Any] = Field(default_factory=dict, description="Configuration parameters for execution mode")
 
 # Dependencies
 def get_db():
@@ -200,6 +208,7 @@ async def root():
             "executions": "/api/executions",
             "generate_code": "/api/workflows/{workflow_id}/generate-code",
             "get_generated_code": "/api/workflows/{workflow_id}/generated-code",
+            "execution_mode": "/api/workflows/{workflow_id}/execution-mode",
             "create_sample_workflow": "/api/workflows/create-sample",
             "list_workflows": "/api/workflows/debug/list"
         }
@@ -477,6 +486,140 @@ async def get_generated_code(
     except Exception as e:
         logger.error(f"Error retrieving generated code: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve generated code: {str(e)}")
+
+# --- Execution mode endpoint (new) ---
+
+@app.post("/api/workflows/{workflow_id}/execution-mode")
+async def set_execution_mode(
+    workflow_id: str,
+    request: ExecutionModeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set execution mode and route to appropriate handler"""
+    try:
+        # Validate workflow exists and user owns it
+        workflow = db.query(NoCodeWorkflow).filter(
+            NoCodeWorkflow.uuid == workflow_id,
+            NoCodeWorkflow.user_id == current_user.id
+        ).first()
+        
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found or access denied")
+        
+        # Update workflow with execution mode
+        workflow.execution_mode = request.mode
+        workflow.execution_metadata = request.config
+        workflow.updated_at = datetime.utcnow()
+        
+        execution_id = str(uuid.uuid4())
+        
+        if request.mode == "strategy":
+            # Strategy mode: Use existing code generator
+            logger.info(f"Processing workflow {workflow_id} in strategy mode")
+            
+            generation_result = code_generator.generate_strategy_code(
+                workflow.workflow_data or {"nodes": [], "edges": []},
+                workflow.name
+            )
+            
+            if generation_result['success']:
+                workflow.generated_code = generation_result['code']
+                workflow.generated_requirements = generation_result['requirements']
+                workflow.compilation_status = 'generated'
+                
+                db.commit()
+                
+                return {
+                    "execution_id": execution_id,
+                    "mode": "strategy",
+                    "status": "completed",
+                    "next_action": f"/api/workflows/{workflow_id}/generated-code",
+                    "generated_code": generation_result['code'],
+                    "requirements": generation_result['requirements']
+                }
+            else:
+                workflow.compilation_status = 'generation_failed'
+                workflow.compilation_errors = generation_result['errors']
+                db.commit()
+                
+                return {
+                    "execution_id": execution_id,
+                    "mode": "strategy", 
+                    "status": "failed",
+                    "next_action": None,
+                    "errors": generation_result['errors']
+                }
+                
+        elif request.mode == "model":
+            # Model mode: Convert workflow and forward to AI-ML service
+            logger.info(f"Processing workflow {workflow_id} in model mode")
+            
+            try:
+                # Create AI-ML client and submit training job
+                async with AIMLClient(AIML_SERVICE_URL) as aiml_client:
+                    training_job_response = await aiml_client.create_training_job_from_workflow(
+                        workflow_definition=workflow.workflow_data,
+                        workflow_name=workflow.name,
+                        user_id=str(current_user.id),
+                        config=request.config
+                    )
+                
+                # Update workflow status
+                workflow.compilation_status = 'training_submitted'
+                training_job_id = training_job_response.get('training_job_id')
+                workflow.aiml_training_job_id = training_job_id
+                
+                db.commit()
+                
+                return {
+                    "execution_id": execution_id,
+                    "mode": "model",
+                    "status": "training_submitted",
+                    "next_action": f"/api/training/jobs/{training_job_id}/status",
+                    "training_job_id": training_job_id,
+                    "estimated_duration": training_job_response.get('estimated_duration'),
+                    "message": "Training job successfully submitted to AI-ML service"
+                }
+                
+            except (AIMLServiceUnavailable, AIMLServiceError) as e:
+                logger.error(f"AI-ML service error for workflow {workflow_id}: {str(e)}")
+                raise HTTPException(status_code=503, detail=f"AI-ML service unavailable: {e}")
+            except Exception as e:
+                logger.error(f"Error in model mode for {workflow_id}: {str(e)}")
+                raise HTTPException(status_code=500, detail=str(e))
+
+        else:
+            # Handle other modes by forwarding to AI-ML service
+            logger.info(f"Processing workflow {workflow_id} in {request.mode} mode")
+            try:
+                async with AIMLClient(AIML_SERVICE_URL) as aiml_client:
+                    if request.mode == "hybrid":
+                        response = await aiml_client.start_hybrid_execution(workflow.workflow_data, request.config)
+                    elif request.mode == "backtesting":
+                        response = await aiml_client.start_backtest(workflow.workflow_data, request.config)
+                    elif request.mode == "paper_trading":
+                        response = await aiml_client.start_paper_trading(workflow.workflow_data, request.config)
+                    elif request.mode == "research":
+                        response = await aiml_client.start_research_session(workflow.workflow_data, request.config)
+                    else:
+                        raise HTTPException(status_code=400, detail=f"Unsupported mode: {request.mode}")
+                
+                db.commit() # Commit changes to execution_mode and metadata
+                return response
+
+            except (AIMLServiceUnavailable, AIMLServiceError) as e:
+                logger.error(f"AI-ML service error for workflow {workflow_id} in {request.mode} mode: {str(e)}")
+                raise HTTPException(status_code=503, detail=f"AI-ML service unavailable: {e}")
+            except Exception as e:
+                logger.error(f"Error in {request.mode} mode for {workflow_id}: {str(e)}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting execution mode for workflow {workflow_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to set execution mode: {str(e)}")
 
 # --- General workflow routes (after specific routes) ---
 

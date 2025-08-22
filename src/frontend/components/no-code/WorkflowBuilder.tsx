@@ -113,7 +113,7 @@ const WorkflowBuilderContent: React.FC<WorkflowBuilderProps> = ({
         type: 'default',
       };
       
-      updateWorkflow({ nodes, edges: [...edges, newEdge] });
+      updateWorkflow({ nodes, edges: [...edges, newEdge as Edge] });
     },
     [readOnly, updateWorkflow, nodes, edges]
   );
