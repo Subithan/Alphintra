@@ -1,3 +1,5 @@
+// file path:"D:\Alphintra\Alphintra\src\frontend\components\auth\InputField.tsx"
+
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
 

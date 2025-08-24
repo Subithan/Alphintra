@@ -58,7 +58,6 @@ export class WorkflowValidator {
     this.validateDataTypeCompatibility();
     this.validateParameterRanges();
     this.validateCircularDependencies();
-    this.validateTimeframeConsistency();
     
     // Enhanced validations for sophisticated workflows
     this.validateSignalPaths();
@@ -427,14 +426,6 @@ export class WorkflowValidator {
         return 1;
       case 'output':
         return 1;
-      case 'marketRegimeDetection':
-        return 1;
-      case 'multiTimeframeAnalysis':
-        return 1;
-      case 'correlationAnalysis':
-        return 2;
-      case 'sentimentAnalysis':
-        return 1;
       default:
         return 0;
     }
@@ -448,8 +439,6 @@ export class WorkflowValidator {
         return 2; // data + value inputs
       case 'risk':
         return 2; // data + signal inputs
-      case 'correlationAnalysis':
-        return 2;
       default:
         return this.getRequiredInputs(node);
     }
@@ -504,14 +493,6 @@ export class WorkflowValidator {
         return 'signal';
       case 'risk':
         return 'risk';
-      case 'marketRegimeDetection':
-        return 'signal';
-      case 'multiTimeframeAnalysis':
-        return 'ohlcv';
-      case 'correlationAnalysis':
-        return 'numeric';
-      case 'sentimentAnalysis':
-        return 'signal';
       default:
         return 'unknown';
     }
@@ -534,14 +515,6 @@ export class WorkflowValidator {
         if (handle.includes('signal') || handle.includes('trigger')) return 'signal';
         return 'ohlcv';
       case 'output':
-        return 'any';
-      case 'marketRegimeDetection':
-        return 'ohlcv';
-      case 'multiTimeframeAnalysis':
-        return 'ohlcv';
-      case 'correlationAnalysis':
-        return 'ohlcv';
-      case 'sentimentAnalysis':
         return 'any';
       default:
         return 'unknown';
@@ -677,57 +650,6 @@ export class WorkflowValidator {
   }
 
   /**
-   * Validates timeframe consistency for nodes that process time-series data.
-   */
-  private validateTimeframeConsistency(): void {
-    this.nodes.forEach(node => {
-      if (node.type === 'technicalIndicator' || node.type === 'condition') {
-        const timeframes = this.getUpstreamTimeframes(node.id, new Set());
-        if (timeframes.size > 1) {
-          this.addError({
-            id: `timeframe_inconsistency_${node.id}`,
-            type: 'warning',
-            category: 'connection',
-            severity: 'medium',
-            message: `Node "${node.data.label}" receives data from multiple timeframes: ${Array.from(timeframes).join(', ')}. This can lead to unexpected results.`,
-            nodeId: node.id,
-            suggestion: 'Ensure that all data sources feeding into this node have the same timeframe, or use specific nodes to handle multi-timeframe logic.'
-          });
-        }
-      }
-    });
-  }
-
-  private getUpstreamTimeframes(nodeId: string, visited: Set<string>): Set<string> {
-    if (visited.has(nodeId)) {
-      return new Set();
-    }
-    visited.add(nodeId);
-
-    const node = this.nodes.find(n => n.id === nodeId);
-    if (!node) {
-      return new Set();
-    }
-
-    if (node.type === 'dataSource') {
-      return new Set([node.data.parameters?.timeframe].filter(Boolean));
-    }
-
-    const incomingEdges = this.edges.filter(e => e.target === nodeId);
-    if (incomingEdges.length === 0) {
-      return new Set();
-    }
-
-    const timeframes = new Set<string>();
-    for (const edge of incomingEdges) {
-      const upstreamTimeframes = this.getUpstreamTimeframes(edge.source, visited);
-      upstreamTimeframes.forEach(tf => timeframes.add(tf));
-    }
-
-    return timeframes;
-  }
-
-  /**
    * Validate complete signal paths from data sources to actions
    */
   private validateSignalPaths(): void {
@@ -798,7 +720,7 @@ export class WorkflowValidator {
   private validateMultiOutputIndicators(): void {
     const multiOutputIndicators = this.nodes.filter(n => 
       n.type === 'technicalIndicator' && 
-      ['ADX', 'BB', 'MACD', 'STOCH', 'KDJ', 'Ichimoku', 'VolumeProfile', 'MarketStructure'].includes(n.data?.parameters?.indicator)
+      ['ADX', 'BB', 'MACD', 'STOCH', 'KDJ'].includes(n.data?.parameters?.indicator)
     );
 
     multiOutputIndicators.forEach(indicator => {
@@ -951,28 +873,19 @@ export class WorkflowValidator {
       'MACD': 3, // MACD, Signal, Histogram
       'STOCH': 2, // %K, %D
       'KDJ': 3,   // %K, %D, %J
-      'Ichimoku': 5,
-      'VolumeProfile': 3,
-      'MarketStructure': 4,
     };
     return outputCounts[indicatorType] || 2;
   }
 
   private isValidIndicatorHandle(indicatorType: string, handle: string): boolean {
     const validHandles: Record<string, string[]> = {
-      'ADX': ['adx', 'di_plus', 'di_minus'],
-      'BB': ['upper', 'middle', 'lower', 'width'],
-      'MACD': ['macd', 'signal', 'histogram'],
-      'STOCH': ['k', 'd'],
-      'KDJ': ['k', 'd', 'j'],
-      'Ichimoku': ['tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'],
-      'VolumeProfile': ['poc', 'vah', 'val'],
-      'MarketStructure': ['higher_high', 'lower_low', 'support', 'resistance'],
+      'ADX': ['output-1', 'output-2', 'output-3'],
+      'BB': ['output-1', 'output-2', 'output-3', 'output-4'],
+      'MACD': ['output-1', 'output-2', 'output-3'],
+      'STOCH': ['output-1', 'output-2'],
+      'KDJ': ['output-1', 'output-2', 'output-3'],
     };
-    // Also allow generic output handles
-    const genericHandles = ['output-1', 'output-2', 'output-3', 'output-4', 'output-5'];
-    const specificHandles = validHandles[indicatorType] || [];
-    return specificHandles.includes(handle) || genericHandles.includes(handle);
+    return validHandles[indicatorType]?.includes(handle) || false;
   }
 
   private findSimilarIndicators(): string[][] {

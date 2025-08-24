@@ -60,13 +60,12 @@ const Notification = () => {
               </div>
             ))}
           </div>
-          <Link
-            href="/notifications"
+          <button
             onClick={() => setIsOpen(false)}
-            className="block w-full px-4 py-2 text-yellow-500 hover:bg-gray-100 dark:hover:bg-[#262739] rounded-b-lg text-sm font-medium text-center"
+            className="w-full px-4 py-2 text-yellow-500 hover:bg-gray-100 dark:hover:bg-[#262739] rounded-b-lg text-sm font-medium"
           >
             See All Notifications
-          </Link>
+          </button>
         </div>
       )}
     </div>
