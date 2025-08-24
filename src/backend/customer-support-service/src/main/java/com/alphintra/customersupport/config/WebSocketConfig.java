@@ -55,6 +55,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
         
+        // Register endpoint for backward compatibility with old context path
+        registry.addEndpoint("/api/customer-support/ws/support")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
+        
         // Register endpoint for ticket-specific connections
         registry.addEndpoint("/ws/tickets/{ticketId}")
                 .setAllowedOriginPatterns("*")

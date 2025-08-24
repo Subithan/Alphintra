@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS support_agents (
 -- Agent Specializations Table (for SupportAgent entity @ElementCollection)
 CREATE TABLE IF NOT EXISTS agent_specializations (
     agent_id VARCHAR(50) NOT NULL REFERENCES support_agents(agent_id) ON DELETE CASCADE,
-    specialization VARCHAR(50) NOT NULL CHECK (specialization IN ('TECHNICAL_ISSUE', 'ACCOUNT_QUESTION', 'BILLING_INQUIRY', 'FEATURE_REQUEST', 'BUG_REPORT', 'GENERAL_INQUIRY')),
+    specialization VARCHAR(50) NOT NULL CHECK (specialization IN ('TECHNICAL', 'STRATEGY_DEVELOPMENT', 'LIVE_TRADING', 'PAPER_TRADING', 'BROKER_INTEGRATION', 'MODEL_TRAINING', 'BACKTESTING', 'ACCOUNT_BILLING', 'KYC_VERIFICATION', 'API_SDK', 'MARKETPLACE', 'SECURITY', 'DATA_PRIVACY', 'FEATURE_REQUEST', 'BUG_REPORT', 'GENERAL_INQUIRY', 'OTHER')),
     PRIMARY KEY (agent_id, specialization)
 );
 
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
     user_name VARCHAR(200),
     title VARCHAR(500) NOT NULL,
     description TEXT NOT NULL,
-    category VARCHAR(50) NOT NULL CHECK (category IN ('TECHNICAL_ISSUE', 'ACCOUNT_QUESTION', 'BILLING_INQUIRY', 'FEATURE_REQUEST', 'BUG_REPORT', 'GENERAL_INQUIRY')),
+    category VARCHAR(50) NOT NULL CHECK (category IN ('TECHNICAL', 'STRATEGY_DEVELOPMENT', 'LIVE_TRADING', 'PAPER_TRADING', 'BROKER_INTEGRATION', 'MODEL_TRAINING', 'BACKTESTING', 'ACCOUNT_BILLING', 'KYC_VERIFICATION', 'API_SDK', 'MARKETPLACE', 'SECURITY', 'DATA_PRIVACY', 'FEATURE_REQUEST', 'BUG_REPORT', 'GENERAL_INQUIRY', 'OTHER')),
     priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT', 'CRITICAL')),
     status VARCHAR(20) NOT NULL DEFAULT 'NEW' CHECK (status IN ('NEW', 'ASSIGNED', 'IN_PROGRESS', 'PENDING_CUSTOMER', 'PENDING_INTERNAL', 'ESCALATED', 'RESOLVED', 'CLOSED', 'CANCELLED')),
     assigned_agent_id VARCHAR(255) REFERENCES support_agents(agent_id),
@@ -86,26 +86,27 @@ CREATE TABLE IF NOT EXISTS support_tickets (
     updated_by VARCHAR(255)
 );
 
+-- Ticket Tags Table (for Ticket entity @ElementCollection)
+CREATE TABLE IF NOT EXISTS ticket_tags (
+    ticket_id VARCHAR(20) NOT NULL REFERENCES support_tickets(ticket_id) ON DELETE CASCADE,
+    tag VARCHAR(255) NOT NULL,
+    PRIMARY KEY (ticket_id, tag)
+);
+
 -- Communications Table (Messages within tickets)
 CREATE TABLE IF NOT EXISTS communications (
-    communication_id VARCHAR(255) PRIMARY KEY,
+    communication_id BIGSERIAL PRIMARY KEY,
     ticket_id VARCHAR(20) NOT NULL REFERENCES support_tickets(ticket_id) ON DELETE CASCADE,
+    sender_id VARCHAR(255) NOT NULL,
     sender_type VARCHAR(20) NOT NULL CHECK (sender_type IN ('CUSTOMER', 'AGENT', 'SYSTEM')),
-    sender_id VARCHAR(255),
-    sender_name VARCHAR(200),
-    sender_email VARCHAR(255),
-    message TEXT NOT NULL,
-    message_type VARCHAR(50) DEFAULT 'TEXT' CHECK (message_type IN ('TEXT', 'HTML', 'MARKDOWN', 'ATTACHMENT', 'SYSTEM_NOTE', 'INTERNAL_NOTE', 'ESCALATION', 'RESOLUTION')),
+    content TEXT,
+    communication_type VARCHAR(50) NOT NULL CHECK (communication_type IN ('MESSAGE', 'EMAIL', 'PHONE_LOG', 'VIDEO_CALL', 'SCREEN_SHARE', 'INTERNAL_NOTE', 'SYSTEM_LOG', 'FILE_UPLOAD', 'STATUS_UPDATE', 'ESCALATION', 'RESOLUTION')),
     is_internal BOOLEAN DEFAULT false,
-    is_automated BOOLEAN DEFAULT false,
-    attachments TEXT[],
-    metadata JSONB,
-    parent_communication_id VARCHAR(255) REFERENCES communications(communication_id),
-    is_read BOOLEAN DEFAULT false,
+    email_message_id VARCHAR(255),
+    phone_call_duration INTEGER,
+    video_call_recording_url TEXT,
     read_at TIMESTAMP,
-    read_by VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Ticket History/Audit Table
@@ -220,6 +221,7 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_updated_at ON support_tickets(upd
 CREATE INDEX IF NOT EXISTS idx_support_tickets_sla_due_date ON support_tickets(sla_due_date);
 CREATE INDEX IF NOT EXISTS idx_communications_ticket_id ON communications(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_communications_created_at ON communications(created_at);
+CREATE INDEX IF NOT EXISTS idx_ticket_tags_ticket_id ON ticket_tags(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_history_ticket_id ON ticket_history(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_history_created_at ON ticket_history(created_at);
 CREATE INDEX IF NOT EXISTS idx_support_agents_status ON support_agents(status);
@@ -241,14 +243,14 @@ ON CONFLICT (agent_id) DO NOTHING;
 
 -- Insert default specializations for agents
 INSERT INTO agent_specializations (agent_id, specialization) VALUES
-('dev-agent-001', 'TECHNICAL_ISSUE'),
-('dev-agent-001', 'ACCOUNT_QUESTION'),
+('dev-agent-001', 'TECHNICAL'),
+('dev-agent-001', 'ACCOUNT_BILLING'),
 ('dev-agent-001', 'BUG_REPORT'),
-('admin-agent-001', 'BILLING_INQUIRY'),
-('admin-agent-001', 'TECHNICAL_ISSUE'),
+('admin-agent-001', 'ACCOUNT_BILLING'),
+('admin-agent-001', 'TECHNICAL'),
 ('admin-agent-001', 'FEATURE_REQUEST'),
 ('l1-agent-001', 'GENERAL_INQUIRY'),
-('l1-agent-001', 'ACCOUNT_QUESTION')
+('l1-agent-001', 'ACCOUNT_BILLING')
 ON CONFLICT (agent_id, specialization) DO NOTHING;
 
 -- Update triggers for timestamps

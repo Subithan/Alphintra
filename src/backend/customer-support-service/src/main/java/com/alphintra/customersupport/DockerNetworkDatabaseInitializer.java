@@ -224,6 +224,28 @@ public class DockerNetworkDatabaseInitializer {
                 System.out.println("support_tickets table does not exist, will create it with full schema...");
             }
             
+            // Check communications table schema and recreate if needed
+            boolean communicationsTableExists = false;
+            try (ResultSet tableCheck = stmt.executeQuery(
+                "SELECT table_name FROM information_schema.tables WHERE table_name = 'communications'")) {
+                communicationsTableExists = tableCheck.next();
+            }
+            
+            if (communicationsTableExists) {
+                // Check if communications table has old schema (message column instead of content)
+                boolean hasOldSchema = false;
+                try (ResultSet columnCheck = stmt.executeQuery(
+                    "SELECT column_name FROM information_schema.columns WHERE table_name = 'communications' AND column_name = 'message'")) {
+                    hasOldSchema = columnCheck.next();
+                }
+                
+                if (hasOldSchema) {
+                    System.out.println("Communications table has old schema, dropping and recreating...");
+                    stmt.execute("DROP TABLE IF EXISTS communications CASCADE");
+                    System.out.println("✓ Dropped old communications table.");
+                }
+            }
+            
             // Now proceed with full schema initialization
             String sql;
             try {

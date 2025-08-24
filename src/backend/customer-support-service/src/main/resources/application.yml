@@ -1,7 +1,7 @@
 server:
   port: 8010
   servlet:
-    context-path: /api/customer-support
+    context-path: "/api/customer-support"
   websocket:
     port: 8085
 
@@ -197,6 +197,12 @@ support:
   knowledge-base:
     elasticsearch:
       hosts: elasticsearch-service:9200
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
 
 ---
 spring:
