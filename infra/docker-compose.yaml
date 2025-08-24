@@ -1,215 +1,347 @@
-# Minimal Development Docker Compose Configuration
-# Only essential services: PostgreSQL, Redis, and Kafka
-# Run: docker-compose -f docker-compose.minimal.yml up -d
+version: '3.8'
 
 services:
-  # PostgreSQL - Main application database
-  postgres:
-    image: postgres:15-alpine
-    container_name: alphintra-minimal-postgres
-    environment:
-      POSTGRES_DB: alphintra
-      POSTGRES_USER: alphintra
-      POSTGRES_PASSWORD: alphintra123
+  # PostgreSQL (simulates GCP Cloud SQL)
+  db:
+    image: postgres:15
+    container_name: alphintra-db
     ports:
       - "5432:5432"
+    environment:
+      POSTGRES_USER: alphintra
+      POSTGRES_PASSWORD: alphintra
+      POSTGRES_DB: alphintra
     volumes:
-      - postgres_minimal_data:/var/lib/postgresql/data
+      - ./volumes/postgres:/var/lib/postgresql/data
+      - ./databases/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - alphintra-minimal-network
+      - alphintra-network
     healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=alphintra123 psql -U alphintra -d alphintra -c 'SELECT 1;'"]
-      interval: 15s
+      test: ["CMD-SHELL", "pg_isready -U alphintra"]
+      interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
+      retries: 3
 
-  # Redis - Cache and session store
+  # TimescaleDB (for time-series market data)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: alphintra-tsdb
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: tsuser
+      POSTGRES_PASSWORD: tspass
+      POSTGRES_DB: alphintra_ts
+    volumes:
+      - ./volumes/timescaledb:/home/postgres/pgdata
+      - ./databases/timescaledb/init.sql:/docker-entrypoint-initdb.d/timescale_init.sql
+    command: ["-c", "shared_preload_libraries=timescaledb"]
+    networks:
+      - alphintra-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tsuser"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis (simulates Cloud Memorystore)
   redis:
-    image: redis:7-alpine
-    container_name: alphintra-minimal-redis
-    command: redis-server --appendonly yes --requirepass redis123
+    image: redis:alpine
+    container_name: alphintra-redis
     ports:
       - "6379:6379"
     volumes:
-      - redis_minimal_data:/data
+      - ./volumes/redis:/data
     networks:
-      - alphintra-minimal-network
+      - alphintra-network
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redis123", "ping"]
-      interval: 10s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
 
-  # Zookeeper - Required for Kafka
+  # Zookeeper (for Kafka)
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
-    container_name: alphintra-minimal-zookeeper
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: alphintra-zookeeper
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
+    volumes:
+      - ./volumes/zookeeper:/var/lib/zookeeper
     networks:
-      - alphintra-minimal-network
-    restart: unless-stopped
+      - alphintra-network
 
-  # Kafka - Message streaming
+  # Kafka (event streaming)
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    container_name: alphintra-minimal-kafka
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: alphintra-kafka
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+    volumes:
+      - ./volumes/kafka:/var/lib/kafka/data
     networks:
-      - alphintra-minimal-network
-    restart: unless-stopped
-
-  # No-Code Service - Visual workflow builder API
-  no-code-service:
-    build:
-      context: ../../../src/backend/no-code-service
-      dockerfile: Dockerfile
-    container_name: alphintra-minimal-no-code-service
-    environment:
-      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-no-code-service
-      REDIS_URL: redis://:redis123@redis:6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "8006:8006"
-    networks:
-      - alphintra-minimal-network
+      - alphintra-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    restart: unless-stopped
 
-  # # Gateway Service - API Gateway using Spring Cloud Gateway
-  # gateway:
-  #   build:
-  #     context: ../../../src/backend/gateway
-  #     dockerfile: Dockerfile.distroless
-  #   container_name: alphintra-minimal-gateway
-  #   environment:
-  #     SPRING_PROFILES_ACTIVE: standalone
-  #     REDIS_HOST: redis
-  #     REDIS_PASSWORD: redis123
-  #     DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   ports:
-  #     - "8080:8080"
-  #   networks:
-  #     - alphintra-minimal-network
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 60s
-  #   restart: unless-stopped
-
-  # GraphQL Gateway - GraphQL API interface
-  graphql-gateway:
-    build:
-      context: ../../../src/backend/graphql-gateway
-      dockerfile: Dockerfile
-    container_name: alphintra-minimal-graphql-gateway
+  # MLflow (simulates Vertex AI)
+  mlflow:
+    image: python:3.9-slim
+    container_name: alphintra-mlflow
+    ports:
+      - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
-      REDIS_URL: redis://:redis123@redis:6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      NO_CODE_SERVICE_URL: http://no-code-service:8006
-      AUTH_SERVICE_URL: http://auth-service:8001
+      MLFLOW_BACKEND_STORE_URI: sqlite:///mlflow.db
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: /artifacts
+    volumes:
+      - ./volumes/mlflow:/artifacts
+      - ./volumes/mlflow-db:/app
+    working_dir: /app
+    command: >
+      bash -c "pip install mlflow psycopg2-binary &&
+               mlflow server --backend-store-uri sqlite:///mlflow.db 
+               --default-artifact-root /artifacts 
+               --host 0.0.0.0 --port 5000"
+    networks:
+      - alphintra-network
+
+  # Strategy Engine API (Java/Spring Boot)
+  strategy-engine:
+    build: 
+      context: ../src/backend/strategy-engine
+      dockerfile: Dockerfile
+    container_name: alphintra-strategy-engine
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATABASE_URL: jdbc:postgresql://db:5432/alphintra
+      DATABASE_USERNAME: alphintra
+      DATABASE_PASSWORD: alphintra
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
-      no-code-service:
+      kafka:
         condition: service_healthy
-    ports:
-      - "8005:8005"
     networks:
-      - alphintra-minimal-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - alphintra-network
     restart: unless-stopped
 
-  adminer:
-    image: adminer:latest
-    container_name: alphintra-adminer
+  # Trading API (FastAPI Python)
+  trading-api:
+    build:
+      context: ../src/backend/trading-api
+      dockerfile: Dockerfile
+    container_name: alphintra-trading-api
     ports:
-      - "8080:8080"
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra@db:5432/alphintra
+      TIMESCALE_URL: postgresql://tsuser:tspass@timescaledb:5432/alphintra_ts
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     depends_on:
-      postgres:
+      db:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
-      - alphintra-minimal-network
+      - alphintra-network
     restart: unless-stopped
 
+  # Auth Service (Spring Boot)
   auth-service:
     build:
-      context: ../../../src/backend/auth-service
+      context: ../src/backend/auth-service
       dockerfile: Dockerfile
-    container_name: alphintra-minimal-auth-service
+    container_name: alphintra-auth-service
+    ports:
+      - "8083:8080"
     environment:
-      # CORRECTED: Added 'jdbc:' prefix to the DATABASE_URL
-      DATABASE_URL: jdbc:postgresql://alphintra:alphintra123@postgres:5432/alphintra_auth_service
-      REDIS_URL: redis://:redis123@redis:6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_PROFILES_ACTIVE: docker
+      DATABASE_URL: jdbc:postgresql://db:5432/alphintra
+      DATABASE_USERNAME: alphintra
+      DATABASE_PASSWORD: alphintra
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "8009:8009"
     networks:
-      - alphintra-minimal-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - alphintra-network
     restart: unless-stopped
 
-# Add this top-level volumes section if missing
-volumes:
-  adminer-data:
-  postgres_minimal_data:
-    driver: local
-  redis_minimal_data:
-    driver: local
+  # Broker Connector (Multi-exchange integration)
+  broker-connector:
+    build:
+      context: ../src/backend/broker-connector
+      dockerfile: Dockerfile
+    container_name: alphintra-broker-connector
+    ports:
+      - "8084:8080"
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra@db:5432/alphintra
+      REDIS_URL: redis://redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Broker Simulator (Mock exchanges)
+  broker-simulator:
+    build:
+      context: ../src/backend/broker-simulator
+      dockerfile: Dockerfile
+    container_name: alphintra-broker-simulator
+    ports:
+      - "8082:8080"
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Spring Cloud Gateway
+  gateway:
+    build:
+      context: ../services/gateway
+      dockerfile: Dockerfile
+    container_name: alphintra-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      STRATEGY_ENGINE_URL: http://strategy-engine:8080
+      TRADING_API_URL: http://trading-api:8000
+      AUTH_SERVICE_URL: http://auth-service:8080
+      BROKER_CONNECTOR_URL: http://broker-connector:8080
+    depends_on:
+      - strategy-engine
+      - trading-api
+      - auth-service
+      - broker-connector
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Prometheus (metrics collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: alphintra-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../services/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./volumes/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Grafana (dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: alphintra-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./volumes/grafana:/var/lib/grafana
+      - ../services/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ../services/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Loki (log aggregation)
+  loki:
+    image: grafana/loki:latest
+    container_name: alphintra-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../services/monitoring/loki.yml:/etc/loki/local-config.yaml
+      - ./volumes/loki:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - alphintra-network
+    restart: unless-stopped
+
+  # Promtail (log shipper)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: alphintra-promtail
+    volumes:
+      - ../services/monitoring/promtail.yml:/etc/promtail/config.yml
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - alphintra-network
+    restart: unless-stopped
 
 networks:
-  alphintra-minimal-network:
+  alphintra-network:
     driver: bridge
+
+volumes:
+  postgres-data:
+  timescaledb-data:
+  redis-data:
+  kafka-data:
+  zookeeper-data:
+  mlflow-data:
+  mlflow-db:
+  prometheus-data:
+  grafana-data:
+  loki-data:

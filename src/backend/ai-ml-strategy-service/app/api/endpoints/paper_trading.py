@@ -13,13 +13,17 @@ from app.services.order_management import order_manager
 from app.services.portfolio_tracker import portfolio_tracker
 from app.services.market_data_service import market_data_service
 from app.services.risk_manager import risk_manager
-from app.models.paper_trading import OrderStatus, OrderType, OrderSide
+from app.models.paper_trading import OrderStatus, OrderType, OrderSide, PaperTradingSession
 
 
 router = APIRouter(prefix="/paper-trading")
 
 
 # Request/Response Models
+class WorkflowPaperTradingRequest(BaseModel):
+    workflow_definition: Dict[str, Any] = Field(..., description="The workflow definition from the no-code UI")
+    config: Dict[str, Any] = Field(..., description="Paper trading configuration")
+
 class CreateSessionRequest(BaseModel):
     strategy_id: int
     name: str
@@ -134,6 +138,25 @@ class MarketDataResponse(BaseModel):
 
 
 # API Endpoints
+
+@router.post("/from-workflow", status_code=status.HTTP_202_ACCEPTED)
+async def create_paper_session_from_workflow(
+    request: WorkflowPaperTradingRequest,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Create a paper trading session from a workflow."""
+    # Placeholder logic
+    import logging
+    logging.info(f"Received paper trading request from workflow for user {user_id}")
+
+    strategy_id = 1 # dummy
+    session = await paper_trading_engine.create_session(
+        strategy_id=strategy_id,
+        name=f"Workflow Paper Trading - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        initial_capital=request.config.get("paper_initial_capital", 50000)
+    )
+    return {"session_id": session.id, "status": "created"}
+
 
 @router.post("/sessions", response_model=SessionResponse)
 async def create_paper_trading_session(request: CreateSessionRequest):

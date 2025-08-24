@@ -322,6 +322,20 @@ async def get_model_health(
             detail=f"Error getting model health: {str(e)}"
         )
 
+@router.get("/health-statuses", response_model=List[ModelHealthStatus])
+async def get_all_health_statuses(current_user: User = Depends(get_current_user)):
+    """
+    Get the health status of all monitored models.
+    """
+    try:
+        return await model_monitor.get_all_health_statuses()
+    except Exception as e:
+        logger.error(f"Error getting all health statuses: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting all health statuses: {str(e)}"
+        )
+
 @router.post("/health/{deployment_id}/update", response_model=ModelHealthStatusResponse)
 async def update_model_health(
     deployment_id: int,

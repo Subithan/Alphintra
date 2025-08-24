@@ -23,6 +23,8 @@ from app.models.backtesting import (
 )
 from app.models.strategy import Strategy
 from app.models.dataset import Dataset
+from app.services.workflow_parser import WorkflowParser
+from app.services.strategy_generator import StrategyGenerator
 
 router = APIRouter(prefix="/backtesting")
 
@@ -35,6 +37,10 @@ rate_limit = create_rate_limit_dependency(requests_per_minute=20)
 
 
 # Request/Response Models
+class WorkflowBacktestRequest(BaseModel):
+    workflow_definition: Dict[str, Any] = Field(..., description="The workflow definition from the no-code UI")
+    config: Dict[str, Any] = Field(..., description="Backtesting configuration")
+
 class BacktestJobRequest(BaseModel):
     """Request model for creating a backtest job."""
     strategy_id: str = Field(..., description="Strategy ID to backtest")
@@ -169,6 +175,62 @@ class BacktestTemplateRequest(BaseModel):
 
 
 # Backtest Job Management Endpoints
+@router.post("/from-workflow", status_code=status.HTTP_202_ACCEPTED)
+async def create_backtest_from_workflow(
+    request: WorkflowBacktestRequest,
+    background_tasks: BackgroundTasks,
+    user_id: UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create and start a backtest job from a workflow definition."""
+    try:
+        # This is a simplified version. In a real scenario, you would:
+        # 1. Parse the workflow definition to extract strategy logic, parameters, etc.
+        # 2. Generate Python code for the strategy.
+        # 3. Create a Strategy record in the database.
+        # 4. Create a Dataset record if it doesn't exist.
+        # 5. Create and run the backtest job.
+
+        # For now, we'll just log it and return a dummy response.
+        import logging
+        logging.info(f"Received backtest request from workflow for user {user_id}")
+
+        # In a real implementation, you would generate a strategy and get a strategy_id
+        # For this example, we'll assume a placeholder strategy and dataset
+
+        # Placeholder logic
+        strategy_id = "f47ac10b-58cc-4372-a567-0e02b2c3d479" # A dummy strategy UUID
+        dataset_id = "a1b2c3d4-e5f6-7890-1234-567890abcdef" # A dummy dataset UUID
+
+        job_data = {
+            "strategy_id": strategy_id,
+            "dataset_id": dataset_id,
+            "name": f"Workflow Backtest - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            "user_id": str(user_id),
+            "start_date": request.config.get("backtest_start", "2023-01-01"),
+            "end_date": request.config.get("backtest_end", "2023-12-31"),
+            "initial_capital": request.config.get("initial_capital", 10000),
+            "commission_rate": request.config.get("commission", 0.001),
+            "slippage_rate": 0.0005,
+        }
+
+        # Create a BacktestJob instance
+        backtest_job = BacktestJob(**job_data)
+        db.add(backtest_job)
+        await db.commit()
+        await db.refresh(backtest_job)
+
+        # Start backtest in background
+        background_tasks.add_task(
+            _run_backtest_background,
+            backtest_job.id,
+            db
+        )
+
+        return {"job_id": str(backtest_job.id), "status": "started"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/jobs", status_code=status.HTTP_201_CREATED)
 async def create_backtest_job(
     request: BacktestJobRequest,
@@ -1003,15 +1065,19 @@ async def _verify_backtest_access(backtest_id: str, user_id: str, db: AsyncSessi
         )
 
 
-async def _run_backtest_background(backtest_job: BacktestJob, db: AsyncSession):
+async def _run_backtest_background(backtest_job_id: UUID, db: AsyncSession):
     """Run backtest in background task."""
     try:
-        await backtesting_engine.run_backtest(backtest_job, db)
+        from sqlalchemy import select
+        result = await db.execute(select(BacktestJob).where(BacktestJob.id == backtest_job_id))
+        backtest_job = result.scalar_one_or_none()
+        if backtest_job:
+            await backtesting_engine.run_backtest(backtest_job, db)
     except Exception as e:
         # Log error and update job status
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Background backtest failed: {str(e)}")
+        logger.error(f"Background backtest failed for job {backtest_job_id}: {str(e)}")
 
 
 async def _calculate_comparison_metrics(backtest_ids: List[str], 
