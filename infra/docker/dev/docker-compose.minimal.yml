@@ -175,6 +175,33 @@ services:
       - alphintra-minimal-network
     restart: unless-stopped
 
+  wallet-service:
+      build:
+        context: ../../../src/backend/wallet-service
+        dockerfile: Dockerfile
+      container_name: alphintra-wallet-service
+      environment:
+        SPRING_PROFILES_ACTIVE: docker
+        DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra
+        REDIS_URL: redis://:redis123@redis:6379
+        KAFKA_BOOTSTRAP_SERVERS: kafka:29092 
+      depends_on: 
+        postgres:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+      ports:
+        - "8011:8011"
+      networks:
+        - alphintra-minimal-network 
+      healthcheck:
+        test: ["CMD", "curl", "_f", "http://localhost:8011/actuator/health"]
+        interval: 30s 
+        timeout: 10s 
+        retries: 3 
+        start_period: 40s 
+      restart: unless-stopped
+
 
   trading-engine:
     build:
@@ -211,7 +238,7 @@ services:
       dockerfile: Dockerfile
     container_name: alphintra-minimal-auth-service
     environment:
-      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-auth-service
+      DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra_auth_service?user=alphintra&password=alphintra123
       REDIS_URL: redis://:redis123@redis:6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
