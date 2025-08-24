@@ -440,6 +440,7 @@ services:
       retries: 3
 
 
+  wallet-service:
     build:
       context: ./src/backend/wallet-service
       dockerfile: Dockerfile
