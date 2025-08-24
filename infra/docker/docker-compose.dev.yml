@@ -381,7 +381,7 @@ services:
     build:
       context: ../../src/backend/auth-service
       dockerfile: Dockerfile  # Changed from Dockerfile.dev
-    container_name: alphintra-auth-service-dev
+    container_name: alphintra_auth_service-dev
     ports:
       - "8001:8001"
       - "5001:5001"  # Debug port

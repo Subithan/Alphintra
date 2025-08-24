@@ -16,12 +16,6 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/trade",
   },
   {
-    id: "strategy",
-    name: "Strategy",
-    icon: "solar:graph-new-up-line-duotone",
-    url: "/strategy",
-  },
-  {
     id: "market",
     name: "Market",
     icon: "solar:chart-line-duotone",

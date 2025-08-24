@@ -23,7 +23,6 @@ from app.models.training import (
 from app.models.dataset import Dataset
 from app.models.strategy import Strategy
 from app.core.config import get_settings
-from app.services.model_training_service import ModelTrainingService
 
 
 class TrainingJobQueue:
@@ -543,16 +542,9 @@ class TrainingJobManager:
             job.progress_percentage = 0
             
             await db.commit()
-
-            # Check if this is an ML model training job
-            if job.model_config and job.model_config.get("model_name"):
-                self.logger.info(f"Handing off job {job.id} to ModelTrainingService.")
-                # Run the training in a background task
-                training_service = ModelTrainingService(job.id)
-                asyncio.create_task(training_service.run_training())
-            else:
-                # Keep the old simulation logic for other job types for now
-                self.logger.info(f"Simulating training for job {job.id} (not an ML model job).")
+            
+            # Here you would integrate with actual training infrastructure
+            # For now, we'll simulate the training process
             
             self.logger.info(f"Started training job {job.id}")
             

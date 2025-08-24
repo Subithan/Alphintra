@@ -1,0 +1,87 @@
+// file path: "D:\Alphintra\Alphintra\src\frontend\lib\api\auth-service-api.ts"
+
+import axios from 'axios';
+import type { AxiosInstance } from 'axios';
+
+
+// Types for Auth API
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  date_of_birth?: string;
+  phone_number?: string;
+  address?: string;
+  kyc_status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  username: string;
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface GoogleLoginCredentials {
+  google_token: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+export class AuthServiceApiClient {
+  private api: AxiosInstance;
+
+  constructor() {
+    this.api = axios.create({
+      baseURL: process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8009',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEBUG_API === 'true') {
+      console.log('🔧 AuthServiceApiClient Debug:', {
+        baseUrl: this.api.defaults.baseURL,
+      });
+    }
+  }
+
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const response = await this.api.post<AuthResponse>('/api/auth/login', credentials);
+    return response.data;
+  }
+
+  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+    // Make sure keys match backend DTO fields
+    const payload = {
+      username: credentials.username,
+      email: credentials.email,
+      password: credentials.password,
+      firstName: credentials.firstName,
+      lastName: credentials.lastName,
+    };
+
+    const response = await this.api.post<AuthResponse>('/api/auth/register', payload);
+    return response.data;
+  }
+
+  async googleLogin(credentials: GoogleLoginCredentials): Promise<AuthResponse> {
+    const response = await this.api.post<AuthResponse>('/api/auth/google', credentials);
+    return response.data;
+  }
+}
+
+export const authServiceApiClient = new AuthServiceApiClient();

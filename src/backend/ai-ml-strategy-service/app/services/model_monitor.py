@@ -7,7 +7,6 @@ import json
 import logging
 import time
 import statistics
-from collections import deque
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple, Union
 from dataclasses import dataclass, field
@@ -19,40 +18,13 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, accuracy_sc
 import redis.asyncio as redis
 
 from app.models.model_registry import ModelDeployment, ModelMetrics, DeploymentStatus
-from app.services import prediction_service as prediction_service_module
-from app.services.prediction_service import ModelMetrics as PredictionMetrics
+from app.services.prediction_service import prediction_service, ModelMetrics as PredictionMetrics
 from app.core.database import get_db_session
 from app.core.config import get_settings
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
-async def _send_email_notification(subject: str, body: str):
-    logger.info(f"--- EMAIL NOTIFICATION ---")
-    logger.info(f"To: on-call-team@example.com")
-    logger.info(f"Subject: {subject}")
-    logger.info(f"Body: {body}")
-    logger.info(f"--------------------------")
-
-async def _send_slack_notification(channel: str, message: str):
-    logger.info(f"--- SLACK NOTIFICATION ---")
-    logger.info(f"Channel: {channel}")
-    logger.info(f"Message: {message}")
-    logger.info(f"--------------------------")
-
-
-@dataclass
-class ConceptDriftAlert:
-    """Concept drift detection alert"""
-    deployment_id: int
-    drift_score: float
-    p_value: float
-    threshold: float = 0.05
-    timestamp: float = field(default_factory=time.time)
-    severity: str # "low", "medium", "high"
-    description: str
 
 
 @dataclass
@@ -66,17 +38,6 @@ class DataDriftAlert:
     timestamp: float
     severity: str  # "low", "medium", "high"
     description: str
-
-
-@dataclass
-class PredictionLog:
-    """Log of a single prediction"""
-    deployment_id: int
-    request_id: str
-    features: Dict[str, Any]
-    prediction: Union[float, int, List[float], Dict[str, Any]]
-    ground_truth: Optional[Union[float, int, str]] = None
-    timestamp: float = field(default_factory=time.time)
 
 
 @dataclass
@@ -100,10 +61,9 @@ class ModelHealthStatus:
     health_score: float  # 0-100
     status: str  # "healthy", "warning", "critical"
     performance_metrics: Dict[str, float]
-    accuracy_metrics: Dict[str, float]
     drift_metrics: Dict[str, float]
     business_metrics: Dict[str, float]
-    alerts: List[Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]]
+    alerts: List[Union[DataDriftAlert, PerformanceDegradationAlert]]
     last_updated: float
     recommendations: List[str] = field(default_factory=list)
 
@@ -125,8 +85,7 @@ class MonitoringConfig:
     alert_settings: Dict[str, Any] = field(default_factory=lambda: {
         "enable_alerts": True,
         "alert_cooldown_minutes": 30,
-        "min_samples_for_drift": 1000,
-        "notification_channels": ["log"] # "log", "email", "slack"
+        "min_samples_for_drift": 1000
     })
     business_thresholds: Dict[str, float] = field(default_factory=lambda: {
         "sharpe_ratio_threshold": -0.5,
@@ -144,11 +103,9 @@ class ModelMonitoringService:
         self.redis_client: Optional[redis.Redis] = None
         self.monitoring_configs: Dict[int, MonitoringConfig] = {}
         self.health_statuses: Dict[int, ModelHealthStatus] = {}
-        self.alert_history: Dict[int, List[Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]]] = {}
+        self.alert_history: Dict[int, List[Union[DataDriftAlert, PerformanceDegradationAlert]]] = {}
         self.reference_data: Dict[int, pd.DataFrame] = {}  # Training data distributions
         self.performance_baselines: Dict[int, Dict[str, float]] = {}
-        self.prediction_logs: Dict[int, deque[PredictionLog]] = {}
-        self.prediction_log_map: Dict[str, PredictionLog] = {}
         
         # Background task management
         self._background_tasks = []
@@ -383,7 +340,7 @@ class ModelMonitoringService:
         """Update and return overall health status"""
         try:
             # Get prediction service metrics
-            pred_metrics = await prediction_service_module.prediction_service.get_model_metrics(deployment_id)
+            pred_metrics = await prediction_service.get_model_metrics(deployment_id)
             
             # Get recent alerts
             recent_alerts = self._get_recent_alerts(deployment_id, hours=24)
@@ -403,14 +360,11 @@ class ModelMonitoringService:
             recommendations = await self._generate_recommendations(deployment_id, health_score, recent_alerts)
             
             # Update health status
-            accuracy_metrics = await self.calculate_accuracy_metrics(deployment_id)
-
             health_status = ModelHealthStatus(
                 deployment_id=deployment_id,
                 health_score=health_score,
                 status=status,
                 performance_metrics=self._extract_performance_metrics(pred_metrics),
-                accuracy_metrics=accuracy_metrics,
                 drift_metrics=await self._get_drift_metrics(deployment_id),
                 business_metrics=await self._get_business_metrics(deployment_id),
                 alerts=recent_alerts,
@@ -433,7 +387,6 @@ class ModelMonitoringService:
                 health_score=0.0,
                 status="unknown",
                 performance_metrics={},
-                accuracy_metrics={},
                 drift_metrics={},
                 business_metrics={},
                 alerts=[],
@@ -452,16 +405,12 @@ class ModelMonitoringService:
         # Return in-memory status
         return self.health_statuses.get(deployment_id)
 
-    async def get_all_health_statuses(self) -> List[ModelHealthStatus]:
-        """Get all health statuses"""
-        return list(self.health_statuses.values())
-
     async def get_alert_history(
         self,
         deployment_id: int,
         hours: int = 24,
         alert_type: Optional[str] = None
-    ) -> List[Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]]:
+    ) -> List[Union[DataDriftAlert, PerformanceDegradationAlert]]:
         """Get alert history for a deployment"""
         if deployment_id not in self.alert_history:
             return []
@@ -480,7 +429,7 @@ class ModelMonitoringService:
         
         return sorted(alerts, key=lambda x: x.timestamp, reverse=True)
 
-    async def add_alert(self, alert: Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]):
+    async def add_alert(self, alert: Union[DataDriftAlert, PerformanceDegradationAlert]):
         """Add alert to history and trigger notifications"""
         deployment_id = alert.deployment_id
         
@@ -512,131 +461,10 @@ class ModelMonitoringService:
         if len(self.alert_history[deployment_id]) > max_history:
             self.alert_history[deployment_id] = self.alert_history[deployment_id][-max_history:]
         
-        # Trigger notification
+        # Trigger notification (placeholder)
         await self._send_alert_notification(alert)
         
-        # Trigger remediation for severe alerts
-        if alert.severity == "high":
-            await self.trigger_remediation(alert)
-
         logger.warning(f"New alert for deployment {deployment_id}: {alert.description}")
-
-    async def log_prediction(self, log: PredictionLog):
-        """Log a prediction for monitoring"""
-        deployment_id = log.deployment_id
-        if deployment_id not in self.prediction_logs:
-            self.prediction_logs[deployment_id] = deque(maxlen=10000)
-
-        if len(self.prediction_logs[deployment_id]) == self.prediction_logs[deployment_id].maxlen:
-            # The oldest item is about to be evicted.
-            oldest_log = self.prediction_logs[deployment_id][0]
-            if oldest_log.request_id in self.prediction_log_map:
-                del self.prediction_log_map[oldest_log.request_id]
-
-        self.prediction_logs[deployment_id].append(log)
-        self.prediction_log_map[log.request_id] = log
-
-        logger.debug(f"Logged prediction {log.request_id} for deployment {deployment_id}")
-
-    async def log_ground_truth(self, deployment_id: int, request_id: str, ground_truth: Union[float, int, str]):
-        """Log ground truth for a past prediction."""
-        if request_id in self.prediction_log_map:
-            log = self.prediction_log_map[request_id]
-            if log.deployment_id == deployment_id:
-                log.ground_truth = ground_truth
-                logger.info(f"Logged ground truth for request {request_id}")
-                return
-        logger.warning(f"Could not find prediction with request_id {request_id} for deployment {deployment_id} to log ground truth.")
-
-    async def check_concept_drift(self, deployment_id: int, current_predictions: pd.Series) -> Optional[ConceptDriftAlert]:
-        """Detect concept drift by comparing prediction distributions."""
-        if deployment_id not in self.reference_data or 'prediction' not in self.reference_data[deployment_id].columns:
-            return None
-
-        reference_predictions = self.reference_data[deployment_id]['prediction'].dropna()
-        current_predictions = current_predictions.dropna()
-
-        if len(reference_predictions) == 0 or len(current_predictions) == 0:
-            return None
-
-        ks_stat, p_value = stats.ks_2samp(reference_predictions, current_predictions)
-
-        threshold = 0.05  # p-value threshold
-        if p_value < threshold:
-            return ConceptDriftAlert(
-                deployment_id=deployment_id,
-                drift_score=ks_stat,
-                p_value=p_value,
-                description=f"Concept drift detected (KS test on predictions). p-value: {p_value:.4f}",
-                severity="medium"
-            )
-        return None
-
-    async def calculate_accuracy_metrics(self, deployment_id: int, time_window_hours: int = 24) -> Dict[str, float]:
-        """Calculate accuracy metrics over a time window."""
-        if deployment_id not in self.prediction_logs:
-            return {}
-
-        cutoff_time = time.time() - (time_window_hours * 3600)
-
-        predictions = []
-        ground_truths = []
-
-        for log in self.prediction_logs[deployment_id]:
-            if log.timestamp >= cutoff_time and log.ground_truth is not None:
-                predictions.append(log.prediction)
-                ground_truths.append(log.ground_truth)
-
-        if not predictions:
-            return {}
-
-        try:
-            accuracy = accuracy_score(ground_truths, predictions)
-            precision, recall, f1, _ = precision_recall_fscore_support(ground_truths, predictions, average='weighted', zero_division=0)
-
-            return {
-                "accuracy": accuracy,
-                "precision": precision,
-                "recall": recall,
-                "f1_score": f1,
-                "samples_with_ground_truth": float(len(ground_truths))
-            }
-        except Exception as e:
-            logger.error(f"Error calculating accuracy metrics for deployment {deployment_id}: {e}")
-            return {}
-
-    async def trigger_remediation(self, alert: Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]):
-        """Trigger automated remediation actions."""
-        logger.info(f"Triggering remediation for high-severity alert on deployment {alert.deployment_id}")
-
-        # Example remediation: flag for retraining
-        await self._flag_for_retraining(alert.deployment_id, alert)
-
-    async def _flag_for_retraining(self, deployment_id: int, alert: Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]):
-        """Set a flag in the model deployment's health_metrics to indicate need for retraining."""
-        try:
-            db = next(get_db_session())
-            deployment = db.query(ModelDeployment).filter(ModelDeployment.id == deployment_id).first()
-            if deployment:
-                if not deployment.health_metrics:
-                    deployment.health_metrics = {}
-
-                new_health_metrics = deployment.health_metrics.copy()
-                new_health_metrics["retraining_needed"] = True
-                new_health_metrics["retraining_reason"] = f"High-severity alert: {type(alert).__name__}"
-                new_health_metrics["retraining_flagged_at"] = datetime.utcnow().isoformat()
-                deployment.health_metrics = new_health_metrics
-
-                db.commit()
-                logger.info(f"Deployment {deployment_id} flagged for retraining.")
-            else:
-                logger.warning(f"Could not find deployment {deployment_id} to flag for retraining.")
-        except Exception as e:
-            logger.error(f"Error flagging deployment {deployment_id} for retraining: {e}")
-            db.rollback()
-        finally:
-            if 'db' in locals() and db.is_active:
-                db.close()
 
     # Private helper methods
     
@@ -699,44 +527,9 @@ class ModelMonitoringService:
         """Background task for drift monitoring"""
         while self._monitoring_active:
             try:
-                for deployment_id, config in self.monitoring_configs.items():
-                    if deployment_id not in self.prediction_logs:
-                        continue
-
-                    # Get recent prediction logs for drift check
-                    cutoff_time = time.time() - 3600  # Last hour of data
-                    recent_logs = [
-                        log for log in self.prediction_logs[deployment_id]
-                        if log.timestamp >= cutoff_time
-                    ]
-
-                    if len(recent_logs) < config.alert_settings.get("min_samples_for_drift", 100):
-                        continue
-
-                    # Create DataFrame from logs for data drift
-                    current_features = pd.DataFrame([log.features for log in recent_logs])
-
-                    if deployment_id in self.reference_data:
-                        feature_columns = list(self.reference_data[deployment_id].columns)
-
-                        # Data drift check
-                        data_drift_alerts = await self.check_data_drift(
-                            deployment_id,
-                            current_features,
-                            feature_columns
-                        )
-                        for alert in data_drift_alerts:
-                            await self.add_alert(alert)
-
-                        # Concept drift check
-                        current_predictions = pd.Series([log.prediction for log in recent_logs])
-                        concept_drift_alert = await self.check_concept_drift(
-                            deployment_id,
-                            current_predictions
-                        )
-                        if concept_drift_alert:
-                            await self.add_alert(concept_drift_alert)
-
+                # This would integrate with real data pipeline
+                # For now, just log that drift monitoring is active
+                logger.debug("Drift monitoring cycle")
                 await asyncio.sleep(600)  # Run every 10 minutes
                 
             except Exception as e:
@@ -749,7 +542,7 @@ class ModelMonitoringService:
             try:
                 for deployment_id in self.monitoring_configs.keys():
                     # Get current metrics from prediction service
-                    pred_metrics = await prediction_service_module.prediction_service.get_model_metrics(deployment_id)
+                    pred_metrics = await prediction_service.get_model_metrics(deployment_id)
                     if pred_metrics:
                         current_metrics = {
                             "error_rate": pred_metrics.error_rate,
@@ -834,7 +627,7 @@ class ModelMonitoringService:
         self,
         deployment_id: int,
         hours: int = 24
-    ) -> List[Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]]:
+    ) -> List[Union[DataDriftAlert, PerformanceDegradationAlert]]:
         """Get recent alerts for health calculation"""
         if deployment_id not in self.alert_history:
             return []
@@ -849,7 +642,7 @@ class ModelMonitoringService:
         self,
         deployment_id: int,
         pred_metrics: Optional[PredictionMetrics],
-        recent_alerts: List[Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]]
+        recent_alerts: List[Union[DataDriftAlert, PerformanceDegradationAlert]]
     ) -> float:
         """Calculate overall health score (0-100)"""
         score = 100.0
@@ -882,8 +675,6 @@ class ModelMonitoringService:
             "total_requests": float(pred_metrics.total_requests),
             "error_rate": pred_metrics.error_rate,
             "avg_latency_ms": pred_metrics.avg_latency_ms,
-            "p50_latency_ms": pred_metrics.p50_latency_ms,
-            "p90_latency_ms": pred_metrics.p90_latency_ms,
             "p95_latency_ms": pred_metrics.p95_latency_ms,
             "p99_latency_ms": pred_metrics.p99_latency_ms
         }
@@ -910,7 +701,7 @@ class ModelMonitoringService:
         self,
         deployment_id: int,
         health_score: float,
-        recent_alerts: List[Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]]
+        recent_alerts: List[Union[DataDriftAlert, PerformanceDegradationAlert]]
     ) -> List[str]:
         """Generate health improvement recommendations"""
         recommendations = []
@@ -933,25 +724,10 @@ class ModelMonitoringService:
         
         return recommendations
 
-    async def _send_alert_notification(self, alert: Union[DataDriftAlert, PerformanceDegradationAlert, ConceptDriftAlert]):
+    async def _send_alert_notification(self, alert: Union[DataDriftAlert, PerformanceDegradationAlert]):
         """Send alert notification (placeholder)"""
-        config = self.monitoring_configs.get(alert.deployment_id)
-        if not config or not config.alert_settings.get("enable_alerts"):
-            return
-
-        channels = config.alert_settings.get("notification_channels", ["log"])
-
-        subject = f"Model Alert for Deployment {alert.deployment_id}: {type(alert).__name__}"
-        body = f"Alert: {alert.description}\nSeverity: {alert.severity}\nTimestamp: {datetime.fromtimestamp(alert.timestamp)}"
-
-        if "log" in channels:
-            logger.warning(f"Alert for deployment {alert.deployment_id}: {alert.description}")
-
-        if "email" in channels:
-            await _send_email_notification(subject, body)
-
-        if "slack" in channels:
-            await _send_slack_notification("#monitoring-alerts", body)
+        # This would integrate with notification systems (email, Slack, etc.)
+        logger.info(f"Alert notification: {alert.description}")
 
     async def _save_config_to_cache(self, deployment_id: int, config: MonitoringConfig):
         """Save monitoring config to cache"""
@@ -1000,7 +776,6 @@ class ModelMonitoringService:
                 "health_score": health_status.health_score,
                 "status": health_status.status,
                 "performance_metrics": health_status.performance_metrics,
-                "accuracy_metrics": health_status.accuracy_metrics,
                 "drift_metrics": health_status.drift_metrics,
                 "business_metrics": health_status.business_metrics,
                 "alerts": [alert.__dict__ for alert in health_status.alerts],
@@ -1021,14 +796,10 @@ class ModelMonitoringService:
             health_data = await self.redis_client.get(key)
             if health_data:
                 data = json.loads(health_data)
-                if 'accuracy_metrics' not in data:
-                    data['accuracy_metrics'] = {}
                 # Convert alert dicts back to objects (simplified)
                 alerts = []
                 for alert_data in data.get("alerts", []):
-                    if "p_value" in alert_data:
-                        alerts.append(ConceptDriftAlert(**alert_data))
-                    elif "feature_name" in alert_data:
+                    if "feature_name" in alert_data:
                         alerts.append(DataDriftAlert(**alert_data))
                     else:
                         alerts.append(PerformanceDegradationAlert(**alert_data))

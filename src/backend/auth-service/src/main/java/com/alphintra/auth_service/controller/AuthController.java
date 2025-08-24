@@ -20,11 +20,17 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<User> register(@RequestBody RegisterRequest request) {
-        User user = authService.register(request.getUsername(), request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(user);
-    }
+   @PostMapping("/register")
+public ResponseEntity<User> register(@RequestBody RegisterRequest request) {
+    User user = authService.register(
+        request.getUsername(),
+        request.getEmail(),
+        request.getPassword(),
+        request.getFirstName(),
+        request.getLastName()
+    );
+    return ResponseEntity.ok(user);
+}
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {

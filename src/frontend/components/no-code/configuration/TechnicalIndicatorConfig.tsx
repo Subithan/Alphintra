@@ -79,12 +79,7 @@ const indicatorOptions = [
   { value: 'PSAR', label: 'Parabolic SAR', category: 'oscillators' },
   { value: 'ADX', label: 'Average Directional Index', category: 'oscillators' },
   { value: 'DMI', label: 'Directional Movement Index', category: 'oscillators' },
-  { value: 'DPO', label: 'Detrended Price Oscillator', category: 'oscillators' },
-
-  // New Indicators
-  { value: 'Ichimoku', label: 'Ichimoku Cloud', category: 'trend' },
-  { value: 'VolumeProfile', label: 'Volume Profile', category: 'volume' },
-  { value: 'MarketStructure', label: 'Market Structure', category: 'market_structure' }
+  { value: 'DPO', label: 'Detrended Price Oscillator', category: 'oscillators' }
 ];
 
 export function getTechnicalIndicatorConfig(): NodeConfigResult {
@@ -99,7 +94,6 @@ export function getTechnicalIndicatorConfig(): NodeConfigResult {
         { value: 'volatility', label: 'Volatility Indicators' },
         { value: 'volume', label: 'Volume Indicators' },
         { value: 'oscillators', label: 'Oscillators' },
-        { value: 'market_structure', label: 'Market Structure' },
       ],
       default: 'trend'
     },

@@ -225,44 +225,6 @@ const BUILTIN_COMPONENTS: ComponentItem[] = [
     icon: '📝',
     color: 'bg-gray-500',
   },
-
-  // Advanced Nodes
-  {
-    id: 'advanced-market-regime',
-    type: 'marketRegimeDetection',
-    label: 'Market Regime Detection',
-    description: 'Detect trend, sideways, or volatile market regimes',
-    category: 'Advanced Nodes',
-    icon: '👁️',
-    color: 'bg-purple-600',
-  },
-  {
-    id: 'advanced-multi-timeframe',
-    type: 'multiTimeframeAnalysis',
-    label: 'Multi-Timeframe Analysis',
-    description: 'Analyze multiple timeframes simultaneously',
-    category: 'Advanced Nodes',
-    icon: '🕒',
-    color: 'bg-cyan-600',
-  },
-  {
-    id: 'advanced-correlation',
-    type: 'correlationAnalysis',
-    label: 'Correlation Analysis',
-    description: 'Analyze correlation between different assets',
-    category: 'Advanced Nodes',
-    icon: '🔗',
-    color: 'bg-orange-600',
-  },
-  {
-    id: 'advanced-sentiment',
-    type: 'sentimentAnalysis',
-    label: 'Sentiment Analysis',
-    description: 'Analyze market sentiment from news and social media',
-    category: 'Advanced Nodes',
-    icon: '💬',
-    color: 'bg-teal-600',
-  },
 ];
 
 interface ComponentPaletteProps {

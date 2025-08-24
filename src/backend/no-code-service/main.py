@@ -108,7 +108,7 @@ class CodeGenerationRequest(BaseModel):
     includeComments: bool = True
 
 class ExecutionModeRequest(BaseModel):
-    mode: str = Field(..., pattern="^(strategy|model|hybrid|backtesting|paper_trading|research)$", description="Execution mode")
+    mode: str = Field(..., regex="^(strategy|model)$", description="Execution mode: 'strategy' or 'model'")
     config: Dict[str, Any] = Field(default_factory=dict, description="Configuration parameters for execution mode")
 
 # Dependencies
@@ -556,6 +556,11 @@ async def set_execution_mode(
             logger.info(f"Processing workflow {workflow_id} in model mode")
             
             try:
+                # Convert workflow to training configuration
+                training_config = workflow_converter.convert_to_training_config(
+                    workflow.workflow_data or {"nodes": [], "edges": []}
+                )
+                
                 # Create AI-ML client and submit training job
                 async with AIMLClient(AIML_SERVICE_URL) as aiml_client:
                     training_job_response = await aiml_client.create_training_job_from_workflow(
@@ -583,37 +588,35 @@ async def set_execution_mode(
                 }
                 
             except (AIMLServiceUnavailable, AIMLServiceError) as e:
+                # Handle AI-ML service errors gracefully
                 logger.error(f"AI-ML service error for workflow {workflow_id}: {str(e)}")
-                raise HTTPException(status_code=503, detail=f"AI-ML service unavailable: {e}")
-            except Exception as e:
-                logger.error(f"Error in model mode for {workflow_id}: {str(e)}")
-                raise HTTPException(status_code=500, detail=str(e))
-
-        else:
-            # Handle other modes by forwarding to AI-ML service
-            logger.info(f"Processing workflow {workflow_id} in {request.mode} mode")
-            try:
-                async with AIMLClient(AIML_SERVICE_URL) as aiml_client:
-                    if request.mode == "hybrid":
-                        response = await aiml_client.start_hybrid_execution(workflow.workflow_data, request.config)
-                    elif request.mode == "backtesting":
-                        response = await aiml_client.start_backtest(workflow.workflow_data, request.config)
-                    elif request.mode == "paper_trading":
-                        response = await aiml_client.start_paper_trading(workflow.workflow_data, request.config)
-                    elif request.mode == "research":
-                        response = await aiml_client.start_research_session(workflow.workflow_data, request.config)
-                    else:
-                        raise HTTPException(status_code=400, detail=f"Unsupported mode: {request.mode}")
+                workflow.compilation_status = 'training_failed'
+                workflow.compilation_errors = [str(e)]
+                db.commit()
                 
-                db.commit() # Commit changes to execution_mode and metadata
-                return response
-
-            except (AIMLServiceUnavailable, AIMLServiceError) as e:
-                logger.error(f"AI-ML service error for workflow {workflow_id} in {request.mode} mode: {str(e)}")
-                raise HTTPException(status_code=503, detail=f"AI-ML service unavailable: {e}")
+                return {
+                    "execution_id": execution_id,
+                    "mode": "model",
+                    "status": "failed",
+                    "next_action": None,
+                    "errors": [str(e)],
+                    "message": "Failed to submit training job to AI-ML service"
+                }
             except Exception as e:
-                logger.error(f"Error in {request.mode} mode for {workflow_id}: {str(e)}")
-                raise HTTPException(status_code=500, detail=str(e))
+                # Handle workflow conversion errors
+                logger.error(f"Workflow conversion error for {workflow_id}: {str(e)}")
+                workflow.compilation_status = 'conversion_failed'  
+                workflow.compilation_errors = [str(e)]
+                db.commit()
+                
+                return {
+                    "execution_id": execution_id,
+                    "mode": "model",
+                    "status": "failed", 
+                    "next_action": None,
+                    "errors": [str(e)],
+                    "message": "Failed to convert workflow to training configuration"
+                }
         
     except HTTPException:
         raise
