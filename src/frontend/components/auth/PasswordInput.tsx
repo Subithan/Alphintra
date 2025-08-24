@@ -1,5 +1,3 @@
-// file path:"D:\Alphintra\Alphintra\src\frontend\components\auth\PasswordInput.tsx"
-
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock } from 'lucide-react';
 

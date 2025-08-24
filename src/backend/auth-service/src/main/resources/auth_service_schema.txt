@@ -1,4 +1,3 @@
-
 -- Creating the users table to store user information with KYC fields
 CREATE TABLE users (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,

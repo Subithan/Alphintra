@@ -1,5 +1,3 @@
-// file path "D:\Alphintra\Alphintra\src\frontend\components\auth\auth-provider.tsx"
-
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
