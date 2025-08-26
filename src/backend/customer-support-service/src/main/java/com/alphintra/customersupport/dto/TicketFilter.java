@@ -5,14 +5,13 @@ import com.alphintra.customersupport.entity.TicketPriority;
 import com.alphintra.customersupport.entity.TicketStatus;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 /**
  * DTO for filtering tickets in queries.
  */
 public class TicketFilter {
 
-    private UUID userId;
+    private String userId;
     private String agentId;
     private TicketStatus status;
     private TicketCategory category;
@@ -27,11 +26,11 @@ public class TicketFilter {
     public TicketFilter() {}
 
     // Getters and Setters
-    public UUID getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(UUID userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

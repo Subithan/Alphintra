@@ -28,7 +28,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * REST Controller for managing support tickets.
@@ -98,14 +97,9 @@ public class TicketController {
 
         TicketFilter filter = new TicketFilter();
         
-        // Handle userId conversion - skip filtering by userId if it's not a valid UUID
+        // Set userId filter directly (now accepts String)
         if (userId != null) {
-            try {
-                filter.setUserId(UUID.fromString(userId));
-            } catch (IllegalArgumentException e) {
-                logger.warn("Invalid UUID format for userId: {}, skipping user filter", userId);
-                // Don't set userId in filter - will search all users
-            }
+            filter.setUserId(userId);
         }
         
         filter.setAgentId(assignedToMe != null && assignedToMe ? getAgentId(authentication) : agentId);

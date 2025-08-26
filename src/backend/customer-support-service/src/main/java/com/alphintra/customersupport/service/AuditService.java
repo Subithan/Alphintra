@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
 
 /**
  * Service for audit logging and compliance tracking.
@@ -18,7 +17,7 @@ public class AuditService {
     /**
      * Log ticket creation event.
      */
-    public void logTicketCreation(String ticketId, UUID userId, String createdBy) {
+    public void logTicketCreation(String ticketId, String userId, String createdBy) {
         logger.info("AUDIT: Ticket {} created for user {} by {}", ticketId, userId, createdBy);
         
         // TODO: Implement proper audit logging to database
@@ -64,7 +63,7 @@ public class AuditService {
     /**
      * Log user data access event.
      */
-    public void logUserDataAccess(String agentId, UUID userId, String accessType, String reason) {
+    public void logUserDataAccess(String agentId, String userId, String accessType, String reason) {
         logger.info("AUDIT: Agent {} accessed user {} data - type: {} reason: {}", 
                    agentId, userId, accessType, reason);
         

@@ -7,7 +7,6 @@ import com.alphintra.customersupport.entity.TicketStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * DTO for ticket information.
@@ -15,7 +14,7 @@ import java.util.UUID;
 public class TicketDto {
 
     private String ticketId;
-    private UUID userId;
+    private String userId;
     private String title;
     private String description;
     private TicketCategory category;
@@ -59,11 +58,11 @@ public class TicketDto {
         this.ticketId = ticketId;
     }
 
-    public UUID getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(UUID userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

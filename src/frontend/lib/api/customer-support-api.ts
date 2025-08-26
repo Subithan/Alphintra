@@ -339,8 +339,8 @@ export const customerSupportApi = {
 
   // Agent Management
   async getAgents(): Promise<SupportAgent[]> {
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/agents`);
-    return response;
+    const response = await supportApiClient.get<{ data: SupportAgent[], total: number, message: string }>(`${SUPPORT_API_BASE}/agents`);
+    return response.data;
   },
 
   async updateAgentStatus(agentId: string, status: AgentStatus): Promise<SupportAgent> {

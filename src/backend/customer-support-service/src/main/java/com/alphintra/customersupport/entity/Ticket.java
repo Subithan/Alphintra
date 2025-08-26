@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Entity representing a support ticket in the customer support system.
@@ -28,7 +27,7 @@ public class Ticket {
     private String ticketId;
 
     @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    private String userId;
 
     @Column(name = "user_email", nullable = false)
     private String userEmail;
@@ -94,7 +93,7 @@ public class Ticket {
     // Constructors
     public Ticket() {}
 
-    public Ticket(String ticketId, UUID userId, String userEmail, String title, String description, 
+    public Ticket(String ticketId, String userId, String userEmail, String title, String description, 
                  TicketCategory category, TicketPriority priority) {
         this.ticketId = ticketId;
         this.userId = userId;
@@ -116,11 +115,11 @@ public class Ticket {
         this.ticketId = ticketId;
     }
 
-    public UUID getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(UUID userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
