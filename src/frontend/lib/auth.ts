@@ -84,21 +84,25 @@ export const logout = (): void => {
   removeToken();
   removeUser();
   
-  if (typeof window !== 'undefined') {
-    window.location.href = '/login';
-  }
+  // DEVELOPMENT: Disable automatic redirect to login
+  // Uncomment the lines below to re-enable auth redirects for production
+  // if (typeof window !== 'undefined') {
+  //   window.location.href = '/login';
+  // }
 };
 
 // Route protection utilities
 export const requireAuth = (): boolean => {
-  const token = getToken();
+  // DEVELOPMENT: Disable authentication requirement
+  // Uncomment the lines below to re-enable auth checks for production
+  // const token = getToken();
+  // 
+  // if (!token || isTokenExpired(token)) {
+  //   logout();
+  //   return false;
+  // }
   
-  if (!token || isTokenExpired(token)) {
-    logout();
-    return false;
-  }
-  
-  return true;
+  return true; // Always return true for development
 };
 
 export const requireRole = (requiredRole: User['role']): boolean => {

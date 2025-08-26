@@ -45,27 +45,31 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
         `[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`
       );
       
+      // DEVELOPMENT: Disable authentication error redirects
+      // Uncomment the lines below to re-enable auth error handling for production
       // Handle authentication errors
-      if (extensions?.code === 'UNAUTHENTICATED' || extensions?.code === 'FORBIDDEN') {
-        removeToken();
-        // Redirect to login page
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
-      }
+      // if (extensions?.code === 'UNAUTHENTICATED' || extensions?.code === 'FORBIDDEN') {
+      //   removeToken();
+      //   // Redirect to login page
+      //   if (typeof window !== 'undefined') {
+      //     window.location.href = '/login';
+      //   }
+      // }
     });
   }
   
   if (networkError) {
     console.error(`[Network error]: ${networkError}`);
     
+    // DEVELOPMENT: Disable authentication error redirects
+    // Uncomment the lines below to re-enable auth error handling for production
     // Handle network authentication errors
-    if ('statusCode' in networkError && (networkError.statusCode === 401 || networkError.statusCode === 403)) {
-      removeToken();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
-    }
+    // if ('statusCode' in networkError && (networkError.statusCode === 401 || networkError.statusCode === 403)) {
+    //   removeToken();
+    //   if (typeof window !== 'undefined') {
+    //     window.location.href = '/login';
+    //   }
+    // }
   }
 });
 

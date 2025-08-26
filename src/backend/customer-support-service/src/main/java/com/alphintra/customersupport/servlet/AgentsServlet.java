@@ -10,8 +10,9 @@ import java.io.IOException;
 
 /**
  * Simple servlet to handle /agents requests outside of Spring MVC.
+ * DISABLED: Using AgentsController instead.
  */
-@WebServlet(name = "AgentsServlet", urlPatterns = {"/agents"})
+// @WebServlet(name = "AgentsServlet", urlPatterns = {"/agents"})
 public class AgentsServlet extends HttpServlet {
 
     @Override
