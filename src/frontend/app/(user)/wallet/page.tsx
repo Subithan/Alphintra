@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import GradientBorder from '@/components/ui/GradientBorder';
-import { Eye, EyeOff, Key, RefreshCw, Wallet as WalletIcon, AlertCircle } from 'lucide-react';
+import GradientBorder from "@/components/ui/GradientBorder";
+import {
+  Eye,
+  EyeOff,
+  Key,
+  RefreshCw,
+  Wallet as WalletIcon,
+  AlertCircle,
+} from "lucide-react";
 
 interface Balance {
   asset: string;
@@ -11,13 +18,14 @@ interface Balance {
 }
 
 export default function Wallet() {
-  const [apiKey, setApiKey] = useState('');
-  const [secretKey, setSecretKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
+  const [secretKey, setSecretKey] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [maskedApiKey, setMaskedApiKey] = useState("");
 
   // Check if already connected on page load
   useEffect(() => {
@@ -26,92 +34,141 @@ export default function Wallet() {
 
   // ...existing code...
 
-const checkConnection = async () => {
+  const checkConnection = async () => {
   try {
-    const res = await fetch('http://localhost:8011/binance/connection-status');
+    const res = await fetch(
+      "http://localhost:8011/binance/connection-status"
+    );
     const text = await res.text();
     let data: any = {};
-    try { data = JSON.parse(text); } catch { data = { detail: text }; }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { detail: text };
+    }
+    
+    console.log("DEBUG: Connection status response:", data); // Add this for debugging
+    
     setIsConnected(!!data.connected);
     if (data.connected) {
       fetchBalances();
+      const storedMaskedKey = localStorage.getItem('maskedApiKey');
+      setMaskedApiKey(storedMaskedKey || '****');
+    } else {
+      // Clear localStorage if backend says not connected
+      localStorage.removeItem('maskedApiKey');
+      setMaskedApiKey("");
     }
   } catch (err) {
-    console.error('Failed to check connection:', err);
-  }
-};
-
-const connectToBinance = async () => {
-  if (!apiKey || !secretKey) {
-    setError('Please enter both API Key and Secret Key');
-    return;
-  }
-
-  setLoading(true);
-  setError('');
-  console.log('DEBUG: connectToBinance started');
-
-  try {
-    const response = await fetch('http://localhost:8011/binance/connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apiKey, secretKey }),
-    });
-
-    const text = await response.text();
-    let data: any = {};
-    try { data = JSON.parse(text); } catch { data = { detail: text }; }
-    console.log('DEBUG: connect response', response.status, data);
-
-    if (response.ok) {
+    console.error("Failed to check connection:", err);
+    // On network error, don't clear connection if we have stored data
+    const storedMaskedKey = localStorage.getItem('maskedApiKey');
+    if (storedMaskedKey) {
       setIsConnected(true);
-      fetchBalances();
-      setApiKey('');
-      setSecretKey('');
-    } else {
-      setError(data.detail || data.message || data.error || 'Failed to connect to Binance');
+      setMaskedApiKey(storedMaskedKey);
     }
-  } catch (err) {
-    console.error('DEBUG: connectToBinance error', err);
-    setError('Network error. Please try again.');
-  } finally {
-    console.log('DEBUG: connectToBinance finally - clearing loading');
-    setLoading(false);
   }
 };
 
-const fetchBalances = async () => {
-  setLoading(true);
-  try {
-    const response = await fetch('http://localhost:8011/binance/balances');
-    const text = await response.text();
-    let data: any = {};
-    try { data = JSON.parse(text); } catch { data = { detail: text }; }
-
-    if (response.ok && Array.isArray(data.balances)) {
-      const nonZeroBalances = data.balances.filter(
-        (balance: Balance) => parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
-      );
-      setBalances(nonZeroBalances);
-    } else {
-      setError(data.detail || data.message || data.error || 'Failed to fetch balances');
+  const connectToBinance = async () => {
+    if (!apiKey || !secretKey) {
+      setError("Please enter both API Key and Secret Key");
+      return;
     }
-  } catch (err) {
-    setError('Failed to fetch balances');
-  } finally {
-    setLoading(false);
-  }
-};
 
-// ...existing code...
+    setLoading(true);
+    setError("");
+    console.log("DEBUG: connectToBinance started");
+
+    try {
+      const response = await fetch("http://localhost:8011/binance/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey, secretKey }),
+      });
+
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { detail: text };
+      }
+      console.log("DEBUG: connect response", response.status, data);
+
+      if (response.ok) {
+        setIsConnected(true);
+        fetchBalances();
+         const masked = apiKey.slice(-4);
+        setMaskedApiKey(masked);
+        // Store in localStorage for persistence across page reloads
+        localStorage.setItem('maskedApiKey', masked);
+        setApiKey("");
+        setSecretKey("");
+      } else {
+        setError(
+          data.detail ||
+            data.message ||
+            data.error ||
+            "Failed to connect to Binance"
+        );
+      }
+    } catch (err) {
+      console.error("DEBUG: connectToBinance error", err);
+      setError("Network error. Please try again.");
+    } finally {
+      console.log("DEBUG: connectToBinance finally - clearing loading");
+      setLoading(false);
+    }
+  };
+
+  const fetchBalances = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:8011/binance/balances");
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { detail: text };
+      }
+
+      if (response.ok && Array.isArray(data.balances)) {
+        const nonZeroBalances = data.balances.filter(
+          (balance: Balance) =>
+            parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
+        );
+        setBalances(nonZeroBalances);
+      } else {
+        setError(
+          data.detail ||
+            data.message ||
+            data.error ||
+            "Failed to fetch balances"
+        );
+      }
+    } catch (err) {
+      setError("Failed to fetch balances");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ...existing code...
 
   const disconnect = async () => {
     try {
-      await fetch('http://localhost:8011/binance/disconnect', { method: 'POST' });
+      await fetch("http://localhost:8011/binance/disconnect", {
+        method: "POST",
+      });
       setIsConnected(false);
       setBalances([]);
+     setMaskedApiKey("");
+      // Clear from localStorage
+      localStorage.removeItem('maskedApiKey');
     } catch (err) {
-      console.error('Failed to disconnect:', err);
+      console.error("Failed to disconnect:", err);
     }
   };
 
@@ -122,7 +179,9 @@ const fetchBalances = async () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Wallet</h1>
-            <p className="text-muted-foreground mt-1">Connect to Binance and view your balances</p>
+            <p className="text-muted-foreground mt-1">
+              Connect to Binance and view your balances
+            </p>
           </div>
           {isConnected && (
             <button
@@ -130,7 +189,9 @@ const fetchBalances = async () => {
               disabled={loading}
               className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh
             </button>
           )}
@@ -183,13 +244,19 @@ const fetchBalances = async () => {
                     onClick={() => setShowSecret(!showSecret)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showSecret ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showSecret ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
 
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                <h4 className="font-semibold text-amber-400 mb-2">Security Notice:</h4>
+                <h4 className="font-semibold text-amber-400 mb-2">
+                  Security Notice:
+                </h4>
                 <ul className="text-sm text-amber-300 space-y-1">
                   <li>• Only use API keys with "Read" permissions</li>
                   <li>• Never share your secret key</li>
@@ -202,7 +269,7 @@ const fetchBalances = async () => {
                 disabled={loading || !apiKey || !secretKey}
                 className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Connecting...' : 'Connect to Binance'}
+                {loading ? "Connecting..." : "Connect to Binance"}
               </button>
             </div>
           </GradientBorder>
@@ -210,20 +277,29 @@ const fetchBalances = async () => {
           /* Balance Display */
           <div className="space-y-6">
             {/* Connection Status */}
-            <GradientBorder gradientAngle="135deg" className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="font-semibold">Connected to Binance</span>
+            {isConnected && (
+              <GradientBorder gradientAngle="135deg" className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div>
+                      <span className="font-semibold">
+                        Connected to Binance
+                      </span>
+                      <p className="text-sm text-muted-foreground">
+                        API Key: ****{maskedApiKey || '****'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={disconnect}
+                    className="text-red-400 hover:text-red-300 text-sm"
+                  >
+                    Disconnect
+                  </button>
                 </div>
-                <button
-                  onClick={disconnect}
-                  className="text-red-400 hover:text-red-300 text-sm"
-                >
-                  Disconnect
-                </button>
-              </div>
-            </GradientBorder>
+              </GradientBorder>
+            )}
 
             {/* Balances */}
             <GradientBorder gradientAngle="225deg" className="p-6">
@@ -259,7 +335,10 @@ const fetchBalances = async () => {
                       </div>
                       <div className="text-right">
                         <div className="font-semibold">
-                          {(parseFloat(balance.free) + parseFloat(balance.locked)).toFixed(8)}
+                          {(
+                            parseFloat(balance.free) +
+                            parseFloat(balance.locked)
+                          ).toFixed(8)}
                         </div>
                         {parseFloat(balance.locked) > 0 && (
                           <div className="text-sm text-orange-400">

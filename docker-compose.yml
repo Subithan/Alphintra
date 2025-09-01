@@ -446,13 +446,13 @@ services:
       dockerfile: Dockerfile
     container_name: alphintra-wallet-service
     ports:
-      - "8008:8008"
+      - "8011:8011"
     environment:
       - ENVIRONMENT=development
     networks:
       - alphintra-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
       interval: 30s
       timeout: 10s
       retries: 3    
@@ -529,6 +529,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
 
 # ===============================
 # VOLUMES
