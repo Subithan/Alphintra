@@ -6,7 +6,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'USER' | 'ADMIN' | 'PREMIUM';
+  role: 'USER' | 'ADMIN' | 'KYC_ADMIN';
   isVerified: boolean;
   twoFactorEnabled: boolean;
   createdAt: string;
@@ -73,7 +73,6 @@ export const shouldRefreshToken = (token: string): boolean => {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const currentTime = Date.now() / 1000;
     const timeUntilExpiry = payload.exp - currentTime;
-    // Refresh if token expires in less than 5 minutes
     return timeUntilExpiry < 300;
   } catch {
     return false;
@@ -85,22 +84,25 @@ export const logout = (): void => {
   removeToken();
   removeUser();
   
-  // Redirect to login page
-  if (typeof window !== 'undefined') {
-    window.location.href = '/login';
-  }
+  // DEVELOPMENT: Disable automatic redirect to login
+  // Uncomment the lines below to re-enable auth redirects for production
+  // if (typeof window !== 'undefined') {
+  //   window.location.href = '/login';
+  // }
 };
 
 // Route protection utilities
 export const requireAuth = (): boolean => {
-  const token = getToken();
+  // DEVELOPMENT: Disable authentication requirement
+  // Uncomment the lines below to re-enable auth checks for production
+  // const token = getToken();
+  // 
+  // if (!token || isTokenExpired(token)) {
+  //   logout();
+  //   return false;
+  // }
   
-  if (!token || isTokenExpired(token)) {
-    logout();
-    return false;
-  }
-  
-  return true;
+  return true; // Always return true for development
 };
 
 export const requireRole = (requiredRole: User['role']): boolean => {
@@ -111,7 +113,7 @@ export const requireRole = (requiredRole: User['role']): boolean => {
   
   const roleHierarchy: Record<User['role'], number> = {
     'USER': 1,
-    'PREMIUM': 2,
+    'KYC_ADMIN': 2,
     'ADMIN': 3,
   };
   

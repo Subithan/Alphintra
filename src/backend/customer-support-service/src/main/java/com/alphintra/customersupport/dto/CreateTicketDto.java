@@ -7,15 +7,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * DTO for creating a new support ticket.
  */
 public class CreateTicketDto {
 
-    @NotNull(message = "User ID is required")
-    private UUID userId;
+    @NotBlank(message = "User ID is required")
+    private String userId;
 
     @NotBlank(message = "Title is required")
     @Size(max = 200, message = "Title must not exceed 200 characters")
@@ -46,7 +45,7 @@ public class CreateTicketDto {
     // Constructors
     public CreateTicketDto() {}
 
-    public CreateTicketDto(UUID userId, String title, String description, TicketCategory category) {
+    public CreateTicketDto(String userId, String title, String description, TicketCategory category) {
         this.userId = userId;
         this.title = title;
         this.description = description;
@@ -54,11 +53,11 @@ public class CreateTicketDto {
     }
 
     // Getters and Setters
-    public UUID getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(UUID userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

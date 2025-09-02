@@ -112,6 +112,33 @@ services:
       start_period: 40s
     restart: unless-stopped
 
+  # AI/ML Strategy Service - Machine learning and algorithmic trading strategies
+  ai-ml-strategy-service:
+    build:
+      context: ../../../src/backend/ai-ml-strategy-service
+      dockerfile: Dockerfile
+    container_name: alphintra-minimal-ai-ml-strategy-service
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-ai-ml-strategy-service
+      REDIS_URL: redis://:redis123@redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    networks:
+      - alphintra-minimal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
   # Gateway Service - API Gateway using Spring Cloud Gateway
   gateway:
     build:
@@ -151,6 +178,7 @@ services:
       REDIS_URL: redis://:redis123@redis:6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       NO_CODE_SERVICE_URL: http://no-code-service:8006
+      AI_ML_STRATEGY_SERVICE_URL: http://ai-ml-strategy-service:8002
       AUTH_SERVICE_URL: http://auth-service:8001
     depends_on:
       postgres:
@@ -158,6 +186,8 @@ services:
       redis:
         condition: service_healthy
       no-code-service:
+        condition: service_healthy
+      ai-ml-strategy-service:
         condition: service_healthy
     ports:
       - "8005:8005"
@@ -248,7 +278,7 @@ services:
       dockerfile: Dockerfile
     container_name: alphintra-minimal-auth-service
     environment:
-      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-auth-service
+      DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra_auth_service?user=alphintra&password=alphintra123
       REDIS_URL: redis://:redis123@redis:6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:

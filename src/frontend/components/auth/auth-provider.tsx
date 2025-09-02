@@ -1,3 +1,5 @@
+// file path "D:\Alphintra\Alphintra\src\frontend\components\auth\auth-provider.tsx"
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -80,10 +82,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     removeToken();
     removeUser();
     
+    // DEVELOPMENT: Disable automatic redirect to login
+    // Uncomment the lines below to re-enable auth redirects for production
     // Redirect to login page
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
+    // if (typeof window !== 'undefined') {
+    //   window.location.href = '/login';
+    // }
   };
 
   const updateUser = (updatedUser: User) => {

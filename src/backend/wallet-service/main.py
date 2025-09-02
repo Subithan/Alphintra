@@ -121,9 +121,11 @@ async def connect_to_binance(request: ConnectRequest, db: Session = Depends(get_
             print("DEBUG: Keys too short")
             raise HTTPException(status_code=400, detail="API Key and Secret Key seem too short")
         
-        print("DEBUG: Getting current user...")
+        # print("DEBUG: Getting current user...")
+        # current_user = get_current_user_from_db(db)
+        # print(f"DEBUG: Current user: {current_user.email}")
+
         current_user = get_current_user_from_db(db)
-        print(f"DEBUG: Current user: {current_user.email}")
         
         # Check if connection already exists for this user
         existing_connection = db.query(WalletConnection).filter(
@@ -251,11 +253,15 @@ async def get_balances(db: Session = Depends(get_db)):
             'enableRateLimit': True,
             'timeout': 60000,
         })
-
+            
         try:
+
+            # Always enable sandbox mode for testnet
+            # exchange.set_sandbox_mode(True)
+            print("DEBUG: Using production Binance API") 
             # use sandbox/testnet if stored
-            if getattr(connection, "exchange_environment", "").lower() == "testnet":
-                exchange.set_sandbox_mode(True)
+            # if getattr(connection, "exchange_environment", "").lower() == "testnet":
+            #     exchange.set_sandbox_mode(True)
 
             balance_data = await exchange.fetch_balance()
 
@@ -367,6 +373,8 @@ async def disconnect_from_binance(db: Session = Depends(get_db)):
         import traceback
         print(f"DEBUG: Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to disconnect: {str(e)}")
+
+# ...existing code...
 
 if __name__ == "__main__":
     import uvicorn

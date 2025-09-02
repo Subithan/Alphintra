@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -68,6 +67,7 @@ public class TicketService {
         Ticket ticket = new Ticket(
             ticketId,
             createTicketDto.getUserId(),
+            "user@example.com", // TODO: Get actual user email from user service
             createTicketDto.getTitle(),
             createTicketDto.getDescription(),
             createTicketDto.getCategory(),

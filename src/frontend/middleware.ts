@@ -44,31 +44,35 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value || 
                 request.headers.get('authorization')?.replace('Bearer ', '');
 
-  // Allow public routes
-  if (isPublicRoute(pathname)) {
-    return NextResponse.next();
-  }
-
-  // Check if user is authenticated
-  if (!token) {
-    return redirectToLogin(request);
-  }
-
-  // For protected routes, verify user roles
-  if (isProtectedRoute(pathname)) {
-    // In a real implementation, you would verify the JWT token here
-    // and extract user roles to check permissions
-    const userRoles = getUserRolesFromToken(token);
-    
-    if (!hasRequiredPermissions(pathname, userRoles)) {
-      return NextResponse.json(
-        { error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
-  }
-
+  // DEVELOPMENT: Disable authentication - uncomment the lines below to re-enable auth
+  // Remove the next line and uncomment the authentication logic for production
   return NextResponse.next();
+
+  // Allow public routes
+  // if (isPublicRoute(pathname)) {
+  //   return NextResponse.next();
+  // }
+
+  // // Check if user is authenticated
+  // if (!token) {
+  //   return redirectToLogin(request);
+  // }
+
+  // // For protected routes, verify user roles
+  // if (isProtectedRoute(pathname)) {
+  //   // In a real implementation, you would verify the JWT token here
+  //   // and extract user roles to check permissions
+  //   const userRoles = getUserRolesFromToken(token);
+  //   
+  //   if (!hasRequiredPermissions(pathname, userRoles)) {
+  //     return NextResponse.json(
+  //       { error: 'Insufficient permissions' },
+  //       { status: 403 }
+  //     );
+  //   }
+  // }
+
+  // return NextResponse.next();
 }
 
 function isPublicRoute(pathname: string): boolean {

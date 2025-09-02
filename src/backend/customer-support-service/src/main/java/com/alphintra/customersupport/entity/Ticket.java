@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Entity representing a support ticket in the customer support system.
@@ -28,7 +27,13 @@ public class Ticket {
     private String ticketId;
 
     @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    private String userId;
+
+    @Column(name = "user_email", nullable = false)
+    private String userEmail;
+
+    @Column(name = "user_name")
+    private String userName;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
@@ -88,10 +93,11 @@ public class Ticket {
     // Constructors
     public Ticket() {}
 
-    public Ticket(String ticketId, UUID userId, String title, String description, 
+    public Ticket(String ticketId, String userId, String userEmail, String title, String description, 
                  TicketCategory category, TicketPriority priority) {
         this.ticketId = ticketId;
         this.userId = userId;
+        this.userEmail = userEmail;
         this.title = title;
         this.description = description;
         this.category = category;
@@ -109,12 +115,28 @@ public class Ticket {
         this.ticketId = ticketId;
     }
 
-    public UUID getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(UUID userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public String getTitle() {

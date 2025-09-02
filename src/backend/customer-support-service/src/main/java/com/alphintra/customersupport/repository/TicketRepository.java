@@ -14,7 +14,6 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Repository interface for managing Ticket entities.
@@ -25,7 +24,7 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
     /**
      * Find tickets by user ID with pagination.
      */
-    Page<Ticket> findByUserId(UUID userId, Pageable pageable);
+    Page<Ticket> findByUserId(String userId, Pageable pageable);
 
     /**
      * Find tickets assigned to a specific agent.

@@ -25,8 +25,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
 /**
  * REST Controller for managing support tickets.
@@ -96,14 +97,9 @@ public class TicketController {
 
         TicketFilter filter = new TicketFilter();
         
-        // Handle userId conversion - skip filtering by userId if it's not a valid UUID
+        // Set userId filter directly (now accepts String)
         if (userId != null) {
-            try {
-                filter.setUserId(UUID.fromString(userId));
-            } catch (IllegalArgumentException e) {
-                logger.warn("Invalid UUID format for userId: {}, skipping user filter", userId);
-                // Don't set userId in filter - will search all users
-            }
+            filter.setUserId(userId);
         }
         
         filter.setAgentId(assignedToMe != null && assignedToMe ? getAgentId(authentication) : agentId);
@@ -320,5 +316,17 @@ public class TicketController {
             return "dev-agent-001";
         }
         return authentication.getName();
+    }
+
+    /**
+     * Get all agents - temporary endpoint for testing.
+     */
+    @GetMapping("/agents")
+    @CrossOrigin(originPatterns = "*", allowCredentials = "false")
+    public ResponseEntity<Map<String, Object>> getAllAgents() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Agents endpoint is working via tickets controller");
+        response.put("data", new Object[0]);
+        return ResponseEntity.ok(response);
     }
 }
