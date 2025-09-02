@@ -75,6 +75,14 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
     networks:
       - alphintra-minimal-network
+    healthcheck:
+      # A healthcheck for Kafka to ensure the broker is ready.
+      # It uses the kafka-topics command to list topics, which requires the broker to be operational.
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     restart: unless-stopped
 
   # No-Code Service - Visual workflow builder API
@@ -219,6 +227,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     ports:
       - "8008:8008"
