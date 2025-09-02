@@ -6,7 +6,6 @@ import AccountsScreen from '../screens/Home';
 // Placeholder screens
 const TradeScreen = () => null;
 const InsightsScreen = () => null;
-const PerformanceScreen = () => null;
 const ProfileScreen = () => null;
 
 const Tab = createBottomTabNavigator();
@@ -14,17 +13,18 @@ const Tab = createBottomTabNavigator();
 const BottomTabs = () => {
   return (
     <Tab.Navigator
+      id={undefined}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
           backgroundColor: '#0D0D0D',
-          borderTopColor: '#1c1c1c',
+          borderTopColor: '#0D0D0D',
         },
         tabBarLabelStyle: {
           fontSize: 12,
           color: '#ccc',
         },
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused }) => {
           let iconName = 'ellipse';
 
           switch (route.name) {

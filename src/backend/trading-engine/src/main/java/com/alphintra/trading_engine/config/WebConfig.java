@@ -1,4 +1,4 @@
-package com.alphintra.trading_engine;
+package com.alphintra.trading_engine.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

@@ -1,13 +1,12 @@
+// src/App.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import BottomTabs from './src/navigation/BottomTabs';
+import BottomTabs from './navigation/BottomTabs';
 
-const App = () => {
+export default function App() {
   return (
     <NavigationContainer>
       <BottomTabs />
     </NavigationContainer>
   );
-};
-
-export default App;
+}
