@@ -4,10 +4,12 @@ import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
 import GradientBorder from '@/components/ui/GradientBorder';
 import { Plus, Plug, ShoppingCart, User } from 'lucide-react';
+import { useRouter } from "next/navigation";
 
 export default function Strategy() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -22,7 +24,7 @@ export default function Strategy() {
 
   const handleCreateStrategy = () => {
     console.log("Creating new strategy...");
-    // Add your create strategy logic here
+    router.push("/strategy-hub"); // Add this navigation
   };
 
   return (
