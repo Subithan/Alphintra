@@ -1,10 +1,11 @@
 {
-  "name": "TestStrategy",
-  "description": "Auto-generated training script",
-  "generatedAt": "2025-08-04T12:51:04.753014",
+  "name": "Untitled Model",
+  "description": "Auto-generated live trading script",
+  "generatedAt": "2025-09-10T18:03:51.483971",
   "complexity": {
     "nodes": 16,
     "edges": 19,
-    "linesOfCode": 43
-  }
+    "linesOfCode": 111
+  },
+  "config": {}
 }

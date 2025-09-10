@@ -1,16 +1,12 @@
-# Generated Trainer
+# Generated Strategy
 
-This directory contains an auto-generated training script `trainer.py`.
+                This directory contains an auto-generated trading strategy `generated_strategy.py`.
 
-## Inputs
-* Data loading, feature engineering and label generation logic embedded in `trainer.py`.
+                ## Usage
+                This script is designed to run continuously. Ensure you have a broker connection
+                properly configured (the default is a mock broker).
 
-## Outputs
-* Trained model saved as `trained_model.joblib`.
-* Evaluation report printed to the console.
-
-## Usage
-```bash
-pip install -r requirements.txt
-python trainer.py
-```
+                ```bash
+                pip install -r requirements.txt
+                python generated_strategy.py
+                ```

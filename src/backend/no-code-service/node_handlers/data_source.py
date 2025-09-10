@@ -10,12 +10,11 @@ class DataSourceHandler(NodeHandler):
     node_type = "dataSource"
 
     def handle(self, node: Node, generator) -> str:
-        params = node.data.get("parameters", {})
-        symbol = params.get("symbol", "AAPL")
-        timeframe = params.get("timeframe", "1h")
-        return (
-            f"df = pd.DataFrame()  # TODO load {symbol} ({timeframe})"
-        )
+        # Data fetching is handled by the strategy template's run loop.
+        # This handler's primary role is to allow the generator to identify
+        # the node and extract parameters from it. It does not need to
+        # generate any code for the strategy class methods.
+        return ""
 
     def required_packages(self) -> List[str]:
-        return ["pandas"]
+        return []
