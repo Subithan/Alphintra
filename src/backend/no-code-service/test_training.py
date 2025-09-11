@@ -1,6 +1,6 @@
 """
 Auto-generated Training Strategy
-Generated at: 2025-09-11T11:32:26.650092
+Generated at: 2025-09-11T11:33:27.780847
 Compiler: Enhanced No-Code Generator v2.0
 """
 
@@ -12,8 +12,6 @@ warnings.filterwarnings('ignore')
 import talib as ta
 from scipy import stats
 from typing import Union, Optional
-import math
-from collections import deque
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
@@ -26,26 +24,26 @@ class StrategyPipeline:
         self.targets = []
         
     def load_data(self):
-                # Load AAPL data (1h, 1000 bars)
+                # Load TSLA data (4h, 1000 bars)
         try:
             # In a real implementation, this would connect to your data provider
             import yfinance as yf
-            ticker = yf.Ticker("AAPL")
-            data_dataSource_1 = ticker.history(period="1y", interval="1h")
-            data_dataSource_1 = data_dataSource_1.tail(1000).copy()
+            ticker = yf.Ticker("TSLA")
+            data_data_1 = ticker.history(period="1y", interval="4h")
+            data_data_1 = data_data_1.tail(1000).copy()
     
             # Ensure we have OHLCV columns
             required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-            if all(col in data_dataSource_1.columns for col in required_cols):
+            if all(col in data_data_1.columns for col in required_cols):
                 # Standardize column names
-                data_dataSource_1.columns = [col.lower() for col in data_dataSource_1.columns]
-                df = data_dataSource_1  # Set as main dataframe
-                print(f"Loaded {len(df)} rows of AAPL data")
+                data_data_1.columns = [col.lower() for col in data_data_1.columns]
+                df = data_data_1  # Set as main dataframe
+                print(f"Loaded {len(df)} rows of TSLA data")
             else:
-                raise ValueError(f"Missing required OHLCV columns for AAPL")
+                raise ValueError(f"Missing required OHLCV columns for TSLA")
         
         except Exception as e:
-            print(f"Error loading AAPL data: {e}")
+            print(f"Error loading TSLA data: {e}")
             # Fallback to synthetic data for testing
             import pandas as pd
             import numpy as np
@@ -63,55 +61,27 @@ class StrategyPipeline:
                 'volume': np.random.randint(1000000, 10000000, 1000)
             }, index=dates)
     
-            print(f"Using synthetic data for AAPL (1000 rows)")
+            print(f"Using synthetic data for TSLA (1000 rows)")
         return self
         
     def engineer_features(self):
                 # Feature Engineering
-        # Optimizations: vectorized
-        # Vectorized RSI calculation
-        # RSI calculation
-        delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df['feature_technicalIndicator_1'] = 100 - (100 / (1 + rs))
-        # Validate RSI output
-        df['feature_technicalIndicator_1'] = df['feature_technicalIndicator_1'].fillna(method='bfill').fillna(0)
-        # Optimizations: vectorized
-        # Vectorized SMA calculation
-        df['feature_technicalIndicator_2'] = df['close'].rolling(window=20).mean()
+        # SMA calculation
+        df['feature_sma_1'] = df['close'].rolling(window=20).mean()
         # Validate SMA output
-        df['feature_technicalIndicator_2'] = df['feature_technicalIndicator_2'].fillna(method='bfill').fillna(0)
+        df['feature_sma_1'] = df['feature_sma_1'].fillna(method='bfill').fillna(0)
         return self
         
     def generate_signals(self):
                 # Signal Generation
-        # Condition: comparison - less_than
+        # Condition: comparison - greater_than
         # Apply condition logic
-        condition_raw = df['close'] < 30
+        condition_raw = df['close'] > 0
 
-        # Apply confirmation bars (2)
-        condition_confirmed = condition_raw.copy()
-        for i in range(1, 3):
-            condition_confirmed &= condition_raw.shift(i)
-        df['signal_condition_1'] = condition_confirmed.astype(int)
+        df['signal_condition_1'] = condition_raw.astype(int)
 
         # Create target variable for training
         df['target_condition_1'] = df['signal_condition_1'].copy()
-
-        # Condition: crossover - crossover
-        # Apply condition logic
-        condition_raw = (df['close'] > 0) & (df['close'].shift(1) <= 0)
-
-        df['signal_condition_2'] = condition_raw.astype(int)
-
-        # Create target variable for training
-        df['target_condition_2'] = df['signal_condition_2'].copy()
-
-        # Logic Gate: AND with 2 inputs
-        # Apply AND logic
-        df['signal_logic_1'] = (False & False).astype(int)
 
         return self
         
@@ -159,13 +129,6 @@ if __name__ == "__main__":
     pipeline = StrategyPipeline()
     pipeline.load_data().engineer_features().generate_signals()
     
-    model_config = {
-    "type": "random_forest",
-    "hyperparameters": {
-        "n_estimators": 100,
-        "max_depth": 10,
-        "random_state": 42
-    }
-}
+    model_config = {}
     model = pipeline.train_model(model_config)
     print("Training completed successfully!")

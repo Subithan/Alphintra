@@ -1,6 +1,6 @@
 """
 Auto-generated Backtesting Strategy
-Generated at: 2025-09-11T11:32:26.652757
+Generated at: 2025-09-11T11:35:34.779537
 Compiler: Enhanced No-Code Generator v2.0
 """
 
@@ -24,44 +24,44 @@ class BacktestingEngine:
         self.data = None
         
     def load_data(self):
-                # Load AAPL data (1h, 1000 bars)
+                # Load BTC-USD data (1h, 2000 bars)
         try:
             # In a real implementation, this would connect to your data provider
             import yfinance as yf
-            ticker = yf.Ticker("AAPL")
-            data_dataSource_1 = ticker.history(period="1y", interval="1h")
-            data_dataSource_1 = data_dataSource_1.tail(1000).copy()
+            ticker = yf.Ticker("BTC-USD")
+            data_data_btc = ticker.history(period="1y", interval="1h")
+            data_data_btc = data_data_btc.tail(2000).copy()
     
             # Ensure we have OHLCV columns
             required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-            if all(col in data_dataSource_1.columns for col in required_cols):
+            if all(col in data_data_btc.columns for col in required_cols):
                 # Standardize column names
-                data_dataSource_1.columns = [col.lower() for col in data_dataSource_1.columns]
-                df = data_dataSource_1  # Set as main dataframe
-                print(f"Loaded {len(df)} rows of AAPL data")
+                data_data_btc.columns = [col.lower() for col in data_data_btc.columns]
+                df = data_data_btc  # Set as main dataframe
+                print(f"Loaded {len(df)} rows of BTC-USD data")
             else:
-                raise ValueError(f"Missing required OHLCV columns for AAPL")
+                raise ValueError(f"Missing required OHLCV columns for BTC-USD")
         
         except Exception as e:
-            print(f"Error loading AAPL data: {e}")
+            print(f"Error loading BTC-USD data: {e}")
             # Fallback to synthetic data for testing
             import pandas as pd
             import numpy as np
-            dates = pd.date_range(start='2023-01-01', periods=1000, freq='1H')
+            dates = pd.date_range(start='2023-01-01', periods=2000, freq='1H')
             np.random.seed(42)
             base_price = 100
-            returns = np.random.normal(0.0001, 0.02, 1000)
+            returns = np.random.normal(0.0001, 0.02, 2000)
             prices = base_price * np.exp(np.cumsum(returns))
     
             df = pd.DataFrame({
-                'open': prices * (1 + np.random.normal(0, 0.001, 1000)),
-                'high': prices * (1 + np.abs(np.random.normal(0, 0.01, 1000))),
-                'low': prices * (1 - np.abs(np.random.normal(0, 0.01, 1000))),
+                'open': prices * (1 + np.random.normal(0, 0.001, 2000)),
+                'high': prices * (1 + np.abs(np.random.normal(0, 0.01, 2000))),
+                'low': prices * (1 - np.abs(np.random.normal(0, 0.01, 2000))),
                 'close': prices,
-                'volume': np.random.randint(1000000, 10000000, 1000)
+                'volume': np.random.randint(1000000, 10000000, 2000)
             }, index=dates)
     
-            print(f"Using synthetic data for AAPL (1000 rows)")
+            print(f"Using synthetic data for BTC-USD (2000 rows)")
         return self
         
     def engineer_features(self):
@@ -72,13 +72,20 @@ class BacktestingEngine:
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
-        df['feature_technicalIndicator_1'] = 100 - (100 / (1 + rs))
+        df['feature_rsi_14'] = 100 - (100 / (1 + rs))
         # Validate RSI output
-        df['feature_technicalIndicator_1'] = df['feature_technicalIndicator_1'].fillna(method='bfill').fillna(0)
-        # SMA calculation
-        df['feature_technicalIndicator_2'] = df['close'].rolling(window=20).mean()
-        # Validate SMA output
-        df['feature_technicalIndicator_2'] = df['feature_technicalIndicator_2'].fillna(method='bfill').fillna(0)
+        df['feature_rsi_14'] = df['feature_rsi_14'].fillna(method='bfill').fillna(0)
+        # BB calculation
+        # Bollinger Bands calculation
+        sma = df['close'].rolling(window=20).mean()
+        std = df['close'].rolling(window=20).std()
+        df['feature_bb_20_upper'] = sma + (std * 2)
+        df['feature_bb_20_middle'] = sma
+        df['feature_bb_20_lower'] = sma - (std * 2)
+        df['feature_bb_20_width'] = df['feature_bb_20_upper'] - df['feature_bb_20_lower']
+        df['feature_bb_20'] = df['feature_bb_20_middle']  # Main output
+        # Validate BB output
+        df['feature_bb_20'] = df['feature_bb_20'].fillna(method='bfill').fillna(0)
         return self
         
     def generate_signals(self):
@@ -87,27 +94,27 @@ class BacktestingEngine:
         # Apply condition logic
         condition_raw = df['close'] < 30
 
-        # Apply confirmation bars (2)
+        # Apply confirmation bars (1)
         condition_confirmed = condition_raw.copy()
-        for i in range(1, 3):
+        for i in range(1, 2):
             condition_confirmed &= condition_raw.shift(i)
-        df['signal_condition_1'] = condition_confirmed.astype(int)
+        df['signal_oversold_condition'] = condition_confirmed.astype(int)
 
         # Create target variable for training
-        df['target_condition_1'] = df['signal_condition_1'].copy()
+        df['target_oversold_condition'] = df['signal_oversold_condition'].copy()
 
-        # Condition: crossover - crossover
+        # Condition: comparison - less_than
         # Apply condition logic
-        condition_raw = (df['close'] > 0) & (df['close'].shift(1) <= 0)
+        condition_raw = df['close'] < 0.01
 
-        df['signal_condition_2'] = condition_raw.astype(int)
+        df['signal_bb_touch'] = condition_raw.astype(int)
 
         # Create target variable for training
-        df['target_condition_2'] = df['signal_condition_2'].copy()
+        df['target_bb_touch'] = df['signal_bb_touch'].copy()
 
         # Logic Gate: AND with 2 inputs
         # Apply AND logic
-        df['signal_logic_1'] = (False & False).astype(int)
+        df['signal_buy_signal'] = (False & False).astype(int)
 
         return self
         
@@ -115,14 +122,14 @@ class BacktestingEngine:
                 # Risk Management
         # Risk Management: position - position_size
         # Position size risk management
-        df['risk_riskManagement_1_max_position'] = 0.02  # Max position as percentage
-        df['risk_riskManagement_1_portfolio_heat'] = 0.1  # Portfolio heat limit
+        df['risk_risk_mgmt_max_position'] = 0.03  # Max position as percentage
+        df['risk_risk_mgmt_portfolio_heat'] = 0.15  # Portfolio heat limit
 
         # Calculate position size based on risk
-        df['risk_riskManagement_1_volatility'] = df['close'].pct_change().rolling(20).std()
-        df['risk_riskManagement_1_position_size'] = np.minimum(
-            df['risk_riskManagement_1_max_position'] / (df['risk_riskManagement_1_volatility'] * 2),
-            df['risk_riskManagement_1_portfolio_heat']
+        df['risk_risk_mgmt_volatility'] = df['close'].pct_change().rolling(20).std()
+        df['risk_risk_mgmt_position_size'] = np.minimum(
+            df['risk_risk_mgmt_max_position'] / (df['risk_risk_mgmt_volatility'] * 2),
+            df['risk_risk_mgmt_portfolio_heat']
         )
 
         return self
@@ -134,28 +141,28 @@ class BacktestingEngine:
             df['signal_default'] = 0  # Default signal
 
         # Generate buy actions
-        df['action_action_1'] = 0  # Initialize
+        df['action_buy_action'] = 0  # Initialize
 
         # Apply action when signal is active
         active_signals = df['signal_default'] == 1
-        df.loc[active_signals, 'action_action_1'] = 1
+        df.loc[active_signals, 'action_buy_action'] = 1
 
         # Position sizing logic
         if 'percentage' == 'percentage':
             # Percentage of portfolio
-            df['action_action_1_size'] = df['action_action_1'] * (100 / 100.0)
+            df['action_buy_action_size'] = df['action_buy_action'] * (0.1 / 100.0)
         elif 'percentage' == 'fixed':
             # Fixed quantity
-            df['action_action_1_size'] = df['action_action_1'] * 100
+            df['action_buy_action_size'] = df['action_buy_action'] * 0.1
         else:
             # Default to fixed
-            df['action_action_1_size'] = df['action_action_1'] * 100
+            df['action_buy_action_size'] = df['action_buy_action'] * 0.1
 
         # Risk management
         if True:
-            df['action_action_1_stop_loss'] = 2
+            df['action_buy_action_stop_loss'] = 4
         if True:
-            df['action_action_1_take_profit'] = 6
+            df['action_buy_action_take_profit'] = 12
 
         return self
         
