@@ -59,6 +59,10 @@ async def log_requests(request, call_next):
     return response
 
 # Pydantic models for request/response
+class CredentialsResponse(BaseModel):
+    apiKey: str
+    secretKey: str
+
 class ConnectRequest(BaseModel):
     apiKey: str
     secretKey: str
@@ -373,6 +377,40 @@ async def disconnect_from_binance(db: Session = Depends(get_db)):
         import traceback
         print(f"DEBUG: Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to disconnect: {str(e)}")
+
+# The "userId: int" parameter tells FastAPI to expect a URL like "...?userId=1"
+@app.get("/binance/credentials", response_model=CredentialsResponse)
+async def get_binance_credentials(userId: int, db: Session = Depends(get_db)):
+    """
+    Retrieves the active Binance API key and secret for a SPECIFIC user.
+    """
+    print(f"DEBUG: /binance/credentials endpoint called for userId: {userId}")
+    
+    try:
+        # We no longer use the hardcoded get_current_user_from_db function here.
+        # We use the userId passed directly in the URL.
+        connection = db.query(WalletConnection).filter(
+            WalletConnection.user_id == userId, # <-- Use the userId from the request
+            # WalletConnection.exchange_name == 'binance',
+            # WalletConnection.is_active == True,
+            # WalletConnection.connection_status == 'connected'
+        ).first()
+
+        if not connection:
+            print(f"DEBUG: No active Binance connection found for userId: {userId}.")
+            raise HTTPException(status_code=404, detail=f"Active Binance connection not found for userId: {userId}.")
+
+        api_key = connection.encrypted_api_key
+        secret_key = connection.encrypted_secret_key
+
+        print(f"DEBUG: Found credentials for userId: {userId}. Sending API Key starting with: {api_key[:5]}...")
+        return CredentialsResponse(apiKey=api_key, secretKey=secret_key)
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"DEBUG: Error fetching credentials for userId {userId}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching credentials.")
 
 # ...existing code...
 
