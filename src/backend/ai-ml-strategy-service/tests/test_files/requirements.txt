@@ -1,5 +1,3 @@
-joblib
-numpy
 pandas
 scikit-learn
-ta-lib
+joblib

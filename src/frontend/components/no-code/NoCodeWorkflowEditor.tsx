@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
   ReactFlow,
   MiniMap,
@@ -16,29 +16,39 @@ import {
   BackgroundVariant,
   useReactFlow,
   MarkerType,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from "reactflow";
+import "reactflow/dist/style.css";
 
-import { TechnicalIndicatorNode } from './nodes/TechnicalIndicatorNode';
-import { ConditionNode } from './nodes/ConditionNode';
-import { ActionNode } from './nodes/ActionNode';
-import { DataSourceNode } from './nodes/DataSourceNode';
-import { CustomDatasetNode } from './nodes/CustomDatasetNode';
-import { OutputNode } from './nodes/OutputNode';
-import { LogicNode } from './nodes/LogicNode';
-import { RiskManagementNode } from './nodes/RiskManagementNode';
-import { SmartEdge } from './edges/SmartEdge';
-import { useNoCodeStore } from '@/lib/stores/no-code-store';
-import { useExecutionStore } from '@/lib/stores/execution-store';
-import { connectionManager } from '@/lib/connection-manager';
-import { validateWorkflow, ValidationResult } from '@/lib/workflow-validation';
-import { getWorkflowOptimizations, OptimizationSuggestion } from '@/lib/workflow-optimizer';
-import { ConfigurationPanel } from './ConfigurationPanel';
-import { ExecutionModeSelector } from './ExecutionModeSelector';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { X, AlertTriangle, CheckCircle, Info, Play, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { TechnicalIndicatorNode } from "./nodes/TechnicalIndicatorNode";
+import { ConditionNode } from "./nodes/ConditionNode";
+import { ActionNode } from "./nodes/ActionNode";
+import { DataSourceNode } from "./nodes/DataSourceNode";
+import { CustomDatasetNode } from "./nodes/CustomDatasetNode";
+import { OutputNode } from "./nodes/OutputNode";
+import { LogicNode } from "./nodes/LogicNode";
+import { RiskManagementNode } from "./nodes/RiskManagementNode";
+import { SmartEdge } from "./edges/SmartEdge";
+import { useNoCodeStore } from "@/lib/stores/no-code-store";
+import { useExecutionStore } from "@/lib/stores/execution-store";
+import { connectionManager } from "@/lib/connection-manager";
+import { validateWorkflow, ValidationResult } from "@/lib/workflow-validation";
+import {
+  getWorkflowOptimizations,
+  OptimizationSuggestion,
+} from "@/lib/workflow-optimizer";
+import { noCodeApiClient } from "@/lib/api/no-code-api";
+import { ConfigurationPanel } from "./ConfigurationPanel";
+import { ExecutionModeSelector } from "./ExecutionModeSelector";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { X, AlertTriangle, CheckCircle, Info, Play, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const nodeTypes = {
   technicalIndicator: TechnicalIndicatorNode,
@@ -63,38 +73,56 @@ interface NoCodeWorkflowEditorProps {
   onNodeSelect: (nodeId: string | null) => void;
 }
 
-function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflowEditorProps) {
+function NoCodeWorkflowEditorInner({
+  selectedNode,
+  onNodeSelect,
+}: NoCodeWorkflowEditorProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [isClosingModal, setIsClosingModal] = useState(false);
-  const [modalSelectedNode, setModalSelectedNode] = useState<string | null>(null);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
-  const [optimizationSuggestions, setOptimizationSuggestions] = useState<OptimizationSuggestion[]>([]);
+  const [modalSelectedNode, setModalSelectedNode] = useState<string | null>(
+    null,
+  );
+  const [validationResult, setValidationResult] =
+    useState<ValidationResult | null>(null);
+  const [optimizationSuggestions, setOptimizationSuggestions] = useState<
+    OptimizationSuggestion[]
+  >([]);
   const [showValidationPanel, setShowValidationPanel] = useState(false);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [isWorkflowSaved, setIsWorkflowSaved] = useState(false);
-  const { currentWorkflow, updateWorkflow, addNode, removeNode } = useNoCodeStore();
-  const { 
-    openExecutionModal, 
-    closeExecutionModal, 
+  const { currentWorkflow, updateWorkflow, addNode, removeNode } =
+    useNoCodeStore();
+  const {
+    openExecutionModal,
+    closeExecutionModal,
     isExecutionModalOpen,
     currentExecutionMode,
     currentExecutionStatus,
-    setExecutionStatus
+    setExecutionStatus,
   } = useExecutionStore();
   const { screenToFlowPosition } = useReactFlow();
-  
+
   // Use ReactFlow state as primary, sync to store when needed
-  const [nodes, setNodes, onNodesChange] = useNodesState(currentWorkflow?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(currentWorkflow?.edges || []);
-  
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    currentWorkflow?.nodes || [],
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    currentWorkflow?.edges || [],
+  );
+
   // Sync store changes to ReactFlow when store is updated externally
   useEffect(() => {
     if (currentWorkflow) {
       setNodes(currentWorkflow.nodes);
       setEdges(currentWorkflow.edges);
     }
-  }, [currentWorkflow?.nodes?.length, currentWorkflow?.edges?.length, setNodes, setEdges]);
+  }, [
+    currentWorkflow?.nodes?.length,
+    currentWorkflow?.edges?.length,
+    setNodes,
+    setEdges,
+  ]);
 
   // Run validation when workflow changes
   useEffect(() => {
@@ -113,31 +141,38 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const isValidConnection = useCallback(
     (connection: Connection) => {
       // Find source and target nodes for validation
-      const sourceNode = nodes.find(n => n.id === connection.source);
-      const targetNode = nodes.find(n => n.id === connection.target);
-      
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+
       if (!sourceNode || !targetNode) {
-        console.warn('Source or target node not found for validation');
+        console.warn("Source or target node not found for validation");
         return false;
       }
 
       // For technical indicators, check if the handle should exist based on the indicator type
-      if (sourceNode.type === 'technicalIndicator' && connection.sourceHandle) {
+      if (sourceNode.type === "technicalIndicator" && connection.sourceHandle) {
         const indicator = sourceNode.data?.parameters?.indicator;
-        console.log(`🔍 Checking handle ${connection.sourceHandle} for indicator ${indicator}`);
-        
+        console.log(
+          `🔍 Checking handle ${connection.sourceHandle} for indicator ${indicator}`,
+        );
+
         // List of valid handles for each indicator (full handle IDs)
         const validHandles: Record<string, string[]> = {
-          'ADX': ['adx-output', 'di_plus-output', 'di_minus-output'],
-          'BB': ['upper-output', 'middle-output', 'lower-output', 'width-output'],
-          'MACD': ['macd-output', 'signal-output', 'histogram-output'],
-          'STOCH': ['k-output', 'd-output'],
-          'Stochastic': ['k-output', 'd-output'],
+          ADX: ["adx-output", "di_plus-output", "di_minus-output"],
+          BB: ["upper-output", "middle-output", "lower-output", "width-output"],
+          MACD: ["macd-output", "signal-output", "histogram-output"],
+          STOCH: ["k-output", "d-output"],
+          Stochastic: ["k-output", "d-output"],
         };
 
-        const expectedHandles = validHandles[indicator] || ['value-output', 'signal-output'];
+        const expectedHandles = validHandles[indicator] || [
+          "value-output",
+          "signal-output",
+        ];
         if (!expectedHandles.includes(connection.sourceHandle)) {
-          console.warn(`Handle ${connection.sourceHandle} not valid for indicator ${indicator}`);
+          console.warn(
+            `Handle ${connection.sourceHandle} not valid for indicator ${indicator}`,
+          );
           return false;
         }
       }
@@ -145,44 +180,44 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
       // Validate connection using connection manager
       const validation = connectionManager.validateConnection(
         sourceNode,
-        connection.sourceHandle || 'default',
+        connection.sourceHandle || "default",
         targetNode,
-        connection.targetHandle || 'default'
+        connection.targetHandle || "default",
       );
 
       if (!validation.valid) {
-        console.warn('Invalid connection attempt:', validation.reason);
+        console.warn("Invalid connection attempt:", validation.reason);
         return false;
       }
 
       return true;
     },
-    [nodes]
+    [nodes],
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
-      console.log('🔗 Creating connection:', params);
-      
+      console.log("🔗 Creating connection:", params);
+
       // Find source and target nodes for validation
-      const sourceNode = nodes.find(n => n.id === params.source);
-      const targetNode = nodes.find(n => n.id === params.target);
-      
+      const sourceNode = nodes.find((n) => n.id === params.source);
+      const targetNode = nodes.find((n) => n.id === params.target);
+
       if (!sourceNode || !targetNode) {
-        console.warn('Source or target node not found');
+        console.warn("Source or target node not found");
         return;
       }
 
       // Validate connection using connection manager
       const validation = connectionManager.validateConnection(
         sourceNode,
-        params.sourceHandle || 'default',
+        params.sourceHandle || "default",
         targetNode,
-        params.targetHandle || 'default'
+        params.targetHandle || "default",
       );
 
       if (!validation.valid) {
-        console.warn('Invalid connection:', validation.reason);
+        console.warn("Invalid connection:", validation.reason);
         return;
       }
 
@@ -193,36 +228,42 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
         target: params.target!,
         sourceHandle: params.sourceHandle,
         targetHandle: params.targetHandle,
-        type: 'smart',
+        type: "smart",
         markerEnd: { type: MarkerType.ArrowClosed },
         ...connectionManager.getConnectionStyle(validation.rule),
-        animated: validation.rule?.dataType === 'signal',
+        animated: validation.rule?.dataType === "signal",
         data: {
           rule: validation.rule,
           sourceNode,
-          targetNode
-        }
+          targetNode,
+        },
       };
 
       // Create connection config and add to manager
       connectionManager.createConnection(newEdge, validation.rule);
-      
+
       // Add edge to ReactFlow state
       setEdges((eds) => [...eds, newEdge]);
     },
-    [setEdges, nodes]
+    [setEdges, nodes],
   );
 
-  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    onNodeSelect(node.id);
-  }, [onNodeSelect]);
+  const onNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      onNodeSelect(node.id);
+    },
+    [onNodeSelect],
+  );
 
-  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
-    console.log('Double click on node:', node.id); // Debug log
-    setModalSelectedNode(node.id);
-    setShowConfigModal(true);
-    onNodeSelect(node.id);
-  }, [onNodeSelect]);
+  const onNodeDoubleClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      console.log("Double click on node:", node.id); // Debug log
+      setModalSelectedNode(node.id);
+      setShowConfigModal(true);
+      onNodeSelect(node.id);
+    },
+    [onNodeSelect],
+  );
 
   const handleCloseModal = useCallback(() => {
     setIsClosingModal(true);
@@ -239,65 +280,77 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   }, [onNodeSelect]);
 
   const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
-    console.log('🔗 Edge clicked:', edge.id);
+    console.log("🔗 Edge clicked:", edge.id);
     event.stopPropagation();
   }, []);
 
   // Handle node changes - let ReactFlow manage dragging, sync to store on end
-  const handleNodesChange = useCallback((changes: any) => {
-    console.log('🔄 ReactFlow node changes:', changes);
-    
-    // Let ReactFlow handle its own state changes
-    onNodesChange(changes);
-    
-    // Sync to store only when drag ends or nodes are removed/added
-    const needsSync = changes.some((change: any) => 
-      change.type === 'position' && change.dragging === false ||
-      change.type === 'remove' ||
-      change.type === 'add'
-    );
-    
-    if (needsSync) {
-      setTimeout(() => {
-        console.log('📍 Syncing node changes to store');
-        updateWorkflow({ nodes, edges });
-      }, 100);
-    }
-  }, [onNodesChange, updateWorkflow, nodes, edges]);
+  const handleNodesChange = useCallback(
+    (changes: any) => {
+      console.log("🔄 ReactFlow node changes:", changes);
 
-  const handleEdgesChange = useCallback((changes: any) => {
-    console.log('🔄 ReactFlow edge changes:', changes);
-    
-    // Let ReactFlow handle its own state changes
-    onEdgesChange(changes);
-    
-    // Sync to store after edge changes (but not for every selection change)
-    const needsSync = changes.some((change: any) => 
-      change.type === 'remove' || change.type === 'add'
-    );
-    
-    if (needsSync) {
-      setTimeout(() => {
-        console.log('📍 Syncing edge changes to store');
-        updateWorkflow({ nodes, edges });
-      }, 100);
-    }
-  }, [onEdgesChange, updateWorkflow, nodes, edges]);
+      // Let ReactFlow handle its own state changes
+      onNodesChange(changes);
+
+      // Sync to store only when drag ends or nodes are removed/added
+      const needsSync = changes.some(
+        (change: any) =>
+          (change.type === "position" && change.dragging === false) ||
+          change.type === "remove" ||
+          change.type === "add",
+      );
+
+      if (needsSync) {
+        setTimeout(() => {
+          console.log("📍 Syncing node changes to store");
+          updateWorkflow({ nodes, edges });
+        }, 100);
+      }
+    },
+    [onNodesChange, updateWorkflow, nodes, edges],
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: any) => {
+      console.log("🔄 ReactFlow edge changes:", changes);
+
+      // Let ReactFlow handle its own state changes
+      onEdgesChange(changes);
+
+      // Sync to store after edge changes (but not for every selection change)
+      const needsSync = changes.some(
+        (change: any) => change.type === "remove" || change.type === "add",
+      );
+
+      if (needsSync) {
+        setTimeout(() => {
+          console.log("📍 Syncing edge changes to store");
+          updateWorkflow({ nodes, edges });
+        }, 100);
+      }
+    },
+    [onEdgesChange, updateWorkflow, nodes, edges],
+  );
 
   // Handle dropping nodes from the component library
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      console.log('📦 Drop event triggered'); // Debug log
+      console.log("📦 Drop event triggered"); // Debug log
 
-      const type = event.dataTransfer.getData('application/reactflow') || event.dataTransfer.getData('text/plain');
-      const label = event.dataTransfer.getData('application/reactflow-label');
-      
-      console.log('📦 Drop data:', { type, label }); // Debug log
+      const type =
+        event.dataTransfer.getData("application/reactflow") ||
+        event.dataTransfer.getData("text/plain");
+      const label = event.dataTransfer.getData("application/reactflow-label");
+
+      console.log("📦 Drop data:", { type, label }); // Debug log
 
       if (!type) {
-        console.log('No type found in dataTransfer, available types:', event.dataTransfer.types);
+        console.log(
+          "No type found in dataTransfer, available types:",
+          event.dataTransfer.types,
+        );
         return;
       }
 
@@ -319,87 +372,87 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
           },
         };
 
-        console.log('Creating new node:', newNode); // Debug log
+        console.log("Creating new node:", newNode); // Debug log
 
         // Add node to ReactFlow state
         setNodes((nds) => nds.concat(newNode));
-        
+
         setIsDragOver(false);
-        
+
         // Auto-select the new node
         onNodeSelect(nodeId);
-        console.log('Node creation completed successfully'); // Debug log
+        console.log("Node creation completed successfully"); // Debug log
       } catch (error) {
-        console.error('Error creating node:', error); // Debug log
+        console.error("Error creating node:", error); // Debug log
       }
     },
-    [screenToFlowPosition, setNodes, onNodeSelect]
+    [screenToFlowPosition, setNodes, onNodeSelect],
   );
 
   const getDefaultParameters = (nodeType: string) => {
     switch (nodeType) {
-      case 'technicalIndicator':
-        return { 
-          indicatorCategory: 'trend',
-          indicator: 'SMA', 
-          period: 20, 
-          source: 'close',
+      case "technicalIndicator":
+        return {
+          indicatorCategory: "trend",
+          indicator: "SMA",
+          period: 20,
+          source: "close",
           smoothing: 0.2,
           multiplier: 2.0,
-          outputType: 'main'
+          outputType: "main",
         };
-      case 'condition':
-        return { 
-          conditionType: 'comparison',
-          condition: 'greater_than', 
-          value: 0, 
+      case "condition":
+        return {
+          conditionType: "comparison",
+          condition: "greater_than",
+          value: 0,
           lookback: 1,
           sensitivity: 1.0,
-          confirmationBars: 0
+          confirmationBars: 0,
         };
-      case 'action':
-        return { 
-          actionCategory: 'entry',
-          action: 'buy', 
-          quantity: 10, 
-          order_type: 'market',
-          positionSizing: 'percentage',
+      case "action":
+        return {
+          actionCategory: "entry",
+          action: "buy",
+          quantity: 10,
+          order_type: "market",
+          positionSizing: "percentage",
           stop_loss: 2.0,
           take_profit: 4.0,
-          conditional_execution: false
+          conditional_execution: false,
         };
-      case 'dataSource':
-        return { 
-          symbol: 'AAPL', 
-          timeframe: '1h', 
-          bars: 1000, 
-          dataSource: 'system', 
-          assetClass: 'stocks' 
-        };
-      case 'customDataset':
+      case "dataSource":
         return {
-          fileName: 'No file uploaded',
-          dateColumn: 'Date',
-          openColumn: 'Open',
-          highColumn: 'High',
-          lowColumn: 'Low',
-          closeColumn: 'Close',
-          volumeColumn: 'Volume',
-          normalization: 'none',
-          missingValues: 'forward_fill',
-          validateData: true
+          symbol: "AAPL",
+          timeframe: "1h",
+          bars: 1000,
+          dataSource: "system",
+          assetClass: "stocks",
         };
-      case 'logic':
-        return { operation: 'AND', inputs: 2 };
-      case 'risk':
-        return { 
-          riskCategory: 'position',
-          riskType: 'position_size', 
-          riskLevel: 2, 
+      case "customDataset":
+        return {
+          fileName: "No file uploaded",
+          dateColumn: "Date",
+          openColumn: "Open",
+          highColumn: "High",
+          lowColumn: "Low",
+          closeColumn: "Close",
+          volumeColumn: "Volume",
+          normalization: "none",
+          missingValues: "forward_fill",
+          validateData: true,
+        };
+      case "logic":
+        return { operation: "AND", inputs: 2 };
+      case "risk":
+        return {
+          riskCategory: "position",
+          riskType: "position_size",
+          riskLevel: 2,
           maxLoss: 2.0,
           positionSize: 5.0,
           portfolioHeat: 20,
-          emergencyAction: 'alert_only'
+          emergencyAction: "alert_only",
         };
       default:
         return {};
@@ -409,7 +462,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.dropEffect = "move";
     setIsDragOver(true);
   }, []);
 
@@ -422,14 +475,14 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const onDragLeave = useCallback((event: React.DragEvent) => {
     // Only set to false if we're leaving the main container
     if (!event.currentTarget.contains(event.relatedTarget as Element)) {
-      console.log('Drag leave canvas'); // Debug log
+      console.log("Drag leave canvas"); // Debug log
       setIsDragOver(false);
     }
   }, []);
 
   const getValidationIcon = () => {
     if (!validationResult) return null;
-    
+
     if (validationResult.errors.length > 0) {
       return <AlertTriangle className="h-4 w-4 text-red-500" />;
     } else if (validationResult.warnings.length > 0) {
@@ -440,14 +493,14 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   };
 
   const getValidationStatus = () => {
-    if (!validationResult) return 'No validation';
-    
+    if (!validationResult) return "No validation";
+
     if (validationResult.errors.length > 0) {
-      return `${validationResult.errors.length} error${validationResult.errors.length > 1 ? 's' : ''}`;
+      return `${validationResult.errors.length} error${validationResult.errors.length > 1 ? "s" : ""}`;
     } else if (validationResult.warnings.length > 0) {
-      return `${validationResult.warnings.length} warning${validationResult.warnings.length > 1 ? 's' : ''}`;
+      return `${validationResult.warnings.length} warning${validationResult.warnings.length > 1 ? "s" : ""}`;
     } else {
-      return 'Valid workflow';
+      return "Valid workflow";
     }
   };
 
@@ -457,31 +510,31 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
       const workflowData = {
         nodes,
         edges,
-        name: currentWorkflow?.name || 'Untitled Workflow',
+        name: currentWorkflow?.name || "Untitled Workflow",
         id: currentWorkflow?.id || Date.now(),
         description: currentWorkflow?.description,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       // Update local store
       updateWorkflow(workflowData);
-      
+
       // Save to backend (mock implementation for now)
-      console.log('Saving workflow to backend...', workflowData);
-      
+      console.log("Saving workflow to backend...", workflowData);
+
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       setIsWorkflowSaved(true);
-      
+
       // Reset save status after delay
       setTimeout(() => setIsWorkflowSaved(false), 3000);
-      
-      console.log('Workflow saved successfully');
+
+      console.log("Workflow saved successfully");
       return workflowData;
     } catch (error) {
-      console.error('Failed to save workflow:', error);
-      alert('Failed to save workflow. Please try again.');
+      console.error("Failed to save workflow:", error);
+      alert("Failed to save workflow. Please try again.");
       throw error;
     }
   }, [nodes, edges, updateWorkflow, currentWorkflow]);
@@ -489,106 +542,122 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
   const handleExecuteWorkflow = useCallback(() => {
     // First validate the workflow
     if (!validationResult || validationResult.errors.length > 0) {
-      alert('Please fix all validation errors before executing the workflow.');
+      alert("Please fix all validation errors before executing the workflow.");
       return;
     }
 
     // Save the workflow before execution
     handleSaveWorkflow();
-    
+
     // Show execution mode selector
     setShowExecutionModal(true);
   }, [validationResult, handleSaveWorkflow]);
 
-  const handleModeSelect = useCallback(async (mode: 'strategy' | 'model', config: any) => {
-    try {
-      setExecutionStatus('executing');
-      
-      const workflowId = currentWorkflow?.id || Date.now();
-      
-      const response = await fetch(`/api/workflows/${workflowId}/execution-mode`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+  const handleModeSelect = useCallback(
+    async (mode: "strategy" | "model", config: any) => {
+      try {
+        setExecutionStatus("executing");
+
+        const workflowId =
+          currentWorkflow?.id || currentWorkflow?.uuid || Date.now().toString();
+
+        const result = await noCodeApiClient.setExecutionMode(workflowId, {
           mode,
-          config
-        }),
-      });
+          config,
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to execute workflow');
+        // Handle different execution modes with proper navigation
+        if (mode === "strategy") {
+          // Navigate to strategy results page
+          setExecutionStatus("completed");
+          setShowExecutionModal(false);
+          // In a real implementation, use Next.js router
+          console.log("Strategy execution result:", result);
+          window.location.href = `/workflows/${workflowId}/results/strategy?executionId=${Date.now()}`;
+        } else {
+          // Navigate to training dashboard
+          setExecutionStatus("monitoring");
+          setShowExecutionModal(false);
+          const trainingJobId = result.training_job_id;
+          console.log("Training job created:", result);
+          // In a real implementation, use Next.js router
+          window.location.href = `/workflows/${workflowId}/training/${trainingJobId}?from=execute`;
+        }
+      } catch (error) {
+        console.error("Execution failed:", error);
+        setExecutionStatus("failed");
+        // Keep modal open on error so user can try again
+        alert("Failed to execute workflow. Please try again.");
       }
-
-      const result = await response.json();
-      
-      // Handle different execution modes with proper navigation
-      if (mode === 'strategy') {
-        // Navigate to strategy results page
-        setExecutionStatus('completed');
-        setShowExecutionModal(false);
-        // In a real implementation, use Next.js router
-        console.log('Strategy execution result:', result);
-        window.location.href = `/workflows/${workflowId}/results/strategy?executionId=${Date.now()}`;
-      } else {
-        // Navigate to training dashboard
-        setExecutionStatus('monitoring');
-        setShowExecutionModal(false);
-        const trainingJobId = result.training_job_id;
-        console.log('Training job created:', result);
-        // In a real implementation, use Next.js router
-        window.location.href = `/workflows/${workflowId}/training/${trainingJobId}?from=execute`;
-      }
-    } catch (error) {
-      console.error('Execution failed:', error);
-      setExecutionStatus('failed');
-      // Keep modal open on error so user can try again
-      alert('Failed to execute workflow. Please try again.');
-    }
-  }, [currentWorkflow, setExecutionStatus]);
+    },
+    [currentWorkflow, setExecutionStatus],
+  );
 
   const isWorkflowExecutable = () => {
-    return nodes.length > 0 && 
-           validationResult && 
-           validationResult.errors.length === 0;
+    return (
+      nodes.length > 0 &&
+      validationResult &&
+      validationResult.errors.length === 0
+    );
   };
 
   const handleApplyOptimization = (action: any) => {
-    if (action.type === 'CONSOLIDATE_NODES') {
+    if (action.type === "CONSOLIDATE_NODES") {
       const { nodesToRemove, nodeToKeep } = action.payload;
 
       // Re-wire the edges from the removed nodes to the node to keep
-      const updatedEdges = edges.map(edge => {
-        if (nodesToRemove.includes(edge.source)) {
-          return { ...edge, source: nodeToKeep };
-        }
-        return edge;
-      }).filter(edge => !nodesToRemove.includes(edge.target)); // also remove edges going to the removed nodes
+      const updatedEdges = edges
+        .map((edge) => {
+          if (nodesToRemove.includes(edge.source)) {
+            return { ...edge, source: nodeToKeep };
+          }
+          return edge;
+        })
+        .filter((edge) => !nodesToRemove.includes(edge.target)); // also remove edges going to the removed nodes
 
       // Filter out duplicate edges
-      const uniqueEdges = updatedEdges.filter((edge, index, self) =>
-        index === self.findIndex((e) => (
-          e.source === edge.source && e.target === edge.target && e.sourceHandle === edge.sourceHandle && e.targetHandle === edge.targetHandle
-        ))
+      const uniqueEdges = updatedEdges.filter(
+        (edge, index, self) =>
+          index ===
+          self.findIndex(
+            (e) =>
+              e.source === edge.source &&
+              e.target === edge.target &&
+              e.sourceHandle === edge.sourceHandle &&
+              e.targetHandle === edge.targetHandle,
+          ),
       );
 
       setEdges(uniqueEdges);
 
       // Remove the redundant nodes
-      setNodes(currentNodes => currentNodes.filter(n => !nodesToRemove.includes(n.id)));
+      setNodes((currentNodes) =>
+        currentNodes.filter((n) => !nodesToRemove.includes(n.id)),
+      );
     }
   };
 
   const getExecutionStatusBadge = () => {
     switch (currentExecutionStatus) {
-      case 'executing':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Executing...</Badge>;
-      case 'monitoring':
-        return <Badge variant="secondary" className="bg-purple-100 text-purple-800">Training in Progress</Badge>;
-      case 'completed':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800">Completed</Badge>;
-      case 'failed':
+      case "executing":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            Executing...
+          </Badge>
+        );
+      case "monitoring":
+        return (
+          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+            Training in Progress
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800">
+            Completed
+          </Badge>
+        );
+      case "failed":
         return <Badge variant="destructive">Execution Failed</Badge>;
       default:
         return null;
@@ -607,7 +676,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink>
-                {currentWorkflow?.name || 'Workflow Designer'}
+                {currentWorkflow?.name || "Workflow Designer"}
               </BreadcrumbLink>
             </BreadcrumbItem>
             {currentExecutionMode && (
@@ -638,9 +707,9 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
           className="flex items-center space-x-1"
         >
           <Save className="h-4 w-4" />
-          <span>{isWorkflowSaved ? 'Saved!' : 'Save'}</span>
+          <span>{isWorkflowSaved ? "Saved!" : "Save"}</span>
         </Button>
-        
+
         <Button
           variant="default"
           size="sm"
@@ -665,15 +734,15 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
               onClick={() => setShowValidationPanel(!showValidationPanel)}
               className="h-6 px-2 text-xs"
             >
-              {showValidationPanel ? 'Hide' : 'Details'}
+              {showValidationPanel ? "Hide" : "Details"}
             </Button>
           </div>
-          
+
           {/* Performance Metrics */}
           {validationResult.performance && (
             <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-              Complexity: {validationResult.performance.estimatedComplexity} | 
-              Logic Depth: {validationResult.performance.logicDepth} | 
+              Complexity: {validationResult.performance.estimatedComplexity} |
+              Logic Depth: {validationResult.performance.logicDepth} |
               Indicators: {validationResult.performance.indicatorCount}
             </div>
           )}
@@ -696,7 +765,7 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
               </Button>
             </div>
           </div>
-          
+
           <div className="overflow-y-auto max-h-80">
             {/* Errors */}
             {validationResult.errors.length > 0 && (
@@ -705,10 +774,17 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                   Errors ({validationResult.errors.length})
                 </h4>
                 {validationResult.errors.map((error, index) => (
-                  <div key={index} className="mb-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs">
-                    <div className="font-medium text-red-800 dark:text-red-300">{error.message}</div>
+                  <div
+                    key={index}
+                    className="mb-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs"
+                  >
+                    <div className="font-medium text-red-800 dark:text-red-300">
+                      {error.message}
+                    </div>
                     {error.suggestion && (
-                      <div className="text-red-600 dark:text-red-400 mt-1">{error.suggestion}</div>
+                      <div className="text-red-600 dark:text-red-400 mt-1">
+                        {error.suggestion}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -722,10 +798,17 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                   Warnings ({validationResult.warnings.length})
                 </h4>
                 {validationResult.warnings.map((warning, index) => (
-                  <div key={index} className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs">
-                    <div className="font-medium text-yellow-800 dark:text-yellow-300">{warning.message}</div>
+                  <div
+                    key={index}
+                    className="mb-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs"
+                  >
+                    <div className="font-medium text-yellow-800 dark:text-yellow-300">
+                      {warning.message}
+                    </div>
                     {warning.suggestion && (
-                      <div className="text-yellow-600 dark:text-yellow-400 mt-1">{warning.suggestion}</div>
+                      <div className="text-yellow-600 dark:text-yellow-400 mt-1">
+                        {warning.suggestion}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -733,21 +816,27 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
             )}
 
             {/* Suggestions */}
-            {validationResult.suggestions && validationResult.suggestions.length > 0 && (
-              <div className="p-3">
-                <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
-                  Suggestions ({validationResult.suggestions.length})
-                </h4>
-                {validationResult.suggestions.map((suggestion, index) => (
-                  <div key={index} className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-                    <div className="font-medium text-blue-800 dark:text-blue-300">{suggestion.message}</div>
-                    <div className="text-blue-600 dark:text-blue-400 mt-1 capitalize">
-                      {suggestion.type} • Priority: {suggestion.priority}
+            {validationResult.suggestions &&
+              validationResult.suggestions.length > 0 && (
+                <div className="p-3">
+                  <h4 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
+                    Suggestions ({validationResult.suggestions.length})
+                  </h4>
+                  {validationResult.suggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs"
+                    >
+                      <div className="font-medium text-blue-800 dark:text-blue-300">
+                        {suggestion.message}
+                      </div>
+                      <div className="text-blue-600 dark:text-blue-400 mt-1 capitalize">
+                        {suggestion.type} • Priority: {suggestion.priority}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
             {/* Optimizations */}
             {optimizationSuggestions.length > 0 && (
@@ -756,8 +845,13 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                   Optimizations ({optimizationSuggestions.length})
                 </h4>
                 {optimizationSuggestions.map((suggestion, index) => (
-                  <div key={index} className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs">
-                    <div className="font-medium text-green-800 dark:text-green-300">{suggestion.message}</div>
+                  <div
+                    key={index}
+                    className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs"
+                  >
+                    <div className="font-medium text-green-800 dark:text-green-300">
+                      {suggestion.message}
+                    </div>
                     <div className="text-green-600 dark:text-green-400 mt-1 capitalize">
                       {suggestion.type} • Priority: {suggestion.priority}
                     </div>
@@ -766,7 +860,9 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                         variant="outline"
                         size="sm"
                         className="mt-2 text-xs h-6 px-2"
-                        onClick={() => handleApplyOptimization(suggestion.action)}
+                        onClick={() =>
+                          handleApplyOptimization(suggestion.action)
+                        }
                       >
                         Apply
                       </Button>
@@ -782,27 +878,35 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
       {isDragOver && (
         <div className="absolute inset-0 bg-blue-100/20 dark:bg-blue-900/20 border-2 border-dashed border-blue-400 dark:border-blue-600 z-50 flex items-center justify-center pointer-events-none">
           <div className="bg-blue-50 dark:bg-blue-900/50 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-700">
-            <span className="text-blue-600 dark:text-blue-400 font-medium">Drop component here</span>
+            <span className="text-blue-600 dark:text-blue-400 font-medium">
+              Drop component here
+            </span>
           </div>
         </div>
       )}
-      
+
       {/* Empty state with instructions */}
       {nodes.length === 0 && !isDragOver && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center space-y-3 max-w-md">
-            <h3 className="text-lg font-medium text-muted-foreground">Start Building Your Strategy</h3>
+            <h3 className="text-lg font-medium text-muted-foreground">
+              Start Building Your Strategy
+            </h3>
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>• Drag components from the left panel to create nodes</p>
-              <p>• Connect nodes by dragging from output handles to input handles</p>
-              <p>• Select connections and press Delete/Backspace to remove them</p>
+              <p>
+                • Connect nodes by dragging from output handles to input handles
+              </p>
+              <p>
+                • Select connections and press Delete/Backspace to remove them
+              </p>
               <p>• Double-click nodes to configure their settings</p>
             </div>
           </div>
         </div>
       )}
-      
-      <div 
+
+      <div
         className="w-full h-full"
         onDrop={onDrop}
         onDragOver={onDragOver}
@@ -827,64 +931,72 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
           maxZoom={2}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           suppressHydrationWarning
-          deleteKeyCode={['Delete', 'Backspace']}
-          multiSelectionKeyCode={['Meta', 'Shift']}
+          deleteKeyCode={["Delete", "Backspace"]}
+          multiSelectionKeyCode={["Meta", "Shift"]}
           selectionKeyCode={null}
           defaultEdgeOptions={{
-            type: 'default',
+            type: "default",
             markerEnd: { type: MarkerType.ArrowClosed },
-            style: { strokeWidth: 2, stroke: '#6B7280' },
+            style: { strokeWidth: 2, stroke: "#6B7280" },
           }}
         >
-        <Controls className="dark:bg-background dark:border-border" />
-        <MiniMap 
-          className="dark:bg-background dark:border-border"
-          nodeColor={(node) => {
-            switch (node.type) {
-              case 'dataSource': return '#8B5CF6';
-              case 'technicalIndicator': return '#3B82F6';
-              case 'condition': return '#F59E0B';
-              case 'action': return '#10B981';
-              default: return '#6B7280';
-            }
-          }}
-        />
-        <Background 
-          variant={BackgroundVariant.Dots} 
-          gap={12} 
-          size={1} 
-          className="dark:bg-background"
-        />
+          <Controls className="dark:bg-background dark:border-border" />
+          <MiniMap
+            className="dark:bg-background dark:border-border"
+            nodeColor={(node) => {
+              switch (node.type) {
+                case "dataSource":
+                  return "#8B5CF6";
+                case "technicalIndicator":
+                  return "#3B82F6";
+                case "condition":
+                  return "#F59E0B";
+                case "action":
+                  return "#10B981";
+                default:
+                  return "#6B7280";
+              }
+            }}
+          />
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={12}
+            size={1}
+            className="dark:bg-background"
+          />
         </ReactFlow>
       </div>
-      
+
       {/* Configuration Modal */}
       {showConfigModal && modalSelectedNode && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center ${
-          isClosingModal 
-            ? 'animate-out fade-out-0 duration-200' 
-            : 'animate-in fade-in-0 duration-200'
-        }`}>
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center ${
+            isClosingModal
+              ? "animate-out fade-out-0 duration-200"
+              : "animate-in fade-in-0 duration-200"
+          }`}
+        >
           {/* Blur Background Overlay */}
-          <div 
+          <div
             className={`absolute inset-0 bg-black/30 backdrop-blur-sm ${
-              isClosingModal 
-                ? 'animate-out fade-out-0 duration-200' 
-                : 'animate-in fade-in-0 duration-200'
+              isClosingModal
+                ? "animate-out fade-out-0 duration-200"
+                : "animate-in fade-in-0 duration-200"
             }`}
             onClick={handleCloseModal}
           />
-          
+
           {/* Modal Content */}
-          <div className={`relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-[700px] max-w-[95vw] max-h-[95vh] overflow-hidden ${
-            isClosingModal 
-              ? 'animate-out zoom-out-95 slide-out-to-bottom-2 duration-200' 
-              : 'animate-in zoom-in-95 slide-in-from-bottom-2 duration-200'
-          }`}>
-            
+          <div
+            className={`relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-[700px] max-w-[95vw] max-h-[95vh] overflow-hidden ${
+              isClosingModal
+                ? "animate-out zoom-out-95 slide-out-to-bottom-2 duration-200"
+                : "animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+            }`}
+          >
             {/* Modal Body */}
             <div className="overflow-y-auto max-h-[calc(95vh-80px)] p-1">
-              <ConfigurationPanel 
+              <ConfigurationPanel
                 selectedNode={modalSelectedNode}
                 onNodeSelect={(nodeId) => {
                   if (nodeId) {
@@ -904,14 +1016,13 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
       {showExecutionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in-0 duration-200">
           {/* Background Overlay */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-in fade-in-0 duration-200"
             onClick={() => setShowExecutionModal(false)}
           />
-          
+
           {/* Modal Content */}
           <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-[95vw] max-w-6xl max-h-[95vh] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-200">
-            
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
@@ -926,22 +1037,32 @@ function NoCodeWorkflowEditorInner({ selectedNode, onNodeSelect }: NoCodeWorkflo
                 </Button>
               </div>
             </div>
-            
+
             {/* Modal Body */}
             <div className="overflow-y-auto max-h-[calc(95vh-120px)] p-6">
               <ExecutionModeSelector
                 workflowId={currentWorkflow?.id || Date.now()}
-                workflowName={currentWorkflow?.name || 'Untitled Workflow'}
+                workflowName={currentWorkflow?.name || "Untitled Workflow"}
                 workflowComplexity={
-                  validationResult?.performance?.estimatedComplexity === 'high' ? 'complex' :
-                  validationResult?.performance?.estimatedComplexity === 'medium' ? 'medium' : 'simple'
+                  validationResult?.performance?.estimatedComplexity === "high"
+                    ? "complex"
+                    : validationResult?.performance?.estimatedComplexity ===
+                        "medium"
+                      ? "medium"
+                      : "simple"
                 }
                 onModeSelect={handleModeSelect}
                 onCancel={() => setShowExecutionModal(false)}
                 estimatedDuration={{
-                  strategy: '< 1 minute',
-                  model: validationResult?.performance?.estimatedComplexity === 'complex' ? '8-24 hours' :
-                         validationResult?.performance?.estimatedComplexity === 'medium' ? '2-8 hours' : '1-4 hours'
+                  strategy: "< 1 minute",
+                  model:
+                    validationResult?.performance?.estimatedComplexity ===
+                    "complex"
+                      ? "8-24 hours"
+                      : validationResult?.performance?.estimatedComplexity ===
+                          "medium"
+                        ? "2-8 hours"
+                        : "1-4 hours",
                 }}
               />
             </div>

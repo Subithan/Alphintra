@@ -1,7 +1,10 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 """
 AI/ML Strategy Service - Main FastAPI Application
 
-This service provides comprehensive machine learning capabilities, code-based strategy 
+This service provides comprehensive machine learning capabilities, code-based strategy
 development, model training orchestration, backtesting, and paper trading functionality.
 """
 
@@ -48,17 +51,17 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Starting AI/ML Strategy Service")
-    
+
     # Initialize database
     await init_db()
     logger.info("Database initialized")
-    
+
     # Setup monitoring
     setup_metrics()
     logger.info("Metrics setup completed")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down AI/ML Strategy Service")
 
@@ -95,7 +98,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         error=str(exc),
         exc_info=True
     )
-    
+
     return JSONResponse(
         status_code=500,
         content={
@@ -132,7 +135,7 @@ app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",

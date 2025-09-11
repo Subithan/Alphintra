@@ -35,7 +35,7 @@ export const mainSidebarItems: SidebarItemType[] = [
   },
   {
     id: "no-code-console",
-    name: "No-Code",
+    name: "Strategy Hub",
     icon: "solar:programming-line-duotone",
     url: "/strategy-hub",
   },

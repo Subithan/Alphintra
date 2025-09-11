@@ -1,7 +1,7 @@
 // No-Code Service API Client
 // Handles all API calls related to workflow management, compilation, and execution
 
-import { BaseApiClient } from './api-client';
+import { BaseApiClient } from "./api-client";
 
 // Types for No-Code API
 export interface WorkflowNode {
@@ -39,12 +39,12 @@ export interface Workflow {
   generated_code?: string;
   generated_code_language: string;
   generated_requirements: string[];
-  compilation_status: 'pending' | 'compiling' | 'compiled' | 'failed';
+  compilation_status: "pending" | "compiling" | "compiled" | "failed";
   compilation_errors: any[];
   validation_status: string;
   validation_errors: any[];
   deployment_status: string;
-  execution_mode: 'backtest' | 'paper_trade' | 'live_trade';
+  execution_mode: "backtest" | "paper_trade" | "live_trade";
   version: number;
   parent_workflow_id?: number;
   is_template: boolean;
@@ -81,7 +81,7 @@ export interface WorkflowCreate {
   category?: string;
   tags?: string[];
   workflow_data?: WorkflowData;
-  execution_mode?: 'backtest' | 'paper_trade' | 'live_trade';
+  execution_mode?: "backtest" | "paper_trade" | "live_trade";
 }
 
 export interface WorkflowUpdate {
@@ -95,9 +95,9 @@ export interface WorkflowUpdate {
 }
 
 export interface ExecutionConfig {
-  execution_type: 'backtest' | 'paper_trade' | 'live_trade';
+  execution_type: "backtest" | "paper_trade" | "live_trade";
   symbols: string[];
-  timeframe: '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
+  timeframe: "1m" | "5m" | "15m" | "30m" | "1h" | "4h" | "1d";
   start_date?: string;
   end_date?: string;
   initial_capital: number;
@@ -114,7 +114,7 @@ export interface Execution {
   start_date?: string;
   end_date?: string;
   initial_capital: number;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   progress: number;
   current_step?: string;
   final_capital?: number;
@@ -137,7 +137,7 @@ export interface CompilationResult {
   workflow_id: string;
   generated_code: string;
   requirements: string[];
-  status: 'compiling' | 'compiled' | 'failed';
+  status: "compiling" | "compiled" | "failed";
   errors: any[];
   created_at: string;
 }
@@ -210,28 +210,34 @@ export interface TemplateFilters {
 export class NoCodeApiClient extends BaseApiClient {
   constructor() {
     super({
-      baseUrl: process.env.NEXT_PUBLIC_NOCODE_API_URL || 'http://localhost:8006',
+      baseUrl:
+        process.env.NEXT_PUBLIC_NOCODE_API_URL || "http://localhost:8006",
     });
-    
+
     // Debug logging only in development mode and when explicitly enabled
-    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEBUG_API === 'true') {
-      console.log('🔧 NoCodeApiClient Debug:', {
-        baseUrl: this.config.baseUrl
+    if (
+      process.env.NODE_ENV === "development" &&
+      process.env.NEXT_PUBLIC_DEBUG_API === "true"
+    ) {
+      console.log("🔧 NoCodeApiClient Debug:", {
+        baseUrl: this.config.baseUrl,
       });
     }
   }
 
   // Workflow Management
   async createWorkflow(workflow: WorkflowCreate): Promise<Workflow> {
-    return this.requestWithRetry<Workflow>('/api/workflows', {
-      method: 'POST',
+    return this.requestWithRetry<Workflow>("/api/workflows", {
+      method: "POST",
       body: JSON.stringify(workflow),
     });
   }
 
   async getWorkflows(filters: WorkflowFilters = {}): Promise<Workflow[]> {
     const queryString = this.buildQueryString(filters);
-    const endpoint = queryString ? `/api/workflows?${queryString}` : '/api/workflows';
+    const endpoint = queryString
+      ? `/api/workflows?${queryString}`
+      : "/api/workflows";
     return this.requestWithRetry<Workflow[]>(endpoint);
   }
 
@@ -239,32 +245,81 @@ export class NoCodeApiClient extends BaseApiClient {
     return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}`);
   }
 
-  async updateWorkflow(workflowId: string, updates: WorkflowUpdate): Promise<Workflow> {
+  async updateWorkflow(
+    workflowId: string,
+    updates: WorkflowUpdate,
+  ): Promise<Workflow> {
     return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(updates),
     });
   }
 
   async deleteWorkflow(workflowId: string): Promise<{ message: string }> {
-    return this.requestWithRetry<{ message: string }>(`/api/workflows/${workflowId}`, {
-      method: 'DELETE',
-    });
+    return this.requestWithRetry<{ message: string }>(
+      `/api/workflows/${workflowId}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 
   // Code Generation
   async compileWorkflow(workflowId: string): Promise<CompilationResult> {
-    return this.requestWithRetry<CompilationResult>(`/api/workflows/${workflowId}/compile`, {
-      method: 'POST',
-    });
+    return this.requestWithRetry<CompilationResult>(
+      `/api/workflows/${workflowId}/compile`,
+      {
+        method: "POST",
+      },
+    );
+  }
+
+  // Execution Mode
+  async setExecutionMode(
+    workflowId: string,
+    config: {
+      mode:
+        | "strategy"
+        | "model"
+        | "hybrid"
+        | "backtesting"
+        | "paper_trading"
+        | "research";
+      config: Record<string, any>;
+    },
+  ): Promise<{
+    execution_id: string;
+    mode: string;
+    status: string;
+    next_action?: string;
+    generated_code?: string;
+    requirements?: string[];
+    training_job_id?: string;
+    estimated_duration?: string;
+    message?: string;
+    errors?: string[];
+  }> {
+    return this.requestWithRetry(
+      `/api/workflows/${workflowId}/execution-mode`,
+      {
+        method: "POST",
+        body: JSON.stringify(config),
+      },
+    );
   }
 
   // Execution
-  async executeWorkflow(workflowId: string, config: ExecutionConfig): Promise<Execution> {
-    return this.requestWithRetry<Execution>(`/api/workflows/${workflowId}/execute`, {
-      method: 'POST',
-      body: JSON.stringify(config),
-    });
+  async executeWorkflow(
+    workflowId: string,
+    config: ExecutionConfig,
+  ): Promise<Execution> {
+    return this.requestWithRetry<Execution>(
+      `/api/workflows/${workflowId}/execute`,
+      {
+        method: "POST",
+        body: JSON.stringify(config),
+      },
+    );
   }
 
   async getExecution(executionId: string): Promise<Execution> {
@@ -274,88 +329,118 @@ export class NoCodeApiClient extends BaseApiClient {
   // Component Library
   async getComponents(filters: ComponentFilters = {}): Promise<Component[]> {
     const queryString = this.buildQueryString(filters);
-    const endpoint = queryString ? `/api/components?${queryString}` : '/api/components';
+    const endpoint = queryString
+      ? `/api/components?${queryString}`
+      : "/api/components";
     return this.requestWithRetry<Component[]>(endpoint);
   }
 
   // Template Library
   async getTemplates(filters: TemplateFilters = {}): Promise<Template[]> {
     const queryString = this.buildQueryString(filters);
-    const endpoint = queryString ? `/api/templates?${queryString}` : '/api/templates';
+    const endpoint = queryString
+      ? `/api/templates?${queryString}`
+      : "/api/templates";
     return this.requestWithRetry<Template[]>(endpoint);
   }
 
-  async createWorkflowFromTemplate(templateId: string, workflowName: string): Promise<Workflow> {
+  async createWorkflowFromTemplate(
+    templateId: string,
+    workflowName: string,
+  ): Promise<Workflow> {
     return this.requestWithRetry<Workflow>(`/api/templates/${templateId}/use`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ workflow_name: workflowName }),
     });
   }
 
   // Workflow Import/Export
-  async exportWorkflow(workflowId: string, format: 'json' | 'yaml' = 'json'): Promise<string> {
-    return this.requestWithRetry<string>(`/api/workflows/${workflowId}/export?format=${format}`);
+  async exportWorkflow(
+    workflowId: string,
+    format: "json" | "yaml" = "json",
+  ): Promise<string> {
+    return this.requestWithRetry<string>(
+      `/api/workflows/${workflowId}/export?format=${format}`,
+    );
   }
 
-  async importWorkflow(data: string, format: 'json' | 'yaml' = 'json'): Promise<Workflow> {
-    return this.requestWithRetry<Workflow>('/api/workflows/import', {
-      method: 'POST',
+  async importWorkflow(
+    data: string,
+    format: "json" | "yaml" = "json",
+  ): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>("/api/workflows/import", {
+      method: "POST",
       body: JSON.stringify({ data, format }),
     });
   }
 
   // Workflow Execution Control
   async stopExecution(executionId: string): Promise<{ message: string }> {
-    return this.requestWithRetry<{ message: string }>(`/api/executions/${executionId}/stop`, {
-      method: 'POST',
-    });
+    return this.requestWithRetry<{ message: string }>(
+      `/api/executions/${executionId}/stop`,
+      {
+        method: "POST",
+      },
+    );
   }
 
   async resetWorkflow(workflowId: string): Promise<Workflow> {
-    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/reset`, {
-      method: 'POST',
-    });
+    return this.requestWithRetry<Workflow>(
+      `/api/workflows/${workflowId}/reset`,
+      {
+        method: "POST",
+      },
+    );
   }
 
   // Code Generation
-  async generateCode(workflowId: string, options: {
-    language: 'python' | 'javascript';
-    framework?: 'backtesting.py' | 'zipline' | 'custom';
-    includeComments?: boolean;
-  } = { language: 'python' }): Promise<{
+  async generateCode(
+    workflowId: string,
+    options: {
+      language: "python" | "javascript";
+      framework?: "backtesting.py" | "zipline" | "custom";
+      includeComments?: boolean;
+    } = { language: "python" },
+  ): Promise<{
     code: string;
     dependencies: string[];
     documentation: string;
   }> {
     return this.requestWithRetry(`/api/workflows/${workflowId}/generate-code`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(options),
     });
   }
 
   // Workflow Testing
-  async testWorkflow(workflowId: string, testConfig: {
-    testType: 'validation' | 'backtest' | 'paper_trade';
-    parameters?: Record<string, any>;
-  }): Promise<{
+  async testWorkflow(
+    workflowId: string,
+    testConfig: {
+      testType: "validation" | "backtest" | "paper_trade";
+      parameters?: Record<string, any>;
+    },
+  ): Promise<{
     testId: string;
-    status: 'running' | 'completed' | 'failed';
+    status: "running" | "completed" | "failed";
     results?: any;
   }> {
     return this.requestWithRetry(`/api/workflows/${workflowId}/test`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(testConfig),
     });
   }
 
   // Search functionality
-  async searchWorkflows(query: string, filters: {
-    category?: string;
-    tags?: string[];
-    isPublic?: boolean;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<{
+  async searchWorkflows(
+    query: string,
+    filters: {
+      category?: string;
+      tags?: string[];
+      isPublic?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Promise<{
     workflows: Workflow[];
     total: number;
     hasMore: boolean;
@@ -364,7 +449,7 @@ export class NoCodeApiClient extends BaseApiClient {
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined) {
         if (Array.isArray(value)) {
-          value.forEach(v => params.append(key, v));
+          value.forEach((v) => params.append(key, v));
         } else {
           params.append(key, value.toString());
         }
@@ -374,7 +459,10 @@ export class NoCodeApiClient extends BaseApiClient {
     return this.requestWithRetry(`/api/workflows/search?${params.toString()}`);
   }
 
-  async searchNodes(workflowId: string, query: string): Promise<{
+  async searchNodes(
+    workflowId: string,
+    query: string,
+  ): Promise<{
     nodes: WorkflowNode[];
     matches: Array<{
       nodeId: string;
@@ -382,7 +470,9 @@ export class NoCodeApiClient extends BaseApiClient {
       value: string;
     }>;
   }> {
-    return this.requestWithRetry(`/api/workflows/${workflowId}/search-nodes?query=${encodeURIComponent(query)}`);
+    return this.requestWithRetry(
+      `/api/workflows/${workflowId}/search-nodes?query=${encodeURIComponent(query)}`,
+    );
   }
 
   // Workflow Validation
@@ -391,7 +481,7 @@ export class NoCodeApiClient extends BaseApiClient {
     errors: Array<{
       nodeId?: string;
       message: string;
-      severity: 'error' | 'warning' | 'info';
+      severity: "error" | "warning" | "info";
     }>;
     warnings: Array<{
       nodeId?: string;
@@ -399,32 +489,41 @@ export class NoCodeApiClient extends BaseApiClient {
     }>;
   }> {
     return this.requestWithRetry(`/api/workflows/${workflowId}/validate`, {
-      method: 'POST',
+      method: "POST",
     });
   }
 
   // Workflow Duplication
-  async duplicateWorkflow(workflowId: string, newName: string): Promise<Workflow> {
+  async duplicateWorkflow(
+    workflowId: string,
+    newName: string,
+  ): Promise<Workflow> {
     return this.requestWithRetry(`/api/workflows/${workflowId}/duplicate`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ name: newName }),
     });
   }
 
   // Auto-save functionality
-  async autoSaveWorkflow(workflowId: string, workflowData: WorkflowData): Promise<{ saved: boolean; timestamp: string }> {
+  async autoSaveWorkflow(
+    workflowId: string,
+    workflowData: WorkflowData,
+  ): Promise<{ saved: boolean; timestamp: string }> {
     return this.requestWithRetry(`/api/workflows/${workflowId}/auto-save`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ workflow_data: workflowData }),
     });
   }
 
   // Execution Logs
-  async getExecutionLogs(executionId: string, options: {
-    limit?: number;
-    offset?: number;
-    level?: 'error' | 'warning' | 'info' | 'debug';
-  } = {}): Promise<{
+  async getExecutionLogs(
+    executionId: string,
+    options: {
+      limit?: number;
+      offset?: number;
+      level?: "error" | "warning" | "info" | "debug";
+    } = {},
+  ): Promise<{
     logs: Array<{
       timestamp: string;
       level: string;
@@ -442,7 +541,9 @@ export class NoCodeApiClient extends BaseApiClient {
     });
 
     const query = params.toString();
-    const endpoint = query ? `/api/executions/${executionId}/logs?${query}` : `/api/executions/${executionId}/logs`;
+    const endpoint = query
+      ? `/api/executions/${executionId}/logs?${query}`
+      : `/api/executions/${executionId}/logs`;
     return this.requestWithRetry(endpoint);
   }
 
@@ -459,7 +560,7 @@ export class NoCodeApiClient extends BaseApiClient {
     autoSave: boolean;
     notifications: boolean;
   }> {
-    return this.requestWithRetry('/api/user/settings');
+    return this.requestWithRetry("/api/user/settings");
   }
 
   async updateUserSettings(settings: {
@@ -468,39 +569,59 @@ export class NoCodeApiClient extends BaseApiClient {
     autoSave?: boolean;
     notifications?: boolean;
   }): Promise<{ updated: boolean }> {
-    return this.requestWithRetry('/api/user/settings', {
-      method: 'PUT',
+    return this.requestWithRetry("/api/user/settings", {
+      method: "PUT",
       body: JSON.stringify(settings),
     });
   }
 
   // Workflow Versioning
-  async createVersion(workflowId: string, options: {
-    name?: string;
-    changes_summary?: string;
-    workflow_data?: WorkflowData;
-  } = {}): Promise<Workflow> {
-    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/versions`, {
-      method: 'POST',
-      body: JSON.stringify(options),
-    });
+  async createVersion(
+    workflowId: string,
+    options: {
+      name?: string;
+      changes_summary?: string;
+      workflow_data?: WorkflowData;
+    } = {},
+  ): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>(
+      `/api/workflows/${workflowId}/versions`,
+      {
+        method: "POST",
+        body: JSON.stringify(options),
+      },
+    );
   }
 
   async getVersions(workflowId: string): Promise<WorkflowVersion[]> {
-    return this.requestWithRetry<WorkflowVersion[]>(`/api/workflows/${workflowId}/versions`);
+    return this.requestWithRetry<WorkflowVersion[]>(
+      `/api/workflows/${workflowId}/versions`,
+    );
   }
 
-  async getVersion(workflowId: string, version: number): Promise<WorkflowVersionDetails> {
-    return this.requestWithRetry<WorkflowVersionDetails>(`/api/workflows/${workflowId}/versions/${version}`);
+  async getVersion(
+    workflowId: string,
+    version: number,
+  ): Promise<WorkflowVersionDetails> {
+    return this.requestWithRetry<WorkflowVersionDetails>(
+      `/api/workflows/${workflowId}/versions/${version}`,
+    );
   }
 
   async restoreVersion(workflowId: string, version: number): Promise<Workflow> {
-    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/versions/${version}/restore`, {
-      method: 'POST',
-    });
+    return this.requestWithRetry<Workflow>(
+      `/api/workflows/${workflowId}/versions/${version}/restore`,
+      {
+        method: "POST",
+      },
+    );
   }
 
-  async compareVersions(workflowId: string, fromVersion: number, toVersion: number): Promise<{
+  async compareVersions(
+    workflowId: string,
+    fromVersion: number,
+    toVersion: number,
+  ): Promise<{
     added_nodes: WorkflowNode[];
     removed_nodes: WorkflowNode[];
     modified_nodes: Array<{
@@ -511,21 +632,32 @@ export class NoCodeApiClient extends BaseApiClient {
     removed_edges: WorkflowEdge[];
     metadata_changes: Record<string, any>;
   }> {
-    return this.requestWithRetry(`/api/workflows/${workflowId}/versions/compare?from=${fromVersion}&to=${toVersion}`);
+    return this.requestWithRetry(
+      `/api/workflows/${workflowId}/versions/compare?from=${fromVersion}&to=${toVersion}`,
+    );
   }
 
-  async deleteVersion(workflowId: string, version: number): Promise<{ message: string }> {
-    return this.requestWithRetry<{ message: string }>(`/api/workflows/${workflowId}/versions/${version}`, {
-      method: 'DELETE',
-    });
+  async deleteVersion(
+    workflowId: string,
+    version: number,
+  ): Promise<{ message: string }> {
+    return this.requestWithRetry<{ message: string }>(
+      `/api/workflows/${workflowId}/versions/${version}`,
+      {
+        method: "DELETE",
+      },
+    );
   }
 
   // Workflow History and Activity
-  async getWorkflowHistory(workflowId: string, options: {
-    limit?: number;
-    offset?: number;
-    action_type?: 'created' | 'updated' | 'executed' | 'shared' | 'versioned';
-  } = {}): Promise<{
+  async getWorkflowHistory(
+    workflowId: string,
+    options: {
+      limit?: number;
+      offset?: number;
+      action_type?: "created" | "updated" | "executed" | "shared" | "versioned";
+    } = {},
+  ): Promise<{
     activities: Array<{
       id: string;
       action_type: string;
@@ -546,57 +678,75 @@ export class NoCodeApiClient extends BaseApiClient {
     });
 
     const query = params.toString();
-    const endpoint = query ? `/api/workflows/${workflowId}/history?${query}` : `/api/workflows/${workflowId}/history`;
+    const endpoint = query
+      ? `/api/workflows/${workflowId}/history?${query}`
+      : `/api/workflows/${workflowId}/history`;
     return this.requestWithRetry(endpoint);
   }
 
   // Workflow Branching
-  async createBranch(workflowId: string, branchName: string, fromVersion?: number): Promise<Workflow> {
-    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/branch`, {
-      method: 'POST',
-      body: JSON.stringify({ 
-        branch_name: branchName,
-        from_version: fromVersion 
-      }),
-    });
+  async createBranch(
+    workflowId: string,
+    branchName: string,
+    fromVersion?: number,
+  ): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>(
+      `/api/workflows/${workflowId}/branch`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          branch_name: branchName,
+          from_version: fromVersion,
+        }),
+      },
+    );
   }
 
-  async getBranches(workflowId: string): Promise<Array<{
-    id: number;
-    name: string;
-    version: number;
-    created_at: string;
-    created_by?: string;
-  }>> {
+  async getBranches(workflowId: string): Promise<
+    Array<{
+      id: number;
+      name: string;
+      version: number;
+      created_at: string;
+      created_by?: string;
+    }>
+  > {
     return this.requestWithRetry(`/api/workflows/${workflowId}/branches`);
   }
 
-  async mergeBranch(workflowId: string, branchId: number, strategy: 'replace' | 'merge' = 'merge'): Promise<Workflow> {
-    return this.requestWithRetry<Workflow>(`/api/workflows/${workflowId}/branches/${branchId}/merge`, {
-      method: 'POST',
-      body: JSON.stringify({ strategy }),
-    });
+  async mergeBranch(
+    workflowId: string,
+    branchId: number,
+    strategy: "replace" | "merge" = "merge",
+  ): Promise<Workflow> {
+    return this.requestWithRetry<Workflow>(
+      `/api/workflows/${workflowId}/branches/${branchId}/merge`,
+      {
+        method: "POST",
+        body: JSON.stringify({ strategy }),
+      },
+    );
   }
 
   // Health Check - override base class method to match expected interface
   async healthCheck(): Promise<{
-    status: 'healthy' | 'unhealthy';
+    status: "healthy" | "unhealthy";
     timestamp: string;
-    services: Record<string, 'up' | 'down'>;
+    services: Record<string, "up" | "down">;
   }> {
     const result = await this.request<{
       status: string;
       service: string;
       version: string;
-    }>('/health');
-    
+    }>("/health");
+
     // Transform the response to match the base class interface
     return {
-      status: result.status === 'ok' ? 'healthy' : 'unhealthy',
+      status: result.status === "ok" ? "healthy" : "unhealthy",
       timestamp: new Date().toISOString(),
       services: {
-        [result.service]: result.status === 'ok' ? 'up' : 'down'
-      }
+        [result.service]: result.status === "ok" ? "up" : "down",
+      },
     };
   }
 }
