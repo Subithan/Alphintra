@@ -1,0 +1,191 @@
+{
+  "nodes": [
+    {
+      "id": "data-btc",
+      "type": "dataSource",
+      "data": {
+        "label": "Bitcoin Data",
+        "parameters": {
+          "symbol": "BTC-USD",
+          "timeframe": "1h",
+          "bars": 2000,
+          "assetClass": "crypto"
+        }
+      }
+    },
+    {
+      "id": "rsi-14",
+      "type": "technicalIndicator",
+      "data": {
+        "label": "RSI 14",
+        "parameters": {
+          "indicator": "RSI",
+          "period": 14,
+          "source": "close"
+        }
+      }
+    },
+    {
+      "id": "bb-20",
+      "type": "technicalIndicator", 
+      "data": {
+        "label": "Bollinger Bands",
+        "parameters": {
+          "indicator": "BB",
+          "period": 20,
+          "multiplier": 2,
+          "source": "close"
+        }
+      }
+    },
+    {
+      "id": "oversold-condition",
+      "type": "condition",
+      "data": {
+        "label": "RSI Oversold",
+        "parameters": {
+          "conditionType": "comparison",
+          "condition": "less_than",
+          "value": 30,
+          "confirmationBars": 1
+        }
+      }
+    },
+    {
+      "id": "bb-touch",
+      "type": "condition",
+      "data": {
+        "label": "Price Near Lower BB",
+        "parameters": {
+          "conditionType": "comparison", 
+          "condition": "less_than",
+          "value": 0.01
+        }
+      }
+    },
+    {
+      "id": "buy-signal",
+      "type": "logic",
+      "data": {
+        "label": "Buy Signal Logic",
+        "parameters": {
+          "operation": "AND",
+          "inputs": 2
+        }
+      }
+    },
+    {
+      "id": "risk-mgmt",
+      "type": "riskManagement",
+      "data": {
+        "label": "Position Risk",
+        "parameters": {
+          "riskCategory": "position",
+          "riskType": "position_size",
+          "maxLoss": 3.0,
+          "portfolioHeat": 15.0
+        }
+      }
+    },
+    {
+      "id": "buy-action",
+      "type": "action",
+      "data": {
+        "label": "Buy BTC",
+        "parameters": {
+          "actionCategory": "entry",
+          "action": "buy",
+          "quantity": 0.1,
+          "order_type": "market",
+          "positionSizing": "percentage",
+          "stop_loss": 4,
+          "take_profit": 12
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "data-btc",
+      "target": "rsi-14",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": {"dataType": "ohlcv", "label": "BTC Price Data"}
+      }
+    },
+    {
+      "source": "data-btc", 
+      "target": "bb-20",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": {"dataType": "ohlcv", "label": "BTC Price Data"}
+      }
+    },
+    {
+      "source": "rsi-14",
+      "target": "oversold-condition",
+      "data": {
+        "sourceHandle": "output-1",
+        "targetHandle": "data-input", 
+        "rule": {"dataType": "numeric", "label": "RSI Values"}
+      }
+    },
+    {
+      "source": "bb-20",
+      "target": "bb-touch",
+      "data": {
+        "sourceHandle": "output-3",
+        "targetHandle": "data-input",
+        "rule": {"dataType": "numeric", "label": "Lower BB"}
+      }
+    },
+    {
+      "source": "oversold-condition",
+      "target": "buy-signal",
+      "data": {
+        "sourceHandle": "signal-output",
+        "targetHandle": "input-0",
+        "rule": {"dataType": "signal", "label": "RSI Signal"}
+      }
+    },
+    {
+      "source": "bb-touch",
+      "target": "buy-signal", 
+      "data": {
+        "sourceHandle": "signal-output",
+        "targetHandle": "input-1",
+        "rule": {"dataType": "signal", "label": "BB Signal"}
+      }
+    },
+    {
+      "source": "buy-signal",
+      "target": "buy-action",
+      "data": {
+        "sourceHandle": "output",
+        "targetHandle": "signal-input",
+        "rule": {"dataType": "signal", "label": "Combined Buy Signal"}
+      }
+    },
+    {
+      "source": "data-btc",
+      "target": "risk-mgmt",
+      "data": {
+        "sourceHandle": "data-output", 
+        "targetHandle": "data-input",
+        "rule": {"dataType": "ohlcv", "label": "Price Data for Risk"}
+      }
+    }
+  ],
+  "config": {
+    "model": {
+      "type": "gradient_boosting",
+      "hyperparameters": {
+        "n_estimators": 200,
+        "learning_rate": 0.1,
+        "max_depth": 8
+      }
+    }
+  }
+}

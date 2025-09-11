@@ -40,10 +40,13 @@ class NoCodeWorkflow(Base):
     # Workflow definition
     workflow_data = Column(JSON, nullable=False, default={"nodes": [], "edges": []})
     
-    # Generated code
+    # Generated code  
     generated_code = Column(Text)
     generated_code_language = Column(String(20), default='python')
     generated_requirements = Column(ARRAY(String), default=[])
+    generated_code_size = Column(Integer, default=0)  # Code size in bytes
+    generated_code_lines = Column(Integer, default=0)  # Lines of code
+    compiler_version = Column(String(50), default='Enhanced v2.0')
     
     # Status fields
     compilation_status = Column(String(20), default='pending')
@@ -332,6 +335,10 @@ class ExecutionHistory(Base):
     execution_config = Column(JSON, default={})
     results = Column(JSON, default={})
     error_logs = Column(JSON, default=[])
+    # Store generated strategy details
+    generated_code = Column(Text)  # Copy of generated strategy code
+    generated_requirements = Column(ARRAY(String), default=[])  # Strategy requirements
+    compilation_stats = Column(JSON, default={})  # Compiler statistics
     created_at = Column(DateTime, server_default=func.now())
     completed_at = Column(DateTime)
     

@@ -30,7 +30,7 @@ from pydantic import BaseModel
 from models import Base, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate, User, ExecutionHistory
 from schemas_updated import *
 from workflow_compiler_updated import WorkflowCompiler
-from code_generator import CodeGenerator
+from database_strategy_handler import execute_database_strategy_mode
 from workflow_converter import WorkflowConverter
 from clients.aiml_client import AIMLClient, AIMLServiceError, AIMLServiceUnavailable
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 # Database configuration with K3D internal networking
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
+    "DATABASE_URL",
     "postgresql://nocode_service_user:nocode_service_pass@postgresql-primary.alphintra.svc.cluster.local:5432/alphintra_nocode"
 )
 
@@ -98,7 +98,6 @@ security = HTTPBearer(auto_error=False)  # Don't auto-error for missing auth in 
 
 # Initialize services
 workflow_compiler = WorkflowCompiler()
-code_generator = CodeGenerator()
 workflow_converter = WorkflowConverter()
 
 # Request models
@@ -140,14 +139,14 @@ async def get_current_user(
             db.commit()
             db.refresh(test_user)
         return test_user
-    
+
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     try:
         headers = {"Authorization": f"Bearer {credentials.credentials}"}
         response = await http_client.get(f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers)
-        
+
         if response.status_code == 200:
             return response.json()
         else:
@@ -166,11 +165,11 @@ async def health_check():
         # Check database connection
         db = next(get_db())
         db.execute(text("SELECT 1"))
-        
+
         # Check Redis connection if available
         if redis_client:
             redis_client.ping()
-        
+
         return {
             "status": "healthy",
             "service": "no-code-service",
@@ -210,7 +209,10 @@ async def root():
             "get_generated_code": "/api/workflows/{workflow_id}/generated-code",
             "execution_mode": "/api/workflows/{workflow_id}/execution-mode",
             "create_sample_workflow": "/api/workflows/create-sample",
-            "list_workflows": "/api/workflows/debug/list"
+            "list_workflows": "/api/workflows/debug/list",
+            "list_strategies": "/api/workflows/strategies/list",
+            "strategy_details": "/api/workflows/{workflow_id}/strategy-details",
+            "strategy_database_overview": "/api/workflows/strategies/database-overview"
         }
     }
 
@@ -224,7 +226,7 @@ schema = strawberry.Schema(query=Query, mutation=Mutation, subscription=Subscrip
 async def get_graphql_context(request: Request, db: Session = Depends(get_db)):
     """Create GraphQL context with database session and user authentication"""
     current_user = None
-    
+
     if DEV_MODE:
         # Development mode: create/get test user
         test_user = db.query(User).filter(User.email == "dev@alphintra.com").first()
@@ -265,7 +267,7 @@ async def get_graphql_context(request: Request, db: Session = Depends(get_db)):
             except Exception:
                 # Default to test user for development
                 current_user = db.query(User).filter(User.email == "test@alphintra.com").first()
-    
+
     return {
         "db_session": db,
         "current_user": current_user,
@@ -324,7 +326,7 @@ async def create_sample_workflow(
                 {"id": "edge_3", "source": "condition_1", "target": "signal_1"}
             ]
         }
-        
+
         workflow = NoCodeWorkflow(
             name="Sample Trading Strategy",
             description="A sample workflow for testing code generation",
@@ -334,17 +336,17 @@ async def create_sample_workflow(
             workflow_data=sample_workflow_data,
             execution_mode="backtest"
         )
-        
+
         db.add(workflow)
         db.commit()
         db.refresh(workflow)
-        
+
         return {
             "message": "Sample workflow created successfully",
             "workflow_id": str(workflow.uuid),
             "workflow_data": workflow.workflow_data
         }
-        
+
     except Exception as e:
         logger.error(f"Error creating sample workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create sample workflow: {str(e)}")
@@ -389,12 +391,12 @@ async def generate_code(
         logger.info(f"Generate code request for workflow_id: {workflow_id}")
         logger.info(f"Current user: {current_user}")
         logger.info(f"Generation options: {request.dict()}")
-        
+
         # Check if workflow exists (with more detailed logging)
         workflow = db.query(NoCodeWorkflow).filter(
             NoCodeWorkflow.uuid == workflow_id
         ).first()
-        
+
         if not workflow:
             all_workflows = db.query(NoCodeWorkflow).all()
             logger.error(f"Workflow not found with ID: {workflow_id}")
@@ -407,48 +409,33 @@ async def generate_code(
                 "errors": [f"Workflow not found with ID: {workflow_id}"],
                 "message": "Workflow not found"
             }
-        
-        # Generate code using the code generator
-        generation_result = code_generator.generate_strategy_code(
-            workflow.workflow_data or {"nodes": [], "edges": []},
-            workflow.name
+
+        # Generate code using database strategy handler
+        generation_result = execute_database_strategy_mode(
+            workflow=workflow,
+            execution_config={"optimization_level": 2},
+            db=db
         )
-        
+
         if generation_result['success']:
-            # Update workflow with generated code
-            workflow.generated_code = generation_result['code']
-            workflow.generated_requirements = generation_result['requirements']
-            workflow.compilation_status = 'generated'
-            workflow.updated_at = datetime.utcnow()
-            
-            db.commit()
-            db.refresh(workflow)
-            
             return {
                 "workflow_id": str(workflow.uuid),
-                "generated_code": generation_result['code'],
-                "requirements": generation_result['requirements'],
-                "metadata": generation_result['metadata'],
+                "generated_code": workflow.generated_code,
+                "requirements": workflow.generated_requirements or [],
+                "metadata": generation_result.get('strategy_details', {}),
                 "success": True,
                 "message": "Code generated successfully"
             }
         else:
-            # Update workflow with error status
-            workflow.compilation_status = 'generation_failed'
-            workflow.compilation_errors = generation_result['errors']
-            workflow.updated_at = datetime.utcnow()
-            
-            db.commit()
-            
             return {
                 "workflow_id": str(workflow.uuid),
                 "generated_code": "",
                 "requirements": [],
                 "success": False,
-                "errors": generation_result['errors'],
+                "errors": [generation_result.get('error', 'Unknown error')],
                 "message": "Code generation failed"
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -467,10 +454,10 @@ async def get_generated_code(
             NoCodeWorkflow.uuid == workflow_id,
             NoCodeWorkflow.user_id == current_user.id
         ).first()
-        
+
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
-        
+
         return {
             "workflow_id": str(workflow.uuid),
             "workflow_name": workflow.name,
@@ -480,7 +467,7 @@ async def get_generated_code(
             "compilation_errors": workflow.compilation_errors or [],
             "last_updated": workflow.updated_at.isoformat() if workflow.updated_at else None
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -499,62 +486,119 @@ async def set_execution_mode(
     """Set execution mode and route to appropriate handler"""
     try:
         # Validate workflow exists and user owns it
-        workflow = db.query(NoCodeWorkflow).filter(
-            NoCodeWorkflow.uuid == workflow_id,
-            NoCodeWorkflow.user_id == current_user.id
-        ).first()
-        
+        # Find workflow with flexible UUID handling (same as update_workflow)
+        workflow = None
+
+        # Check if workflow_id is a valid UUID format
+        try:
+            import uuid as uuid_module
+            uuid_module.UUID(workflow_id)  # This will raise ValueError if not a valid UUID
+
+            # It's a valid UUID, try to find the workflow
+            workflow = db.query(NoCodeWorkflow).filter(
+                NoCodeWorkflow.uuid == workflow_id,
+                NoCodeWorkflow.user_id == current_user.id
+            ).first()
+        except ValueError:
+            # Not a valid UUID, this might be a template ID or custom identifier
+            # For execution mode, we need to create a workflow if it doesn't exist
+            logger.info(f"Looking for workflow with non-UUID identifier for execution: {workflow_id}")
+            workflow = None
+
         if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found or access denied")
-        
+            # Create a basic workflow for execution if none exists
+            # This handles template-based workflows from the frontend
+            workflow = NoCodeWorkflow(
+                name=f"Template Workflow {workflow_id}",
+                description="Auto-created for execution",
+                category="trading_strategy",
+                tags=["template", "auto-created"],
+                user_id=current_user.id,
+                workflow_data={"nodes": [], "edges": []},
+                execution_mode=request.mode,
+                execution_metadata=request.config,
+                version=1,
+                is_template=False,
+                is_public=False
+            )
+            db.add(workflow)
+            db.commit()
+            db.refresh(workflow)
+            logger.info(f"Created new workflow for execution with UUID: {workflow.uuid}")
+
         # Update workflow with execution mode
         workflow.execution_mode = request.mode
         workflow.execution_metadata = request.config
         workflow.updated_at = datetime.utcnow()
-        
+
         execution_id = str(uuid.uuid4())
-        
+
         if request.mode == "strategy":
-            # Strategy mode: Use existing code generator
-            logger.info(f"Processing workflow {workflow_id} in strategy mode")
-            
-            generation_result = code_generator.generate_strategy_code(
-                workflow.workflow_data or {"nodes": [], "edges": []},
-                workflow.name
-            )
-            
-            if generation_result['success']:
-                workflow.generated_code = generation_result['code']
-                workflow.generated_requirements = generation_result['requirements']
-                workflow.compilation_status = 'generated'
-                
-                db.commit()
-                
-                return {
-                    "execution_id": execution_id,
-                    "mode": "strategy",
-                    "status": "completed",
-                    "next_action": f"/api/workflows/{workflow_id}/generated-code",
-                    "generated_code": generation_result['code'],
-                    "requirements": generation_result['requirements']
-                }
-            else:
+            # Enhanced Strategy mode: Use Enhanced Compiler with organized file storage
+            logger.info(f"Processing workflow {workflow_id} in enhanced strategy mode")
+
+            try:
+                # Use Database Strategy Handler (no file storage)
+                strategy_result = execute_database_strategy_mode(
+                    workflow=workflow,
+                    execution_config=request.config,
+                    db=db
+                )
+
+                if strategy_result['success']:
+                    # Strategy generated and saved successfully to database
+                    logger.info(f"Database strategy generated successfully for workflow {workflow_id}")
+                    
+                    return {
+                        "execution_id": strategy_result['execution_id'],
+                        "mode": "strategy", 
+                        "status": "completed",
+                        "message": strategy_result['message'],
+                        "next_action": f"/api/workflows/{workflow_id}/generated-code",
+                        "strategy_details": {
+                            "workflow_id": strategy_result['strategy_details']['workflow_id'],
+                            "workflow_uuid": strategy_result['strategy_details']['workflow_uuid'],
+                            "code_lines": strategy_result['strategy_details']['code_lines'],
+                            "code_size_bytes": strategy_result['strategy_details']['code_size_bytes'],
+                            "requirements": strategy_result['strategy_details']['requirements'],
+                            "compilation_stats": strategy_result['strategy_details']['compilation_stats'],
+                            "storage": strategy_result['strategy_details']['storage'],
+                            "compiler_version": strategy_result['strategy_details']['compiler_version']
+                        },
+                        "database_storage": strategy_result['database_storage'],
+                        "execution_record_id": strategy_result['execution_record_id']
+                    }
+                else:
+                    # Strategy generation failed
+                    logger.error(f"Enhanced strategy generation failed: {strategy_result.get('error', 'Unknown error')}")
+                    
+                    return {
+                        "execution_id": strategy_result['execution_id'],
+                        "mode": "strategy",
+                        "status": "failed", 
+                        "error": strategy_result.get('error', 'Strategy generation failed'),
+                        "details": strategy_result.get('details', {}),
+                        "next_action": None
+                    }
+                    
+            except Exception as e:
+                logger.error(f"Exception in enhanced strategy mode: {str(e)}")
                 workflow.compilation_status = 'generation_failed'
-                workflow.compilation_errors = generation_result['errors']
+                workflow.compilation_errors = [{"type": "exception", "message": str(e)}]
                 db.commit()
                 
                 return {
-                    "execution_id": execution_id,
-                    "mode": "strategy", 
+                    "execution_id": str(uuid.uuid4()),
+                    "mode": "strategy",
                     "status": "failed",
-                    "next_action": None,
-                    "errors": generation_result['errors']
+                    "error": f"Strategy execution failed: {str(e)}",
+                    "next_action": None
                 }
-                
+
         elif request.mode == "model":
             # Model mode: Convert workflow and forward to AI-ML service
             logger.info(f"Processing workflow {workflow_id} in model mode")
-            
+
             try:
                 # Create AI-ML client and submit training job
                 async with AIMLClient(AIML_SERVICE_URL) as aiml_client:
@@ -564,14 +608,14 @@ async def set_execution_mode(
                         user_id=str(current_user.id),
                         config=request.config
                     )
-                
+
                 # Update workflow status
                 workflow.compilation_status = 'training_submitted'
                 training_job_id = training_job_response.get('training_job_id')
                 workflow.aiml_training_job_id = training_job_id
-                
+
                 db.commit()
-                
+
                 return {
                     "execution_id": execution_id,
                     "mode": "model",
@@ -581,7 +625,7 @@ async def set_execution_mode(
                     "estimated_duration": training_job_response.get('estimated_duration'),
                     "message": "Training job successfully submitted to AI-ML service"
                 }
-                
+
             except (AIMLServiceUnavailable, AIMLServiceError) as e:
                 logger.error(f"AI-ML service error for workflow {workflow_id}: {str(e)}")
                 raise HTTPException(status_code=503, detail=f"AI-ML service unavailable: {e}")
@@ -604,7 +648,7 @@ async def set_execution_mode(
                         response = await aiml_client.start_research_session(workflow.workflow_data, request.config)
                     else:
                         raise HTTPException(status_code=400, detail=f"Unsupported mode: {request.mode}")
-                
+
                 db.commit() # Commit changes to execution_mode and metadata
                 return response
 
@@ -614,12 +658,110 @@ async def set_execution_mode(
             except Exception as e:
                 logger.error(f"Error in {request.mode} mode for {workflow_id}: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error setting execution mode for workflow {workflow_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to set execution mode: {str(e)}")
+
+# --- Enhanced Strategy Management Routes ---
+@app.get("/api/workflows/strategies/list")
+async def list_user_strategies(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List all generated strategies for the current user (from database)"""
+    from database_strategy_handler import DatabaseStrategyHandler
+    
+    try:
+        handler = DatabaseStrategyHandler()
+        strategies = handler.list_user_strategies(current_user.id, db)
+        
+        if strategies['success']:
+            return {
+                "success": True,
+                "strategies": strategies['strategies'],
+                "total_count": strategies['total_count'],
+                "storage_info": strategies['storage_info']
+            }
+        else:
+            raise HTTPException(status_code=500, detail=strategies['error'])
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing user strategies: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list strategies: {str(e)}")
+
+
+@app.get("/api/workflows/{workflow_id}/strategy-details")
+async def get_strategy_details(
+    workflow_id: str,
+    include_code: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed information about a generated strategy from database"""
+    from database_strategy_handler import get_strategy_from_database
+    
+    try:
+        # Convert workflow_id to int if it's numeric, otherwise find by UUID
+        try:
+            workflow_id_int = int(workflow_id)
+        except ValueError:
+            # If it's a UUID, find the workflow first
+            workflow = db.query(NoCodeWorkflow).filter(
+                NoCodeWorkflow.uuid == workflow_id
+            ).first()
+            if not workflow:
+                raise HTTPException(status_code=404, detail="Workflow not found")
+            workflow_id_int = workflow.id
+        
+        details = get_strategy_from_database(workflow_id_int, db, include_code)
+        
+        if not details['success']:
+            raise HTTPException(status_code=404, detail=details['error'])
+            
+        return details
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting strategy details: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get strategy details: {str(e)}")
+
+
+@app.get("/api/workflows/strategies/database-overview")  
+async def get_strategy_database_overview(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get overview of generated strategies in database"""
+    from database_strategy_handler import DatabaseStrategyHandler
+    
+    try:
+        handler = DatabaseStrategyHandler()
+        strategies = handler.list_user_strategies(current_user.id, db)
+        
+        if strategies['success']:
+            return {
+                "success": True,
+                "database_overview": {
+                    "total_strategies": strategies['total_count'],
+                    "storage_type": "database",
+                    "storage_info": strategies['storage_info'],
+                    "recent_strategies": strategies['strategies'][:5]  # Show 5 most recent
+                }
+            }
+        else:
+            raise HTTPException(status_code=500, detail=strategies['error'])
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting strategy database overview: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get database overview: {str(e)}")
 
 # --- General workflow routes (after specific routes) ---
 
@@ -640,11 +782,11 @@ async def create_workflow(
             workflow_data=workflow.workflow_data or {"nodes": [], "edges": []},
             execution_mode=workflow.execution_mode or 'backtest'
         )
-        
+
         db.add(db_workflow)
         db.commit()
         db.refresh(db_workflow)
-        
+
         return WorkflowResponse.from_orm(db_workflow)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create workflow: {str(e)}")
@@ -662,17 +804,17 @@ async def get_workflows(
     try:
         # In dev mode, use user_id=2 for testing
         user_id_to_use = 2 if DEV_MODE else current_user.id
-        
+
         query = db.query(NoCodeWorkflow).filter(
-            (NoCodeWorkflow.user_id == user_id_to_use) | 
+            (NoCodeWorkflow.user_id == user_id_to_use) |
             (NoCodeWorkflow.is_public == True)
         )
-        
+
         if category:
             query = query.filter(NoCodeWorkflow.category == category)
         if is_public is not None:
             query = query.filter(NoCodeWorkflow.is_public == is_public)
-            
+
         workflows = query.order_by(NoCodeWorkflow.updated_at.desc()).offset(skip).limit(limit).all()
         return [WorkflowResponse.from_orm(w) for w in workflows]
     except Exception as e:
@@ -688,13 +830,13 @@ async def get_workflow(
     try:
         workflow = db.query(NoCodeWorkflow).filter(
             NoCodeWorkflow.uuid == workflow_id,
-            (NoCodeWorkflow.user_id == current_user.id) | 
+            (NoCodeWorkflow.user_id == current_user.id) |
             (NoCodeWorkflow.is_public == True)
         ).first()
-        
+
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
-        
+
         return WorkflowResponse.from_orm(workflow)
     except HTTPException:
         raise
@@ -708,31 +850,73 @@ async def update_workflow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update an existing workflow"""
+    """Update an existing workflow or create a new one if it doesn't exist"""
     try:
-        workflow = db.query(NoCodeWorkflow).filter(
-            NoCodeWorkflow.uuid == workflow_id,
-            NoCodeWorkflow.user_id == current_user.id
-        ).first()
-        
-        if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        # Update fields that are provided
-        update_data = workflow_update.dict(exclude_unset=True)
-        for key, value in update_data.items():
-            if hasattr(workflow, key):
-                setattr(workflow, key, value)
-        
-        workflow.updated_at = datetime.utcnow()
-        db.commit()
-        db.refresh(workflow)
-        
-        return WorkflowResponse.from_orm(workflow)
+        # Try to find existing workflow by UUID first
+        workflow = None
+
+        # Check if workflow_id is a valid UUID format
+        try:
+            import uuid as uuid_module
+            uuid_module.UUID(workflow_id)  # This will raise ValueError if not a valid UUID
+
+            # It's a valid UUID, try to find the workflow
+            workflow = db.query(NoCodeWorkflow).filter(
+                NoCodeWorkflow.uuid == workflow_id,
+                NoCodeWorkflow.user_id == current_user.id
+            ).first()
+        except ValueError:
+            # Not a valid UUID, this might be a template ID or custom identifier
+            # In this case, we'll create a new workflow
+            logger.info(f"Creating new workflow for non-UUID identifier: {workflow_id}")
+            workflow = None
+
+        if workflow:
+            # Update existing workflow
+            update_data = workflow_update.dict(exclude_unset=True)
+            for key, value in update_data.items():
+                if hasattr(workflow, key):
+                    setattr(workflow, key, value)
+
+            workflow.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(workflow)
+
+            return WorkflowResponse.from_orm(workflow)
+        else:
+            # Create new workflow since it doesn't exist or ID is not a valid UUID
+            workflow_data = workflow_update.dict(exclude_unset=True)
+
+            new_workflow = NoCodeWorkflow(
+                name=workflow_data.get('name', f'Workflow {workflow_id}'),
+                description=workflow_data.get('description', 'Created from template'),
+                category=workflow_data.get('category', 'trading_strategy'),
+                tags=workflow_data.get('tags', ['no-code', 'generated']),
+                user_id=current_user.id,
+                workflow_data=workflow_data.get('workflow_data', {"nodes": [], "edges": []}),
+                execution_mode=workflow_data.get('execution_mode', 'backtest'),
+                generated_code=workflow_data.get('generated_code'),
+                generated_requirements=workflow_data.get('generated_requirements', []),
+                compilation_status=workflow_data.get('compilation_status', 'pending'),
+                validation_status=workflow_data.get('validation_status', 'pending'),
+                deployment_status=workflow_data.get('deployment_status', 'draft'),
+                execution_metadata=workflow_data.get('execution_metadata', {}),
+                version=1,
+                is_template=False,
+                is_public=False
+            )
+
+            db.add(new_workflow)
+            db.commit()
+            db.refresh(new_workflow)
+
+            logger.info(f"Created new workflow with UUID: {new_workflow.uuid}")
+            return WorkflowResponse.from_orm(new_workflow)
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating workflow: {str(e)}")
+        logger.error(f"Error updating/creating workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update workflow: {str(e)}")
 
 @app.delete("/api/workflows/{workflow_id}")
@@ -747,13 +931,13 @@ async def delete_workflow(
             NoCodeWorkflow.uuid == workflow_id,
             NoCodeWorkflow.user_id == current_user.id
         ).first()
-        
+
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
-        
+
         db.delete(workflow)
         db.commit()
-        
+
         return {"message": "Workflow deleted successfully"}
     except HTTPException:
         raise
@@ -775,30 +959,30 @@ async def compile_workflow(
             NoCodeWorkflow.uuid == workflow_id,
             NoCodeWorkflow.user_id == current_user.id
         ).first()
-        
+
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
-        
+
         # Update compilation status
         workflow.compilation_status = 'compiling'
         db.commit()
-        
+
         # Compile workflow
         compilation_result = await workflow_compiler.compile_workflow(
             workflow.workflow_data.get('nodes', []),
             workflow.workflow_data.get('edges', []),
             workflow.name
         )
-        
+
         # Update workflow with generated code
         workflow.generated_code = compilation_result.get('code', '')
         workflow.generated_requirements = compilation_result.get('requirements', [])
         workflow.compilation_status = 'compiled' if compilation_result.get('success') else 'failed'
         workflow.compilation_errors = compilation_result.get('errors', [])
-        
+
         db.commit()
         db.refresh(workflow)
-        
+
         return CompilationResponse(
             workflow_id=str(workflow.uuid),
             generated_code=workflow.generated_code,
@@ -807,7 +991,7 @@ async def compile_workflow(
             errors=workflow.compilation_errors,
             created_at=datetime.utcnow()
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -834,13 +1018,13 @@ async def execute_workflow(
             NoCodeWorkflow.uuid == workflow_id,
             NoCodeWorkflow.user_id == current_user.id
         ).first()
-        
+
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
-        
+
         if workflow.compilation_status != 'compiled':
             raise HTTPException(status_code=400, detail="Workflow must be compiled before execution")
-        
+
         # Create execution record
         execution = NoCodeExecution(
             workflow_id=workflow.id,
@@ -853,11 +1037,11 @@ async def execute_workflow(
             initial_capital=execution_config.initial_capital,
             parameters=execution_config.parameters or {}
         )
-        
+
         db.add(execution)
         db.commit()
         db.refresh(execution)
-        
+
         # Start execution in background
         background_tasks.add_task(
             execute_strategy_background,
@@ -865,9 +1049,9 @@ async def execute_workflow(
             workflow.generated_code,
             execution_config.dict()
         )
-        
+
         return ExecutionResponse.from_orm(execution)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -885,10 +1069,10 @@ async def get_execution(
             NoCodeExecution.uuid == execution_id,
             NoCodeExecution.user_id == current_user.id
         ).first()
-        
+
         if not execution:
             raise HTTPException(status_code=404, detail="Execution not found")
-        
+
         return ExecutionResponse.from_orm(execution)
     except HTTPException:
         raise
@@ -905,12 +1089,12 @@ async def get_components(
     """Get available workflow components"""
     try:
         query = db.query(NoCodeComponent).filter(NoCodeComponent.is_public == True)
-        
+
         if category:
             query = query.filter(NoCodeComponent.category == category)
         if is_builtin is not None:
             query = query.filter(NoCodeComponent.is_builtin == is_builtin)
-            
+
         components = query.order_by(NoCodeComponent.category, NoCodeComponent.name).all()
         return [ComponentResponse.from_orm(c) for c in components]
     except Exception as e:
@@ -927,14 +1111,14 @@ async def get_templates(
     """Get available workflow templates"""
     try:
         query = db.query(NoCodeTemplate).filter(NoCodeTemplate.is_public == True)
-        
+
         if category:
             query = query.filter(NoCodeTemplate.category == category)
         if difficulty_level:
             query = query.filter(NoCodeTemplate.difficulty_level == difficulty_level)
         if is_featured is not None:
             query = query.filter(NoCodeTemplate.is_featured == is_featured)
-            
+
         templates = query.order_by(NoCodeTemplate.rating.desc()).all()
         return [TemplateResponse.from_orm(t) for t in templates]
     except Exception as e:
@@ -953,10 +1137,10 @@ async def create_workflow_from_template(
             NoCodeTemplate.uuid == template_id,
             NoCodeTemplate.is_public == True
         ).first()
-        
+
         if not template:
             raise HTTPException(status_code=404, detail="Template not found")
-        
+
         # Create workflow from template
         workflow = NoCodeWorkflow(
             name=workflow_name,
@@ -967,15 +1151,15 @@ async def create_workflow_from_template(
             is_template=False,
             parent_workflow_id=None
         )
-        
+
         db.add(workflow)
-        
+
         # Update template usage count
         template.usage_count += 1
-        
+
         db.commit()
         db.refresh(workflow)
-        
+
         return WorkflowResponse.from_orm(workflow)
     except HTTPException:
         raise
@@ -990,29 +1174,29 @@ async def execute_strategy_background(execution_id: str, strategy_code: str, con
         execution = db.query(NoCodeExecution).filter(NoCodeExecution.uuid == execution_id).first()
         if not execution:
             return
-        
+
         execution.status = 'running'
         execution.current_step = 'Initializing execution environment'
         db.commit()
-        
+
         # Simulate strategy execution
         await asyncio.sleep(2)
         execution.current_step = 'Loading market data'
         execution.progress = 25
         db.commit()
-        
+
         await asyncio.sleep(3)
         execution.current_step = 'Running strategy logic'
         execution.progress = 50
         db.commit()
-        
+
         await asyncio.sleep(5)
         execution.current_step = 'Calculating performance metrics'
         execution.progress = 75
         db.commit()
-        
+
         await asyncio.sleep(2)
-        
+
         # Simulate results
         execution.status = 'completed'
         execution.progress = 100
@@ -1027,9 +1211,9 @@ async def execute_strategy_background(execution_id: str, strategy_code: str, con
             "profit_factor": 2.1
         }
         execution.completed_at = datetime.utcnow()
-        
+
         db.commit()
-        
+
     except Exception as e:
         execution.status = 'failed'
         execution.error_logs = [{"error": str(e), "timestamp": datetime.utcnow().isoformat()}]
