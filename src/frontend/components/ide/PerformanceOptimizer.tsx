@@ -4,8 +4,10 @@ import React, { memo, useEffect } from 'react'
 
 // Performance optimization utilities
 export const optimizeForPerformance = () => {
+  // Only run on client side to prevent hydration issues
+  if (typeof window === 'undefined') return
+  
   // Disable smooth scrolling for better performance
-  if (typeof window !== 'undefined') {
     document.documentElement.style.scrollBehavior = 'auto'
     
     // Add performance hints to critical elements
@@ -24,20 +26,10 @@ export const optimizeForPerformance = () => {
     }
 
     // Apply optimizations after DOM is ready
-    setTimeout(addPerformanceHints, 100)
+    const timeoutId = setTimeout(addPerformanceHints, 100)
     
-    // Debounce resize events globally
-    let resizeTimeout: NodeJS.Timeout
-    const originalAddEventListener = window.addEventListener
-    window.addEventListener = function(type: string, listener: any, options?: any) {
-      if (type === 'resize' && typeof listener === 'function') {
-        const debouncedListener = (...args: any[]) => {
-          clearTimeout(resizeTimeout)
-          resizeTimeout = setTimeout(() => listener(...args), 100)
-        }
-        return originalAddEventListener.call(this, type, debouncedListener, options)
-      }
-      return originalAddEventListener.call(this, type, listener, options)
+    return () => {
+      clearTimeout(timeoutId)
     }
   }
 }
@@ -45,6 +37,7 @@ export const optimizeForPerformance = () => {
 // Performance monitoring component
 export const PerformanceMonitor = memo(() => {
   useEffect(() => {
+    if (typeof window === 'undefined') return
     if (process.env.NODE_ENV === 'development') {
       // Monitor performance in development
       const observer = new PerformanceObserver((list) => {

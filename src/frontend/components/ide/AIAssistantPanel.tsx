@@ -594,71 +594,116 @@ export function AIAssistantPanel({
 
               {/* Enhanced Code Templates */}
               <div>
-                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
-                  <Code className="h-4 w-4 mr-2 text-ide-accent" />
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                  <Code className="h-4 w-4 mr-2 text-primary" />
                   Trading Templates
                 </h3>
                 <div className="space-y-2">
-                  {TRADING_TEMPLATES.map((template, index) => (
-                    <Button
-                      key={index}
-                      variant="ghost"
-                      className="w-full justify-start h-auto p-3 ide-button-ghost"
-                      onClick={() => onGenerate(template.prompt)}
-                      disabled={isGenerating}
-                    >
-                      <div className="flex items-start space-x-3 text-left">
-                        <div className="w-8 h-8 rounded-lg bg-ide-surface flex items-center justify-center flex-shrink-0">
-                          {template.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-ide-text">{template.title}</p>
-                          <p className="text-xs text-ide-text-muted mt-0.5">{template.description}</p>
-                        </div>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start h-auto p-3 ide-button-ghost"
+                    onClick={() => onGenerate('Create a basic trading strategy class with buy/sell signals')}
+                    disabled={isGenerating}
+                  >
+                    <div className="flex items-start space-x-3 text-left">
+                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Code className="h-4 w-4 text-blue-500" />
                       </div>
-                    </Button>
-                  ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">Trading Strategy</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Basic strategy class with buy/sell signals</p>
+                      </div>
+                    </div>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start h-auto p-3 ide-button-ghost"
+                    onClick={() => onGenerate('Create a technical indicator calculator with SMA, EMA, RSI')}
+                    disabled={isGenerating}
+                  >
+                    <div className="flex items-start space-x-3 text-left">
+                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Database className="h-4 w-4 text-green-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">Technical Indicators</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">SMA, EMA, RSI calculator functions</p>
+                      </div>
+                    </div>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start h-auto p-3 ide-button-ghost"
+                    onClick={() => onGenerate('Create a backtesting framework with performance metrics')}
+                    disabled={isGenerating}
+                  >
+                    <div className="flex items-start space-x-3 text-left">
+                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <TestTube className="h-4 w-4 text-purple-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">Backtesting Framework</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Performance metrics and analysis</p>
+                      </div>
+                    </div>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start h-auto p-3 ide-button-ghost"
+                    onClick={() => onGenerate('Create a risk management system with position sizing')}
+                    disabled={isGenerating}
+                  >
+                    <div className="flex items-start space-x-3 text-left">
+                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Settings className="h-4 w-4 text-orange-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">Risk Management</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Position sizing and risk controls</p>
+                      </div>
+                    </div>
+                  </Button>}
                 </div>
               </div>
 
               {/* Enhanced File Context */}
               {currentFile && (
                 <div>
-                  <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
-                    <FileText className="h-4 w-4 mr-2 text-ide-accent" />
-                    Current File
-                  </h3>
-                  <div className="bg-ide-background border border-ide-border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        {getFileIcon(currentFile.name, currentFile.language)}
-                        <span className="text-sm font-medium text-ide-text">{currentFile.name}</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs bg-ide-accent/10 text-ide-accent border-ide-accent/20">
-                        {currentFile.language.toUpperCase()}
-                      </Badge>
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                  <FileText className="h-4 w-4 mr-2 text-primary" />
+                  Current File
+                </h3>
+                <div className="bg-background border border-border rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      {getFileIcon(currentFile.name, currentFile.language)}
+                      <span className="text-sm font-medium text-foreground">{currentFile.name}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-xs text-ide-text-muted">
-                      <div>
-                        <span className="block">Lines:</span>
-                        <span className="text-ide-text font-medium">{currentFile.content.split('\n').length}</span>
-                      </div>
-                      <div>
-                        <span className="block">Characters:</span>
-                        <span className="text-ide-text font-medium">{currentFile.content.length}</span>
-                      </div>
-                      <div>
-                        <span className="block">Size:</span>
-                        <span className="text-ide-text font-medium">{(currentFile.content.length / 1024).toFixed(1)} KB</span>
-                      </div>
-                      <div>
-                        <span className="block">Modified:</span>
-                        <span className={`font-medium ${currentFile.modified ? 'text-ide-warning' : 'text-ide-success'}`}>
-                          {currentFile.modified ? 'Yes' : 'No'}
-                        </span>
-                      </div>
+                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+                      {currentFile.language.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                    <div>
+                      <span className="block">Lines:</span>
+                      <span className="text-foreground font-medium">{currentFile.content.split('\n').length}</span>
+                    </div>
+                    <div>
+                      <span className="block">Characters:</span>
+                      <span className="text-foreground font-medium">{currentFile.content.length}</span>
+                    </div>
+                    <div>
+                      <span className="block">Size:</span>
+                      <span className="text-foreground font-medium">{(currentFile.content.length / 1024).toFixed(1)} KB</span>
+                    </div>
+                    <div>
+                      <span className="block">Modified:</span>
+                      <span className={`font-medium ${currentFile.modified ? 'text-orange-500' : 'text-green-600'}`}>
+                        {currentFile.modified ? 'Yes' : 'No'}
+                      </span>
                     </div>
                   </div>
+                </div>
                 </div>
               )}
             </div>
@@ -670,25 +715,25 @@ export function AIAssistantPanel({
             <div className="space-y-6">
               {/* AI Configuration */}
               <div>
-                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
-                  <Bot className="h-4 w-4 mr-2 text-ide-accent" />
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                  <Bot className="h-4 w-4 mr-2 text-primary" />
                   AI Configuration
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-ide-text block mb-2">AI Provider</label>
+                    <label className="text-sm font-medium text-foreground block mb-2">AI Provider</label>
                     <Select value={provider} onValueChange={(value: 'openai' | 'anthropic') => setProvider(value)}>
                       <SelectTrigger className="ide-input">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-ide-surface border-ide-border">
-                        <SelectItem value="openai" className="text-ide-text hover:bg-ide-surface-hover">
+                      <SelectContent className="bg-card border-border">
+                        <SelectItem value="openai" className="text-foreground hover:bg-accent">
                           <div className="flex items-center space-x-2">
                             <div className="w-2 h-2 bg-green-500 rounded-full" />
                             <span>OpenAI GPT-4</span>
                           </div>
                         </SelectItem>
-                        <SelectItem value="anthropic" className="text-ide-text hover:bg-ide-surface-hover">
+                        <SelectItem value="anthropic" className="text-foreground hover:bg-accent">
                           <div className="flex items-center space-x-2">
                             <div className="w-2 h-2 bg-blue-500 rounded-full" />
                             <span>Anthropic Claude</span>
@@ -699,29 +744,29 @@ export function AIAssistantPanel({
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-ide-text block mb-2">Complexity Level</label>
+                    <label className="text-sm font-medium text-foreground block mb-2">Complexity Level</label>
                     <Select value={complexity} onValueChange={(value: typeof complexity) => setComplexity(value)}>
                       <SelectTrigger className="ide-input">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-ide-surface border-ide-border">
-                        <SelectItem value="beginner" className="text-ide-text hover:bg-ide-surface-hover">Beginner</SelectItem>
-                        <SelectItem value="intermediate" className="text-ide-text hover:bg-ide-surface-hover">Intermediate</SelectItem>
-                        <SelectItem value="advanced" className="text-ide-text hover:bg-ide-surface-hover">Advanced</SelectItem>
+                      <SelectContent className="bg-card border-border">
+                        <SelectItem value="beginner" className="text-foreground hover:bg-accent">Beginner</SelectItem>
+                        <SelectItem value="intermediate" className="text-foreground hover:bg-accent">Intermediate</SelectItem>
+                        <SelectItem value="advanced" className="text-foreground hover:bg-accent">Advanced</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-ide-text block mb-2">Context Mode</label>
+                    <label className="text-sm font-medium text-foreground block mb-2">Context Mode</label>
                     <Select value={contextMode} onValueChange={(value: typeof contextMode) => setContextMode(value)}>
                       <SelectTrigger className="ide-input">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-ide-surface border-ide-border">
-                        <SelectItem value="full" className="text-ide-text hover:bg-ide-surface-hover">Full File Context</SelectItem>
-                        <SelectItem value="selection" className="text-ide-text hover:bg-ide-surface-hover">Selection Only</SelectItem>
-                        <SelectItem value="none" className="text-ide-text hover:bg-ide-surface-hover">No Context</SelectItem>
+                      <SelectContent className="bg-card border-border">
+                        <SelectItem value="full" className="text-foreground hover:bg-accent">Full File Context</SelectItem>
+                        <SelectItem value="selection" className="text-foreground hover:bg-accent">Selection Only</SelectItem>
+                        <SelectItem value="none" className="text-foreground hover:bg-accent">No Context</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -730,24 +775,24 @@ export function AIAssistantPanel({
 
               {/* Session Statistics */}
               <div>
-                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
-                  <BarChart3 className="h-4 w-4 mr-2 text-ide-accent" />
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                  <BarChart3 className="h-4 w-4 mr-2 text-primary" />
                   Session Statistics
                 </h3>
-                <div className="bg-ide-background border border-ide-border rounded-lg p-4">
+                <div className="bg-background border border-border rounded-lg p-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-ide-accent">{messages.length}</div>
-                      <div className="text-xs text-ide-text-muted">Messages</div>
+                      <div className="text-2xl font-bold text-primary">{messages.length}</div>
+                      <div className="text-xs text-muted-foreground">Messages</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-ide-success">
+                      <div className="text-2xl font-bold text-green-600">
                         {messages.reduce((acc, msg) => acc + (msg.metadata?.tokensUsed || 0), 0)}
                       </div>
-                      <div className="text-xs text-ide-text-muted">Tokens Used</div>
+                      <div className="text-xs text-muted-foreground">Tokens Used</div>
                     </div>
                     <div className="text-center col-span-2">
-                      <div className="text-sm text-ide-text-muted">
+                      <div className="text-sm text-muted-foreground">
                         Session started: {formatTimestamp(new Date())}
                       </div>
                     </div>
@@ -757,26 +802,26 @@ export function AIAssistantPanel({
 
               {/* Performance Metrics */}
               <div>
-                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
-                  <Activity className="h-4 w-4 mr-2 text-ide-accent" />
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                  <Activity className="h-4 w-4 mr-2 text-primary" />
                   Performance
                 </h3>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center p-2 bg-ide-background border border-ide-border rounded">
-                    <span className="text-sm text-ide-text">Average Response Time</span>
-                    <Badge variant="outline" className="bg-ide-success/10 text-ide-success border-ide-success/20">
+                  <div className="flex justify-between items-center p-2 bg-background border border-border rounded">
+                    <span className="text-sm text-foreground">Average Response Time</span>
+                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
                       1.2s
                     </Badge>
                   </div>
-                  <div className="flex justify-between items-center p-2 bg-ide-background border border-ide-border rounded">
-                    <span className="text-sm text-ide-text">Success Rate</span>
-                    <Badge variant="outline" className="bg-ide-success/10 text-ide-success border-ide-success/20">
+                  <div className="flex justify-between items-center p-2 bg-background border border-border rounded">
+                    <span className="text-sm text-foreground">Success Rate</span>
+                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
                       98.5%
                     </Badge>
                   </div>
-                  <div className="flex justify-between items-center p-2 bg-ide-background border border-ide-border rounded">
-                    <span className="text-sm text-ide-text">Model Quality</span>
-                    <Badge variant="outline" className="bg-ide-accent/10 text-ide-accent border-ide-accent/20">
+                  <div className="flex justify-between items-center p-2 bg-background border border-border rounded">
+                    <span className="text-sm text-foreground">Model Quality</span>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                       Excellent
                     </Badge>
                   </div>

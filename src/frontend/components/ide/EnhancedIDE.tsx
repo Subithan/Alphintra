@@ -100,6 +100,12 @@ export function EnhancedIDE({
   onRun 
 }: EnhancedIDEProps) {
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   const [editorMode, setEditorMode] = useState<EditorMode>(initialMode)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [activeFile, setActiveFile] = useState<File | null>(null)
@@ -303,6 +309,23 @@ export function EnhancedIDE({
   const handleCloseTerminal = useCallback(() => {
     setShowTerminal(false)
   }, [])
+
+  const handleEditorMount = useCallback((editor: any) => {
+    editorRef.current = editor
+    
+    // Optimized editor configuration
+    editor.updateOptions({
+      fontFamily: 'JetBrains Mono, Fira Code, Cascadia Code, SF Mono, Consolas, Liberation Mono, Menlo, monospace',
+      fontSize: isMobile ? 12 : 14,
+      lineHeight: 1.6,
+      letterSpacing: 0.5,
+      fontLigatures: true,
+      cursorBlinking: 'phase',
+      cursorSmoothCaretAnimation: false, // Disabled for performance
+      smoothScrolling: false, // Disabled for performance
+      mouseWheelZoom: false // Disabled for performance
+    })
+  }, [isMobile])
 
   const switchMode = useCallback((newMode: EditorMode) => {
     // Preserve current code and context
@@ -666,7 +689,13 @@ export function EnhancedIDE({
             className="ide-button-ghost"
             title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {!mounted ? (
+              <Monitor className="h-4 w-4" />
+            ) : theme === 'dark' ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
           </Button>
           
           {/* Layout Controls - Hidden on mobile */}
@@ -793,22 +822,7 @@ export function EnhancedIDE({
                       value={activeFile.content}
                       onChange={handleEditorChange}
                       theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                      onMount={useCallback((editor) => {
-                        editorRef.current = editor
-                        
-                        // Optimized editor configuration
-                        editor.updateOptions({
-                          fontFamily: 'JetBrains Mono, Fira Code, Cascadia Code, SF Mono, Consolas, Liberation Mono, Menlo, monospace',
-                          fontSize: isMobile ? 12 : 14,
-                          lineHeight: 1.6,
-                          letterSpacing: 0.5,
-                          fontLigatures: true,
-                          cursorBlinking: 'phase',
-                          cursorSmoothCaretAnimation: false, // Disabled for performance
-                          smoothScrolling: false, // Disabled for performance
-                          mouseWheelZoom: false // Disabled for performance
-                        })
-                      }, [isMobile])}
+                        onMount={handleEditorMount}
                       options={editorOptions}
                     />
                     
