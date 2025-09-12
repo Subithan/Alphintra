@@ -22,7 +22,7 @@ import {
   GitBranch
 } from 'lucide-react'
 
-interface ProjectFile {
+export interface ProjectFile {
   id: string
   name: string
   path: string
@@ -32,7 +32,7 @@ interface ProjectFile {
   isActive?: boolean
 }
 
-interface ProjectFolder {
+export interface ProjectFolder {
   id: string
   name: string
   path: string
@@ -41,7 +41,7 @@ interface ProjectFolder {
   folders: ProjectFolder[]
 }
 
-interface Project {
+export interface Project {
   id: string
   name: string
   description: string
@@ -58,6 +58,7 @@ interface ProjectExplorerProps {
 export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectExplorerProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']))
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
 
   // Transform flat file list into folder structure
   const folderStructure = useMemo(() => {
@@ -119,6 +120,31 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
     })
   }
 
+  const toggleFavorite = (fileId: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev)
+      if (next.has(fileId)) next.delete(fileId)
+      else next.add(fileId)
+      return next
+    })
+  }
+
+  const highlight = (text: string) => {
+    if (!searchTerm) return text
+    const idx = text.toLowerCase().indexOf(searchTerm.toLowerCase())
+    if (idx === -1) return text
+    const before = text.slice(0, idx)
+    const match = text.slice(idx, idx + searchTerm.length)
+    const after = text.slice(idx + searchTerm.length)
+    return (
+      <>
+        {before}
+        <span className="bg-primary/20 text-foreground rounded px-0.5">{match}</span>
+        {after}
+      </>
+    ) as any
+  }
+
   const getFileIcon = (fileName: string, language: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase()
     
@@ -153,10 +179,17 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
       onClick={() => onFileSelect(file)}
     >
       {getFileIcon(file.name, file.language)}
-      <span className="text-sm flex-1 truncate">{file.name}</span>
+      <span className="text-sm flex-1 truncate">{highlight(file.name) as any}</span>
       {file.modified && (
         <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" />
       )}
+      <button
+        className={`text-xs px-1.5 py-0.5 rounded ${favorites.has(file.id) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+        onClick={(e) => { e.stopPropagation(); toggleFavorite(file.id) }}
+        aria-label={favorites.has(file.id) ? 'Unfavorite' : 'Favorite'}
+      >
+        {favorites.has(file.id) ? '★' : '☆'}
+      </button>
     </div>
   )
 
@@ -217,9 +250,14 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
             <Folder className="h-4 w-4" />
             <span>{project.name}</span>
           </div>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={createNewFile}>
-            <Plus className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={createNewFile}>
+              <Plus className="h-3 w-3" />
+            </Button>
+            {favorites.size > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary-foreground/80">{favorites.size} fav</span>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
 
@@ -249,12 +287,12 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
               // Show folder structure when not searching
               <>
                 {/* Root level files */}
-                {folderStructure.files.map(file => (
+                {folderStructure.files.map((file: ProjectFile) => (
                   <ProjectFileItem key={file.id} file={file} />
                 ))}
                 
                 {/* Folders */}
-                {folderStructure.folders.map(folder => (
+                {folderStructure.folders.map((folder: ProjectFolder) => (
                   <ProjectFolderItem key={folder.id} folder={folder} />
                 ))}
               </>
