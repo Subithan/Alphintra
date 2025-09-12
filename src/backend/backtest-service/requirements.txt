@@ -1,0 +1,18 @@
+# Backtest Service Dependencies
+
+# Web Framework
+fastapi==0.104.1
+uvicorn==0.24.0
+
+# Data Processing
+pandas==2.1.4
+numpy==1.25.2
+
+# HTTP Client for API calls
+httpx==0.25.2
+
+# Validation
+pydantic==2.5.0
+
+# Development
+python-multipart==0.0.6

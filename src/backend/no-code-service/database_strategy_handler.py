@@ -14,6 +14,7 @@ from typing import Dict, Any, Optional
 from enhanced_code_generator import EnhancedCodeGenerator, OutputMode
 from models import NoCodeWorkflow, ExecutionHistory
 from sqlalchemy.orm import Session
+from clients.backtest_client import BacktestClient, BacktestServiceError, BacktestServiceUnavailable
 
 
 class DatabaseStrategyHandler:
@@ -21,6 +22,7 @@ class DatabaseStrategyHandler:
     
     def __init__(self):
         self.compiler = EnhancedCodeGenerator()
+        self.backtest_client = BacktestClient()
         
     def execute_strategy_mode(self, 
                              workflow: NoCodeWorkflow, 
@@ -91,7 +93,85 @@ class DatabaseStrategyHandler:
                 print(f"Warning: Could not save execution history: {e}")
                 execution_record = None
             
-            # Step 5: Prepare response
+            # Step 5: Automatically run backtest after code generation
+            backtest_result = None
+            try:
+                # Prepare backtest configuration with sensible defaults
+                backtest_config = {
+                    'start_date': execution_config.get('backtest_start', '2023-01-01'),
+                    'end_date': execution_config.get('backtest_end', '2023-12-31'),
+                    'initial_capital': execution_config.get('initial_capital', 10000.0),
+                    'commission': execution_config.get('commission', 0.001),
+                    'symbols': execution_config.get('symbols', ['AAPL']),
+                    'timeframe': execution_config.get('timeframe', '1h')
+                }
+                
+                print(f"Auto-running backtest for workflow {workflow.id} with config: {backtest_config}")
+                
+                # Call backtest service - use the sync wrapper method
+                backtest_result = self.backtest_client.run_backtest_sync(
+                    workflow_id=str(workflow.uuid),
+                    strategy_code=compilation_result['code'],
+                    config=backtest_config,
+                    metadata={
+                        'workflow_name': workflow.name,
+                        'auto_generated': True,
+                        'compilation_status': 'success',
+                        'compiler_version': 'Enhanced v2.0',
+                        'generated_code_lines': code_lines,
+                        'generated_code_size': code_size
+                    }
+                )
+                
+                if backtest_result.get('success'):
+                    # Save backtest execution record
+                    backtest_execution = ExecutionHistory(
+                        uuid=backtest_result['execution_id'],
+                        workflow_id=workflow.id,
+                        execution_mode='backtest',
+                        status='completed',
+                        execution_config=backtest_config,
+                        results=backtest_result,
+                        generated_code=compilation_result['code'],
+                        generated_requirements=compilation_result.get('requirements', []),
+                        compilation_stats={
+                            'auto_backtest': True,
+                            'backtest_service_execution': True,
+                            'execution_time': datetime.utcnow().isoformat(),
+                            'service_url': self.backtest_client.base_url
+                        },
+                        created_at=datetime.utcnow(),
+                        completed_at=datetime.utcnow()
+                    )
+                    
+                    try:
+                        db.add(backtest_execution)
+                        db.commit()
+                        print(f"Backtest results saved for workflow {workflow.id}")
+                        
+                        # Update workflow stats
+                        workflow.total_executions = (workflow.total_executions or 0) + 1
+                        if backtest_result.get('performance_metrics', {}).get('total_return_percent', 0) > 0:
+                            workflow.successful_executions = (workflow.successful_executions or 0) + 1
+                        workflow.last_execution_at = datetime.utcnow()
+                        db.commit()
+                        
+                    except Exception as db_error:
+                        print(f"Warning: Failed to save backtest execution: {db_error}")
+                        db.rollback()
+                
+                else:
+                    print(f"Auto-backtest failed: {backtest_result.get('error', 'Unknown error')}")
+                    
+            except (BacktestServiceUnavailable, BacktestServiceError) as e:
+                print(f"Backtest service error: {str(e)}")
+                # Continue with strategy generation success even if backtest fails
+                
+            except Exception as e:
+                print(f"Unexpected backtest error: {str(e)}")
+                # Continue with strategy generation success even if backtest fails
+            
+            # Step 6: Prepare response
             response = {
                 'success': True,
                 'execution_id': execution_id,
@@ -117,6 +197,29 @@ class DatabaseStrategyHandler:
                     'stored_at': datetime.utcnow().isoformat()
                 }
             }
+            
+            # Include backtest results if available
+            if backtest_result and backtest_result.get('success'):
+                response['auto_backtest'] = {
+                    'success': True,
+                    'execution_id': backtest_result['execution_id'],
+                    'performance_metrics': backtest_result.get('performance_metrics', {}),
+                    'trade_summary': backtest_result.get('trade_summary', {}),
+                    'market_data_stats': backtest_result.get('market_data_stats', {}),
+                    'message': 'Backtest completed automatically after code generation'
+                }
+            elif backtest_result:
+                response['auto_backtest'] = {
+                    'success': False,
+                    'error': backtest_result.get('error', 'Backtest failed'),
+                    'message': 'Auto-backtest failed but strategy generation succeeded'
+                }
+            else:
+                response['auto_backtest'] = {
+                    'success': False,
+                    'error': 'Backtest service unavailable',
+                    'message': 'Auto-backtest skipped due to service unavailability'
+                }
             
             return response
             

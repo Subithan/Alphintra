@@ -33,6 +33,7 @@ from workflow_compiler_updated import WorkflowCompiler
 from database_strategy_handler import execute_database_strategy_mode
 from workflow_converter import WorkflowConverter
 from clients.aiml_client import AIMLClient, AIMLServiceError, AIMLServiceUnavailable
+from clients.backtest_client import BacktestClient, BacktestServiceError, BacktestServiceUnavailable
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -99,6 +100,7 @@ security = HTTPBearer(auto_error=False)  # Don't auto-error for missing auth in 
 # Initialize services
 workflow_compiler = WorkflowCompiler()
 workflow_converter = WorkflowConverter()
+backtest_client = BacktestClient()
 
 # Request models
 class CodeGenerationRequest(BaseModel):
@@ -549,7 +551,7 @@ async def set_execution_mode(
                     # Strategy generated and saved successfully to database
                     logger.info(f"Database strategy generated successfully for workflow {workflow_id}")
                     
-                    return {
+                    response = {
                         "execution_id": strategy_result['execution_id'],
                         "mode": "strategy", 
                         "status": "completed",
@@ -568,6 +570,24 @@ async def set_execution_mode(
                         "database_storage": strategy_result['database_storage'],
                         "execution_record_id": strategy_result['execution_record_id']
                     }
+                    
+                    # Include auto-backtest results if available
+                    if 'auto_backtest' in strategy_result:
+                        response['auto_backtest'] = strategy_result['auto_backtest']
+                        
+                        # Update message if backtest was successful
+                        if strategy_result['auto_backtest'].get('success'):
+                            response['message'] = f"{strategy_result['message']} + Auto-backtest completed successfully"
+                            response['backtest_performance'] = strategy_result['auto_backtest']['performance_metrics']
+                            response['next_actions'] = {
+                                "view_code": f"/api/workflows/{workflow_id}/generated-code",
+                                "view_backtest_results": f"/api/executions/{strategy_result['auto_backtest']['execution_id']}/details",
+                                "manual_backtest": f"/api/workflows/{workflow_id}/backtest"
+                            }
+                        else:
+                            response['message'] = f"{strategy_result['message']} (Auto-backtest: {strategy_result['auto_backtest'].get('error', 'Failed')})"
+                    
+                    return response
                 else:
                     # Strategy generation failed
                     logger.error(f"Enhanced strategy generation failed: {strategy_result.get('error', 'Unknown error')}")
@@ -1220,6 +1240,186 @@ async def execute_strategy_background(execution_id: str, strategy_code: str, con
         db.commit()
     finally:
         db.close()
+
+# Backtest Endpoints (calls backtest microservice)
+@app.post("/api/workflows/{workflow_id}/backtest")
+async def run_workflow_backtest(
+    workflow_id: str,
+    backtest_config: Dict[str, Any] = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Run backtest for a workflow's generated strategy using backtest microservice.
+    
+    Expected backtest_config:
+    {
+        "start_date": "2023-01-01",
+        "end_date": "2023-12-31", 
+        "initial_capital": 10000,
+        "commission": 0.001,
+        "symbols": ["AAPL"],
+        "timeframe": "1h"
+    }
+    """
+    try:
+        # Find workflow
+        workflow = db.query(NoCodeWorkflow).filter(
+            NoCodeWorkflow.uuid == workflow_id,
+            NoCodeWorkflow.user_id == current_user.id
+        ).first()
+
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+
+        if not workflow.generated_code:
+            raise HTTPException(
+                status_code=400, 
+                detail="No generated code found. Please generate strategy code first using execution-mode endpoint."
+            )
+
+        # Validate backtest configuration
+        required_fields = ['start_date', 'end_date']
+        for field in required_fields:
+            if field not in backtest_config:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Missing required field: {field}"
+                )
+
+        # Set defaults for optional fields
+        backtest_config.setdefault('initial_capital', 10000.0)
+        backtest_config.setdefault('commission', 0.001)
+        backtest_config.setdefault('symbols', ['AAPL'])
+        backtest_config.setdefault('timeframe', '1h')
+
+        # Call backtest microservice
+        logger.info(f"Calling backtest service for workflow {workflow_id}")
+        
+        try:
+            result = await backtest_client.run_backtest(
+                workflow_id=workflow_id,
+                strategy_code=workflow.generated_code,
+                config=backtest_config,
+                metadata={
+                    'workflow_name': workflow.name,
+                    'compilation_status': workflow.compilation_status,
+                    'compiler_version': getattr(workflow, 'compiler_version', 'Enhanced v2.0'),
+                    'generated_code_lines': getattr(workflow, 'generated_code_lines', 0),
+                    'generated_code_size': getattr(workflow, 'generated_code_size', 0)
+                }
+            )
+            
+            if result.get('success'):
+                # Save backtest record to execution history
+                try:
+                    execution_record = ExecutionHistory(
+                        uuid=result['execution_id'],
+                        workflow_id=workflow.id,
+                        execution_mode='backtest',
+                        status='completed',
+                        execution_config=backtest_config,
+                        results=result,
+                        generated_code=workflow.generated_code,
+                        generated_requirements=workflow.generated_requirements or [],
+                        compilation_stats={
+                            'backtest_service_execution': True,
+                            'execution_time': datetime.utcnow().isoformat(),
+                            'service_url': backtest_client.base_url
+                        },
+                        created_at=datetime.utcnow(),
+                        completed_at=datetime.utcnow()
+                    )
+                    
+                    db.add(execution_record)
+                    db.commit()
+                    
+                    # Update workflow stats
+                    workflow.total_executions = (workflow.total_executions or 0) + 1
+                    if result.get('performance_metrics', {}).get('total_return_percent', 0) > 0:
+                        workflow.successful_executions = (workflow.successful_executions or 0) + 1
+                    workflow.last_execution_at = datetime.utcnow()
+                    db.commit()
+                    
+                except Exception as db_error:
+                    logger.warning(f"Failed to save execution history: {db_error}")
+                    # Continue anyway - backtest succeeded
+                
+                logger.info(f"Backtest completed successfully for workflow {workflow_id}")
+                return {
+                    "message": "Backtest completed successfully",
+                    "workflow_id": workflow_id,
+                    "execution_id": result['execution_id'],
+                    "performance_metrics": result['performance_metrics'],
+                    "trade_summary": result['trade_summary'],
+                    "market_data_stats": result['market_data_stats'],
+                    "backtest_config": result['execution_config'],
+                    "service_info": {
+                        "backtest_service_url": backtest_client.base_url,
+                        "execution_method": "microservice"
+                    }
+                }
+            else:
+                logger.error(f"Backtest failed for workflow {workflow_id}: {result.get('error')}")
+                return {
+                    "message": "Backtest failed",
+                    "workflow_id": workflow_id,
+                    "error": result.get('error', 'Unknown error'),
+                    "success": False
+                }
+                
+        except BacktestServiceUnavailable as e:
+            logger.error(f"Backtest service unavailable: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail="Backtest service is currently unavailable. Please try again later."
+            )
+        
+        except BacktestServiceError as e:
+            logger.error(f"Backtest service error: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Backtest failed: {str(e)}"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Backtest endpoint error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+@app.get("/api/backtest/symbols")
+async def get_backtest_symbols():
+    """Get available symbols for backtesting from backtest service."""
+    try:
+        symbols = await backtest_client.get_available_symbols()
+        return symbols
+    except BacktestServiceUnavailable:
+        raise HTTPException(
+            status_code=503,
+            detail="Backtest service is currently unavailable"
+        )
+    except Exception as e:
+        logger.error(f"Error getting symbols: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/backtest/health")
+async def check_backtest_service_health():
+    """Check health of backtest service."""
+    try:
+        is_healthy = await backtest_client.health_check()
+        return {
+            "backtest_service": "healthy" if is_healthy else "unhealthy",
+            "service_url": backtest_client.base_url,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "backtest_service": "error",
+            "error": str(e),
+            "service_url": backtest_client.base_url,
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 if __name__ == "__main__":
     import uvicorn
