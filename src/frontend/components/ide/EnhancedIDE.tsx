@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,13 +27,37 @@ import {
   Search,
   RefreshCw,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Sun,
+  Moon,
+  Monitor,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  GitBranch,
+  Package,
+  Database,
+  Layers,
+  Command,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Split,
+  Folder,
+  X
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import Editor from '@monaco-editor/react'
 import { ProjectExplorer } from './ProjectExplorer'
 import { AIAssistantPanel } from './AIAssistantPanel'
 import { TerminalPanel } from './TerminalPanel'
 import { useAICodeStore } from '@/lib/stores/ai-code-store'
+
+// Memoized components for performance
+const MemoizedProjectExplorer = memo(ProjectExplorer)
+const MemoizedAIAssistantPanel = memo(AIAssistantPanel)
+const MemoizedTerminalPanel = memo(TerminalPanel)
 
 export type EditorMode = 'traditional' | 'ai-assisted' | 'ai-first'
 
@@ -74,14 +98,36 @@ export function EnhancedIDE({
   onSave, 
   onRun 
 }: EnhancedIDEProps) {
+  const { theme, setTheme } = useTheme()
   const [editorMode, setEditorMode] = useState<EditorMode>(initialMode)
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [activeFile, setActiveFile] = useState<File | null>(null)
   const [openFiles, setOpenFiles] = useState<File[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [editorTheme, setEditorTheme] = useState<'vs-dark' | 'light'>('vs-dark')
   const [showAIPanel, setShowAIPanel] = useState(true)
+  const [showLeftPanel, setShowLeftPanel] = useState(true)
   const [showTerminal, setShowTerminal] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Handle responsive design
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      
+      // Auto-hide panels on mobile
+      if (mobile) {
+        setShowLeftPanel(false)
+        setShowAIPanel(false)
+      }
+    }
+    
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+    
+    return () => window.removeEventListener('resize', checkScreenSize)
+  }, [])
   
   const editorRef = useRef<any>(null)
   const { 
@@ -149,6 +195,75 @@ export function EnhancedIDE({
     }
   }
 
+  // Memoize expensive computations
+  const editorOptions = useMemo(() => ({
+    minimap: { 
+      enabled: !isMobile,
+      size: 'proportional' as const,
+      maxColumn: 120,
+      renderCharacters: true,
+      showSlider: 'always' as const
+    },
+    fontSize: isMobile ? 12 : 14,
+    lineNumbers: 'on' as const,
+    lineNumbersMinChars: 4,
+    glyphMargin: true,
+    folding: true,
+    foldingStrategy: 'indentation' as const,
+    showFoldingControls: 'always' as const,
+    unfoldOnClickAfterEndOfLine: true,
+    roundedSelection: false,
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    wordWrap: 'on' as const,
+    wordWrapColumn: 120,
+    wrappingIndent: 'indent' as const,
+    bracketMatching: 'always' as const,
+    matchBrackets: 'always' as const,
+    autoClosingBrackets: 'always' as const,
+    autoClosingQuotes: 'always' as const,
+    autoSurround: 'languageDefined' as const,
+    suggestOnTriggerCharacters: currentProject?.settings.suggestions ?? true,
+    quickSuggestions: currentProject?.settings.autoComplete ?? true,
+    tabCompletion: 'on' as const,
+    wordBasedSuggestions: true,
+    parameterHints: { enabled: true },
+    autoIndent: 'advanced' as const,
+    formatOnType: true,
+    formatOnPaste: true,
+    dragAndDrop: true,
+    links: true,
+    colorDecorators: true,
+    codeLens: true,
+    contextmenu: true,
+    mouseWheelScrollSensitivity: 1,
+    fastScrollSensitivity: 5,
+    scrollbar: {
+      useShadows: true,
+      verticalHasArrows: false,
+      horizontalHasArrows: false,
+      vertical: 'visible' as const,
+      horizontal: 'visible' as const,
+      verticalScrollbarSize: isMobile ? 8 : 10,
+      horizontalScrollbarSize: isMobile ? 8 : 10
+    },
+    overviewRulerBorder: false,
+    overviewRulerLanes: 3,
+    hideCursorInOverviewRuler: false,
+    renderLineHighlight: 'all' as const,
+    renderWhitespace: 'selection' as const,
+    renderControlCharacters: false,
+    renderIndentGuides: true,
+    highlightActiveIndentGuide: true,
+    rulers: [80, 120],
+    find: {
+      seedSearchStringFromSelection: 'always' as const,
+      autoFindInSelection: 'never' as const,
+      globalFindClipboard: false,
+      addExtraSpaceOnTop: true
+    }
+  }), [isMobile, currentProject?.settings])
+  
   const switchMode = useCallback((newMode: EditorMode) => {
     // Preserve current code and context
     const currentContent = editorRef.current?.getValue() || ''
@@ -356,192 +471,406 @@ export function EnhancedIDE({
     }
   }
 
+  // Loading state with skeleton
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <RefreshCw className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading project...</span>
+      <div className="flex items-center justify-center h-screen bg-ide-background">
+        <div className="text-center space-y-4 fade-in">
+          <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-ide-accent" />
+          </div>
+          <div>
+            <h3 className={`font-medium text-ide-text mb-2 ${
+              isMobile ? 'text-base' : 'text-lg'
+            }`}>
+              Loading Strategy Hub IDE
+            </h3>
+            <p className={`text-ide-text-muted ${
+              isMobile ? 'text-xs' : 'text-sm'
+            }`}>
+              Preparing your development environment...
+            </p>
+          </div>
+          <div className="w-48 h-2 bg-ide-surface rounded-full overflow-hidden mx-auto">
+            <div className="h-full bg-ide-accent rounded-full shimmer" />
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Top Toolbar */}
-      <div className="border-b border-border p-2 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-lg font-semibold">
-            {currentProject?.name || 'Enhanced IDE'}
-          </h1>
-          
-          {/* Mode Switcher */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                {getEditorModeIcon(editorMode)}
-                <span className="capitalize">{editorMode}</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Switch Editor Mode</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                {(['traditional', 'ai-assisted', 'ai-first'] as EditorMode[]).map((mode) => (
-                  <Button
-                    key={mode}
-                    variant={editorMode === mode ? 'default' : 'outline'}
-                    className="w-full justify-start"
-                    onClick={() => switchMode(mode)}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {getEditorModeIcon(mode)}
-                      <div className="text-left">
-                        <div className="font-medium capitalize">{mode}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {getEditorModeDescription(mode)}
-                        </div>
-                      </div>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-          
-          {/* File tabs */}
-          <div className="flex items-center space-x-1">
-            {openFiles.map((file) => (
-              <div
-                key={file.id}
-                className={`flex items-center space-x-2 px-3 py-1 rounded-t-md border-b-2 cursor-pointer ${
-                  file.id === activeFile?.id
-                    ? 'bg-background border-primary'
-                    : 'bg-muted border-transparent hover:bg-background/50'
-                }`}
-                onClick={() => setActiveFile(file)}
-              >
-                <FileText className="h-3 w-3" />
-                <span className="text-sm">{file.name}</span>
-                {file.modified && <div className="w-2 h-2 bg-orange-500 rounded-full" />}
-                <button
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    closeFile(file.id)
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+    <div className="h-screen flex flex-col bg-ide-background text-ide-text">
+      {/* Enhanced Responsive Toolbar */}
+      <div className="ide-toolbar">
+        <div className={`flex items-center ${isMobile ? 'justify-between w-full' : 'space-x-6'}`}>
+          {/* Project Info */}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <Folder className="h-5 w-5 text-ide-accent" />
+              <h1 className={`font-semibold text-ide-text ${
+                isMobile ? 'text-base' : 'text-lg'
+              }`}>
+                {isMobile 
+                  ? (currentProject?.name || 'IDE').slice(0, 12) + '...'
+                  : currentProject?.name || 'Strategy Hub IDE'
+                }
+              </h1>
+            </div>
+            {!isMobile && (
+              <Badge variant="outline" className="text-xs bg-ide-accent/10 text-ide-accent border-ide-accent/20">
+                v2.0.0
+              </Badge>
+            )}
           </div>
+          
+          {/* Mobile Menu Button */}
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowLeftPanel(!showLeftPanel)}
+              className="ide-button-ghost"
+            >
+              <Command className="h-4 w-4" />
+            </Button>
+          )}
+          
+          {/* Desktop Controls */}
+          {!isMobile && (
+            <>
+              {/* Mode Switcher */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="ide-button-secondary">
+                    {getEditorModeIcon(editorMode)}
+                    <span className="ml-2 capitalize">{editorMode.replace('-', ' ')}</span>
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-ide-surface border-ide-border">
+                  <DialogHeader>
+                    <DialogTitle className="text-ide-text">Switch Editor Mode</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    {(['traditional', 'ai-assisted', 'ai-first'] as EditorMode[]).map((mode) => (
+                      <Button
+                        key={mode}
+                        variant={editorMode === mode ? 'default' : 'outline'}
+                        className={`w-full justify-start ${
+                          editorMode === mode ? 'ide-button-primary' : 'ide-button-secondary'
+                        }`}
+                        onClick={() => switchMode(mode)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {getEditorModeIcon(mode)}
+                          <div className="text-left">
+                            <div className="font-medium capitalize">{mode.replace('-', ' ')}</div>
+                            <div className="text-sm opacity-70">
+                              {getEditorModeDescription(mode)}
+                            </div>
+                          </div>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+              
+              {/* File tabs */}
+              <div className="flex items-center space-x-1 ml-4 overflow-x-auto">
+                {openFiles.slice(0, isMobile ? 2 : 6).map((file) => (
+                  <div
+                    key={file.id}
+                    className={`ide-tab whitespace-nowrap ${
+                      file.id === activeFile?.id
+                        ? 'ide-tab-active'
+                        : 'ide-tab-inactive'
+                    }`}
+                    onClick={() => setActiveFile(file)}
+                  >
+                    <FileText className="h-3 w-3" />
+                    <span className="text-sm max-w-[100px] truncate">
+                      {file.name}
+                    </span>
+                    {file.modified && <div className="w-2 h-2 bg-ide-warning rounded-full" />}
+                    <button
+                      className="ml-2 opacity-60 hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        closeFile(file.id)
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {openFiles.length > (isMobile ? 2 : 6) && (
+                  <Button variant="ghost" size="sm" className="ide-button-ghost px-2">
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={saveFile}>
-            <Save className="h-4 w-4 mr-1" />
-            Save
+        <div className={`flex items-center ${isMobile ? 'space-x-1' : 'space-x-2'}`}>
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="ide-button-ghost"
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
-          <Button variant="outline" size="sm" onClick={runCode}>
-            <Play className="h-4 w-4 mr-1" />
-            Run
+          
+          {/* Layout Controls - Hidden on mobile */}
+          {!isMobile && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLeftPanel(!showLeftPanel)}
+                className={`ide-button-ghost ${showLeftPanel ? 'text-ide-accent' : ''}`}
+                title={showLeftPanel ? 'Hide Explorer' : 'Show Explorer'}
+              >
+                {showLeftPanel ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAIPanel(!showAIPanel)}
+                className={`ide-button-ghost ${showAIPanel ? 'text-ide-accent' : ''}`}
+                title={showAIPanel ? 'Hide AI Assistant' : 'Show AI Assistant'}
+              >
+                {showAIPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTerminal(!showTerminal)}
+                className={`ide-button-ghost ${showTerminal ? 'text-ide-accent' : ''}`}
+                title={showTerminal ? 'Hide Terminal' : 'Show Terminal'}
+              >
+                <Terminal className="h-4 w-4" />
+              </Button>
+              
+              <div className="w-px h-6 bg-ide-border mx-2" />
+            </>
+          )}
+          
+          {/* Action Buttons */}
+          <Button 
+            size="sm" 
+            onClick={saveFile} 
+            className={`ide-button-secondary ${isMobile ? 'px-2' : ''}`}
+            title="Save file"
+          >
+            <Save className="h-4 w-4" />
+            {!isMobile && <span className="ml-2">Save</span>}
           </Button>
+          
+          <Button 
+            size="sm" 
+            onClick={runCode} 
+            className={`ide-button-primary ${isMobile ? 'px-2' : ''}`}
+            title="Run code"
+          >
+            <Play className="h-4 w-4" />
+            {!isMobile && <span className="ml-2">Run</span>}
+          </Button>
+          
+          {/* AI Assistant Toggle - Always visible */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowAIPanel(!showAIPanel)}
+            className={`ide-button-secondary ${isMobile ? 'px-2' : ''} ${
+              showAIPanel ? 'bg-ide-accent/10 text-ide-accent border-ide-accent/20' : ''
+            }`}
+            title="Toggle AI Assistant"
           >
-            <Bot className="h-4 w-4 mr-1" />
-            AI Assistant
+            <Bot className="h-4 w-4" />
+            {!isMobile && <span className="ml-2">AI</span>}
           </Button>
+          
+          {/* More menu for mobile */}
+          {isMobile && (
+            <Button variant="ghost" size="sm" className="ide-button-ghost px-2">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
       
-      {/* Main Content */}
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
+      {/* Enhanced Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Mobile overlay for left panel */}
+        {isMobile && showLeftPanel && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+            onClick={() => setShowLeftPanel(false)}
+          />
+        )}
+        
         {/* Left Panel - Project Explorer */}
-        <ResizablePanel defaultSize={20} minSize={15}>
-          <div className="h-full border-r border-border">
-            <ProjectExplorer 
+        {showLeftPanel && (
+          <div className={`${
+            isMobile 
+              ? 'fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 ease-in-out'
+              : 'relative'
+          } ide-sidebar border-r border-ide-border`}
+          style={{
+            width: isMobile ? '320px' : '280px',
+            minWidth: isMobile ? '320px' : '240px',
+            maxWidth: isMobile ? '320px' : '400px'
+          }}>
+            <MemoizedProjectExplorer 
               project={currentProject}
-              onFileSelect={openFile}
+              onFileSelect={useCallback((file) => {
+                openFile(file)
+                if (isMobile) setShowLeftPanel(false)
+              }, [isMobile])}
               activeFile={activeFile}
             />
           </div>
-        </ResizablePanel>
-        
-        <ResizableHandle />
+        )}
         
         {/* Center Panel - Code Editor */}
-        <ResizablePanel defaultSize={showAIPanel ? 55 : 75}>
-          <ResizablePanelGroup direction="vertical">
-            <ResizablePanel defaultSize={showTerminal ? 70 : 100}>
-              <div className="h-full">
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col">
+            <div className={`flex-1 ${showTerminal ? 'h-3/4' : 'h-full'}`}>
+              <div className="h-full bg-ide-background relative">
                 {activeFile ? (
-                  <Editor
-                    height="100%"
-                    language={activeFile.language}
-                    value={activeFile.content}
-                    onChange={handleEditorChange}
-                    theme={editorTheme}
-                    onMount={(editor) => {
-                      editorRef.current = editor
-                    }}
-                    options={{
-                      minimap: { enabled: true },
-                      fontSize: 14,
-                      lineNumbers: 'on',
-                      roundedSelection: false,
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                      suggestOnTriggerCharacters: currentProject?.settings.suggestions,
-                      quickSuggestions: currentProject?.settings.autoComplete,
-                      wordWrap: 'on',
-                      folding: true,
-                      bracketMatching: 'always'
-                    }}
-                  />
+                  <div className="h-full relative">
+                    <Editor
+                      height="100%"
+                      language={activeFile.language}
+                      value={activeFile.content}
+                      onChange={handleEditorChange}
+                      theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                        onMount={(editor) => {
+                        editorRef.current = editor
+                        
+                        // Enhanced editor configuration
+                        editor.updateOptions({
+                          fontFamily: 'JetBrains Mono, Fira Code, Cascadia Code, SF Mono, Consolas, Liberation Mono, Menlo, monospace',
+                          fontSize: isMobile ? 12 : 14,
+                          lineHeight: 1.6,
+                          letterSpacing: 0.5,
+                          fontLigatures: true,
+                          cursorBlinking: 'smooth',
+                          cursorSmoothCaretAnimation: !isMobile,
+                          smoothScrolling: !isMobile,
+                          mouseWheelZoom: !isMobile
+                        })
+                      }}
+                      options={editorOptions}
+                    />
+                    
+                    {/* Editor Status Bar */}
+                    <div className="ide-status-bar">
+                      <div className="flex items-center space-x-4">
+                        <span className="flex items-center space-x-1">
+                          <span className="text-ide-accent">●</span>
+                          <span>{activeFile.language.toUpperCase()}</span>
+                        </span>
+                        <span>Line {1}, Col {1}</span>
+                        <span>UTF-8</span>
+                        <span>LF</span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span>Spaces: 2</span>
+                        <span>{activeFile.content.split('\n').length} lines</span>
+                        <span>{activeFile.content.length} chars</span>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    Select a file to start editing
+                  <div className="flex items-center justify-center h-full text-ide-text-muted">
+                    <div className="text-center space-y-4 p-8">
+                      <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
+                        <Code className="h-8 w-8 text-ide-accent" />
+                      </div>
+                      <div>
+                        <h3 className={`font-medium text-ide-text mb-2 ${
+                          isMobile ? 'text-base' : 'text-lg'
+                        }`}>
+                          Welcome to Strategy Hub IDE
+                        </h3>
+                        <p className={`text-ide-text-muted max-w-md ${
+                          isMobile ? 'text-xs' : 'text-sm'
+                        }`}>
+                          {isMobile 
+                            ? 'Tap the menu button to access files and AI tools.'
+                            : 'Select a file from the project explorer to start editing, or create a new file to begin your trading strategy development.'
+                          }
+                        </p>
+                      </div>
+                      <div className={`flex items-center justify-center ${
+                        isMobile ? 'flex-col space-y-2' : 'space-x-2'
+                      }`}>
+                        <Button size="sm" className="ide-button-primary">
+                          <FileText className="h-4 w-4 mr-2" />
+                          New File
+                        </Button>
+                        <Button size="sm" variant="outline" className="ide-button-secondary">
+                          <Folder className="h-4 w-4 mr-2" />
+                          Open Folder
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
-            </ResizablePanel>
+            </div>
             
             {showTerminal && (
-              <>
-                <ResizableHandle />
-                <ResizablePanel defaultSize={30} minSize={20}>
-                  <TerminalPanel onClose={() => setShowTerminal(false)} />
-                </ResizablePanel>
-              </>
+              <div className="h-1/4 min-h-[200px] border-t border-ide-border">
+                <MemoizedTerminalPanel onClose={useCallback(() => setShowTerminal(false), [])} />
+              </div>
             )}
-          </ResizablePanelGroup>
-        </ResizablePanel>
+          </div>
+        </div>
+        
+        {/* Mobile overlay for right panel */}
+        {isMobile && showAIPanel && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+            onClick={() => setShowAIPanel(false)}
+          />
+        )}
         
         {/* Right Panel - AI Assistant */}
         {showAIPanel && (
-          <>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={25} minSize={20}>
-              <div className="h-full border-l border-border">
-                <AIAssistantPanel
-                  mode={editorMode}
-                  currentFile={activeFile}
-                  onGenerate={handleAIGenerate}
-                  onExplain={handleAIExplain}
-                  onOptimize={handleAIOptimize}
-                  onDebug={handleAIDebug}
-                  isGenerating={isGenerating}
-                  error={aiError}
-                />
-              </div>
-            </ResizablePanel>
-          </>
+          <div className={`${
+            isMobile 
+              ? 'fixed right-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 ease-in-out'
+              : 'relative'
+          } ide-sidebar border-l border-ide-border`}
+          style={{
+            width: isMobile ? '320px' : '320px',
+            minWidth: isMobile ? '320px' : '280px',
+            maxWidth: isMobile ? '320px' : '400px'
+          }}>
+            <MemoizedAIAssistantPanel
+              mode={editorMode}
+              currentFile={activeFile}
+              onGenerate={handleAIGenerate}
+              onExplain={handleAIExplain}
+              onOptimize={handleAIOptimize}
+              onDebug={handleAIDebug}
+              isGenerating={isGenerating}
+              error={aiError}
+            />
+          </div>
         )}
-      </ResizablePanelGroup>
+      </div>
     </div>
   )
 }

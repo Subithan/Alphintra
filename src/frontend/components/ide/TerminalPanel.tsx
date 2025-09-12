@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Terminal, 
   X, 
@@ -17,7 +19,12 @@ import {
   FileText,
   AlertCircle,
   CheckCircle,
-  Info
+  Info,
+  TestTube,
+  Settings,
+  Search,
+  Filter,
+  Copy
 } from 'lucide-react'
 
 interface TerminalOutput {
@@ -288,15 +295,15 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
   const getOutputColor = (type: TerminalOutput['type']) => {
     switch (type) {
       case 'input':
-        return 'text-blue-400'
+        return 'text-ide-info font-medium'
       case 'output':
-        return 'text-foreground'
+        return 'text-ide-text'
       case 'error':
-        return 'text-red-400'
+        return 'text-ide-error font-medium'
       case 'info':
-        return 'text-yellow-400'
+        return 'text-ide-warning font-medium'
       default:
-        return 'text-foreground'
+        return 'text-ide-text'
     }
   }
 
@@ -305,31 +312,75 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background border-t border-border">
-      {/* Header */}
-      <div className="flex items-center justify-between p-2 border-b border-border bg-muted/30">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-          <TabsList className="h-8">
-            <TabsTrigger value="terminal" className="text-xs">
-              <Terminal className="h-3 w-3 mr-1" />
-              Terminal
-            </TabsTrigger>
-            <TabsTrigger value="tests" className="text-xs">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Tests ({testResults.length})
-            </TabsTrigger>
-            <TabsTrigger value="logs" className="text-xs">
-              <FileText className="h-3 w-3 mr-1" />
-              Logs
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+    <div className="h-full flex flex-col bg-ide-surface border-t border-ide-border">
+      {/* Enhanced Header */}
+      <div className="flex items-center justify-between p-3 border-b border-ide-border bg-ide-background">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 rounded bg-ide-accent/10 flex items-center justify-center">
+              <Terminal className="h-3 w-3 text-ide-accent" />
+            </div>
+            <h3 className="font-semibold text-ide-text">Terminal</h3>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="h-8 bg-ide-surface">
+              <TabsTrigger 
+                value="terminal" 
+                className="text-xs data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background"
+              >
+                <Terminal className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Terminal</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="tests" 
+                className="text-xs data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background"
+              >
+                <CheckCircle className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Tests</span>
+                {testResults.length > 0 && (
+                  <Badge variant="outline" className="ml-1 h-4 text-xs px-1">
+                    {testResults.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="logs" 
+                className="text-xs data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background"
+              >
+                <FileText className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Logs</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={clearTerminal}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 w-7 p-0 ide-button-ghost" 
+            onClick={clearTerminal}
+            title="Clear Terminal"
+          >
             <RotateCcw className="h-3 w-3" />
           </Button>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onClose}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 w-7 p-0 ide-button-ghost" 
+            onClick={() => setIsRunning(!isRunning)}
+            title={isRunning ? "Stop" : "Start"}
+          >
+            {isRunning ? <Square className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 w-7 p-0 ide-button-ghost" 
+            onClick={onClose}
+            title="Close Terminal"
+          >
             <X className="h-3 w-3" />
           </Button>
         </div>
@@ -339,117 +390,291 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
       <div className="flex-1">
         <TabsContent value="terminal" className="h-full m-0 p-0">
           <div className="h-full flex flex-col">
-            {/* Terminal Output */}
-            <ScrollArea ref={terminalRef} className="flex-1 p-3">
+            {/* Enhanced Terminal Output */}
+            <ScrollArea ref={terminalRef} className="flex-1 p-4 bg-ide-background">
               <div className="font-mono text-sm space-y-1">
                 {terminalOutput.map((output) => (
-                  <div key={output.id} className="flex">
-                    <span className="text-muted-foreground mr-2 text-xs">
+                  <div key={output.id} className="flex hover:bg-ide-surface/50 rounded px-2 py-1 -mx-2 group">
+                    <span className="text-ide-text-muted mr-3 text-xs font-medium min-w-[60px] flex-shrink-0">
                       {formatTimestamp(output.timestamp)}
                     </span>
-                    <span className={getOutputColor(output.type)}>
+                    <span className={`${getOutputColor(output.type)} flex-1`}>
                       {output.content}
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                      onClick={() => navigator.clipboard.writeText(output.content)}
+                      title="Copy line"
+                    >
+                      <Copy className="h-2 w-2" />
+                    </Button>
                   </div>
                 ))}
                 {isRunning && (
-                  <div className="flex items-center space-x-2 text-yellow-400">
-                    <div className="animate-spin w-3 h-3 border border-current border-t-transparent rounded-full" />
-                    <span>Running...</span>
+                  <div className="flex items-center space-x-3 px-2 py-1 text-ide-warning">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-ide-warning rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-ide-warning rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-ide-warning rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-sm">Executing command...</span>
                   </div>
                 )}
               </div>
             </ScrollArea>
 
-            {/* Command Input */}
-            <div className="border-t border-border p-3">
-              <div className="flex items-center space-x-2 font-mono text-sm">
-                <span className="text-blue-400">$</span>
+            {/* Enhanced Command Input */}
+            <div className="border-t border-ide-border p-4 bg-ide-surface">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-ide-accent">
+                  <div className="w-2 h-2 bg-ide-accent rounded-full animate-pulse" />
+                  <span className="font-mono font-bold">$</span>
+                </div>
                 <Input
                   ref={inputRef}
                   value={currentCommand}
                   onChange={(e) => setCurrentCommand(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Enter command..."
+                  placeholder="Type a command and press Enter..."
                   disabled={isRunning}
-                  className="font-mono bg-transparent border-none p-0 h-auto focus-visible:ring-0"
+                  className="ide-input font-mono bg-ide-background border-ide-border focus-visible:ring-ide-accent"
                 />
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 ide-button-ghost"
+                    onClick={() => setCurrentCommand('')}
+                    disabled={!currentCommand || isRunning}
+                    title="Clear command"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="ide-button-primary h-8"
+                    onClick={() => executeCommand(currentCommand)}
+                    disabled={!currentCommand.trim() || isRunning}
+                  >
+                    <Play className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+              
+              {/* Command History Indicator */}
+              {commandHistory.length > 0 && (
+                <div className="mt-2 text-xs text-ide-text-muted">
+                  Use ↑/↓ arrows to navigate command history ({commandHistory.length} commands)
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>
 
         <TabsContent value="tests" className="h-full m-0 p-0">
-          <ScrollArea className="h-full p-3">
-            {testResults.length > 0 ? (
-              <div className="space-y-2">
-                {testResults.map((test) => (
-                  <div
-                    key={test.id}
-                    className="flex items-center justify-between p-2 border border-border rounded"
-                  >
-                    <div className="flex items-center space-x-2">
-                      {test.status === 'passed' && (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      )}
-                      {test.status === 'failed' && (
-                        <AlertCircle className="h-4 w-4 text-red-500" />
-                      )}
-                      {test.status === 'skipped' && (
-                        <Info className="h-4 w-4 text-yellow-500" />
-                      )}
-                      <span className="font-mono text-sm">{test.name}</span>
+          <div className="h-full flex flex-col">
+            {testResults.length > 0 && (
+              <div className="p-4 border-b border-ide-border bg-ide-background">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-ide-success">
+                      {testResults.filter(t => t.status === 'passed').length}
                     </div>
-                    <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                      <span>{test.duration.toFixed(2)}s</span>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        test.status === 'passed' ? 'bg-green-100 text-green-800' :
-                        test.status === 'failed' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {test.status.toUpperCase()}
-                      </span>
-                    </div>
+                    <div className="text-xs text-ide-text-muted">Passed</div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <div className="text-center">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm">No test results yet</p>
-                  <p className="text-xs">Run `pytest` to see test results here</p>
+                  <div>
+                    <div className="text-2xl font-bold text-ide-error">
+                      {testResults.filter(t => t.status === 'failed').length}
+                    </div>
+                    <div className="text-xs text-ide-text-muted">Failed</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-ide-warning">
+                      {testResults.filter(t => t.status === 'skipped').length}
+                    </div>
+                    <div className="text-xs text-ide-text-muted">Skipped</div>
+                  </div>
                 </div>
               </div>
             )}
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="logs" className="h-full m-0 p-0">
-          <ScrollArea className="h-full p-3">
-            <div className="font-mono text-sm space-y-1">
-              {logs.length > 0 ? (
-                logs.map((log) => (
-                  <div key={log.id} className="flex">
-                    <span className="text-muted-foreground mr-2 text-xs">
-                      {formatTimestamp(log.timestamp)}
-                    </span>
-                    <span className={getOutputColor(log.type)}>
-                      {log.content}
-                    </span>
-                  </div>
-                ))
+            
+            <ScrollArea className="flex-1 p-4">
+              {testResults.length > 0 ? (
+                <div className="space-y-2">
+                  {testResults.map((test) => (
+                    <div
+                      key={test.id}
+                      className={`p-3 border rounded-lg transition-colors hover:bg-ide-surface/50 ${
+                        test.status === 'passed' ? 'border-ide-success/20 bg-ide-success/5' :
+                        test.status === 'failed' ? 'border-ide-error/20 bg-ide-error/5' :
+                        'border-ide-warning/20 bg-ide-warning/5'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            test.status === 'passed' ? 'bg-ide-success/10' :
+                            test.status === 'failed' ? 'bg-ide-error/10' :
+                            'bg-ide-warning/10'
+                          }`}>
+                            {test.status === 'passed' && (
+                              <CheckCircle className="h-3 w-3 text-ide-success" />
+                            )}
+                            {test.status === 'failed' && (
+                              <AlertCircle className="h-3 w-3 text-ide-error" />
+                            )}
+                            {test.status === 'skipped' && (
+                              <Info className="h-3 w-3 text-ide-warning" />
+                            )}
+                          </div>
+                          <div>
+                            <span className="font-mono text-sm text-ide-text font-medium">{test.name}</span>
+                            {test.error && (
+                              <p className="text-xs text-ide-error mt-1">{test.error}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-ide-text-muted font-mono">
+                            {test.duration.toFixed(2)}s
+                          </span>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs h-5 ${
+                              test.status === 'passed' ? 'bg-ide-success/10 text-ide-success border-ide-success/20' :
+                              test.status === 'failed' ? 'bg-ide-error/10 text-ide-error border-ide-error/20' :
+                              'bg-ide-warning/10 text-ide-warning border-ide-warning/20'
+                            }`}
+                          >
+                            {test.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="text-center">
-                    <FileText className="h-8 w-8 mx-auto mb-2" />
-                    <p className="text-sm">No logs yet</p>
-                    <p className="text-xs">Application logs will appear here</p>
+                <div className="flex items-center justify-center h-full text-ide-text-muted">
+                  <div className="text-center space-y-4">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
+                      <TestTube className="h-8 w-8 text-ide-accent" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-ide-text mb-2">No Test Results</h3>
+                      <p className="text-sm text-ide-text-muted max-w-xs">
+                        Run your test suite to see detailed results and coverage information here.
+                      </p>
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                      <Button size="sm" className="ide-button-primary">
+                        <TestTube className="h-4 w-4 mr-2" />
+                        Run Tests
+                      </Button>
+                      <Button size="sm" variant="outline" className="ide-button-secondary">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configure Tests
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
+            </ScrollArea>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="logs" className="h-full m-0 p-0">
+          <div className="h-full flex flex-col">
+            {/* Log Controls */}
+            <div className="p-3 border-b border-ide-border bg-ide-background">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-32 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Logs</SelectItem>
+                      <SelectItem value="error">Errors</SelectItem>
+                      <SelectItem value="warning">Warnings</SelectItem>
+                      <SelectItem value="info">Info</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="sm" className="h-8 px-2 text-xs ide-button-ghost">
+                    <Download className="h-3 w-3 mr-1" />
+                    Export
+                  </Button>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 ide-button-ghost">
+                    <Search className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 ide-button-ghost">
+                    <Filter className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 ide-button-ghost">
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </ScrollArea>
+            
+            <ScrollArea className="flex-1 p-4">
+              <div className="font-mono text-sm space-y-1">
+                {logs.length > 0 ? (
+                  logs.map((log) => (
+                    <div key={log.id} className="flex hover:bg-ide-surface/50 rounded px-2 py-1 -mx-2 group">
+                      <span className="text-ide-text-muted mr-3 text-xs font-medium min-w-[60px] flex-shrink-0">
+                        {formatTimestamp(log.timestamp)}
+                      </span>
+                      <div className={`w-2 h-2 rounded-full mr-2 mt-1.5 flex-shrink-0 ${
+                        log.type === 'error' ? 'bg-ide-error' :
+                        log.type === 'info' ? 'bg-ide-info' :
+                        'bg-ide-warning'
+                      }`} />
+                      <span className={`${getOutputColor(log.type)} flex-1`}>
+                        {log.content}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                        onClick={() => navigator.clipboard.writeText(log.content)}
+                        title="Copy log entry"
+                      >
+                        <Copy className="h-2 w-2" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center h-full text-ide-text-muted">
+                    <div className="text-center space-y-4">
+                      <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
+                        <FileText className="h-8 w-8 text-ide-accent" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium text-ide-text mb-2">No Logs Available</h3>
+                        <p className="text-sm text-ide-text-muted max-w-xs">
+                          Application logs and system messages will appear here when your code runs.
+                        </p>
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <Button size="sm" className="ide-button-primary">
+                          <Play className="h-4 w-4 mr-2" />
+                          Run Application
+                        </Button>
+                        <Button size="sm" variant="outline" className="ide-button-secondary">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Log Settings
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
         </TabsContent>
       </div>
     </div>

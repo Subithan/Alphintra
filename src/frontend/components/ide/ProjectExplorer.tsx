@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
 import { 
   Folder, 
   FolderOpen, 
@@ -19,7 +20,19 @@ import {
   Database,
   Settings,
   Package,
-  GitBranch
+  GitBranch,
+  Filter,
+  SortAsc,
+  Eye,
+  EyeOff,
+  FolderPlus,
+  FilePlus,
+  Trash2,
+  Copy,
+  Scissors,
+  RefreshCw,
+  Download,
+  Upload
 } from 'lucide-react'
 
 interface ProjectFile {
@@ -124,19 +137,34 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
     
     switch (extension) {
       case 'py':
-        return <Code className="h-4 w-4 text-blue-500" />
+        return <Code className="h-4 w-4 file-icon-python" />
       case 'js':
+        return <Code className="h-4 w-4 file-icon-javascript" />
       case 'ts':
-        return <Code className="h-4 w-4 text-yellow-500" />
+      case 'tsx':
+        return <Code className="h-4 w-4 file-icon-typescript" />
       case 'json':
-        return <Database className="h-4 w-4 text-green-500" />
+        return <Database className="h-4 w-4 file-icon-json" />
       case 'md':
-        return <FileText className="h-4 w-4 text-gray-500" />
+      case 'mdx':
+        return <FileText className="h-4 w-4 file-icon-markdown" />
       case 'yml':
       case 'yaml':
-        return <Settings className="h-4 w-4 text-red-500" />
+        return <Settings className="h-4 w-4 file-icon-yaml" />
+      case 'css':
+      case 'scss':
+      case 'sass':
+        return <Code className="h-4 w-4 file-icon-css" />
+      case 'html':
+      case 'htm':
+        return <Code className="h-4 w-4 file-icon-html" />
+      case 'sql':
+        return <Database className="h-4 w-4 file-icon-json" />
+      case 'txt':
+      case 'log':
+        return <FileText className="h-4 w-4 file-icon-default" />
       default:
-        return <File className="h-4 w-4 text-gray-400" />
+        return <File className="h-4 w-4 file-icon-default" />
     }
   }
 
@@ -147,16 +175,21 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
 
   const ProjectFileItem = ({ file }: { file: ProjectFile }) => (
     <div
-      className={`flex items-center space-x-2 px-2 py-1.5 hover:bg-accent cursor-pointer rounded-sm ${
-        activeFile?.id === file.id ? 'bg-accent' : ''
+      className={`ide-tree-item ${
+        activeFile?.id === file.id ? 'ide-tree-item-active' : ''
       }`}
       onClick={() => onFileSelect(file)}
     >
       {getFileIcon(file.name, file.language)}
-      <span className="text-sm flex-1 truncate">{file.name}</span>
-      {file.modified && (
-        <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" />
-      )}
+      <span className="text-sm flex-1 truncate font-medium">{file.name}</span>
+      <div className="flex items-center space-x-1">
+        {file.modified && (
+          <div className="w-2 h-2 bg-ide-warning rounded-full flex-shrink-0" />
+        )}
+        <Button variant="ghost" size="sm" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <MoreHorizontal className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   )
 
@@ -164,33 +197,38 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
     const isExpanded = expandedFolders.has(folder.path)
     
     return (
-      <div>
+      <div className="group">
         <div
-          className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent cursor-pointer rounded-sm"
+          className="ide-tree-item"
           onClick={() => toggleFolder(folder.path)}
         >
           {isExpanded ? (
-            <ChevronDown className="h-3 w-3" />
+            <ChevronDown className="h-3 w-3 text-ide-text-muted" />
           ) : (
-            <ChevronRight className="h-3 w-3" />
+            <ChevronRight className="h-3 w-3 text-ide-text-muted" />
           )}
           {isExpanded ? (
-            <FolderOpen className="h-4 w-4 text-blue-500" />
+            <FolderOpen className="h-4 w-4 text-ide-accent" />
           ) : (
-            <Folder className="h-4 w-4 text-blue-500" />
+            <Folder className="h-4 w-4 text-ide-accent" />
           )}
-          <span className="text-sm flex-1">{folder.name}</span>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-            <MoreHorizontal className="h-3 w-3" />
-          </Button>
+          <span className="text-sm flex-1 font-medium">{folder.name}</span>
+          <div className="flex items-center space-x-1">
+            <Badge variant="outline" className="text-xs px-1 py-0 h-4 opacity-60">
+              {folder.files.length + folder.folders.length}
+            </Badge>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreHorizontal className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
         {isExpanded && (
-          <div className="ml-4 border-l border-border pl-2">
-            {folder.files.map(file => (
-              <ProjectFileItem key={file.id} file={file} />
-            ))}
+          <div className="ml-4 border-l border-ide-border pl-2 space-y-0.5">
             {folder.folders.map(subFolder => (
               <ProjectFolderItem key={subFolder.id} folder={subFolder} />
+            ))}
+            {folder.files.map(file => (
+              <ProjectFileItem key={file.id} file={file} />
             ))}
           </div>
         )}
@@ -200,83 +238,145 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
 
   if (!project) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <Folder className="h-8 w-8 mx-auto mb-2" />
-          <p className="text-sm">No project loaded</p>
+      <div className="h-full flex items-center justify-center bg-ide-surface">
+        <div className="text-center space-y-4 p-8">
+          <div className="mx-auto w-16 h-16 rounded-full bg-ide-background flex items-center justify-center">
+            <Folder className="h-8 w-8 text-ide-accent" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-ide-text mb-2">No Project Loaded</h3>
+            <p className="text-sm text-ide-text-muted max-w-xs">
+              Open an existing project or create a new one to start developing your trading strategies.
+            </p>
+          </div>
+          <div className="flex flex-col space-y-2">
+            <Button size="sm" className="ide-button-primary">
+              <FolderPlus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
+            <Button size="sm" variant="outline" className="ide-button-secondary">
+              <Folder className="h-4 w-4 mr-2" />
+              Open Project
+            </Button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-sm">
+    <div className="h-full flex flex-col bg-ide-surface">
+      {/* Enhanced Header */}
+      <div className="p-4 border-b border-ide-border">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
-            <Folder className="h-4 w-4" />
-            <span>{project.name}</span>
+            <Folder className="h-5 w-5 text-ide-accent" />
+            <span className="font-semibold text-ide-text">{project.name}</span>
           </div>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={createNewFile}>
-            <Plus className="h-3 w-3" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col px-3 py-0">
-        {/* Search */}
-        <div className="mb-3">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-            <Input
-              placeholder="Search files..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-7 h-8 text-xs"
-            />
+          <div className="flex items-center space-x-1">
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 ide-button-ghost" title="New File">
+              <FilePlus className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 ide-button-ghost" title="New Folder">
+              <FolderPlus className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 ide-button-ghost" title="Refresh">
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 ide-button-ghost" title="More Actions">
+              <MoreHorizontal className="h-3 w-3" />
+            </Button>
           </div>
         </div>
 
-        {/* File Tree */}
-        <ScrollArea className="flex-1">
-          <div className="space-y-0.5">
-            {searchTerm ? (
-              // Show filtered files when searching
-              filteredFiles.map(file => (
+        {/* Enhanced Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-3 w-3 text-ide-text-muted" />
+          <Input
+            placeholder="Search files and folders..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="ide-input pl-8 h-8 text-sm"
+          />
+          {searchTerm && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute right-1 top-1 h-6 w-6 p-0"
+              onClick={() => setSearchTerm('')}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* File Tree */}
+      <ScrollArea className="flex-1 px-2">
+        <div className="py-2 space-y-0.5">
+          {searchTerm ? (
+            // Enhanced search results
+            <div className="space-y-1">
+              <div className="text-xs text-ide-text-muted px-2 py-1 font-medium">
+                Search Results ({filteredFiles.length})
+              </div>
+              {filteredFiles.map(file => (
                 <ProjectFileItem key={file.id} file={file} />
-              ))
-            ) : (
-              // Show folder structure when not searching
-              <>
-                {/* Root level files */}
-                {folderStructure.files.map(file => (
-                  <ProjectFileItem key={file.id} file={file} />
-                ))}
-                
-                {/* Folders */}
-                {folderStructure.folders.map(folder => (
-                  <ProjectFolderItem key={folder.id} folder={folder} />
-                ))}
-              </>
-            )}
-          </div>
-        </ScrollArea>
-
-        {/* Project Info */}
-        <div className="mt-3 pt-3 border-t border-border">
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div className="flex items-center justify-between">
-              <span>Files:</span>
-              <span>{project.files.length}</span>
+              ))}
+              {filteredFiles.length === 0 && (
+                <div className="text-center py-8 text-ide-text-muted">
+                  <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No files found</p>
+                  <p className="text-xs">Try adjusting your search terms</p>
+                </div>
+              )}
             </div>
-            {project.description && (
-              <p className="text-xs text-muted-foreground italic">
-                {project.description}
-              </p>
-            )}
-          </div>
+          ) : (
+            // Enhanced folder structure
+            <div className="space-y-0.5">
+              {/* Root level files */}
+              {folderStructure.files.map(file => (
+                <ProjectFileItem key={file.id} file={file} />
+              ))}
+              
+              {/* Folders */}
+              {folderStructure.folders.map(folder => (
+                <ProjectFolderItem key={folder.id} folder={folder} />
+              ))}
+              
+              {/* Empty state */}
+              {folderStructure.files.length === 0 && folderStructure.folders.length === 0 && (
+                <div className="text-center py-8 text-ide-text-muted">
+                  <Folder className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No files in project</p>
+                  <p className="text-xs">Create your first file to get started</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </CardContent>
+      </ScrollArea>
+
+      {/* Enhanced Project Info */}
+      <div className="p-4 border-t border-ide-border bg-ide-background">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-ide-text-muted">Files:</span>
+            <Badge variant="outline" className="text-xs h-5">{project.files.length}</Badge>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-ide-text-muted">Size:</span>
+            <span className="text-ide-text-muted">
+              {(project.files.reduce((acc, file) => acc + file.content.length, 0) / 1024).toFixed(1)} KB
+            </span>
+          </div>
+          {project.description && (
+            <p className="text-xs text-ide-text-muted italic pt-2 border-t border-ide-border">
+              {project.description}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

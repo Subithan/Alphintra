@@ -23,7 +23,15 @@ import {
   RefreshCw,
   Copy,
   Trash2,
-  Star
+  Star,
+  FileText,
+  Database,
+  BarChart3,
+  Activity,
+  Download,
+  AlertCircle,
+  File,
+  X
 } from 'lucide-react'
 import { EditorMode } from './EnhancedIDE'
 
@@ -236,86 +244,144 @@ export function AIAssistantPanel({
   const formatTimestamp = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
+  
+  const getFileIcon = (fileName: string, language: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase()
+    
+    switch (extension) {
+      case 'py':
+        return <Code className="h-4 w-4 file-icon-python" />
+      case 'js':
+        return <Code className="h-4 w-4 file-icon-javascript" />
+      case 'ts':
+      case 'tsx':
+        return <Code className="h-4 w-4 file-icon-typescript" />
+      case 'json':
+        return <Database className="h-4 w-4 file-icon-json" />
+      case 'md':
+      case 'mdx':
+        return <FileText className="h-4 w-4 file-icon-markdown" />
+      default:
+        return <File className="h-4 w-4 file-icon-default" />
+    }
+  }
 
   return (
-    <div className="h-full flex flex-col">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-lg">
-          <div className="flex items-center space-x-2">
-            <Bot className="h-5 w-5" />
-            <span>AI Assistant</span>
-            <Badge variant="outline" className="text-xs capitalize">
-              {mode}
-            </Badge>
+    <div className="h-full flex flex-col bg-ide-surface">
+      {/* Enhanced Header */}
+      <div className="p-4 border-b border-ide-border bg-ide-background">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-full bg-ide-accent/10 flex items-center justify-center">
+              <Bot className="h-4 w-4 text-ide-accent" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-ide-text">AI Assistant</h2>
+              <p className="text-xs text-ide-text-muted">Powered by {provider.toUpperCase()}</p>
+            </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearChat}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
+          <div className="flex items-center space-x-1">
+            <Badge 
+              variant="outline" 
+              className={`text-xs h-6 ${
+                mode === 'ai-first' ? 'bg-ide-accent/10 text-ide-accent border-ide-accent/20' :
+                mode === 'ai-assisted' ? 'bg-ide-success/10 text-ide-success border-ide-success/20' :
+                'bg-ide-surface text-ide-text-muted border-ide-border'
+              }`}
+            >
+              {mode.replace('-', ' ').toUpperCase()}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearChat}
+              className="h-7 w-7 p-0 ide-button-ghost"
+              title="Clear Chat"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="mx-4 mb-2">
-          <TabsTrigger value="chat" className="flex items-center space-x-1">
-            <MessageSquare className="h-3 w-3" />
-            <span>Chat</span>
-          </TabsTrigger>
-          <TabsTrigger value="actions" className="flex items-center space-x-1">
-            <Zap className="h-3 w-3" />
-            <span>Actions</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center space-x-1">
-            <Settings className="h-3 w-3" />
-            <span>Settings</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="px-4 py-2 border-b border-ide-border">
+          <TabsList className="grid w-full grid-cols-3 bg-ide-background">
+            <TabsTrigger value="chat" className="flex items-center space-x-2 data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background">
+              <MessageSquare className="h-3 w-3" />
+              <span className="hidden sm:inline">Chat</span>
+            </TabsTrigger>
+            <TabsTrigger value="actions" className="flex items-center space-x-2 data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background">
+              <Zap className="h-3 w-3" />
+              <span className="hidden sm:inline">Actions</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center space-x-2 data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background">
+              <Settings className="h-3 w-3" />
+              <span className="hidden sm:inline">Settings</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="chat" className="flex-1 flex flex-col mx-4">
-          {/* Chat Messages */}
-          <ScrollArea ref={scrollAreaRef} className="flex-1 mb-4">
-            <div className="space-y-4 pr-4">
+        <TabsContent value="chat" className="flex-1 flex flex-col">
+          {/* Enhanced Chat Messages */}
+          <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
+            <div className="py-4 space-y-4">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} group`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
+                    className={`max-w-[85%] rounded-2xl p-4 slide-up ${
                       message.type === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
+                        ? 'bg-ide-accent text-ide-background ml-8'
+                        : 'bg-ide-surface text-ide-text border border-ide-border mr-8'
                     }`}
                   >
-                    <div className="flex items-start space-x-2">
-                      {message.type === 'assistant' && <Bot className="h-4 w-4 mt-0.5" />}
-                      {message.type === 'user' && <User className="h-4 w-4 mt-0.5" />}
-                      <div className="flex-1">
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs opacity-70">
+                    <div className="flex items-start space-x-3">
+                      {message.type === 'assistant' && (
+                        <div className="w-6 h-6 rounded-full bg-ide-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Bot className="h-3 w-3 text-ide-accent" />
+                        </div>
+                      )}
+                      {message.type === 'user' && (
+                        <div className="w-6 h-6 rounded-full bg-ide-background/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <User className="h-3 w-3" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className={`text-xs ${
+                            message.type === 'user' ? 'text-ide-background/70' : 'text-ide-text-muted'
+                          }`}>
                             {formatTimestamp(message.timestamp)}
                           </span>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
+                            className={`h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                              message.type === 'user' ? 'hover:bg-ide-background/20' : 'hover:bg-ide-surface-hover'
+                            }`}
                             onClick={() => copyMessage(message.content)}
+                            title="Copy message"
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
                         </div>
                         {message.metadata && (
-                          <div className="flex items-center space-x-1 mt-1">
-                            <Badge variant="outline" className="text-xs">
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <Badge variant="outline" className="text-xs h-5 bg-ide-accent/10 text-ide-accent border-ide-accent/20">
                               {message.metadata.operation}
                             </Badge>
                             {message.metadata.tokensUsed && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs h-5">
                                 {message.metadata.tokensUsed} tokens
+                              </Badge>
+                            )}
+                            {message.metadata.confidence && (
+                              <Badge variant="outline" className="text-xs h-5">
+                                {Math.round(message.metadata.confidence * 100)}% confidence
                               </Badge>
                             )}
                           </div>
@@ -328,11 +394,19 @@ export function AIAssistantPanel({
               
               {isGenerating && (
                 <div className="flex justify-start">
-                  <div className="bg-muted text-muted-foreground rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <Bot className="h-4 w-4" />
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span className="text-sm">Thinking...</span>
+                  <div className="bg-ide-surface text-ide-text border border-ide-border rounded-2xl p-4 mr-8">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-6 h-6 rounded-full bg-ide-accent/10 flex items-center justify-center">
+                        <Bot className="h-3 w-3 text-ide-accent" />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-ide-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-ide-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-ide-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-sm text-ide-text-muted">AI is thinking...</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -340,200 +414,391 @@ export function AIAssistantPanel({
             </div>
           </ScrollArea>
 
-          {/* Chat Input */}
-          <div className="space-y-2">
-            <div className="flex space-x-2">
-              <Textarea
-                ref={inputRef}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder={
-                  mode === 'ai-first' 
-                    ? 'Describe what you want to build in natural language...'
-                    : 'Ask me anything about your code...'
-                }
-                className="flex-1 min-h-[60px] resize-none"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
+          {/* Enhanced Chat Input */}
+          <div className="p-4 border-t border-ide-border bg-ide-background">
+            <div className="space-y-3">
+              <div className="flex space-x-3">
+                <Textarea
+                  ref={inputRef}
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder={
+                    mode === 'ai-first' 
+                      ? 'Describe what you want to build in natural language...'
+                      : mode === 'ai-assisted'
+                      ? 'Ask me anything about your code or request assistance...'
+                      : 'Type your message here...'
                   }
-                }}
-                disabled={isGenerating}
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isGenerating}
-                className="h-[60px]"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {error && (
-              <div className="text-sm text-destructive bg-destructive/10 p-2 rounded">
-                {error}
+                  className="ide-input flex-1 min-h-[80px] resize-none text-sm leading-relaxed"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  disabled={isGenerating}
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isGenerating}
+                  className={`h-[80px] w-12 ide-button-primary ${
+                    !inputMessage.trim() || isGenerating ? 'opacity-50' : 'pulse-glow'
+                  }`}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+              
+              {/* Quick Actions Bar */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs ide-button-ghost"
+                    onClick={() => handleQuickAction('explain')}
+                    disabled={!currentFile || isGenerating}
+                  >
+                    <Lightbulb className="h-3 w-3 mr-1" />
+                    Explain
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs ide-button-ghost"
+                    onClick={() => handleQuickAction('optimize')}
+                    disabled={!currentFile || isGenerating}
+                  >
+                    <Zap className="h-3 w-3 mr-1" />
+                    Optimize
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs ide-button-ghost"
+                    onClick={() => handleQuickAction('debug')}
+                    disabled={!currentFile || isGenerating}
+                  >
+                    <Bug className="h-3 w-3 mr-1" />
+                    Debug
+                  </Button>
+                </div>
+                <div className="text-xs text-ide-text-muted">
+                  {inputMessage.length}/2000
+                </div>
+              </div>
+              
+              {error && (
+                <div className="text-sm text-ide-error bg-ide-error/10 border border-ide-error/20 p-3 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Error</p>
+                      <p className="text-xs mt-1">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="actions" className="flex-1 mx-4">
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium mb-2">Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('explain')}
-                  disabled={!currentFile || isGenerating}
-                  className="flex items-center space-x-1"
-                >
-                  <Lightbulb className="h-3 w-3" />
-                  <span>Explain</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('optimize')}
-                  disabled={!currentFile || isGenerating}
-                  className="flex items-center space-x-1"
-                >
-                  <Zap className="h-3 w-3" />
-                  <span>Optimize</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('debug')}
-                  disabled={!currentFile || isGenerating}
-                  className="flex items-center space-x-1"
-                >
-                  <Bug className="h-3 w-3" />
-                  <span>Debug</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleQuickAction('test')}
-                  disabled={!currentFile || isGenerating}
-                  className="flex items-center space-x-1"
-                >
-                  <TestTube className="h-3 w-3" />
-                  <span>Test</span>
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">Code Templates</h3>
-              <div className="space-y-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a basic trading strategy class with buy/sell signals')}
-                >
-                  Trading Strategy Template
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a technical indicator calculator with SMA, EMA, RSI')}
-                >
-                  Technical Indicators
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a backtesting framework with performance metrics')}
-                >
-                  Backtesting Framework
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a risk management system with position sizing')}
-                >
-                  Risk Management
-                </Button>
-              </div>
-            </div>
-
-            {currentFile && (
+        <TabsContent value="actions" className="flex-1 p-4">
+          <ScrollArea className="h-full">
+            <div className="space-y-6">
+              {/* Enhanced Quick Actions */}
               <div>
-                <h3 className="text-sm font-medium mb-2">File Context</h3>
-                <div className="bg-muted p-2 rounded text-xs">
-                  <div className="flex items-center justify-between">
-                    <span>{currentFile.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {currentFile.language}
-                    </Badge>
+                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
+                  <Zap className="h-4 w-4 mr-2 text-ide-accent" />
+                  Quick Actions
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuickAction('explain')}
+                    disabled={!currentFile || isGenerating}
+                    className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
+                  >
+                    <Lightbulb className="h-4 w-4 text-ide-accent" />
+                    <span className="text-xs">Explain Code</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuickAction('optimize')}
+                    disabled={!currentFile || isGenerating}
+                    className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
+                  >
+                    <Zap className="h-4 w-4 text-ide-success" />
+                    <span className="text-xs">Optimize</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuickAction('debug')}
+                    disabled={!currentFile || isGenerating}
+                    className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
+                  >
+                    <Bug className="h-4 w-4 text-ide-error" />
+                    <span className="text-xs">Debug</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuickAction('test')}
+                    disabled={!currentFile || isGenerating}
+                    className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
+                  >
+                    <TestTube className="h-4 w-4 text-ide-info" />
+                    <span className="text-xs">Generate Tests</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Enhanced Code Templates */}
+              <div>
+                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
+                  <Code className="h-4 w-4 mr-2 text-ide-accent" />
+                  Trading Templates
+                </h3>
+                <div className="space-y-2">
+                  {[
+                    {
+                      title: 'Trading Strategy',
+                      description: 'Basic strategy class with buy/sell signals',
+                      prompt: 'Create a basic trading strategy class with buy/sell signals',
+                      icon: <Code className="h-4 w-4 text-blue-500" />
+                    },
+                    {
+                      title: 'Technical Indicators',
+                      description: 'SMA, EMA, RSI calculator functions',
+                      prompt: 'Create a technical indicator calculator with SMA, EMA, RSI',
+                      icon: <Database className="h-4 w-4 text-green-500" />
+                    },
+                    {
+                      title: 'Backtesting Framework',
+                      description: 'Performance metrics and analysis',
+                      prompt: 'Create a backtesting framework with performance metrics',
+                      icon: <TestTube className="h-4 w-4 text-purple-500" />
+                    },
+                    {
+                      title: 'Risk Management',
+                      description: 'Position sizing and risk controls',
+                      prompt: 'Create a risk management system with position sizing',
+                      icon: <Settings className="h-4 w-4 text-orange-500" />
+                    }
+                  ].map((template, index) => (
+                    <Button
+                      key={index}
+                      variant="ghost"
+                      className="w-full justify-start h-auto p-3 ide-button-ghost"
+                      onClick={() => onGenerate(template.prompt)}
+                      disabled={isGenerating}
+                    >
+                      <div className="flex items-start space-x-3 text-left">
+                        <div className="w-8 h-8 rounded-lg bg-ide-surface flex items-center justify-center flex-shrink-0">
+                          {template.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-ide-text">{template.title}</p>
+                          <p className="text-xs text-ide-text-muted mt-0.5">{template.description}</p>
+                        </div>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Enhanced File Context */}
+              {currentFile && (
+                <div>
+                  <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
+                    <FileText className="h-4 w-4 mr-2 text-ide-accent" />
+                    Current File
+                  </h3>
+                  <div className="bg-ide-background border border-ide-border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        {getFileIcon(currentFile.name, currentFile.language)}
+                        <span className="text-sm font-medium text-ide-text">{currentFile.name}</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs bg-ide-accent/10 text-ide-accent border-ide-accent/20">
+                        {currentFile.language.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-xs text-ide-text-muted">
+                      <div>
+                        <span className="block">Lines:</span>
+                        <span className="text-ide-text font-medium">{currentFile.content.split('\n').length}</span>
+                      </div>
+                      <div>
+                        <span className="block">Characters:</span>
+                        <span className="text-ide-text font-medium">{currentFile.content.length}</span>
+                      </div>
+                      <div>
+                        <span className="block">Size:</span>
+                        <span className="text-ide-text font-medium">{(currentFile.content.length / 1024).toFixed(1)} KB</span>
+                      </div>
+                      <div>
+                        <span className="block">Modified:</span>
+                        <span className={`font-medium ${currentFile.modified ? 'text-ide-warning' : 'text-ide-success'}`}>
+                          {currentFile.modified ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-muted-foreground mt-1">
-                    {currentFile.content.split('\n').length} lines
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="settings" className="flex-1 p-4">
+          <ScrollArea className="h-full">
+            <div className="space-y-6">
+              {/* AI Configuration */}
+              <div>
+                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
+                  <Bot className="h-4 w-4 mr-2 text-ide-accent" />
+                  AI Configuration
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-ide-text block mb-2">AI Provider</label>
+                    <Select value={provider} onValueChange={(value: 'openai' | 'anthropic') => setProvider(value)}>
+                      <SelectTrigger className="ide-input">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-ide-surface border-ide-border">
+                        <SelectItem value="openai" className="text-ide-text hover:bg-ide-surface-hover">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full" />
+                            <span>OpenAI GPT-4</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="anthropic" className="text-ide-text hover:bg-ide-surface-hover">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                            <span>Anthropic Claude</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ide-text block mb-2">Complexity Level</label>
+                    <Select value={complexity} onValueChange={(value: typeof complexity) => setComplexity(value)}>
+                      <SelectTrigger className="ide-input">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-ide-surface border-ide-border">
+                        <SelectItem value="beginner" className="text-ide-text hover:bg-ide-surface-hover">Beginner</SelectItem>
+                        <SelectItem value="intermediate" className="text-ide-text hover:bg-ide-surface-hover">Intermediate</SelectItem>
+                        <SelectItem value="advanced" className="text-ide-text hover:bg-ide-surface-hover">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-ide-text block mb-2">Context Mode</label>
+                    <Select value={contextMode} onValueChange={(value: typeof contextMode) => setContextMode(value)}>
+                      <SelectTrigger className="ide-input">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-ide-surface border-ide-border">
+                        <SelectItem value="full" className="text-ide-text hover:bg-ide-surface-hover">Full File Context</SelectItem>
+                        <SelectItem value="selection" className="text-ide-text hover:bg-ide-surface-hover">Selection Only</SelectItem>
+                        <SelectItem value="none" className="text-ide-text hover:bg-ide-surface-hover">No Context</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        </TabsContent>
 
-        <TabsContent value="settings" className="flex-1 mx-4">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">AI Provider</label>
-              <Select value={provider} onValueChange={(value: 'openai' | 'anthropic') => setProvider(value)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">OpenAI GPT-4</SelectItem>
-                  <SelectItem value="anthropic">Anthropic Claude</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Session Statistics */}
+              <div>
+                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
+                  <BarChart3 className="h-4 w-4 mr-2 text-ide-accent" />
+                  Session Statistics
+                </h3>
+                <div className="bg-ide-background border border-ide-border rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-ide-accent">{messages.length}</div>
+                      <div className="text-xs text-ide-text-muted">Messages</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-ide-success">
+                        {messages.reduce((acc, msg) => acc + (msg.metadata?.tokensUsed || 0), 0)}
+                      </div>
+                      <div className="text-xs text-ide-text-muted">Tokens Used</div>
+                    </div>
+                    <div className="text-center col-span-2">
+                      <div className="text-sm text-ide-text-muted">
+                        Session started: {formatTimestamp(new Date())}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-            <div>
-              <label className="text-sm font-medium">Complexity Level</label>
-              <Select value={complexity} onValueChange={(value: typeof complexity) => setComplexity(value)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Performance Metrics */}
+              <div>
+                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
+                  <Activity className="h-4 w-4 mr-2 text-ide-accent" />
+                  Performance
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center p-2 bg-ide-background border border-ide-border rounded">
+                    <span className="text-sm text-ide-text">Average Response Time</span>
+                    <Badge variant="outline" className="bg-ide-success/10 text-ide-success border-ide-success/20">
+                      1.2s
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-ide-background border border-ide-border rounded">
+                    <span className="text-sm text-ide-text">Success Rate</span>
+                    <Badge variant="outline" className="bg-ide-success/10 text-ide-success border-ide-success/20">
+                      98.5%
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-ide-background border border-ide-border rounded">
+                    <span className="text-sm text-ide-text">Model Quality</span>
+                    <Badge variant="outline" className="bg-ide-accent/10 text-ide-accent border-ide-accent/20">
+                      Excellent
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-            <div>
-              <label className="text-sm font-medium">Context Mode</label>
-              <Select value={contextMode} onValueChange={(value: typeof contextMode) => setContextMode(value)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full">Full File</SelectItem>
-                  <SelectItem value="selection">Selection Only</SelectItem>
-                  <SelectItem value="none">No Context</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="pt-4 border-t">
-              <h3 className="text-sm font-medium mb-2">Statistics</h3>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>Messages: {messages.length}</div>
-                <div>Current session: {formatTimestamp(new Date())}</div>
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full ide-button-secondary justify-start"
+                  onClick={clearChat}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Chat History
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full ide-button-secondary justify-start"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Conversation
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full ide-button-secondary justify-start"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reset Settings
+                </Button>
               </div>
             </div>
-          </div>
+          </ScrollArea>
         </TabsContent>
       </Tabs>
     </div>

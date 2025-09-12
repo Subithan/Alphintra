@@ -52,54 +52,83 @@
 
 @layer base {
   :root {
+    /* Light theme - Professional and clean */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 45 100% 60%;
+    --primary: 45 100% 50%; /* Professional gold */
     --primary-foreground: 0 0% 0%;
-    --secondary: 210 40% 96%;
+    --secondary: 210 40% 98%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
+    --accent: 210 40% 98%;
     --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 45 100% 50%;
     --radius: 0.5rem;
+    
+    /* Light theme specific IDE colors */
+    --ide-background: 0 0% 100%;
+    --ide-surface: 0 0% 98%;
+    --ide-surface-hover: 210 40% 96%;
+    --ide-border: 214.3 31.8% 91.4%;
+    --ide-text: 222.2 84% 4.9%;
+    --ide-text-muted: 215.4 16.3% 46.9%;
+    --ide-accent: 45 100% 50%;
+    --ide-accent-hover: 45 100% 45%;
+    --ide-success: 142 71% 45%;
+    --ide-warning: 38 92% 50%;
+    --ide-error: 0 84% 60%;
+    --ide-info: 221 83% 53%;
   }
 
   .dark {
-    /* High contrast dark mode - Pure black background with bright whites */
-    --background: 0 0% 0%; /* Pure black */
-    --foreground: 0 0% 100%; /* Pure white */
-    --card: 0 0% 5%; /* Very dark gray */
-    --card-foreground: 0 0% 100%; /* Pure white */
-    --popover: 0 0% 3%; /* Almost black */
-    --popover-foreground: 0 0% 100%; /* Pure white */
-    --primary: 45 100% 60%; /* Bright gold/yellow */
-    --primary-foreground: 0 0% 0%; /* Black text on bright primary */
-    --secondary: 0 0% 15%; /* Dark gray */
-    --secondary-foreground: 0 0% 100%; /* Pure white */
-    --muted: 0 0% 10%; /* Very dark gray */
-    --muted-foreground: 0 0% 85%; /* Light gray */
-    --accent: 0 0% 20%; /* Medium dark gray */
-    --accent-foreground: 0 0% 100%; /* Pure white */
-    --destructive: 0 100% 60%; /* Bright red */
-    --destructive-foreground: 0 0% 100%; /* Pure white */
-    --border: 0 0% 25%; /* Medium gray border */
-    --input: 0 0% 8%; /* Very dark input background */
-    --ring: 45 100% 60%; /* Bright gold ring */
+    /* Enhanced dark theme - Professional black with gold accents */
+    --background: 222.2 84% 4.9%; /* Very dark blue-black */
+    --foreground: 210 40% 98%; /* Off-white */
+    --card: 222.2 84% 6%; /* Slightly lighter than background */
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 5%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 45 100% 60%; /* Bright gold */
+    --primary-foreground: 222.2 84% 4.9%; /* Dark text on gold */
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 45 100% 60%;
 
-    /* High contrast trading colors */
-    --profit: 120 100% 50%; /* Bright green */
-    --loss: 0 100% 60%; /* Bright red */
-    --warning: 30 100% 60%; /* Bright orange */
+    /* Dark theme specific IDE colors */
+    --ide-background: 222.2 84% 4.9%;
+    --ide-surface: 217.2 32.6% 17.5%;
+    --ide-surface-hover: 215 25% 27%;
+    --ide-border: 217.2 32.6% 17.5%;
+    --ide-text: 210 40% 98%;
+    --ide-text-muted: 215 20.2% 65.1%;
+    --ide-accent: 45 100% 60%;
+    --ide-accent-hover: 45 100% 55%;
+    --ide-success: 142 76% 36%;
+    --ide-warning: 38 92% 50%;
+    --ide-error: 0 84% 60%;
+    --ide-info: 217 91% 60%;
+    
+    /* Professional trading colors for dark theme */
+    --profit: 142 76% 36%;
+    --loss: 0 84% 60%;
+    --warning: 38 92% 50%;
   }
 }
 
@@ -112,8 +141,77 @@
   }
 }
 
-/* Trading Platform Specific Styles */
+/* Enhanced IDE Specific Styles */
 @layer components {
+  /* IDE Layout Components */
+  .ide-toolbar {
+    @apply bg-ide-surface border-b border-ide-border px-4 py-2 flex items-center justify-between;
+  }
+  
+  .ide-sidebar {
+    @apply bg-ide-surface border-r border-ide-border flex flex-col h-full;
+  }
+  
+  .ide-panel {
+    @apply bg-ide-background border border-ide-border rounded-lg shadow-sm;
+  }
+  
+  .ide-tab {
+    @apply px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-all duration-200;
+  }
+  
+  .ide-tab-active {
+    @apply bg-ide-background border-ide-accent text-ide-accent;
+  }
+  
+  .ide-tab-inactive {
+    @apply bg-ide-surface border-transparent text-ide-text-muted hover:text-ide-text hover:bg-ide-surface-hover;
+  }
+  
+  .ide-button {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ide-accent focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+  
+  .ide-button-primary {
+    @apply ide-button bg-ide-accent text-ide-background hover:bg-ide-accent-hover;
+  }
+  
+  .ide-button-secondary {
+    @apply ide-button bg-ide-surface text-ide-text hover:bg-ide-surface-hover border border-ide-border;
+  }
+  
+  .ide-button-ghost {
+    @apply ide-button hover:bg-ide-surface-hover hover:text-ide-text;
+  }
+  
+  .ide-input {
+    @apply flex h-9 w-full rounded-md border border-ide-border bg-ide-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-ide-text-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .ide-tree-item {
+    @apply flex items-center gap-2 px-2 py-1 text-sm rounded-sm cursor-pointer transition-colors hover:bg-ide-surface-hover;
+  }
+  
+  .ide-tree-item-active {
+    @apply bg-ide-accent/10 text-ide-accent border-r-2 border-ide-accent;
+  }
+  
+  .ide-status-bar {
+    @apply bg-ide-surface border-t border-ide-border px-4 py-1 text-xs text-ide-text-muted flex items-center justify-between;
+  }
+  
+  /* File type icons */
+  .file-icon-python { @apply text-blue-500; }
+  .file-icon-javascript { @apply text-yellow-500; }
+  .file-icon-typescript { @apply text-blue-400; }
+  .file-icon-json { @apply text-green-500; }
+  .file-icon-markdown { @apply text-gray-500; }
+  .file-icon-yaml { @apply text-red-500; }
+  .file-icon-css { @apply text-pink-500; }
+  .file-icon-html { @apply text-orange-500; }
+  .file-icon-default { @apply text-ide-text-muted; }
+  
+  /* Trading Platform Specific Styles */
   .profit-text {
     @apply text-profit font-medium;
   }
@@ -227,31 +325,90 @@
   }
 }
 
-/* Scrollbar Styles */
+/* Enhanced Scrollbar Styles */
 ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-ide-surface;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-ide-accent/30 rounded-full transition-colors;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-ide-accent/50;
+}
+
+::-webkit-scrollbar-thumb:active {
+  @apply bg-ide-accent/70;
+}
+
+::-webkit-scrollbar-corner {
+  @apply bg-ide-surface;
+}
+
+/* Thin scrollbars for panels */
+.ide-panel ::-webkit-scrollbar,
+.ide-sidebar ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-muted;
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--ide-accent) / 0.3) hsl(var(--ide-surface));
 }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/30 rounded-full;
+/* Focus styles */
+:focus-visible {
+  @apply outline-none ring-2 ring-ide-accent ring-offset-2 ring-offset-ide-background;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground/50;
+/* Selection styles */
+::selection {
+  @apply bg-ide-accent/20 text-ide-text;
 }
 
-/* Monaco Editor Styles */
+::-moz-selection {
+  @apply bg-ide-accent/20 text-ide-text;
+}
+
+/* Enhanced Monaco Editor Styles */
 .monaco-editor {
-  @apply rounded-lg;
+  @apply rounded-lg overflow-hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .monaco-editor .margin {
-  @apply bg-muted;
+  @apply bg-ide-surface;
+}
+
+.monaco-editor .minimap {
+  @apply opacity-80;
+}
+
+.monaco-editor .scroll-decoration {
+  @apply opacity-60;
+}
+
+.monaco-editor .current-line {
+  @apply border-l-2 border-ide-accent;
+}
+
+/* Custom scrollbar for Monaco */
+.monaco-editor .monaco-scrollable-element > .scrollbar > .slider {
+  @apply bg-ide-accent/30 hover:bg-ide-accent/50 rounded-full;
+}
+
+.monaco-editor .monaco-scrollable-element > .scrollbar {
+  @apply bg-ide-surface/50;
 }
 
 /* Chart Styles */
@@ -263,14 +420,98 @@
   @apply rounded-lg;
 }
 
-/* Loading Animation */
+/* Enhanced Loading Animations */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px hsl(var(--ide-accent) / 0.5); }
+  50% { box-shadow: 0 0 20px hsl(var(--ide-accent) / 0.8), 0 0 30px hsl(var(--ide-accent) / 0.6); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
 .loading-spinner {
-  @apply animate-spin rounded-full border-2 border-muted border-t-primary;
+  @apply animate-spin rounded-full border-2 border-ide-surface border-t-ide-accent;
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+.slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--ide-surface)) 0%,
+    hsl(var(--ide-surface-hover)) 50%,
+    hsl(var(--ide-surface)) 100%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Theme Transitions */
+* {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease-in-out;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .pulse-glow {
+    animation: none;
+    box-shadow: 0 0 5px hsl(var(--ide-accent) / 0.5);
+  }
 }
 
 /* Real-time update animations */
@@ -282,7 +523,17 @@
   @apply animate-pulse-loss;
 }
 
-/* Mobile Responsive */
+/* Enhanced Responsive Design */
+@media (max-width: 1024px) {
+  .ide-toolbar {
+    @apply px-2 py-1.5;
+  }
+  
+  .ide-toolbar h1 {
+    @apply text-base;
+  }
+}
+
 @media (max-width: 768px) {
   .mobile-hide {
     @apply hidden;
@@ -292,17 +543,75 @@
     @apply w-full;
   }
   
-  .sidebar-item {
+  .mobile-compact {
+    @apply px-1 py-0.5 text-xs;
+  }
+  
+  .ide-toolbar {
+    @apply px-2 py-1 flex-col space-y-2;
+  }
+  
+  .ide-toolbar > div:first-child {
+    @apply w-full justify-between;
+  }
+  
+  .ide-toolbar > div:last-child {
+    @apply w-full justify-center space-x-1;
+  }
+  
+  .ide-tab {
     @apply px-2 py-1 text-xs;
   }
   
-  .trading-card {
-    @apply p-2;
+  .ide-tree-item {
+    @apply px-1 py-0.5 text-xs;
   }
   
-  .data-table th,
-  .data-table td {
-    @apply px-2 py-2 text-xs;
+  .ide-button {
+    @apply h-8 px-2 text-xs;
+  }
+  
+  .ide-input {
+    @apply h-8 text-xs;
+  }
+}
+
+@media (max-width: 480px) {
+  .ide-toolbar {
+    @apply px-1 py-1;
+  }
+  
+  .ide-toolbar h1 {
+    @apply text-sm;
+  }
+  
+  .ide-tab {
+    @apply px-1 py-0.5 text-xs;
+  }
+  
+  .ide-tree-item {
+    @apply px-1 py-0.5 text-xs gap-1;
+  }
+  
+  .ide-button {
+    @apply h-7 px-1 text-xs;
+  }
+  
+  .ide-input {
+    @apply h-7 text-xs px-2;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .ide-toolbar,
+  .ide-sidebar,
+  .ide-status-bar {
+    @apply hidden;
+  }
+  
+  .monaco-editor {
+    @apply shadow-none border-none;
   }
 }
 
