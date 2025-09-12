@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,6 +34,34 @@ import {
   X
 } from 'lucide-react'
 import { EditorMode } from './EnhancedIDE'
+
+// Memoized constants for performance
+const TRADING_TEMPLATES = [
+  {
+    title: 'Trading Strategy',
+    description: 'Basic strategy class with buy/sell signals',
+    prompt: 'Create a basic trading strategy class with buy/sell signals',
+    icon: <Code className="h-4 w-4 text-blue-500" />
+  },
+  {
+    title: 'Technical Indicators',
+    description: 'SMA, EMA, RSI calculator functions',
+    prompt: 'Create a technical indicator calculator with SMA, EMA, RSI',
+    icon: <Database className="h-4 w-4 text-green-500" />
+  },
+  {
+    title: 'Backtesting Framework',
+    description: 'Performance metrics and analysis',
+    prompt: 'Create a backtesting framework with performance metrics',
+    icon: <TestTube className="h-4 w-4 text-purple-500" />
+  },
+  {
+    title: 'Risk Management',
+    description: 'Position sizing and risk controls',
+    prompt: 'Create a risk management system with position sizing',
+    icon: <Settings className="h-4 w-4 text-orange-500" />
+  }
+]
 
 interface Message {
   id: string
@@ -103,20 +131,28 @@ export function AIAssistantPanel({
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-scroll to bottom when new messages arrive
+  // Optimized auto-scroll with debounce
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
-    }
-  }, [messages])
+    const timeoutId = setTimeout(() => {
+      if (scrollAreaRef.current) {
+        scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+      }
+    }, 50)
+    
+    return () => clearTimeout(timeoutId)
+  }, [messages.length]) // Only depend on length, not entire messages array
 
-  const addMessage = (message: Omit<Message, 'id'>) => {
+  const addMessage = useCallback((message: Omit<Message, 'id'>) => {
     const newMessage: Message = {
       ...message,
-      id: Date.now().toString()
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     }
-    setMessages(prev => [...prev, newMessage])
-  }
+    setMessages(prev => {
+      // Keep only last 100 messages for performance
+      const newMessages = [...prev, newMessage]
+      return newMessages.length > 100 ? newMessages.slice(-100) : newMessages
+    })
+  }, [])
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isGenerating) return
@@ -237,13 +273,13 @@ export function AIAssistantPanel({
     ])
   }
 
-  const copyMessage = (content: string) => {
-    navigator.clipboard.writeText(content)
-  }
+  const copyMessage = useCallback((content: string) => {
+    navigator.clipboard.writeText(content).catch(console.error)
+  }, [])
 
-  const formatTimestamp = (date: Date) => {
+  const formatTimestamp = useCallback((date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
+  }, [])
   
   const getFileIcon = (fileName: string, language: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase()
@@ -326,7 +362,7 @@ export function AIAssistantPanel({
           {/* Enhanced Chat Messages */}
           <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
             <div className="py-4 space-y-4">
-              {messages.map((message) => (
+              {messages.slice(-50).map((message) => ( // Only render last 50 messages for performance
                 <div
                   key={message.id}
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} group`}
@@ -563,32 +599,7 @@ export function AIAssistantPanel({
                   Trading Templates
                 </h3>
                 <div className="space-y-2">
-                  {[
-                    {
-                      title: 'Trading Strategy',
-                      description: 'Basic strategy class with buy/sell signals',
-                      prompt: 'Create a basic trading strategy class with buy/sell signals',
-                      icon: <Code className="h-4 w-4 text-blue-500" />
-                    },
-                    {
-                      title: 'Technical Indicators',
-                      description: 'SMA, EMA, RSI calculator functions',
-                      prompt: 'Create a technical indicator calculator with SMA, EMA, RSI',
-                      icon: <Database className="h-4 w-4 text-green-500" />
-                    },
-                    {
-                      title: 'Backtesting Framework',
-                      description: 'Performance metrics and analysis',
-                      prompt: 'Create a backtesting framework with performance metrics',
-                      icon: <TestTube className="h-4 w-4 text-purple-500" />
-                    },
-                    {
-                      title: 'Risk Management',
-                      description: 'Position sizing and risk controls',
-                      prompt: 'Create a risk management system with position sizing',
-                      icon: <Settings className="h-4 w-4 text-orange-500" />
-                    }
-                  ].map((template, index) => (
+                  {TRADING_TEMPLATES.map((template, index) => (
                     <Button
                       key={index}
                       variant="ghost"

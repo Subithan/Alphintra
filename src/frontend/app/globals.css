@@ -157,7 +157,7 @@
   }
   
   .ide-tab {
-    @apply px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-all duration-200;
+    @apply px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors duration-150;
   }
   
   .ide-tab-active {
@@ -189,7 +189,7 @@
   }
   
   .ide-tree-item {
-    @apply flex items-center gap-2 px-2 py-1 text-sm rounded-sm cursor-pointer transition-colors hover:bg-accent;
+    @apply flex items-center gap-2 px-2 py-1 text-sm rounded-sm cursor-pointer transition-colors hover:bg-accent will-change-auto;
   }
   
   .ide-tree-item-active {
@@ -491,11 +491,34 @@
   animation: shimmer 1.5s infinite;
 }
 
-/* Theme Transitions */
+/* Optimized Theme Transitions - Reduced for performance */
 * {
-  transition-property: color, background-color, border-color, box-shadow;
-  transition-duration: 200ms;
-  transition-timing-function: ease-in-out;
+  transition-property: color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+/* High performance elements - no transitions */
+.monaco-editor,
+.monaco-editor *,
+code,
+pre {
+  transition: none !important;
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-scroll {
+  will-change: scroll-position;
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000;
 }
 
 /* Reduced motion preferences */

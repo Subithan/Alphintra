@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,12 +66,16 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
   const terminalRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-scroll terminal to bottom
+  // Optimized auto-scroll with debounce
   useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
-    }
-  }, [terminalOutput])
+    const timeoutId = setTimeout(() => {
+      if (terminalRef.current) {
+        terminalRef.current.scrollTop = terminalRef.current.scrollHeight
+      }
+    }, 50)
+    
+    return () => clearTimeout(timeoutId)
+  }, [terminalOutput.length]) // Only depend on length
 
   // Focus input when terminal is opened
   useEffect(() => {
@@ -80,15 +84,19 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
     }
   }, [])
 
-  const addOutput = (type: TerminalOutput['type'], content: string) => {
+  const addOutput = useCallback((type: TerminalOutput['type'], content: string) => {
     const newOutput: TerminalOutput = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date(),
       type,
       content
     }
-    setTerminalOutput(prev => [...prev, newOutput])
-  }
+    setTerminalOutput(prev => {
+      // Keep only last 500 lines for performance
+      const newOutput_list = [...prev, newOutput]
+      return newOutput_list.length > 500 ? newOutput_list.slice(-500) : newOutput_list
+    })
+  }, [])
 
   const executeCommand = async (command: string) => {
     if (!command.trim()) return
@@ -307,9 +315,9 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
     }
   }
 
-  const formatTimestamp = (date: Date) => {
+  const formatTimestamp = useCallback((date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  }
+  }, [])
 
   return (
     <div className="h-full flex flex-col bg-card border-t border-border">
@@ -393,7 +401,7 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
             {/* Enhanced Terminal Output */}
             <ScrollArea ref={terminalRef} className="flex-1 p-4 bg-background">
               <div className="font-mono text-sm space-y-1">
-                {terminalOutput.map((output) => (
+                {terminalOutput.slice(-200).map((output) => ( // Only render last 200 lines for performance
                   <div key={output.id} className="flex hover:bg-muted/50 rounded px-2 py-1 -mx-2 group">
                     <span className="text-muted-foreground mr-3 text-xs font-medium min-w-[60px] flex-shrink-0">
                       {formatTimestamp(output.timestamp)}

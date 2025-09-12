@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback, memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -72,7 +72,7 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
   const [searchTerm, setSearchTerm] = useState('')
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']))
 
-  // Transform flat file list into folder structure
+  // Optimized folder structure computation
   const folderStructure = useMemo(() => {
     if (!project?.files) return { files: [], folders: [] }
 
@@ -81,16 +81,15 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
       folders: new Map()
     }
 
-    project.files.forEach(file => {
+    // Use for loop for better performance than forEach
+    for (let i = 0; i < project.files.length; i++) {
+      const file = project.files[i]
       const pathParts = file.path.split('/')
-      const fileName = pathParts[pathParts.length - 1]
       const folderPath = pathParts.slice(0, -1).join('/') || '/'
 
       if (folderPath === '/' || folderPath === '') {
-        // Root level file
         structure.files.push(file)
       } else {
-        // File in a folder - create folder structure if needed
         if (!structure.folders.has(folderPath)) {
           structure.folders.set(folderPath, {
             id: folderPath,
@@ -103,7 +102,7 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
         }
         structure.folders.get(folderPath)!.files.push(file)
       }
-    })
+    }
 
     return {
       files: structure.files,
@@ -120,7 +119,7 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
     )
   }, [folderStructure.files, searchTerm])
 
-  const toggleFolder = (folderPath: string) => {
+  const toggleFolder = useCallback((folderPath: string) => {
     setExpandedFolders(prev => {
       const newSet = new Set(prev)
       if (newSet.has(folderPath)) {
@@ -130,9 +129,9 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
       }
       return newSet
     })
-  }
+  }, [])
 
-  const getFileIcon = (fileName: string, language: string) => {
+  const getFileIcon = useCallback((fileName: string, language: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase()
     
     switch (extension) {
@@ -166,7 +165,7 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
       default:
         return <File className="h-4 w-4 file-icon-default" />
     }
-  }
+  }, [])
 
   const createNewFile = () => {
     // In a real implementation, this would open a dialog to create a new file

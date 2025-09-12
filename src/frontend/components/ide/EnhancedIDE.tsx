@@ -48,11 +48,12 @@ import {
   X
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import Editor from '@monaco-editor/react'
+import { OptimizedMonacoEditor } from './LazyComponents'
 import { ProjectExplorer } from './ProjectExplorer'
 import { AIAssistantPanel } from './AIAssistantPanel'
 import { TerminalPanel } from './TerminalPanel'
 import { useAICodeStore } from '@/lib/stores/ai-code-store'
+import { optimizeForPerformance, PerformanceMonitor } from './PerformanceOptimizer'
 
 // Memoized components for performance
 const MemoizedProjectExplorer = memo(ProjectExplorer)
@@ -110,23 +111,40 @@ export function EnhancedIDE({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   
-  // Handle responsive design
+  // Performance optimizations on mount
   useEffect(() => {
+    optimizeForPerformance()
+  }, [])
+
+  // Handle responsive design - optimized with debounce
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+    
     const checkScreenSize = () => {
-      const mobile = window.innerWidth < 768
-      setIsMobile(mobile)
-      
-      // Auto-hide panels on mobile
-      if (mobile) {
-        setShowLeftPanel(false)
-        setShowAIPanel(false)
-      }
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        const mobile = window.innerWidth < 768
+        setIsMobile(prevMobile => {
+          if (prevMobile !== mobile) {
+            // Auto-hide panels on mobile
+            if (mobile) {
+              setShowLeftPanel(false)
+              setShowAIPanel(false)
+            }
+            return mobile
+          }
+          return prevMobile
+        })
+      }, 100) // Debounce resize events
     }
     
     checkScreenSize()
-    window.addEventListener('resize', checkScreenSize)
+    window.addEventListener('resize', checkScreenSize, { passive: true })
     
-    return () => window.removeEventListener('resize', checkScreenSize)
+    return () => {
+      window.removeEventListener('resize', checkScreenSize)
+      clearTimeout(timeoutId)
+    }
   }, [])
   
   const editorRef = useRef<any>(null)
@@ -195,22 +213,14 @@ export function EnhancedIDE({
     }
   }
 
-  // Memoize expensive computations
-  const editorOptions = useMemo(() => ({
-    minimap: { 
-      enabled: !isMobile,
-      size: 'proportional' as const,
-      maxColumn: 120,
-      renderCharacters: true,
-      showSlider: 'always' as const
-    },
-    fontSize: isMobile ? 12 : 14,
+  // Optimized editor options - split into static and dynamic parts
+  const staticEditorOptions = useMemo(() => ({
     lineNumbers: 'on' as const,
     lineNumbersMinChars: 4,
     glyphMargin: true,
     folding: true,
     foldingStrategy: 'indentation' as const,
-    showFoldingControls: 'always' as const,
+    showFoldingControls: 'mouseover' as const, // Changed from 'always' for performance
     unfoldOnClickAfterEndOfLine: true,
     roundedSelection: false,
     scrollBeyondLastLine: false,
@@ -223,35 +233,24 @@ export function EnhancedIDE({
     autoClosingBrackets: 'always' as const,
     autoClosingQuotes: 'always' as const,
     autoSurround: 'languageDefined' as const,
-    suggestOnTriggerCharacters: currentProject?.settings.suggestions ?? true,
-    quickSuggestions: currentProject?.settings.autoComplete ?? true,
     tabCompletion: 'on' as const,
-    wordBasedSuggestions: true,
+    wordBasedSuggestions: false, // Disabled for performance
     parameterHints: { enabled: true },
     autoIndent: 'advanced' as const,
-    formatOnType: true,
-    formatOnPaste: true,
+    formatOnType: false, // Disabled for performance
+    formatOnPaste: false, // Disabled for performance
     dragAndDrop: true,
     links: true,
-    colorDecorators: true,
-    codeLens: true,
+    colorDecorators: false, // Disabled for performance
+    codeLens: false, // Disabled for performance
     contextmenu: true,
     mouseWheelScrollSensitivity: 1,
     fastScrollSensitivity: 5,
-    scrollbar: {
-      useShadows: true,
-      verticalHasArrows: false,
-      horizontalHasArrows: false,
-      vertical: 'visible' as const,
-      horizontal: 'visible' as const,
-      verticalScrollbarSize: isMobile ? 8 : 10,
-      horizontalScrollbarSize: isMobile ? 8 : 10
-    },
     overviewRulerBorder: false,
-    overviewRulerLanes: 3,
+    overviewRulerLanes: 2, // Reduced for performance
     hideCursorInOverviewRuler: false,
-    renderLineHighlight: 'all' as const,
-    renderWhitespace: 'selection' as const,
+    renderLineHighlight: 'line' as const, // Changed from 'all' for performance
+    renderWhitespace: 'none' as const, // Changed from 'selection' for performance
     renderControlCharacters: false,
     renderIndentGuides: true,
     highlightActiveIndentGuide: true,
@@ -262,8 +261,49 @@ export function EnhancedIDE({
       globalFindClipboard: false,
       addExtraSpaceOnTop: true
     }
-  }), [isMobile, currentProject?.settings])
+  }), [])
+
+  const dynamicEditorOptions = useMemo(() => ({
+    minimap: { 
+      enabled: !isMobile,
+      size: 'proportional' as const,
+      maxColumn: 120,
+      renderCharacters: !isMobile, // Disable on mobile for performance
+      showSlider: 'mouseover' as const // Changed from 'always' for performance
+    },
+    fontSize: isMobile ? 12 : 14,
+    suggestOnTriggerCharacters: currentProject?.settings.suggestions ?? true,
+    quickSuggestions: currentProject?.settings.autoComplete ?? {
+      other: true,
+      comments: false,
+      strings: false
+    },
+    scrollbar: {
+      useShadows: !isMobile, // Disable shadows on mobile
+      verticalHasArrows: false,
+      horizontalHasArrows: false,
+      vertical: 'visible' as const,
+      horizontal: 'visible' as const,
+      verticalScrollbarSize: isMobile ? 6 : 8, // Smaller scrollbars
+      horizontalScrollbarSize: isMobile ? 6 : 8
+    }
+  }), [isMobile, currentProject?.settings.suggestions, currentProject?.settings.autoComplete])
+
+  const editorOptions = useMemo(() => ({
+    ...staticEditorOptions,
+    ...dynamicEditorOptions
+  }), [staticEditorOptions, dynamicEditorOptions])
   
+  // Optimized callback functions
+  const handleFileSelect = useCallback((file: File) => {
+    openFile(file)
+    if (isMobile) setShowLeftPanel(false)
+  }, [isMobile])
+
+  const handleCloseTerminal = useCallback(() => {
+    setShowTerminal(false)
+  }, [])
+
   const switchMode = useCallback((newMode: EditorMode) => {
     // Preserve current code and context
     const currentContent = editorRef.current?.getValue() || ''
@@ -319,17 +359,17 @@ export function EnhancedIDE({
     )
   }
 
-  const handleEditorChange = (value: string | undefined) => {
-    if (activeFile && value !== undefined) {
+  const handleEditorChange = useCallback((value: string | undefined) => {
+    if (activeFile && value !== undefined && value !== activeFile.content) {
       const updatedFile = {
         ...activeFile,
         content: value,
-        modified: activeFile.content !== value
+        modified: true
       }
       setActiveFile(updatedFile)
       updateFileContent(updatedFile)
     }
-  }
+  }, [activeFile])
 
   const openFile = (file: File) => {
     setActiveFile(file)
@@ -500,7 +540,9 @@ export function EnhancedIDE({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
+    <>
+      <PerformanceMonitor />
+      <div className="h-screen flex flex-col bg-background text-foreground gpu-accelerated">
       {/* Enhanced Responsive Toolbar */}
       <div className="ide-toolbar">
         <div className={`flex items-center ${isMobile ? 'justify-between w-full' : 'space-x-6'}`}>
@@ -732,10 +774,7 @@ export function EnhancedIDE({
           }}>
             <MemoizedProjectExplorer 
               project={currentProject}
-              onFileSelect={useCallback((file) => {
-                openFile(file)
-                if (isMobile) setShowLeftPanel(false)
-              }, [isMobile])}
+              onFileSelect={handleFileSelect}
               activeFile={activeFile}
             />
           </div>
@@ -748,28 +787,28 @@ export function EnhancedIDE({
               <div className="h-full bg-background relative">
                 {activeFile ? (
                   <div className="h-full relative">
-                    <Editor
+                    <OptimizedMonacoEditor
                       height="100%"
                       language={activeFile.language}
                       value={activeFile.content}
                       onChange={handleEditorChange}
                       theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                        onMount={(editor) => {
+                      onMount={useCallback((editor) => {
                         editorRef.current = editor
                         
-                        // Enhanced editor configuration
+                        // Optimized editor configuration
                         editor.updateOptions({
                           fontFamily: 'JetBrains Mono, Fira Code, Cascadia Code, SF Mono, Consolas, Liberation Mono, Menlo, monospace',
                           fontSize: isMobile ? 12 : 14,
                           lineHeight: 1.6,
                           letterSpacing: 0.5,
                           fontLigatures: true,
-                          cursorBlinking: 'smooth',
-                          cursorSmoothCaretAnimation: !isMobile,
-                          smoothScrolling: !isMobile,
-                          mouseWheelZoom: !isMobile
+                          cursorBlinking: 'phase',
+                          cursorSmoothCaretAnimation: false, // Disabled for performance
+                          smoothScrolling: false, // Disabled for performance
+                          mouseWheelZoom: false // Disabled for performance
                         })
-                      }}
+                      }, [isMobile])}
                       options={editorOptions}
                     />
                     
@@ -832,7 +871,7 @@ export function EnhancedIDE({
             
             {showTerminal && (
               <div className="h-1/4 min-h-[200px] border-t border-border">
-                <MemoizedTerminalPanel onClose={useCallback(() => setShowTerminal(false), [])} />
+                <MemoizedTerminalPanel onClose={handleCloseTerminal} />
               </div>
             )}
           </div>
@@ -872,5 +911,6 @@ export function EnhancedIDE({
         )}
       </div>
     </div>
+    </>
   )
 }
