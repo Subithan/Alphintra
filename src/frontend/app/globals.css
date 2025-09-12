@@ -145,15 +145,15 @@
 @layer components {
   /* IDE Layout Components */
   .ide-toolbar {
-    @apply bg-ide-surface border-b border-ide-border px-4 py-2 flex items-center justify-between;
+    @apply bg-card border-b border-border px-4 py-2 flex items-center justify-between;
   }
   
   .ide-sidebar {
-    @apply bg-ide-surface border-r border-ide-border flex flex-col h-full;
+    @apply bg-card border-r border-border flex flex-col h-full;
   }
   
   .ide-panel {
-    @apply bg-ide-background border border-ide-border rounded-lg shadow-sm;
+    @apply bg-background border border-border rounded-lg shadow-sm;
   }
   
   .ide-tab {
@@ -161,43 +161,43 @@
   }
   
   .ide-tab-active {
-    @apply bg-ide-background border-ide-accent text-ide-accent;
+    @apply bg-background border-primary text-primary;
   }
   
   .ide-tab-inactive {
-    @apply bg-ide-surface border-transparent text-ide-text-muted hover:text-ide-text hover:bg-ide-surface-hover;
+    @apply bg-muted border-transparent text-muted-foreground hover:text-foreground hover:bg-accent;
   }
   
   .ide-button {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ide-accent focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
   }
   
   .ide-button-primary {
-    @apply ide-button bg-ide-accent text-ide-background hover:bg-ide-accent-hover;
+    @apply ide-button bg-primary text-primary-foreground hover:bg-primary/90;
   }
   
   .ide-button-secondary {
-    @apply ide-button bg-ide-surface text-ide-text hover:bg-ide-surface-hover border border-ide-border;
+    @apply ide-button bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border;
   }
   
   .ide-button-ghost {
-    @apply ide-button hover:bg-ide-surface-hover hover:text-ide-text;
+    @apply ide-button hover:bg-accent hover:text-accent-foreground;
   }
   
   .ide-input {
-    @apply flex h-9 w-full rounded-md border border-ide-border bg-ide-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-ide-text-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ide-accent disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
   }
   
   .ide-tree-item {
-    @apply flex items-center gap-2 px-2 py-1 text-sm rounded-sm cursor-pointer transition-colors hover:bg-ide-surface-hover;
+    @apply flex items-center gap-2 px-2 py-1 text-sm rounded-sm cursor-pointer transition-colors hover:bg-accent;
   }
   
   .ide-tree-item-active {
-    @apply bg-ide-accent/10 text-ide-accent border-r-2 border-ide-accent;
+    @apply bg-primary/10 text-primary border-r-2 border-primary;
   }
   
   .ide-status-bar {
-    @apply bg-ide-surface border-t border-ide-border px-4 py-1 text-xs text-ide-text-muted flex items-center justify-between;
+    @apply bg-muted border-t border-border px-4 py-1 text-xs text-muted-foreground flex items-center justify-between;
   }
   
   /* File type icons */
@@ -332,23 +332,23 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-ide-surface;
+  @apply bg-muted;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-ide-accent/30 rounded-full transition-colors;
+  @apply bg-primary/30 rounded-full transition-colors;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-ide-accent/50;
+  @apply bg-primary/50;
 }
 
 ::-webkit-scrollbar-thumb:active {
-  @apply bg-ide-accent/70;
+  @apply bg-primary/70;
 }
 
 ::-webkit-scrollbar-corner {
-  @apply bg-ide-surface;
+  @apply bg-muted;
 }
 
 /* Thin scrollbars for panels */
@@ -361,21 +361,21 @@
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--ide-accent) / 0.3) hsl(var(--ide-surface));
+  scrollbar-color: hsl(var(--primary) / 0.3) hsl(var(--muted));
 }
 
 /* Focus styles */
 :focus-visible {
-  @apply outline-none ring-2 ring-ide-accent ring-offset-2 ring-offset-ide-background;
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
 }
 
 /* Selection styles */
 ::selection {
-  @apply bg-ide-accent/20 text-ide-text;
+  @apply bg-primary/20 text-foreground;
 }
 
 ::-moz-selection {
-  @apply bg-ide-accent/20 text-ide-text;
+  @apply bg-primary/20 text-foreground;
 }
 
 /* Enhanced Monaco Editor Styles */
@@ -457,7 +457,7 @@
 }
 
 .loading-spinner {
-  @apply animate-spin rounded-full border-2 border-ide-surface border-t-ide-accent;
+  @apply animate-spin rounded-full border-2 border-muted border-t-primary;
 }
 
 .pulse-glow {
@@ -483,9 +483,9 @@
 .shimmer {
   background: linear-gradient(
     90deg,
-    hsl(var(--ide-surface)) 0%,
-    hsl(var(--ide-surface-hover)) 50%,
-    hsl(var(--ide-surface)) 100%
+    hsl(var(--muted)) 0%,
+    hsl(var(--accent)) 50%,
+    hsl(var(--muted)) 100%
   );
   background-size: 200px 100%;
   animation: shimmer 1.5s infinite;
@@ -510,7 +510,7 @@
   
   .pulse-glow {
     animation: none;
-    box-shadow: 0 0 5px hsl(var(--ide-accent) / 0.5);
+    box-shadow: 0 0 5px hsl(var(--primary) / 0.5);
   }
 }
 

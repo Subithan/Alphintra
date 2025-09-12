@@ -82,6 +82,25 @@ const config: Config = {
           border: 'hsl(0, 0%, 25%)',
           accent: 'hsl(45, 100%, 60%)',
         },
+        // IDE-specific colors
+        'ide-background': 'hsl(var(--ide-background))',
+        'ide-surface': {
+          DEFAULT: 'hsl(var(--ide-surface))',
+          hover: 'hsl(var(--ide-surface-hover))',
+        },
+        'ide-border': 'hsl(var(--ide-border))',
+        'ide-text': {
+          DEFAULT: 'hsl(var(--ide-text))',
+          muted: 'hsl(var(--ide-text-muted))',
+        },
+        'ide-accent': {
+          DEFAULT: 'hsl(var(--ide-accent))',
+          hover: 'hsl(var(--ide-accent-hover))',
+        },
+        'ide-success': 'hsl(var(--ide-success))',
+        'ide-warning': 'hsl(var(--ide-warning))',
+        'ide-error': 'hsl(var(--ide-error))',
+        'ide-info': 'hsl(var(--ide-info))',
       },
       borderRadius: {
         lg: 'var(--radius)',

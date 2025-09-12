@@ -474,25 +474,25 @@ export function EnhancedIDE({
   // Loading state with skeleton
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-ide-background">
+      <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center space-y-4 fade-in">
-          <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
-            <RefreshCw className="h-8 w-8 animate-spin text-ide-accent" />
+          <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
           </div>
           <div>
-            <h3 className={`font-medium text-ide-text mb-2 ${
+            <h3 className={`font-medium text-foreground mb-2 ${
               isMobile ? 'text-base' : 'text-lg'
             }`}>
               Loading Strategy Hub IDE
             </h3>
-            <p className={`text-ide-text-muted ${
+            <p className={`text-muted-foreground ${
               isMobile ? 'text-xs' : 'text-sm'
             }`}>
               Preparing your development environment...
             </p>
           </div>
-          <div className="w-48 h-2 bg-ide-surface rounded-full overflow-hidden mx-auto">
-            <div className="h-full bg-ide-accent rounded-full shimmer" />
+          <div className="w-48 h-2 bg-muted rounded-full overflow-hidden mx-auto">
+            <div className="h-full bg-primary rounded-full shimmer" />
           </div>
         </div>
       </div>
@@ -500,7 +500,7 @@ export function EnhancedIDE({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-ide-background text-ide-text">
+    <div className="h-screen flex flex-col bg-background text-foreground">
       {/* Enhanced Responsive Toolbar */}
       <div className="ide-toolbar">
         <div className={`flex items-center ${isMobile ? 'justify-between w-full' : 'space-x-6'}`}>
@@ -508,7 +508,7 @@ export function EnhancedIDE({
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               <Folder className="h-5 w-5 text-ide-accent" />
-              <h1 className={`font-semibold text-ide-text ${
+              <h1 className={`font-semibold text-foreground ${
                 isMobile ? 'text-base' : 'text-lg'
               }`}>
                 {isMobile 
@@ -518,7 +518,7 @@ export function EnhancedIDE({
               </h1>
             </div>
             {!isMobile && (
-              <Badge variant="outline" className="text-xs bg-ide-accent/10 text-ide-accent border-ide-accent/20">
+              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
                 v2.0.0
               </Badge>
             )}
@@ -548,9 +548,9 @@ export function EnhancedIDE({
                     <ChevronDown className="h-3 w-3 ml-1" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-ide-surface border-ide-border">
+                <DialogContent className="bg-card border-border">
                   <DialogHeader>
-                    <DialogTitle className="text-ide-text">Switch Editor Mode</DialogTitle>
+                    <DialogTitle className="text-foreground">Switch Editor Mode</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-3">
                     {(['traditional', 'ai-assisted', 'ai-first'] as EditorMode[]).map((mode) => (
@@ -634,7 +634,7 @@ export function EnhancedIDE({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowLeftPanel(!showLeftPanel)}
-                className={`ide-button-ghost ${showLeftPanel ? 'text-ide-accent' : ''}`}
+                className={`ide-button-ghost ${showLeftPanel ? 'text-primary' : ''}`}
                 title={showLeftPanel ? 'Hide Explorer' : 'Show Explorer'}
               >
                 {showLeftPanel ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
@@ -644,7 +644,7 @@ export function EnhancedIDE({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAIPanel(!showAIPanel)}
-                className={`ide-button-ghost ${showAIPanel ? 'text-ide-accent' : ''}`}
+                className={`ide-button-ghost ${showAIPanel ? 'text-primary' : ''}`}
                 title={showAIPanel ? 'Hide AI Assistant' : 'Show AI Assistant'}
               >
                 {showAIPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
@@ -654,7 +654,7 @@ export function EnhancedIDE({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowTerminal(!showTerminal)}
-                className={`ide-button-ghost ${showTerminal ? 'text-ide-accent' : ''}`}
+                className={`ide-button-ghost ${showTerminal ? 'text-primary' : ''}`}
                 title={showTerminal ? 'Hide Terminal' : 'Show Terminal'}
               >
                 <Terminal className="h-4 w-4" />
@@ -691,7 +691,7 @@ export function EnhancedIDE({
             size="sm"
             onClick={() => setShowAIPanel(!showAIPanel)}
             className={`ide-button-secondary ${isMobile ? 'px-2' : ''} ${
-              showAIPanel ? 'bg-ide-accent/10 text-ide-accent border-ide-accent/20' : ''
+              showAIPanel ? 'bg-primary/10 text-primary border-primary/20' : ''
             }`}
             title="Toggle AI Assistant"
           >
@@ -724,7 +724,7 @@ export function EnhancedIDE({
             isMobile 
               ? 'fixed left-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 ease-in-out'
               : 'relative'
-          } ide-sidebar border-r border-ide-border`}
+          } ide-sidebar border-r border-border`}
           style={{
             width: isMobile ? '320px' : '280px',
             minWidth: isMobile ? '320px' : '240px',
@@ -745,7 +745,7 @@ export function EnhancedIDE({
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex flex-col">
             <div className={`flex-1 ${showTerminal ? 'h-3/4' : 'h-full'}`}>
-              <div className="h-full bg-ide-background relative">
+              <div className="h-full bg-background relative">
                 {activeFile ? (
                   <div className="h-full relative">
                     <Editor
@@ -777,7 +777,7 @@ export function EnhancedIDE({
                     <div className="ide-status-bar">
                       <div className="flex items-center space-x-4">
                         <span className="flex items-center space-x-1">
-                          <span className="text-ide-accent">●</span>
+                          <span className="text-primary">●</span>
                           <span>{activeFile.language.toUpperCase()}</span>
                         </span>
                         <span>Line {1}, Col {1}</span>
@@ -794,16 +794,16 @@ export function EnhancedIDE({
                 ) : (
                   <div className="flex items-center justify-center h-full text-ide-text-muted">
                     <div className="text-center space-y-4 p-8">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
-                        <Code className="h-8 w-8 text-ide-accent" />
+                      <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                        <Code className="h-8 w-8 text-primary" />
                       </div>
                       <div>
-                        <h3 className={`font-medium text-ide-text mb-2 ${
+                        <h3 className={`font-medium text-foreground mb-2 ${
                           isMobile ? 'text-base' : 'text-lg'
                         }`}>
                           Welcome to Strategy Hub IDE
                         </h3>
-                        <p className={`text-ide-text-muted max-w-md ${
+                        <p className={`text-muted-foreground max-w-md ${
                           isMobile ? 'text-xs' : 'text-sm'
                         }`}>
                           {isMobile 
@@ -831,7 +831,7 @@ export function EnhancedIDE({
             </div>
             
             {showTerminal && (
-              <div className="h-1/4 min-h-[200px] border-t border-ide-border">
+              <div className="h-1/4 min-h-[200px] border-t border-border">
                 <MemoizedTerminalPanel onClose={useCallback(() => setShowTerminal(false), [])} />
               </div>
             )}
@@ -852,7 +852,7 @@ export function EnhancedIDE({
             isMobile 
               ? 'fixed right-0 top-0 h-full w-80 z-50 transform transition-transform duration-300 ease-in-out'
               : 'relative'
-          } ide-sidebar border-l border-ide-border`}
+          } ide-sidebar border-l border-border`}
           style={{
             width: isMobile ? '320px' : '320px',
             minWidth: isMobile ? '320px' : '280px',

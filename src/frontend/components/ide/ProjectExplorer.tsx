@@ -183,9 +183,9 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
       {getFileIcon(file.name, file.language)}
       <span className="text-sm flex-1 truncate font-medium">{file.name}</span>
       <div className="flex items-center space-x-1">
-        {file.modified && (
-          <div className="w-2 h-2 bg-ide-warning rounded-full flex-shrink-0" />
-        )}
+                {file.modified && (
+                  <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" />
+                )}
         <Button variant="ghost" size="sm" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <MoreHorizontal className="h-3 w-3" />
         </Button>
@@ -203,14 +203,14 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
           onClick={() => toggleFolder(folder.path)}
         >
           {isExpanded ? (
-            <ChevronDown className="h-3 w-3 text-ide-text-muted" />
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-3 w-3 text-ide-text-muted" />
+            <ChevronRight className="h-3 w-3 text-muted-foreground" />
           )}
           {isExpanded ? (
-            <FolderOpen className="h-4 w-4 text-ide-accent" />
+            <FolderOpen className="h-4 w-4 text-primary" />
           ) : (
-            <Folder className="h-4 w-4 text-ide-accent" />
+            <Folder className="h-4 w-4 text-primary" />
           )}
           <span className="text-sm flex-1 font-medium">{folder.name}</span>
           <div className="flex items-center space-x-1">
@@ -223,7 +223,7 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
           </div>
         </div>
         {isExpanded && (
-          <div className="ml-4 border-l border-ide-border pl-2 space-y-0.5">
+          <div className="ml-4 border-l border-border pl-2 space-y-0.5">
             {folder.folders.map(subFolder => (
               <ProjectFolderItem key={subFolder.id} folder={subFolder} />
             ))}
@@ -238,14 +238,14 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
 
   if (!project) {
     return (
-      <div className="h-full flex items-center justify-center bg-ide-surface">
+      <div className="h-full flex items-center justify-center bg-card">
         <div className="text-center space-y-4 p-8">
-          <div className="mx-auto w-16 h-16 rounded-full bg-ide-background flex items-center justify-center">
-            <Folder className="h-8 w-8 text-ide-accent" />
+          <div className="mx-auto w-16 h-16 rounded-full bg-background flex items-center justify-center">
+            <Folder className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-medium text-ide-text mb-2">No Project Loaded</h3>
-            <p className="text-sm text-ide-text-muted max-w-xs">
+            <h3 className="text-lg font-medium text-foreground mb-2">No Project Loaded</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
               Open an existing project or create a new one to start developing your trading strategies.
             </p>
           </div>
@@ -265,13 +265,13 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
   }
 
   return (
-    <div className="h-full flex flex-col bg-ide-surface">
+    <div className="h-full flex flex-col bg-card">
       {/* Enhanced Header */}
-      <div className="p-4 border-b border-ide-border">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
-            <Folder className="h-5 w-5 text-ide-accent" />
-            <span className="font-semibold text-ide-text">{project.name}</span>
+            <Folder className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-foreground">{project.name}</span>
           </div>
           <div className="flex items-center space-x-1">
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0 ide-button-ghost" title="New File">
@@ -291,7 +291,7 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
 
         {/* Enhanced Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-3 w-3 text-ide-text-muted" />
+          <Search className="absolute left-3 top-2.5 h-3 w-3 text-muted-foreground" />
           <Input
             placeholder="Search files and folders..."
             value={searchTerm}
@@ -324,11 +324,11 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
                 <ProjectFileItem key={file.id} file={file} />
               ))}
               {filteredFiles.length === 0 && (
-                <div className="text-center py-8 text-ide-text-muted">
-                  <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No files found</p>
-                  <p className="text-xs">Try adjusting your search terms</p>
-                </div>
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No files found</p>
+                <p className="text-xs">Try adjusting your search terms</p>
+              </div>
               )}
             </div>
           ) : (
@@ -346,7 +346,7 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
               
               {/* Empty state */}
               {folderStructure.files.length === 0 && folderStructure.folders.length === 0 && (
-                <div className="text-center py-8 text-ide-text-muted">
+                <div className="text-center py-8 text-muted-foreground">
                   <Folder className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No files in project</p>
                   <p className="text-xs">Create your first file to get started</p>
@@ -358,20 +358,20 @@ export function ProjectExplorer({ project, onFileSelect, activeFile }: ProjectEx
       </ScrollArea>
 
       {/* Enhanced Project Info */}
-      <div className="p-4 border-t border-ide-border bg-ide-background">
+      <div className="p-4 border-t border-border bg-background">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-ide-text-muted">Files:</span>
+            <span className="text-muted-foreground">Files:</span>
             <Badge variant="outline" className="text-xs h-5">{project.files.length}</Badge>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-ide-text-muted">Size:</span>
-            <span className="text-ide-text-muted">
+            <span className="text-muted-foreground">Size:</span>
+            <span className="text-muted-foreground">
               {(project.files.reduce((acc, file) => acc + file.content.length, 0) / 1024).toFixed(1)} KB
             </span>
           </div>
           {project.description && (
-            <p className="text-xs text-ide-text-muted italic pt-2 border-t border-ide-border">
+            <p className="text-xs text-muted-foreground italic pt-2 border-t border-border">
               {project.description}
             </p>
           )}

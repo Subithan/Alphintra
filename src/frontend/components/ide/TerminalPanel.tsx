@@ -295,15 +295,15 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
   const getOutputColor = (type: TerminalOutput['type']) => {
     switch (type) {
       case 'input':
-        return 'text-ide-info font-medium'
+        return 'text-blue-500 font-medium'
       case 'output':
-        return 'text-ide-text'
+        return 'text-foreground'
       case 'error':
-        return 'text-ide-error font-medium'
+        return 'text-destructive font-medium'
       case 'info':
-        return 'text-ide-warning font-medium'
+        return 'text-orange-500 font-medium'
       default:
-        return 'text-ide-text'
+        return 'text-foreground'
     }
   }
 
@@ -312,29 +312,29 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-ide-surface border-t border-ide-border">
+    <div className="h-full flex flex-col bg-card border-t border-border">
       {/* Enhanced Header */}
-      <div className="flex items-center justify-between p-3 border-b border-ide-border bg-ide-background">
+      <div className="flex items-center justify-between p-3 border-b border-border bg-background">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 rounded bg-ide-accent/10 flex items-center justify-center">
-              <Terminal className="h-3 w-3 text-ide-accent" />
+            <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center">
+              <Terminal className="h-3 w-3 text-primary" />
             </div>
-            <h3 className="font-semibold text-ide-text">Terminal</h3>
+            <h3 className="font-semibold text-foreground">Terminal</h3>
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="h-8 bg-ide-surface">
+            <TabsList className="h-8 bg-muted">
               <TabsTrigger 
                 value="terminal" 
-                className="text-xs data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background"
+                className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <Terminal className="h-3 w-3 mr-1" />
                 <span className="hidden sm:inline">Terminal</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="tests" 
-                className="text-xs data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background"
+                className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <CheckCircle className="h-3 w-3 mr-1" />
                 <span className="hidden sm:inline">Tests</span>
@@ -346,7 +346,7 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
               </TabsTrigger>
               <TabsTrigger 
                 value="logs" 
-                className="text-xs data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background"
+                className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
                 <FileText className="h-3 w-3 mr-1" />
                 <span className="hidden sm:inline">Logs</span>
@@ -391,11 +391,11 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
         <TabsContent value="terminal" className="h-full m-0 p-0">
           <div className="h-full flex flex-col">
             {/* Enhanced Terminal Output */}
-            <ScrollArea ref={terminalRef} className="flex-1 p-4 bg-ide-background">
+            <ScrollArea ref={terminalRef} className="flex-1 p-4 bg-background">
               <div className="font-mono text-sm space-y-1">
                 {terminalOutput.map((output) => (
-                  <div key={output.id} className="flex hover:bg-ide-surface/50 rounded px-2 py-1 -mx-2 group">
-                    <span className="text-ide-text-muted mr-3 text-xs font-medium min-w-[60px] flex-shrink-0">
+                  <div key={output.id} className="flex hover:bg-muted/50 rounded px-2 py-1 -mx-2 group">
+                    <span className="text-muted-foreground mr-3 text-xs font-medium min-w-[60px] flex-shrink-0">
                       {formatTimestamp(output.timestamp)}
                     </span>
                     <span className={`${getOutputColor(output.type)} flex-1`}>
@@ -413,11 +413,11 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
                   </div>
                 ))}
                 {isRunning && (
-                  <div className="flex items-center space-x-3 px-2 py-1 text-ide-warning">
+                  <div className="flex items-center space-x-3 px-2 py-1 text-orange-500">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-ide-warning rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-ide-warning rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-ide-warning rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                     <span className="text-sm">Executing command...</span>
                   </div>
@@ -426,10 +426,10 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
             </ScrollArea>
 
             {/* Enhanced Command Input */}
-            <div className="border-t border-ide-border p-4 bg-ide-surface">
+            <div className="border-t border-border p-4 bg-muted">
               <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 text-ide-accent">
-                  <div className="w-2 h-2 bg-ide-accent rounded-full animate-pulse" />
+                <div className="flex items-center space-x-2 text-primary">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                   <span className="font-mono font-bold">$</span>
                 </div>
                 <Input
@@ -439,7 +439,7 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
                   onKeyDown={handleKeyDown}
                   placeholder="Type a command and press Enter..."
                   disabled={isRunning}
-                  className="ide-input font-mono bg-ide-background border-ide-border focus-visible:ring-ide-accent"
+                  className="ide-input font-mono bg-background border-border focus-visible:ring-ring"
                 />
                 <div className="flex items-center space-x-1">
                   <Button
@@ -465,7 +465,7 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
               
               {/* Command History Indicator */}
               {commandHistory.length > 0 && (
-                <div className="mt-2 text-xs text-ide-text-muted">
+                <div className="mt-2 text-xs text-muted-foreground">
                   Use ↑/↓ arrows to navigate command history ({commandHistory.length} commands)
                 </div>
               )}
@@ -476,25 +476,25 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
         <TabsContent value="tests" className="h-full m-0 p-0">
           <div className="h-full flex flex-col">
             {testResults.length > 0 && (
-              <div className="p-4 border-b border-ide-border bg-ide-background">
+              <div className="p-4 border-b border-border bg-background">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-ide-success">
+                    <div className="text-2xl font-bold text-green-600">
                       {testResults.filter(t => t.status === 'passed').length}
                     </div>
-                    <div className="text-xs text-ide-text-muted">Passed</div>
+                    <div className="text-xs text-muted-foreground">Passed</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-ide-error">
+                    <div className="text-2xl font-bold text-destructive">
                       {testResults.filter(t => t.status === 'failed').length}
                     </div>
-                    <div className="text-xs text-ide-text-muted">Failed</div>
+                    <div className="text-xs text-muted-foreground">Failed</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-ide-warning">
+                    <div className="text-2xl font-bold text-orange-500">
                       {testResults.filter(t => t.status === 'skipped').length}
                     </div>
-                    <div className="text-xs text-ide-text-muted">Skipped</div>
+                    <div className="text-xs text-muted-foreground">Skipped</div>
                   </div>
                 </div>
               </div>
@@ -515,37 +515,37 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            test.status === 'passed' ? 'bg-ide-success/10' :
-                            test.status === 'failed' ? 'bg-ide-error/10' :
-                            'bg-ide-warning/10'
+                            test.status === 'passed' ? 'bg-green-500/10' :
+                            test.status === 'failed' ? 'bg-destructive/10' :
+                            'bg-orange-500/10'
                           }`}>
                             {test.status === 'passed' && (
-                              <CheckCircle className="h-3 w-3 text-ide-success" />
+                              <CheckCircle className="h-3 w-3 text-green-600" />
                             )}
                             {test.status === 'failed' && (
-                              <AlertCircle className="h-3 w-3 text-ide-error" />
+                              <AlertCircle className="h-3 w-3 text-destructive" />
                             )}
                             {test.status === 'skipped' && (
-                              <Info className="h-3 w-3 text-ide-warning" />
+                              <Info className="h-3 w-3 text-orange-500" />
                             )}
                           </div>
                           <div>
-                            <span className="font-mono text-sm text-ide-text font-medium">{test.name}</span>
+                            <span className="font-mono text-sm text-foreground font-medium">{test.name}</span>
                             {test.error && (
-                              <p className="text-xs text-ide-error mt-1">{test.error}</p>
+                              <p className="text-xs text-destructive mt-1">{test.error}</p>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-ide-text-muted font-mono">
+                          <span className="text-xs text-muted-foreground font-mono">
                             {test.duration.toFixed(2)}s
                           </span>
                           <Badge 
                             variant="outline" 
                             className={`text-xs h-5 ${
-                              test.status === 'passed' ? 'bg-ide-success/10 text-ide-success border-ide-success/20' :
-                              test.status === 'failed' ? 'bg-ide-error/10 text-ide-error border-ide-error/20' :
-                              'bg-ide-warning/10 text-ide-warning border-ide-warning/20'
+                              test.status === 'passed' ? 'bg-green-500/10 text-green-600 border-green-500/20' :
+                              test.status === 'failed' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                              'bg-orange-500/10 text-orange-500 border-orange-500/20'
                             }`}
                           >
                             {test.status.toUpperCase()}
@@ -556,14 +556,14 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-ide-text-muted">
+                <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center space-y-4">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
-                      <TestTube className="h-8 w-8 text-ide-accent" />
+                    <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                      <TestTube className="h-8 w-8 text-primary" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-medium text-ide-text mb-2">No Test Results</h3>
-                      <p className="text-sm text-ide-text-muted max-w-xs">
+                      <h3 className="text-lg font-medium text-foreground mb-2">No Test Results</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
                         Run your test suite to see detailed results and coverage information here.
                       </p>
                     </div>
@@ -587,7 +587,7 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
         <TabsContent value="logs" className="h-full m-0 p-0">
           <div className="h-full flex flex-col">
             {/* Log Controls */}
-            <div className="p-3 border-b border-ide-border bg-ide-background">
+            <div className="p-3 border-b border-border bg-background">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Select defaultValue="all">
@@ -624,14 +624,14 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
               <div className="font-mono text-sm space-y-1">
                 {logs.length > 0 ? (
                   logs.map((log) => (
-                    <div key={log.id} className="flex hover:bg-ide-surface/50 rounded px-2 py-1 -mx-2 group">
-                      <span className="text-ide-text-muted mr-3 text-xs font-medium min-w-[60px] flex-shrink-0">
+                    <div key={log.id} className="flex hover:bg-muted/50 rounded px-2 py-1 -mx-2 group">
+                      <span className="text-muted-foreground mr-3 text-xs font-medium min-w-[60px] flex-shrink-0">
                         {formatTimestamp(log.timestamp)}
                       </span>
                       <div className={`w-2 h-2 rounded-full mr-2 mt-1.5 flex-shrink-0 ${
-                        log.type === 'error' ? 'bg-ide-error' :
-                        log.type === 'info' ? 'bg-ide-info' :
-                        'bg-ide-warning'
+                        log.type === 'error' ? 'bg-destructive' :
+                        log.type === 'info' ? 'bg-blue-500' :
+                        'bg-orange-500'
                       }`} />
                       <span className={`${getOutputColor(log.type)} flex-1`}>
                         {log.content}
@@ -648,14 +648,14 @@ export function TerminalPanel({ onClose }: TerminalPanelProps) {
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center h-full text-ide-text-muted">
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
                     <div className="text-center space-y-4">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-ide-surface flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-ide-accent" />
+                      <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                        <FileText className="h-8 w-8 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-medium text-ide-text mb-2">No Logs Available</h3>
-                        <p className="text-sm text-ide-text-muted max-w-xs">
+                        <h3 className="text-lg font-medium text-foreground mb-2">No Logs Available</h3>
+                        <p className="text-sm text-muted-foreground max-w-xs">
                           Application logs and system messages will appear here when your code runs.
                         </p>
                       </div>

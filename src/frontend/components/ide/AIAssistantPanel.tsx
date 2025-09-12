@@ -267,26 +267,26 @@ export function AIAssistantPanel({
   }
 
   return (
-    <div className="h-full flex flex-col bg-ide-surface">
+    <div className="h-full flex flex-col bg-card">
       {/* Enhanced Header */}
-      <div className="p-4 border-b border-ide-border bg-ide-background">
+      <div className="p-4 border-b border-border bg-background">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full bg-ide-accent/10 flex items-center justify-center">
-              <Bot className="h-4 w-4 text-ide-accent" />
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Bot className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold text-ide-text">AI Assistant</h2>
-              <p className="text-xs text-ide-text-muted">Powered by {provider.toUpperCase()}</p>
+              <h2 className="font-semibold text-foreground">AI Assistant</h2>
+              <p className="text-xs text-muted-foreground">Powered by {provider.toUpperCase()}</p>
             </div>
           </div>
           <div className="flex items-center space-x-1">
             <Badge 
               variant="outline" 
               className={`text-xs h-6 ${
-                mode === 'ai-first' ? 'bg-ide-accent/10 text-ide-accent border-ide-accent/20' :
-                mode === 'ai-assisted' ? 'bg-ide-success/10 text-ide-success border-ide-success/20' :
-                'bg-ide-surface text-ide-text-muted border-ide-border'
+                mode === 'ai-first' ? 'bg-primary/10 text-primary border-primary/20' :
+                mode === 'ai-assisted' ? 'bg-green-500/10 text-green-600 border-green-500/20' :
+                'bg-muted text-muted-foreground border-border'
               }`}
             >
               {mode.replace('-', ' ').toUpperCase()}
@@ -305,17 +305,17 @@ export function AIAssistantPanel({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <div className="px-4 py-2 border-b border-ide-border">
-          <TabsList className="grid w-full grid-cols-3 bg-ide-background">
-            <TabsTrigger value="chat" className="flex items-center space-x-2 data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background">
+        <div className="px-4 py-2 border-b border-border">
+          <TabsList className="grid w-full grid-cols-3 bg-background">
+            <TabsTrigger value="chat" className="flex items-center space-x-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <MessageSquare className="h-3 w-3" />
               <span className="hidden sm:inline">Chat</span>
             </TabsTrigger>
-            <TabsTrigger value="actions" className="flex items-center space-x-2 data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background">
+            <TabsTrigger value="actions" className="flex items-center space-x-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Zap className="h-3 w-3" />
               <span className="hidden sm:inline">Actions</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center space-x-2 data-[state=active]:bg-ide-accent data-[state=active]:text-ide-background">
+            <TabsTrigger value="settings" className="flex items-center space-x-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Settings className="h-3 w-3" />
               <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
@@ -334,18 +334,18 @@ export function AIAssistantPanel({
                   <div
                     className={`max-w-[85%] rounded-2xl p-4 slide-up ${
                       message.type === 'user'
-                        ? 'bg-ide-accent text-ide-background ml-8'
-                        : 'bg-ide-surface text-ide-text border border-ide-border mr-8'
+                        ? 'bg-primary text-primary-foreground ml-8'
+                        : 'bg-muted text-foreground border border-border mr-8'
                     }`}
                   >
                     <div className="flex items-start space-x-3">
                       {message.type === 'assistant' && (
-                        <div className="w-6 h-6 rounded-full bg-ide-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Bot className="h-3 w-3 text-ide-accent" />
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Bot className="h-3 w-3 text-primary" />
                         </div>
                       )}
                       {message.type === 'user' && (
-                        <div className="w-6 h-6 rounded-full bg-ide-background/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="w-6 h-6 rounded-full bg-background/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <User className="h-3 w-3" />
                         </div>
                       )}
@@ -353,7 +353,7 @@ export function AIAssistantPanel({
                         <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                         <div className="flex items-center justify-between mt-3">
                           <span className={`text-xs ${
-                            message.type === 'user' ? 'text-ide-background/70' : 'text-ide-text-muted'
+                            message.type === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
                           }`}>
                             {formatTimestamp(message.timestamp)}
                           </span>
@@ -361,7 +361,7 @@ export function AIAssistantPanel({
                             variant="ghost"
                             size="sm"
                             className={`h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity ${
-                              message.type === 'user' ? 'hover:bg-ide-background/20' : 'hover:bg-ide-surface-hover'
+                              message.type === 'user' ? 'hover:bg-background/20' : 'hover:bg-accent'
                             }`}
                             onClick={() => copyMessage(message.content)}
                             title="Copy message"
@@ -371,7 +371,7 @@ export function AIAssistantPanel({
                         </div>
                         {message.metadata && (
                           <div className="flex flex-wrap items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs h-5 bg-ide-accent/10 text-ide-accent border-ide-accent/20">
+                            <Badge variant="outline" className="text-xs h-5 bg-primary/10 text-primary border-primary/20">
                               {message.metadata.operation}
                             </Badge>
                             {message.metadata.tokensUsed && (
@@ -394,18 +394,18 @@ export function AIAssistantPanel({
               
               {isGenerating && (
                 <div className="flex justify-start">
-                  <div className="bg-ide-surface text-ide-text border border-ide-border rounded-2xl p-4 mr-8">
+                  <div className="bg-muted text-foreground border border-border rounded-2xl p-4 mr-8">
                     <div className="flex items-center space-x-3">
-                      <div className="w-6 h-6 rounded-full bg-ide-accent/10 flex items-center justify-center">
-                        <Bot className="h-3 w-3 text-ide-accent" />
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Bot className="h-3 w-3 text-primary" />
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-ide-accent rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 bg-ide-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 bg-ide-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                        <span className="text-sm text-ide-text-muted">AI is thinking...</span>
+                        <span className="text-sm text-muted-foreground">AI is thinking...</span>
                       </div>
                     </div>
                   </div>
@@ -415,7 +415,7 @@ export function AIAssistantPanel({
           </ScrollArea>
 
           {/* Enhanced Chat Input */}
-          <div className="p-4 border-t border-ide-border bg-ide-background">
+          <div className="p-4 border-t border-border bg-background">
             <div className="space-y-3">
               <div className="flex space-x-3">
                 <Textarea
@@ -483,13 +483,13 @@ export function AIAssistantPanel({
                     Debug
                   </Button>
                 </div>
-                <div className="text-xs text-ide-text-muted">
+                <div className="text-xs text-muted-foreground">
                   {inputMessage.length}/2000
                 </div>
               </div>
               
               {error && (
-                <div className="text-sm text-ide-error bg-ide-error/10 border border-ide-error/20 p-3 rounded-lg">
+                <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 p-3 rounded-lg">
                   <div className="flex items-start space-x-2">
                     <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                     <div>
@@ -508,8 +508,8 @@ export function AIAssistantPanel({
             <div className="space-y-6">
               {/* Enhanced Quick Actions */}
               <div>
-                <h3 className="text-sm font-semibold text-ide-text mb-3 flex items-center">
-                  <Zap className="h-4 w-4 mr-2 text-ide-accent" />
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
+                  <Zap className="h-4 w-4 mr-2 text-primary" />
                   Quick Actions
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -520,7 +520,7 @@ export function AIAssistantPanel({
                     disabled={!currentFile || isGenerating}
                     className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
                   >
-                    <Lightbulb className="h-4 w-4 text-ide-accent" />
+                    <Lightbulb className="h-4 w-4 text-primary" />
                     <span className="text-xs">Explain Code</span>
                   </Button>
                   <Button
@@ -530,7 +530,7 @@ export function AIAssistantPanel({
                     disabled={!currentFile || isGenerating}
                     className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
                   >
-                    <Zap className="h-4 w-4 text-ide-success" />
+                    <Zap className="h-4 w-4 text-green-600" />
                     <span className="text-xs">Optimize</span>
                   </Button>
                   <Button
@@ -540,7 +540,7 @@ export function AIAssistantPanel({
                     disabled={!currentFile || isGenerating}
                     className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
                   >
-                    <Bug className="h-4 w-4 text-ide-error" />
+                    <Bug className="h-4 w-4 text-destructive" />
                     <span className="text-xs">Debug</span>
                   </Button>
                   <Button
@@ -550,7 +550,7 @@ export function AIAssistantPanel({
                     disabled={!currentFile || isGenerating}
                     className="ide-button-secondary justify-start h-12 flex-col space-y-1 p-2"
                   >
-                    <TestTube className="h-4 w-4 text-ide-info" />
+                    <TestTube className="h-4 w-4 text-blue-500" />
                     <span className="text-xs">Generate Tests</span>
                   </Button>
                 </div>
