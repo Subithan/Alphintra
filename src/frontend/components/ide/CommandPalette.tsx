@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Search } from 'lucide-react'
@@ -63,7 +64,10 @@ export function CommandPalette({ isOpen, onClose, commands }: CommandPaletteProp
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 overflow-hidden max-w-xl">
+      <DialogContent className="p-0 overflow-hidden max-w-xl ide-command-palette">
+        <VisuallyHidden>
+          <DialogTitle>Command Palette</DialogTitle>
+        </VisuallyHidden>
         <div className="border-b border-border px-3 py-2 flex items-center bg-background">
           <Search className="h-4 w-4 text-muted-foreground mr-2" />
           <input
