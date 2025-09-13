@@ -95,10 +95,13 @@ services:
       DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-no-code-service
       REDIS_URL: redis://:redis123@redis:6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      BACKTEST_SERVICE_URL: http://backtest-service:8007
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      backtest-service:
         condition: service_healthy
     ports:
       - "8006:8006"
@@ -106,6 +109,27 @@ services:
       - alphintra-minimal-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Backtest Service - Trading strategy backtesting microservice
+  backtest-service:
+    build:
+      context: ../../../src/backend/backtest-service
+      dockerfile: Dockerfile
+    container_name: alphintra-minimal-backtest-service
+    environment:
+      PORT: 8007
+      LOG_LEVEL: info
+    ports:
+      - "8007:8007"
+    networks:
+      - alphintra-minimal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -180,6 +204,7 @@ services:
       NO_CODE_SERVICE_URL: http://no-code-service:8006
       AI_ML_STRATEGY_SERVICE_URL: http://ai-ml-strategy-service:8002
       AUTH_SERVICE_URL: http://auth-service:8001
+      BACKTEST_SERVICE_URL: http://backtest-service:8007
     depends_on:
       postgres:
         condition: service_healthy
@@ -188,6 +213,8 @@ services:
       no-code-service:
         condition: service_healthy
       ai-ml-strategy-service:
+        condition: service_healthy
+      backtest-service:
         condition: service_healthy
     ports:
       - "8005:8005"

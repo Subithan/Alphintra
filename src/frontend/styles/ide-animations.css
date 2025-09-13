@@ -1,0 +1,245 @@
+/* IDE Gold Accent Animations */
+
+/* Gold glow animation */
+@keyframes goldGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(255, 191, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 191, 0, 0.6), 0 0 30px rgba(255, 191, 0, 0.4);
+  }
+}
+
+@keyframes goldPulse {
+  0%, 100% {
+    border-color: rgba(255, 191, 0, 0.3);
+  }
+  50% {
+    border-color: rgba(255, 191, 0, 0.8);
+  }
+}
+
+@keyframes goldShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* IDE specific classes */
+.ide-button-gold {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.ide-button-gold:hover {
+  animation: goldGlow 2s ease-in-out infinite;
+  border-color: rgba(255, 191, 0, 0.5);
+}
+
+.ide-button-gold:active {
+  animation: buttonPress 0.1s ease-in-out;
+}
+
+.ide-button-gold::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -200%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 191, 0, 0.1),
+    rgba(255, 191, 0, 0.2),
+    rgba(255, 191, 0, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease-in-out;
+}
+
+.ide-button-gold:hover::before {
+  left: 100%;
+}
+
+.ide-toolbar {
+  animation: slideInFromTop 0.5s ease-out;
+  border-bottom: 1px solid rgba(255, 191, 0, 0.1);
+}
+
+.ide-panel-left {
+  animation: slideInFromLeft 0.4s ease-out;
+}
+
+.ide-panel-right {
+  animation: slideInFromRight 0.4s ease-out;
+}
+
+.ide-notification {
+  animation: slideInFromRight 0.4s ease-out, fadeInUp 0.3s ease-out;
+}
+
+.ide-file-tab {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ide-file-tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 191, 0, 0.15);
+}
+
+.ide-file-tab.active {
+  border-bottom-color: #FFBF00;
+  animation: goldPulse 2s ease-in-out infinite;
+}
+
+.ide-project-name {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.ide-project-name:hover {
+  color: #FFBF00;
+  cursor: pointer;
+}
+
+.ide-project-name-edit {
+  animation: scaleIn 0.2s ease-out;
+  border: 1px solid #FFBF00;
+  box-shadow: 0 0 10px rgba(255, 191, 0, 0.3);
+}
+
+.ide-status-bar {
+  background: linear-gradient(90deg, transparent, rgba(255, 191, 0, 0.05), transparent);
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.ide-editor-container {
+  animation: scaleIn 0.4s ease-out;
+}
+
+.ide-terminal {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+/* Monaco editor enhancements */
+.monaco-editor .current-line {
+  background: rgba(255, 191, 0, 0.05) !important;
+}
+
+.monaco-editor .cursor {
+  box-shadow: 0 0 10px rgba(255, 191, 0, 0.8) !important;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .ide-toolbar {
+    animation: slideInFromTop 0.3s ease-out;
+  }
+
+  .ide-button-gold:hover::before {
+    display: none;
+  }
+
+  .ide-file-tab:hover {
+    transform: none;
+  }
+}
+
+/* Loading animations */
+.ide-loading {
+  animation: goldPulse 1.5s ease-in-out infinite;
+}
+
+/* Command palette */
+.ide-command-palette {
+  animation: scaleIn 0.2s ease-out;
+  border: 1px solid rgba(255, 191, 0, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 191, 0, 0.1);
+}
+
+/* AI panel */
+.ide-ai-panel {
+  border-left: 3px solid rgba(255, 191, 0, 0.3);
+}
+
+.ide-ai-message {
+  transition: all 0.2s ease;
+}
+
+.ide-ai-message:hover {
+  transform: translateX(5px);
+  border-left: 3px solid rgba(255, 191, 0, 0.5);
+}

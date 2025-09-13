@@ -27,6 +27,7 @@ class Edge:
 
     source: str
     target: str
+    data: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -46,7 +47,11 @@ class Workflow:
             if n.get("id")
         }
         edges = [
-            Edge(source=e.get("source", ""), target=e.get("target", ""))
+            Edge(
+                source=e.get("source", ""), 
+                target=e.get("target", ""),
+                data=e.get("data", {})
+            )
             for e in workflow.get("edges", [])
             if e.get("source") in nodes and e.get("target") in nodes
         ]

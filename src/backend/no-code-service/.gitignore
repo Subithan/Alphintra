@@ -1,0 +1,7 @@
+
+
+# Keep folder structure but ignore contents
+
+
+# Database-only storage - no generated files
+# All strategy code is stored in PostgreSQL

@@ -1,18 +1,43 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, Calendar, Tag, User } from 'lucide-react';
-import { NoCodeApiClient, Workflow } from '@/lib/api/no-code-api';
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Plus,
+  FileText,
+  Calendar,
+  Tag,
+  User,
+  Code2,
+  Workflow as WorkflowIcon,
+} from "lucide-react";
+import { NoCodeApiClient, Workflow } from "@/lib/api/no-code-api";
+import { useRouter } from "next/navigation";
 
 export default function StrategyHubPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const noCodeApi = new NoCodeApiClient();
+  const router = useRouter();
 
   useEffect(() => {
     fetchWorkflows();
@@ -25,41 +50,54 @@ export default function StrategyHubPage() {
       setWorkflows(workflowData);
       setError(null);
     } catch (err) {
-      setError('Failed to load workflows. Please try again.');
-      console.error('Error fetching workflows:', err);
+      setError("Failed to load workflows. Please try again.");
+      console.error("Error fetching workflows:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateNew = () => {
-    window.open('/strategy-hub/no-code-console', '_blank');
+    setIsModalOpen(true);
+  };
+
+  const handleNoCodeSelection = () => {
+    setIsModalOpen(false);
+    router.push("/strategy-hub/no-code-console");
+  };
+
+  const handleIdeSelection = () => {
+    setIsModalOpen(false);
+    router.push("/strategy-hub/ide");
   };
 
   const handleWorkflowClick = (workflow: Workflow) => {
-    window.open(`/strategy-hub/no-code-console?workflow=${workflow.uuid}`, '_blank');
+    window.open(
+      `/strategy-hub/no-code-console?workflow=${workflow.uuid}`,
+      "_blank",
+    );
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'compiled':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
-      case 'compiling':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
-      case 'failed':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+      case "compiled":
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
+      case "compiling":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
+      case "failed":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
   };
 
@@ -99,7 +137,9 @@ export default function StrategyHubPage() {
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
           <div className="text-red-500 mb-4">⚠️</div>
-          <h3 className="text-lg font-semibold mb-2">Failed to Load Workflows</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Failed to Load Workflows
+          </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <Button onClick={fetchWorkflows} variant="outline">
             Try Again
@@ -114,7 +154,9 @@ export default function StrategyHubPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Strategy Hub</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Strategy Hub
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Manage your no-code trading workflows and create new strategies
           </p>
@@ -141,8 +183,8 @@ export default function StrategyHubPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workflows.map((workflow) => (
-            <Card 
-              key={workflow.uuid} 
+            <Card
+              key={workflow.uuid}
               className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
               onClick={() => handleWorkflowClick(workflow)}
             >
@@ -153,10 +195,10 @@ export default function StrategyHubPage() {
                       {workflow.name}
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      {workflow.description || 'No description provided'}
+                      {workflow.description || "No description provided"}
                     </CardDescription>
                   </div>
-                  <Badge 
+                  <Badge
                     className={`ml-2 ${getStatusColor(workflow.compilation_status)}`}
                     variant="secondary"
                   >
@@ -164,7 +206,7 @@ export default function StrategyHubPage() {
                   </Badge>
                 </div>
               </CardHeader>
-              
+
               <CardContent>
                 <div className="space-y-3">
                   {/* Category */}
@@ -177,7 +219,11 @@ export default function StrategyHubPage() {
                   {workflow.tags && workflow.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {workflow.tags.slice(0, 3).map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-xs"
+                        >
                           {tag}
                         </Badge>
                       ))}
@@ -198,15 +244,17 @@ export default function StrategyHubPage() {
                   {/* Execution Mode */}
                   <div className="flex items-center text-xs">
                     <User className="mr-1 h-3 w-3" />
-                    <span className="capitalize">{workflow.execution_mode.replace('_', ' ')}</span>
+                    <span className="capitalize">
+                      {workflow.execution_mode.replace("_", " ")}
+                    </span>
                   </div>
                 </div>
               </CardContent>
 
               <CardFooter>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-full"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -220,6 +268,56 @@ export default function StrategyHubPage() {
           ))}
         </div>
       )}
+
+      {/* Model Type Selection Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Choose Model Type</DialogTitle>
+            <DialogDescription>
+              Select how you'd like to create your trading strategy
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex gap-4 mt-6">
+            {/* No Code Option */}
+            <div
+              onClick={handleNoCodeSelection}
+              className="flex-1 p-6 border-2 border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all duration-200 group"
+            >
+              <div className="text-center">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
+                  <WorkflowIcon className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+                  No Code
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Visual workflow builder with drag-and-drop interface
+                </p>
+              </div>
+            </div>
+
+            {/* IDE Option */}
+            <div
+              onClick={handleIdeSelection}
+              className="flex-1 p-6 border-2 border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950/30 transition-all duration-200 group"
+            >
+              <div className="text-center">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
+                  <Code2 className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+                  IDE
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Code-based development environment for advanced strategies
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
