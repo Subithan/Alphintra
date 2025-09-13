@@ -301,10 +301,23 @@ export function EnhancedIDE({
   }), [staticEditorOptions, dynamicEditorOptions])
   
   // Optimized callback functions
-  const handleFileSelect = useCallback((file: File) => {
-    openFile(file)
+  const handleFileSelect = useCallback((projectFile: any) => {
+    // Check if file is already open to avoid duplicates
+    const existingFile = openFiles.find(f => f.id === projectFile.id)
+
+    if (existingFile) {
+      // Use existing file object to maintain React key consistency
+      setActiveFile(existingFile)
+    } else {
+      // Convert ProjectFile to File, ensuring modified is always boolean
+      const file: File = {
+        ...projectFile,
+        modified: projectFile.modified ?? false
+      }
+      openFile(file)
+    }
     if (isMobile) setShowLeftPanel(false)
-  }, [isMobile])
+  }, [isMobile, openFiles])
 
   const handleCloseTerminal = useCallback(() => {
     setShowTerminal(false)
@@ -687,7 +700,7 @@ export function EnhancedIDE({
             size="sm"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="ide-button-ghost"
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            title={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Switch theme'}
           >
             {!mounted ? (
               <Monitor className="h-4 w-4" />
