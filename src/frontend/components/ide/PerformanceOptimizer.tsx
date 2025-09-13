@@ -8,29 +8,30 @@ export const optimizeForPerformance = () => {
   if (typeof window === 'undefined') return
   
   // Disable smooth scrolling for better performance
-    document.documentElement.style.scrollBehavior = 'auto'
-    
-    // Add performance hints to critical elements
-    const addPerformanceHints = () => {
-      const monacoEditor = document.querySelector('.monaco-editor')
-      if (monacoEditor) {
-        (monacoEditor as HTMLElement).style.willChange = 'scroll-position'
-        (monacoEditor as HTMLElement).style.transform = 'translateZ(0)'
-      }
-
-      const scrollAreas = document.querySelectorAll('[data-radix-scroll-area-viewport]')
-      scrollAreas.forEach(area => {
-        (area as HTMLElement).style.willChange = 'scroll-position'
-        (area as HTMLElement).style.transform = 'translateZ(0)'
-      })
+  document.documentElement.style.scrollBehavior = 'auto'
+  
+  // Add performance hints to critical elements
+  const addPerformanceHints = () => {
+    const monacoEditor = document.querySelector('.monaco-editor')
+    if (monacoEditor) {
+      const element = monacoEditor as HTMLElement
+      element.style.willChange = 'scroll-position'
+      element.style.transform = 'translateZ(0)'
     }
 
-    // Apply optimizations after DOM is ready
-    const timeoutId = setTimeout(addPerformanceHints, 100)
-    
-    return () => {
-      clearTimeout(timeoutId)
-    }
+    const scrollAreas = document.querySelectorAll('[data-radix-scroll-area-viewport]')
+    scrollAreas.forEach(area => {
+      const element = area as HTMLElement
+      element.style.willChange = 'scroll-position'
+      element.style.transform = 'translateZ(0)'
+    })
+  }
+
+  // Apply optimizations after DOM is ready
+  const timeoutId = setTimeout(addPerformanceHints, 100)
+  
+  return () => {
+    clearTimeout(timeoutId)
   }
 }
 
@@ -90,7 +91,7 @@ export const useVirtualScrolling = (items: any[], containerHeight: number, itemH
 }
 
 // Debounced input hook
-export const useDebouncedValue = <T>(value: T, delay: number): T => {
+export const useDebouncedValue = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = React.useState<T>(value)
 
   React.useEffect(() => {
