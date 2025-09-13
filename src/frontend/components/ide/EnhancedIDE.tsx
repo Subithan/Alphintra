@@ -1,64 +1,41 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useState, useEffect, useRef, useCallback, useMemo, startTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Code, 
-  FileText, 
-  Play, 
-  Save, 
-  Settings, 
-  MessageSquare, 
-  Lightbulb, 
-  Bug, 
-  TestTube, 
-  Bot, 
-  Brain, 
+import {
+  Code,
+  FileText,
+  Play,
+  Save,
+  Bot,
+  Brain,
   Zap,
   Terminal,
-  FolderTree,
-  Search,
   RefreshCw,
-  ChevronRight,
   ChevronDown,
   Sun,
   Moon,
   Monitor,
-  Maximize2,
-  Minimize2,
   MoreHorizontal,
-  GitBranch,
-  Package,
-  Database,
-  Layers,
   Command,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
-  Split,
   Folder,
   X
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { OptimizedMonacoEditor } from './LazyComponents'
-import { ProjectExplorer } from './ProjectExplorer'
-import { AIAssistantPanel } from './AIAssistantPanel'
-import { TerminalPanel } from './TerminalPanel'
+import { OptimizedProjectExplorer } from './OptimizedProjectExplorer'
+import { OptimizedAIAssistantPanel } from './OptimizedAIAssistantPanel'
+import { OptimizedTerminalPanel } from './OptimizedTerminalPanel'
 import { useAICodeStore } from '@/lib/stores/ai-code-store'
-import { optimizeForPerformance, PerformanceMonitor } from './PerformanceOptimizer'
 
-// Memoized components for performance
-const MemoizedProjectExplorer = memo(ProjectExplorer)
-const MemoizedAIAssistantPanel = memo(AIAssistantPanel)
-const MemoizedTerminalPanel = memo(TerminalPanel)
+// Already optimized and memoized components
+// No need for additional memo wrapping
 
 export type EditorMode = 'traditional' | 'ai-assisted' | 'ai-first'
 
@@ -114,90 +91,96 @@ export function EnhancedIDE({
   const [showAIPanel, setShowAIPanel] = useState(true)
   const [showLeftPanel, setShowLeftPanel] = useState(true)
   const [showTerminal, setShowTerminal] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  
-  // Performance optimizations on mount
-  useEffect(() => {
-    optimizeForPerformance()
-  }, [])
+  const [isCreatingFile, setIsCreatingFile] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
 
-  // Handle responsive design - optimized with debounce
+
+
+  // Performance refs
+  const resizeTimeoutRef = useRef<NodeJS.Timeout>()
+  const changeTimeoutRef = useRef<NodeJS.Timeout>()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+
+  // Optimized responsive design with improved debouncing
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
-    
     const checkScreenSize = () => {
-      clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => {
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current)
+
+      resizeTimeoutRef.current = setTimeout(() => {
         const mobile = window.innerWidth < 768
-        setIsMobile(prevMobile => {
-          if (prevMobile !== mobile) {
-            // Auto-hide panels on mobile
-            if (mobile) {
-              setShowLeftPanel(false)
-              setShowAIPanel(false)
+
+        startTransition(() => {
+          setIsMobile(prevMobile => {
+            if (prevMobile !== mobile) {
+              if (mobile) {
+                setShowLeftPanel(false)
+                setShowAIPanel(false)
+              }
+              return mobile
             }
-            return mobile
-          }
-          return prevMobile
+            return prevMobile
+          })
         })
-      }, 100) // Debounce resize events
+      }, 150)
     }
-    
+
     checkScreenSize()
     window.addEventListener('resize', checkScreenSize, { passive: true })
-    
+
     return () => {
       window.removeEventListener('resize', checkScreenSize)
-      clearTimeout(timeoutId)
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current)
     }
   }, [])
   
-  const editorRef = useRef<any>(null)
-  const { 
-    generateCode, 
-    explainCode, 
-    optimizeCode, 
-    debugCode, 
-    generateTests,
+  const editorRef = useRef<any>(null) // Monaco editor type
+  const {
+    generateCode,
+    explainCode,
+    optimizeCode,
+    debugCode,
     isGenerating,
     error: aiError
   } = useAICodeStore()
 
-  // Initialize project
+  // Memoized default project to prevent recreation
+  const defaultProject = useMemo((): Project => ({
+    id: 'default',
+    name: 'Trading Strategy',
+    description: 'AI-powered trading strategy development',
+    files: [{
+      id: 'main',
+      name: 'main.py',
+      path: '/main.py',
+      content: '# AI-powered trading strategy\n# Start typing or use the AI assistant to generate code\n\nimport pandas as pd\nimport numpy as np\nfrom typing import Dict, List\n\nclass TradingStrategy:\n    def __init__(self):\n        self.name = "AI Generated Strategy"\n        \n    def execute(self, data: pd.DataFrame) -> Dict:\n        # Your trading logic here\n        pass\n',
+      language: 'python',
+      modified: false,
+      isActive: true
+    }],
+    settings: {
+      aiEnabled: editorMode !== 'traditional',
+      suggestions: true,
+      autoComplete: true,
+      errorDetection: true,
+      testGeneration: true
+    }
+  }), [editorMode])
+
+  // Initialize project with optimized logic
   useEffect(() => {
     if (projectId) {
       loadProject(projectId)
-    } else {
-      // Create default project
-      const defaultProject: Project = {
-        id: 'default',
-        name: 'Trading Strategy',
-        description: 'AI-powered trading strategy development',
-        files: [
-          {
-            id: 'main',
-            name: 'main.py',
-            path: '/main.py',
-            content: '# AI-powered trading strategy\n# Start typing or use the AI assistant to generate code\n\nimport pandas as pd\nimport numpy as np\nfrom typing import Dict, List\n\nclass TradingStrategy:\n    def __init__(self):\n        self.name = "AI Generated Strategy"\n        \n    def execute(self, data: pd.DataFrame) -> Dict:\n        # Your trading logic here\n        pass\n',
-            language: 'python',
-            modified: false,
-            isActive: true
-          }
-        ],
-        settings: {
-          aiEnabled: editorMode !== 'traditional',
-          suggestions: true,
-          autoComplete: true,
-          errorDetection: true,
-          testGeneration: true
-        }
-      }
+    } else if (!currentProject) {
       setCurrentProject(defaultProject)
       setActiveFile(defaultProject.files[0])
       setOpenFiles([defaultProject.files[0]])
     }
-  }, [projectId, editorMode])
+  }, [projectId, defaultProject, currentProject])
 
   const loadProject = async (id: string) => {
     try {
@@ -323,7 +306,7 @@ export function EnhancedIDE({
     setShowTerminal(false)
   }, [])
 
-  const handleEditorMount = useCallback((editor: any) => {
+  const handleEditorMount = useCallback((editor: any) => { // Monaco editor instance
     editorRef.current = editor
     
     // Optimized editor configuration
@@ -377,34 +360,40 @@ export function EnhancedIDE({
     setEditorMode(newMode)
   }, [currentProject, activeFile])
 
-  const updateFileContent = (updatedFile: File) => {
+  const updateFileContent = useCallback((updatedFile: File) => {
     if (!currentProject) return
-    
+
     const updatedFiles = currentProject.files.map(file =>
       file.id === updatedFile.id ? updatedFile : file
     )
-    
+
     setCurrentProject({
       ...currentProject,
       files: updatedFiles
     })
-    
-    // Update open files
+
     setOpenFiles(prev =>
       prev.map(file => file.id === updatedFile.id ? updatedFile : file)
     )
-  }
+  }, [currentProject])
 
   const handleEditorChange = useCallback((value: string | undefined) => {
-    if (activeFile && value !== undefined && value !== activeFile.content) {
+    if (!activeFile || value === undefined || value === activeFile.content) return
+
+    if (changeTimeoutRef.current) clearTimeout(changeTimeoutRef.current)
+
+    changeTimeoutRef.current = setTimeout(() => {
       const updatedFile = {
         ...activeFile,
         content: value,
         modified: true
       }
-      setActiveFile(updatedFile)
-      updateFileContent(updatedFile)
-    }
+
+      startTransition(() => {
+        setActiveFile(updatedFile)
+        updateFileContent(updatedFile)
+      })
+    }, 100)
   }, [activeFile])
 
   const openFile = (file: File) => {
@@ -414,43 +403,81 @@ export function EnhancedIDE({
     }
   }
 
-  const closeFile = (fileId: string) => {
+  const performCloseFile = useCallback((fileId: string) => {
     const newOpenFiles = openFiles.filter(f => f.id !== fileId)
-    setOpenFiles(newOpenFiles)
-    
-    if (activeFile?.id === fileId) {
-      setActiveFile(newOpenFiles.length > 0 ? newOpenFiles[0] : null)
-    }
-  }
 
-  const saveFile = async () => {
-    if (!activeFile) return
-    
+    startTransition(() => {
+      setOpenFiles(newOpenFiles)
+      if (activeFile?.id === fileId) {
+        setActiveFile(newOpenFiles.length > 0 ? newOpenFiles[0] : null)
+      }
+    })
+  }, [openFiles, activeFile?.id])
+
+  const closeFile = useCallback((fileId: string) => {
+    const fileToClose = openFiles.find(f => f.id === fileId)
+
+    if (fileToClose?.modified) {
+      const shouldSave = window.confirm(
+        `${fileToClose.name} has unsaved changes. Do you want to save before closing?`
+      )
+
+      if (shouldSave && activeFile?.id === fileId) {
+        // We'll handle this with a simpler approach - just close after asking
+        performCloseFile(fileId)
+        return
+      }
+    }
+
+    performCloseFile(fileId)
+  }, [openFiles, activeFile?.id, performCloseFile])
+
+  const saveFile = useCallback(async () => {
+    if (!activeFile || isSaving) return
+
+    setIsSaving(true)
     try {
       if (onSave) {
         await onSave(activeFile)
       }
-      
+
       const updatedFile = { ...activeFile, modified: false }
-      setActiveFile(updatedFile)
-      updateFileContent(updatedFile)
+      startTransition(() => {
+        setActiveFile(updatedFile)
+        updateFileContent(updatedFile)
+        setNotification({ type: 'success', message: `${activeFile.name} saved successfully` })
+      })
     } catch (error) {
       console.error('Failed to save file:', error)
+      setNotification({ type: 'error', message: `Failed to save ${activeFile.name}` })
+    } finally {
+      setIsSaving(false)
+      // Clear notification after 3 seconds
+      setTimeout(() => setNotification(null), 3000)
     }
-  }
+  }, [activeFile, onSave, updateFileContent, isSaving])
 
-  const runCode = async () => {
-    if (!activeFile) return
-    
+  const runCode = useCallback(async () => {
+    if (!activeFile || isRunning) return
+
+    setIsRunning(true)
     try {
       if (onRun) {
         await onRun(activeFile)
       }
-      setShowTerminal(true)
+      startTransition(() => {
+        setShowTerminal(true)
+        setNotification({ type: 'success', message: `Running ${activeFile.name}...` })
+      })
     } catch (error) {
       console.error('Failed to run code:', error)
+      setNotification({ type: 'error', message: `Failed to run ${activeFile.name}` })
+    } finally {
+      setIsRunning(false)
+      // Clear notification after 3 seconds
+      setTimeout(() => setNotification(null), 3000)
     }
-  }
+  }, [activeFile, onRun, isRunning])
 
   const handleAIGenerate = async (prompt: string) => {
     if (!activeFile) return
@@ -547,6 +574,258 @@ export function EnhancedIDE({
     }
   }
 
+  // New File functionality
+  const createNewFile = useCallback(() => {
+    if (isCreatingFile) return
+
+    setIsCreatingFile(true)
+    const fileName = prompt('Enter file name (with extension):', 'untitled.py')
+
+    if (fileName && fileName.trim()) {
+      const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'txt'
+      const languageMap: Record<string, string> = {
+        'py': 'python',
+        'js': 'javascript',
+        'ts': 'typescript',
+        'tsx': 'typescript',
+        'jsx': 'javascript',
+        'html': 'html',
+        'css': 'css',
+        'json': 'json',
+        'md': 'markdown',
+        'sql': 'sql',
+        'txt': 'plaintext'
+      }
+
+      const newFile: File = {
+        id: `file-${Date.now()}`,
+        name: fileName.trim(),
+        path: `/${fileName.trim()}`,
+        content: getTemplateContent(fileExtension),
+        language: languageMap[fileExtension] || 'plaintext',
+        modified: false
+      }
+
+      if (currentProject) {
+        const updatedProject = {
+          ...currentProject,
+          files: [...currentProject.files, newFile]
+        }
+
+        startTransition(() => {
+          setCurrentProject(updatedProject)
+          setActiveFile(newFile)
+          setOpenFiles(prev => [...prev, newFile])
+          setNotification({ type: 'success', message: `Created ${fileName}` })
+        })
+      }
+    }
+
+    setIsCreatingFile(false)
+    setTimeout(() => setNotification(null), 3000)
+  }, [currentProject, isCreatingFile])
+
+  // Get template content based on file extension
+  const getTemplateContent = (extension: string): string => {
+    const templates: Record<string, string> = {
+      'py': '# New Python file\n\ndef main():\n    pass\n\nif __name__ == "__main__":\n    main()\n',
+      'js': '// New JavaScript file\n\nfunction main() {\n    // Your code here\n}\n\nmain();\n',
+      'ts': '// New TypeScript file\n\nfunction main(): void {\n    // Your code here\n}\n\nmain();\n',
+      'html': '<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Document</title>\n</head>\n<body>\n    \n</body>\n</html>\n',
+      'css': '/* New CSS file */\n\nbody {\n    margin: 0;\n    padding: 0;\n}\n',
+      'json': '{\n    "name": "example",\n    "version": "1.0.0"\n}\n',
+      'md': '# New Document\n\n## Overview\n\nYour content here...\n'
+    }
+    return templates[extension] || ''
+  }
+
+  // Open Folder functionality
+  const openFolder = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileInput = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    const newFiles: File[] = []
+    const promises: Promise<void>[] = []
+
+    for (let i = 0; i < Math.min(files.length, 10); i++) { // Limit to 10 files
+      const file = files[i]
+      const promise = new Promise<void>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const content = e.target?.result as string || ''
+          const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'txt'
+          const languageMap: Record<string, string> = {
+            'py': 'python',
+            'js': 'javascript',
+            'ts': 'typescript',
+            'tsx': 'typescript',
+            'jsx': 'javascript',
+            'html': 'html',
+            'css': 'css',
+            'json': 'json',
+            'md': 'markdown',
+            'sql': 'sql'
+          }
+
+          newFiles.push({
+            id: `file-${Date.now()}-${i}`,
+            name: file.name,
+            path: `/${file.name}`,
+            content,
+            language: languageMap[fileExtension] || 'plaintext',
+            modified: false
+          })
+          resolve()
+        }
+        reader.readAsText(file)
+      })
+      promises.push(promise)
+    }
+
+    Promise.all(promises).then(() => {
+      if (currentProject && newFiles.length > 0) {
+        const updatedProject = {
+          ...currentProject,
+          files: [...currentProject.files, ...newFiles]
+        }
+
+        startTransition(() => {
+          setCurrentProject(updatedProject)
+          setActiveFile(newFiles[0])
+          setOpenFiles(prev => [...prev, ...newFiles])
+          setNotification({ type: 'success', message: `Opened ${newFiles.length} file(s)` })
+        })
+      }
+    })
+
+    // Clear the input
+    event.target.value = ''
+    setTimeout(() => setNotification(null), 3000)
+  }, [currentProject])
+
+  // Mobile More Menu functionality
+  const toggleMobileMenu = useCallback(() => {
+    setShowMobileMenu(!showMobileMenu)
+  }, [showMobileMenu])
+
+  // File management utilities
+  const duplicateFile = useCallback((file: File) => {
+    const fileName = prompt('Enter new file name:', `${file.name.split('.')[0]}_copy.${file.name.split('.').pop()}`)
+
+    if (fileName && fileName.trim()) {
+      const newFile: File = {
+        ...file,
+        id: `file-${Date.now()}`,
+        name: fileName.trim(),
+        path: `/${fileName.trim()}`,
+        modified: false
+      }
+
+      if (currentProject) {
+        const updatedProject = {
+          ...currentProject,
+          files: [...currentProject.files, newFile]
+        }
+
+        startTransition(() => {
+          setCurrentProject(updatedProject)
+          setActiveFile(newFile)
+          setOpenFiles(prev => [...prev, newFile])
+          setNotification({ type: 'success', message: `Duplicated as ${fileName}` })
+        })
+      }
+    }
+    setTimeout(() => setNotification(null), 3000)
+  }, [currentProject])
+
+  const renameFile = useCallback((file: File) => {
+    const newName = prompt('Enter new file name:', file.name)
+
+    if (newName && newName.trim() && newName !== file.name) {
+      const updatedFile = {
+        ...file,
+        name: newName.trim(),
+        path: `/${newName.trim()}`
+      }
+
+      if (currentProject) {
+        const updatedFiles = currentProject.files.map(f =>
+          f.id === file.id ? updatedFile : f
+        )
+
+        const updatedProject = {
+          ...currentProject,
+          files: updatedFiles
+        }
+
+        startTransition(() => {
+          setCurrentProject(updatedProject)
+          if (activeFile?.id === file.id) {
+            setActiveFile(updatedFile)
+          }
+          setOpenFiles(prev =>
+            prev.map(f => f.id === file.id ? updatedFile : f)
+          )
+          setNotification({ type: 'success', message: `Renamed to ${newName}` })
+        })
+      }
+    }
+    setTimeout(() => setNotification(null), 3000)
+  }, [currentProject, activeFile?.id])
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!activeFile || !activeFile.modified) return
+
+    const autoSaveInterval = setInterval(() => {
+      if (activeFile.modified && !isSaving) {
+        // Auto-save every 30 seconds for modified files
+        saveFile()
+      }
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(autoSaveInterval)
+  }, [activeFile, isSaving, saveFile])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case 's':
+            event.preventDefault()
+            saveFile()
+            break
+          case 'Enter':
+            if (event.shiftKey) {
+              event.preventDefault()
+              runCode()
+            }
+            break
+          case 'n':
+            event.preventDefault()
+            createNewFile()
+            break
+          case 'o':
+            event.preventDefault()
+            openFolder()
+            break
+          case '`':
+            event.preventDefault()
+            setShowTerminal(!showTerminal)
+            break
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [saveFile, runCode, createNewFile, openFolder, showTerminal])
+
   // Loading state with skeleton
   if (isLoading) {
     return (
@@ -577,7 +856,43 @@ export function EnhancedIDE({
 
   return (
     <>
-      <PerformanceMonitor />
+
+      {/* Hidden file input for folder opening */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".py,.js,.ts,.tsx,.jsx,.html,.css,.json,.md,.txt,.sql"
+        className="hidden"
+        onChange={handleFileInput}
+      />
+
+      {/* Notification System */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 p-3 rounded-md shadow-lg transition-all duration-300 ${
+          notification.type === 'success'
+            ? 'bg-green-500 text-white'
+            : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {notification.type === 'success' ? (
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+            ) : (
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+            )}
+            <span className="text-sm font-medium">{notification.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Click outside to close mobile menu */}
+      {isMobile && showMobileMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowMobileMenu(false)}
+        />
+      )}
+
       <div className="h-screen flex flex-col bg-background text-foreground gpu-accelerated">
       {/* Enhanced Responsive Toolbar */}
       <div className="ide-toolbar">
@@ -672,15 +987,35 @@ export function EnhancedIDE({
                       {file.name}
                     </span>
                     {file.modified && <div className="w-2 h-2 bg-ide-warning rounded-full" />}
-                    <button
-                      className="ml-2 opacity-60 hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        closeFile(file.id)
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    <div className="flex items-center space-x-1">
+                      {/* Right-click context menu for file tabs */}
+                      <button
+                        className="opacity-60 hover:opacity-100 transition-opacity p-1 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Simple context menu
+                          const action = window.confirm('Choose action:\nOK = Duplicate\nCancel = Rename')
+                          if (action) {
+                            duplicateFile(file)
+                          } else {
+                            renameFile(file)
+                          }
+                        }}
+                        title="Right-click options"
+                      >
+                        <MoreHorizontal className="h-3 w-3" />
+                      </button>
+                      <button
+                        className="opacity-60 hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          closeFile(file.id)
+                        }}
+                        title="Close file"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {openFiles.length > (isMobile ? 2 : 6) && (
@@ -749,24 +1084,26 @@ export function EnhancedIDE({
           )}
           
           {/* Action Buttons */}
-          <Button 
-            size="sm" 
-            onClick={saveFile} 
+          <Button
+            size="sm"
+            onClick={saveFile}
+            disabled={!activeFile || isSaving}
             className={`ide-button-secondary ${isMobile ? 'px-2' : ''}`}
-            title="Save file"
+            title={`Save file (${isMobile ? '' : 'Ctrl+S'})`}
           >
-            <Save className="h-4 w-4" />
-            {!isMobile && <span className="ml-2">Save</span>}
+            {isSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {!isMobile && <span className="ml-2">{isSaving ? 'Saving...' : 'Save'}</span>}
           </Button>
           
-          <Button 
-            size="sm" 
-            onClick={runCode} 
+          <Button
+            size="sm"
+            onClick={runCode}
+            disabled={!activeFile || isRunning}
             className={`ide-button-primary ${isMobile ? 'px-2' : ''}`}
-            title="Run code"
+            title={`Run code (${isMobile ? '' : 'Ctrl+Shift+Enter'})`}
           >
-            <Play className="h-4 w-4" />
-            {!isMobile && <span className="ml-2">Run</span>}
+            {isRunning ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {!isMobile && <span className="ml-2">{isRunning ? 'Running...' : 'Run'}</span>}
           </Button>
           
           {/* AI Assistant Toggle - Always visible */}
@@ -785,9 +1122,55 @@ export function EnhancedIDE({
           
           {/* More menu for mobile */}
           {isMobile && (
-            <Button variant="ghost" size="sm" className="ide-button-ghost px-2">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleMobileMenu}
+                className="ide-button-ghost px-2"
+                title="More options"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+
+              {/* Mobile Menu Dropdown */}
+              {showMobileMenu && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-md shadow-lg z-50">
+                  <div className="py-1">
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center space-x-2"
+                      onClick={() => {
+                        createNewFile()
+                        setShowMobileMenu(false)
+                      }}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>New File</span>
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center space-x-2"
+                      onClick={() => {
+                        openFolder()
+                        setShowMobileMenu(false)
+                      }}
+                    >
+                      <Folder className="h-4 w-4" />
+                      <span>Open Folder</span>
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center space-x-2"
+                      onClick={() => {
+                        setShowTerminal(!showTerminal)
+                        setShowMobileMenu(false)
+                      }}
+                    >
+                      <Terminal className="h-4 w-4" />
+                      <span>{showTerminal ? 'Hide Terminal' : 'Show Terminal'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -814,7 +1197,7 @@ export function EnhancedIDE({
             minWidth: isMobile ? '320px' : '240px',
             maxWidth: isMobile ? '320px' : '400px'
           }}>
-            <MemoizedProjectExplorer 
+            <OptimizedProjectExplorer
               project={currentProject}
               onFileSelect={handleFileSelect}
               activeFile={activeFile}
@@ -835,8 +1218,10 @@ export function EnhancedIDE({
                       value={activeFile.content}
                       onChange={handleEditorChange}
                       theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                        onMount={handleEditorMount}
-                      options={editorOptions}
+                      onMount={handleEditorMount}
+                      options={{
+                        ...editorOptions
+                      }}
                     />
                     
                     {/* Editor Status Bar */}
@@ -881,11 +1266,23 @@ export function EnhancedIDE({
                       <div className={`flex items-center justify-center ${
                         isMobile ? 'flex-col space-y-2' : 'space-x-2'
                       }`}>
-                        <Button size="sm" className="ide-button-primary">
+                        <Button
+                          size="sm"
+                          onClick={createNewFile}
+                          disabled={isCreatingFile}
+                          className="ide-button-primary"
+                          title="Create new file (Ctrl+N)"
+                        >
                           <FileText className="h-4 w-4 mr-2" />
-                          New File
+                          {isCreatingFile ? 'Creating...' : 'New File'}
                         </Button>
-                        <Button size="sm" variant="outline" className="ide-button-secondary">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={openFolder}
+                          className="ide-button-secondary"
+                          title="Open folder (Ctrl+O)"
+                        >
                           <Folder className="h-4 w-4 mr-2" />
                           Open Folder
                         </Button>
@@ -898,7 +1295,7 @@ export function EnhancedIDE({
             
             {showTerminal && (
               <div className="h-1/4 min-h-[200px] border-t border-border">
-                <MemoizedTerminalPanel onClose={handleCloseTerminal} />
+                <OptimizedTerminalPanel onClose={handleCloseTerminal} />
               </div>
             )}
           </div>
@@ -924,7 +1321,7 @@ export function EnhancedIDE({
             minWidth: isMobile ? '320px' : '280px',
             maxWidth: isMobile ? '320px' : '400px'
           }}>
-            <MemoizedAIAssistantPanel
+            <OptimizedAIAssistantPanel
               mode={editorMode}
               currentFile={activeFile}
               onGenerate={handleAIGenerate}

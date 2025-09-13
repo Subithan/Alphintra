@@ -662,7 +662,7 @@ export function AIAssistantPanel({
                         <p className="text-xs text-muted-foreground mt-0.5">Position sizing and risk controls</p>
                       </div>
                     </div>
-                  </Button>}
+                  </Button>
                 </div>
               </div>
 
