@@ -16,16 +16,18 @@ logger = structlog.get_logger(__name__)
 # SQLite doesn't support pool_size and max_overflow parameters
 engine_kwargs = {
     "pool_pre_ping": True,
-    "poolclass": NullPool if settings.is_development else None,
     "echo": settings.DEBUG,
 }
 
-# Only add pool settings for non-SQLite databases
-if not settings.DATABASE_URL.startswith("sqlite"):
+# Only add pool settings for non-SQLite databases and not using NullPool
+if not settings.DATABASE_URL.startswith("sqlite") and not settings.is_development:
     engine_kwargs.update({
         "pool_size": settings.DATABASE_POOL_SIZE,
         "max_overflow": settings.DATABASE_MAX_OVERFLOW,
     })
+elif settings.is_development:
+    # Use NullPool for development to avoid connection issues
+    engine_kwargs["poolclass"] = NullPool
 
 engine = create_async_engine(
     settings.DATABASE_URL,
@@ -104,12 +106,14 @@ if settings.TIMESCALE_DATABASE_URL:
         "echo": settings.DEBUG,
     }
     
-    # Only add pool settings for non-SQLite databases
-    if not settings.TIMESCALE_DATABASE_URL.startswith("sqlite"):
+    # Only add pool settings for non-SQLite databases and not using NullPool
+    if not settings.TIMESCALE_DATABASE_URL.startswith("sqlite") and not settings.is_development:
         timescale_kwargs.update({
             "pool_size": settings.DATABASE_POOL_SIZE,
             "max_overflow": settings.DATABASE_MAX_OVERFLOW,
         })
+    elif settings.is_development:
+        timescale_kwargs["poolclass"] = NullPool
     
     timescale_engine = create_async_engine(
         settings.TIMESCALE_DATABASE_URL,

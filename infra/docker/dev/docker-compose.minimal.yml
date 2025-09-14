@@ -143,9 +143,37 @@ services:
       dockerfile: Dockerfile
     container_name: alphintra-minimal-ai-ml-strategy-service
     environment:
-      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-ai-ml-strategy-service
+      # Application Settings
+      ENVIRONMENT: development
+      PORT: 8002
+      DEBUG: true
+      LOG_LEVEL: INFO
+      
+      # Security Settings
+      SECRET_KEY: dev-super-secret-jwt-key-that-should-be-at-least-256-bits-long
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      
+      # Database Configuration
+      DATABASE_URL: postgresql+asyncpg://alphintra:alphintra123@postgres:5432/alphintra-ai-ml-strategy-service
       REDIS_URL: redis://:redis123@redis:6379
+      
+      # Google Cloud Platform (Development settings)
+      GCP_PROJECT_ID: alphintra-dev
+      GCP_REGION: us-central1
+      GCS_BUCKET_NAME: alphintra-dev-storage
+      VERTEX_AI_LOCATION: us-central1
+      
+      # MLflow Configuration
+      MLFLOW_TRACKING_URI: http://localhost:5001
+      MLFLOW_EXPERIMENT_NAME: alphintra-strategies
+      
+      # Kafka Configuration
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_CONSUMER_GROUP: ai-ml-strategy-service
+      
+      # CORS Settings
+      ALLOWED_ORIGINS: '["http://localhost:3000", "http://localhost:8080"]'
     depends_on:
       postgres:
         condition: service_healthy

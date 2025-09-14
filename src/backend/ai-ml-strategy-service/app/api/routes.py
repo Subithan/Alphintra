@@ -6,7 +6,7 @@ from fastapi import APIRouter
 
 # Import endpoint routers
 
-from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution, ai_code, model_registry, model_deployment, prediction, model_monitoring, model_lifecycle, hybrid_execution, research, feature_engineering
+from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution, ai_code, model_registry, model_deployment, prediction, model_monitoring, model_lifecycle, hybrid_execution, research, feature_engineering, files
 
 # Create main API router
 api_router = APIRouter()
@@ -53,6 +53,9 @@ api_router.include_router(model_lifecycle.router, tags=["Model Lifecycle"])
 # Include new execution modes
 api_router.include_router(hybrid_execution.router, tags=["Hybrid Execution"])
 api_router.include_router(research.router, tags=["Research Mode"])
+
+# Include File Management endpoints for IDE integration
+api_router.include_router(files.router, tags=["File Management"])
 
 # Basic health check endpoint
 @api_router.get("/status")
