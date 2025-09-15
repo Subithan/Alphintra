@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface TradingBotRepository extends JpaRepository<TradingBot, Long> {
     Optional<TradingBot> findByUserIdAndStrategyIdAndStatus(Long userId, Long strategyId, BotStatus status);
     List<TradingBot> findByUserId(Long userId);
+    List<TradingBot> findByStatus(BotStatus status);
 }

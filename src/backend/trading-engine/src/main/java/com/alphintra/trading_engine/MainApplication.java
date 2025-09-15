@@ -11,24 +11,22 @@ import jakarta.annotation.PostConstruct;
 public class MainApplication {
 
     public static void main(String[] args) {
-        // try {
-        //     System.out.println("Initializing database...");
-        //     DockerNetworkDatabaseInitializer.initializeDatabase();
-        //     System.out.println("Database initialization completed.");
-        // } catch (Exception e) {
-        //     System.err.println("Failed to initialize database: " + e.getMessage());
-        //     e.printStackTrace();
-        //     System.exit(1);
-        // }
+        try {
+            System.out.println("Initializing database...");
+            DockerNetworkDatabaseInitializer.initializeDatabase();
+            System.out.println("Database initialization completed.");
+        } catch (Exception e) {
+            System.err.println("Failed to initialize database: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
         SpringApplication.run(MainApplication.class, args);
         System.out.println("Trading Engine application started on port 8008.");
     }
 
     @PostConstruct
     public void init() {
-        // The database is now initialized in the main method,
-        // so this PostConstruct is no longer needed for initialization.
-        // We can keep it for other post-startup logic if necessary.
+
     }
 }
 
