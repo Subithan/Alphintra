@@ -50,6 +50,7 @@ class TrainingJobRequest(BaseModel):
     ml_model_config: Dict[str, Any] = Field(default_factory=dict)
 
 
+
 class WorkflowTrainingRequest(BaseModel):
     workflow_id: int = Field(..., description="No-code workflow ID")
     workflow_name: str = Field(..., min_length=1, max_length=255)
