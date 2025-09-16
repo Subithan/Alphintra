@@ -32,7 +32,7 @@ class ModelTrainingService:
         """
         Main method to run the training and optimization process.
         """
-        async with get_session() as db:
+        async with get_db() as db:
             self.db = db
             job = await self._get_job()
             if not job:

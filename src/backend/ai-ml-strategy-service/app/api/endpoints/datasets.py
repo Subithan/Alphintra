@@ -19,7 +19,8 @@ from app.services.data_ingestion_service import DataIngestionService
 from app.services.dataset_validator import DatasetValidator
 from app.services.data_processor import DataProcessingService
 from app.services.dataset_catalog import DatasetCatalogService
-from app.services.data_visualization import DataVisualizationService
+# Temporarily commented out to fix startup issues
+# from app.services.data_visualization import DataVisualizationService
 from app.services.storage_manager import StorageManager
 from app.models.dataset import AssetClass, DataSource, DataFrequency, DataFormat
 
@@ -30,7 +31,7 @@ data_ingestion_service = DataIngestionService()
 dataset_validator = DatasetValidator()
 data_processor = DataProcessingService()
 catalog_service = DatasetCatalogService()
-visualization_service = DataVisualizationService()
+# visualization_service = DataVisualizationService()
 storage_manager = StorageManager()
 
 # Rate limiting
@@ -875,12 +876,11 @@ async def create_chart(
         chart_config = request.config.copy()
         chart_config["chart_type"] = request.chart_type
         
-        result = await visualization_service.create_chart(
-            dataset_id=dataset_id,
-            chart_config=chart_config,
-            user_id=str(user_id),
-            db=db
-        )
+        # Temporary placeholder - visualization service disabled
+        result = {
+            "success": False,
+            "error": "Data visualization temporarily unavailable during service startup"
+        }
         
         if result.get("success"):
             return result
@@ -907,11 +907,11 @@ async def get_dataset_preview(
 ):
     """Get dataset preview with sample data and charts."""
     try:
-        result = await visualization_service.create_dataset_preview(
-            dataset_id=dataset_id,
-            user_id=str(user_id),
-            db=db
-        )
+        # Temporary placeholder - visualization service disabled
+        result = {
+            "success": False,
+            "error": "Data visualization temporarily unavailable during service startup"
+        }
         
         if result.get("success"):
             return result
@@ -961,8 +961,11 @@ async def get_dataset_statistics(
 async def get_chart_types():
     """Get available chart types and their configurations."""
     try:
-        chart_types = visualization_service.get_available_chart_types()
-        return {"chart_types": chart_types}
+        # Temporary placeholder - visualization service disabled
+        return {
+            "chart_types": [],
+            "message": "Data visualization temporarily unavailable during service startup"
+        }
         
     except Exception as e:
         raise HTTPException(

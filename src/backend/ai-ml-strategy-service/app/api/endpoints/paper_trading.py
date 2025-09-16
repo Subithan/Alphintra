@@ -15,6 +15,7 @@ from app.services.portfolio_tracker import portfolio_tracker
 from app.services.market_data_service import market_data_service
 from app.services.risk_manager import risk_manager
 from app.models.paper_trading import OrderStatus, OrderType, OrderSide, PaperTradingSession
+from app.core.auth import get_current_user_id
 
 
 router = APIRouter(prefix="/paper-trading")

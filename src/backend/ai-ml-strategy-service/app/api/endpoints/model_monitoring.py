@@ -16,8 +16,7 @@ from app.services.model_monitor import (
     PerformanceDegradationAlert,
     MonitoringConfig
 )
-from app.core.auth import get_current_user
-from app.models.user import User
+from app.core.auth import get_current_user_with_permissions
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/monitoring", tags=["Model Monitoring"])
@@ -114,11 +113,11 @@ async def shutdown_event():
 async def setup_monitoring(
     request: MonitoringSetupRequest,
     reference_data_file: UploadFile = File(..., description="Reference dataset CSV file"),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Setup monitoring for a model deployment"""
     try:
-        logger.info(f"Setting up monitoring for deployment {request.deployment_id} by user {current_user.id}")
+        logger.info(f"Setting up monitoring for deployment {request.deployment_id} by user {current_user['user_id']}")
         
         # Read reference data from uploaded file
         content = await reference_data_file.read()
@@ -175,11 +174,11 @@ async def setup_monitoring(
 async def check_data_drift(
     request: DataDriftCheckRequest,
     current_data_file: UploadFile = File(..., description="Current dataset CSV file"),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Check for data drift in current data"""
     try:
-        logger.info(f"Checking data drift for deployment {request.deployment_id} by user {current_user.id}")
+        logger.info(f"Checking data drift for deployment {request.deployment_id} by user {current_user['user_id']}")
         
         # Read current data from uploaded file
         content = await current_data_file.read()
@@ -235,11 +234,11 @@ async def check_data_drift(
 @router.post("/performance/check")
 async def check_performance_degradation(
     request: PerformanceCheckRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Check for performance degradation"""
     try:
-        logger.info(f"Checking performance degradation for deployment {request.deployment_id} by user {current_user.id}")
+        logger.info(f"Checking performance degradation for deployment {request.deployment_id} by user {current_user['user_id']}")
         
         # Check performance degradation
         alerts = await model_monitor.check_performance_degradation(
@@ -285,7 +284,7 @@ async def check_performance_degradation(
 @router.get("/health/{deployment_id}", response_model=ModelHealthStatusResponse)
 async def get_model_health(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Get model health status"""
     try:
@@ -323,7 +322,7 @@ async def get_model_health(
         )
 
 @router.get("/health-statuses", response_model=List[ModelHealthStatus])
-async def get_all_health_statuses(current_user: User = Depends(get_current_user)):
+async def get_all_health_statuses(current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)):
     """
     Get the health status of all monitored models.
     """
@@ -339,11 +338,11 @@ async def get_all_health_statuses(current_user: User = Depends(get_current_user)
 @router.post("/health/{deployment_id}/update", response_model=ModelHealthStatusResponse)
 async def update_model_health(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Force update model health status"""
     try:
-        logger.info(f"Updating health status for deployment {deployment_id} by user {current_user.id}")
+        logger.info(f"Updating health status for deployment {deployment_id} by user {current_user['user_id']}")
         
         health_status = await model_monitor.update_health_status(deployment_id)
         
@@ -371,7 +370,7 @@ async def get_alert_history(
     deployment_id: int,
     hours: int = Query(24, ge=1, le=168, description="Hours of history to retrieve"),
     alert_type: Optional[str] = Query(None, description="Filter by alert type (drift, performance)"),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Get alert history for a deployment"""
     try:
@@ -408,7 +407,7 @@ async def get_alert_history(
 
 @router.get("/status", response_model=MonitoringStatusResponse)
 async def get_monitoring_status(
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Get overall monitoring service status"""
     try:
@@ -451,7 +450,7 @@ async def get_monitoring_status(
 @router.get("/deployments")
 async def list_monitored_deployments(
     status_filter: Optional[str] = Query(None, description="Filter by health status"),
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """List all monitored deployments"""
     try:
@@ -484,11 +483,11 @@ async def list_monitored_deployments(
 @router.delete("/setup/{deployment_id}")
 async def remove_monitoring(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Remove monitoring for a deployment"""
     try:
-        logger.info(f"Removing monitoring for deployment {deployment_id} by user {current_user.id}")
+        logger.info(f"Removing monitoring for deployment {deployment_id} by user {current_user['user_id']}")
         
         # Remove from monitoring configs
         if deployment_id in model_monitor.monitoring_configs:
@@ -556,11 +555,11 @@ async def monitoring_service_health():
 async def update_monitoring_config(
     deployment_id: int,
     config: MonitoringConfigRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Update monitoring configuration for a deployment"""
     try:
-        logger.info(f"Updating monitoring config for deployment {deployment_id} by user {current_user.id}")
+        logger.info(f"Updating monitoring config for deployment {deployment_id} by user {current_user['user_id']}")
         
         # Get existing config or create new one
         existing_config = model_monitor.monitoring_configs.get(
@@ -608,7 +607,7 @@ async def update_monitoring_config(
 @router.get("/config/{deployment_id}")
 async def get_monitoring_config(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Get monitoring configuration for a deployment"""
     try:

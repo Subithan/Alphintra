@@ -6,7 +6,9 @@ from fastapi import APIRouter
 
 # Import endpoint routers
 
-from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution, ai_code, model_registry, model_deployment, prediction, model_monitoring, model_lifecycle, hybrid_execution, research, feature_engineering, files
+from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution, ai_code, model_registry, prediction, model_monitoring, hybrid_execution, research, files
+# feature_engineering temporarily disabled due to talib dependency
+# model_deployment and model_lifecycle temporarily disabled due to kubernetes dependency
 
 # Create main API router
 api_router = APIRouter()
@@ -17,7 +19,7 @@ api_router.include_router(templates.router, tags=["Strategy Templates"])
 
 # Include Phase 3 endpoint routers
 api_router.include_router(datasets.router, tags=["Dataset Management"])
-api_router.include_router(feature_engineering.router, prefix="/feature-engineering", tags=["Feature Engineering"])
+# api_router.include_router(feature_engineering.router, prefix="/feature-engineering", tags=["Feature Engineering"])  # Temporarily disabled due to talib dependency
 
 # Include Phase 4 endpoint routers
 api_router.include_router(training.router, tags=["Model Training"])
@@ -39,7 +41,7 @@ api_router.include_router(ai_code.router, tags=["AI Code Assistant"])
 api_router.include_router(model_registry.router, tags=["Model Registry"])
 
 # Include Model Deployment endpoints
-api_router.include_router(model_deployment.router, tags=["Model Deployment"])
+# api_router.include_router(model_deployment.router, tags=["Model Deployment"])  # Temporarily disabled due to kubernetes dependency
 
 # Include Prediction Service endpoints
 api_router.include_router(prediction.router, tags=["Real-time Predictions"])
@@ -48,7 +50,7 @@ api_router.include_router(prediction.router, tags=["Real-time Predictions"])
 api_router.include_router(model_monitoring.router, tags=["Model Monitoring"])
 
 # Include Model Lifecycle endpoints
-api_router.include_router(model_lifecycle.router, tags=["Model Lifecycle"])
+# api_router.include_router(model_lifecycle.router, tags=["Model Lifecycle"])  # Temporarily disabled due to kubernetes dependency
 
 # Include new execution modes
 api_router.include_router(hybrid_execution.router, tags=["Hybrid Execution"])

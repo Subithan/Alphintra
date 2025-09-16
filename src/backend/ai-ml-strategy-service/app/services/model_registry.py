@@ -16,8 +16,19 @@ import asyncio
 import aiofiles
 from dataclasses import dataclass
 
-import boto3
-from google.cloud import storage as gcs
+try:
+    import boto3
+    HAS_BOTO3 = True
+except ImportError:
+    HAS_BOTO3 = False
+    boto3 = None
+
+try:
+    from google.cloud import storage as gcs
+    HAS_GCS = True
+except ImportError:
+    HAS_GCS = False
+    gcs = None
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, or_
 import mlflow
@@ -28,7 +39,7 @@ from app.models.model_registry import (
     Model, ModelVersion, ModelDeployment, ModelABTest, ModelMetrics,
     ModelStatus, DeploymentStatus
 )
-from app.core.database import get_db_session
+from app.database.connection import get_db_session
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -76,10 +87,20 @@ class ModelRegistry:
         
         # Initialize storage clients
         if self.storage_backend == 's3':
-            self.s3_client = boto3.client('s3')
+            if HAS_BOTO3:
+                self.s3_client = boto3.client('s3')
+            else:
+                logger.warning("boto3 not available, falling back to local storage")
+                self.storage_backend = 'local'
+                self.s3_client = None
         elif self.storage_backend == 'gcs':
-            self.gcs_client = gcs.Client()
-            self.gcs_bucket = self.gcs_client.bucket(self.storage_bucket)
+            if HAS_GCS:
+                self.gcs_client = gcs.Client()
+                self.gcs_bucket = self.gcs_client.bucket(self.storage_bucket)
+            else:
+                logger.warning("google-cloud-storage not available, falling back to local storage")
+                self.storage_backend = 'local'
+                self.gcs_client = None
         
         # Initialize MLflow
         if settings.MLFLOW_TRACKING_URI:
@@ -565,9 +586,9 @@ class ModelRegistry:
             # Upload to storage backend
             storage_path = f"models/{model_name}/{version}/artifacts.tar.gz"
             
-            if self.storage_backend == 's3':
+            if self.storage_backend == 's3' and self.s3_client:
                 self.s3_client.upload_file(str(package_path), self.storage_bucket, storage_path)
-            elif self.storage_backend == 'gcs':
+            elif self.storage_backend == 'gcs' and hasattr(self, 'gcs_bucket') and self.gcs_bucket:
                 blob = self.gcs_bucket.blob(storage_path)
                 blob.upload_from_filename(str(package_path))
             else:
@@ -655,10 +676,14 @@ class ModelRegistry:
 
     async def _download_from_s3(self, storage_path: str, local_path: str):
         """Download artifacts from S3"""
+        if not self.s3_client:
+            raise RuntimeError("S3 client not available")
         self.s3_client.download_file(self.storage_bucket, storage_path, local_path)
 
     async def _download_from_gcs(self, storage_path: str, local_path: str):
         """Download artifacts from Google Cloud Storage"""
+        if not hasattr(self, 'gcs_bucket') or not self.gcs_bucket:
+            raise RuntimeError("GCS client not available")
         blob = self.gcs_bucket.blob(storage_path)
         blob.download_to_filename(local_path)
 
