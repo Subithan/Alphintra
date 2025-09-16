@@ -353,6 +353,75 @@ services:
       start_period: 40s
     restart: unless-stopped
 
+  # Inference Service - Strategy execution and signal distribution
+  inference-service:
+    build:
+      context: ../../../src/backend/inference-service
+      dockerfile: Dockerfile
+    container_name: alphintra-minimal-inference-service
+    environment:
+      # Service configuration
+      DEBUG: true
+      LOG_LEVEL: INFO
+      SERVICE_PORT: 8003
+      
+      # Database connections
+      AI_ML_DATABASE_URL: postgresql+asyncpg://alphintra:alphintra123@postgres:5432/alphintra-ai-ml-strategy-service
+      NO_CODE_DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-no-code-service
+      
+      # Message queue and caching
+      REDIS_URL: redis://:redis123@redis:6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      
+      # Performance tuning
+      MAX_CONCURRENT_STRATEGIES: 10
+      STRATEGY_EXECUTION_TIMEOUT: 30
+      SIGNAL_COOLDOWN_SECONDS: 60
+      CACHE_TTL_SECONDS: 300
+      
+      # Security and limits
+      MAX_STRATEGY_MEMORY_MB: 256
+      MAX_STRATEGY_EXECUTION_TIME: 30
+      MAX_CACHE_SIZE: 1000
+      
+      # Development settings
+      ENABLE_TEST_ENDPOINTS: true
+      USE_MOCK_MARKET_DATA: true
+      DETAILED_ERRORS: true
+      
+      # Monitoring
+      ENABLE_METRICS: true
+      STRUCTURED_LOGGING: true
+      
+      # WebSocket configuration
+      MAX_WEBSOCKET_CONNECTIONS: 100
+      WEBSOCKET_PING_INTERVAL: 30
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      ai-ml-strategy-service:
+        condition: service_healthy
+      no-code-service:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    networks:
+      - alphintra-minimal-network
+    volumes:
+      - inference_logs:/app/logs
+      - inference_temp:/app/temp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
   customer-support-service:
     build:
       context: ../../../src/backend/customer-support-service
@@ -387,6 +456,10 @@ volumes:
   postgres_minimal_data:
     driver: local
   redis_minimal_data:
+    driver: local
+  inference_logs:
+    driver: local
+  inference_temp:
     driver: local
 
 networks:
