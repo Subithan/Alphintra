@@ -5,9 +5,10 @@ Paper trading API endpoints.
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, Query, Path
+from fastapi import APIRouter, HTTPException, Depends, Query, Path, status
 from pydantic import BaseModel, Field
 
+from app.core.auth import get_current_user_id
 from app.services.paper_trading_engine import paper_trading_engine, OrderRequest
 from app.services.order_management import order_manager
 from app.services.portfolio_tracker import portfolio_tracker

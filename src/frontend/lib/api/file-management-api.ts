@@ -71,7 +71,7 @@ export class FileManagementApi extends BaseApiClient {
   constructor() {
     // Configure for ai-ml-strategy-service
     super({
-      baseUrl: process.env.NEXT_PUBLIC_AI_ML_SERVICE_URL || 'http://localhost:8001',
+      baseUrl: process.env.NEXT_PUBLIC_AI_ML_SERVICE_URL || 'http://localhost:8002',
       timeout: 60000, // File operations may take longer
     });
   }
