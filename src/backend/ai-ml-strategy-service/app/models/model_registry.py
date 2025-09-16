@@ -57,7 +57,7 @@ class Model(Base):
     output_schema = Column(JSONB)  # Expected output format
     
     # Business metadata
-    created_by = Column(Integer, ForeignKey("users.id"))
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     team = Column(String(100))
     project = Column(String(100))
     tags = Column(JSONB)  # Array of tags for organization
@@ -176,6 +176,7 @@ class ModelVersion(Base):
         Index('ix_model_versions_status', 'status'),
         Index('ix_model_versions_created_at', 'created_at'),
         Index('ix_model_versions_deployment_ready', 'deployment_ready'),
+        {'extend_existing': True}
     )
     
     def to_dict(self) -> Dict[str, Any]:
@@ -272,6 +273,7 @@ class ModelDeployment(Base):
         Index('ix_deployments_status', 'status'),
         Index('ix_deployments_environment', 'environment'),
         Index('ix_deployments_created_at', 'created_at'),
+        {'extend_existing': True}
     )
     
     def to_dict(self) -> Dict[str, Any]:

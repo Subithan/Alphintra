@@ -20,9 +20,8 @@ from app.models.model_registry import (
     Model, ModelVersion, ModelDeployment, ModelABTest,
     ModelStatus, DeploymentStatus
 )
-from app.core.auth import get_current_user
-from app.models.user import User
-from app.core.database import get_db_session
+from app.core.auth import get_current_user_with_permissions
+from app.database.connection import get_db_session
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -136,12 +135,12 @@ class ModelVersionListResponse(BaseModel):
 @router.post("/", response_model=ModelResponse)
 async def create_model(
     request: ModelCreateRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Create a new model entry in the registry"""
     try:
-        logger.info(f"Creating model {request.name} by user {current_user.id}")
+        logger.info(f"Creating model {request.name} by user {current_user['user_id']}")
         
         # Check if model name already exists
         existing = db.query(Model).filter(Model.name == request.name).first()
@@ -159,7 +158,7 @@ async def create_model(
             strategy_type=request.strategy_type,
             framework=request.framework,
             model_type=request.model_type,
-            created_by=current_user.id,
+            created_by=current_user['user_id'],
             tags=request.tags,
             status=ModelStatus.TRAINING
         )
@@ -185,7 +184,7 @@ async def list_models(
     tags: Optional[str] = Query(None, description="Comma-separated tags"),
     limit: int = Query(50, ge=1, le=100, description="Number of results"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """List models with filtering options"""
@@ -228,7 +227,7 @@ async def list_models(
 @router.get("/{model_id}", response_model=ModelResponse)
 async def get_model(
     model_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Get model by ID"""
@@ -247,7 +246,7 @@ async def register_model_version(
     model_id: int,
     request: ModelVersionCreateRequest,
     artifacts_file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Register a new model version with artifacts"""
@@ -295,7 +294,7 @@ async def register_model_version(
             # Register version
             model_version = await model_registry.register_model(
                 reg_request, 
-                current_user.id, 
+                current_user['user_id'], 
                 db
             )
             
@@ -322,7 +321,7 @@ async def register_model_version(
 async def list_model_versions(
     model_id: int,
     limit: int = Query(20, ge=1, le=50),
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """List all versions for a model"""
@@ -355,7 +354,7 @@ async def list_model_versions(
 async def get_model_version(
     model_id: int,
     version: str,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Get specific model version"""
@@ -373,7 +372,7 @@ async def get_model_version(
 async def promote_model_version(
     version_id: int,
     request: ModelVersionPromoteRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Promote model version to new status"""
@@ -398,7 +397,7 @@ async def promote_model_version(
 @router.get("/versions/{version_id}/artifacts")
 async def download_model_artifacts(
     version_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Download model artifacts"""
@@ -430,7 +429,7 @@ async def download_model_artifacts(
 @router.post("/versions/compare")
 async def compare_model_versions(
     request: ModelComparisonRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Compare performance metrics between two model versions"""
@@ -459,7 +458,7 @@ async def compare_model_versions(
 @router.post("/ab-tests", response_model=dict)
 async def create_ab_test(
     request: ABTestCreateRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Create A/B test for model comparison"""
@@ -493,7 +492,7 @@ async def create_ab_test(
 async def get_model_lineage(
     version_id: int,
     depth: int = Query(5, ge=1, le=10, description="Lineage depth"),
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Get model version lineage (ancestry and descendants)"""
@@ -516,7 +515,7 @@ async def get_model_lineage(
 @router.delete("/{model_id}")
 async def archive_model(
     model_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions),
     db: Session = Depends(get_db_session)
 ):
     """Archive a model (soft delete)"""

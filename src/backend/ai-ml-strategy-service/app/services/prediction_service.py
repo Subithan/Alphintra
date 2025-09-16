@@ -17,10 +17,10 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 
 from app.models.model_registry import ModelDeployment, DeploymentStatus
-from app.core.database import get_db_session
+from app.database.connection import get_db_session
 from app.core.config import get_settings
 from sqlalchemy.orm import Session
-from app.services.model_monitor import model_monitor, PredictionLog
+# from app.services.model_monitor import model_monitor, PredictionLog  # Temporarily disabled due to circular import
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
