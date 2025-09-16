@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Any, Set, Callable
 from uuid import uuid4
 
 import structlog
-import aioredis
+from redis import asyncio as aioredis
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 import websockets

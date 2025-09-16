@@ -12,7 +12,6 @@ alembic==1.13.1
 # Caching and messaging
 redis==5.0.1
 kafka-python==2.0.2
-aioredis==2.0.1
 
 # Market data and financial libraries
 ccxt==4.2.36

@@ -367,7 +367,7 @@ services:
       
       # Database connections
       AI_ML_DATABASE_URL: postgresql+asyncpg://alphintra:alphintra123@postgres:5432/alphintra-ai-ml-strategy-service
-      NO_CODE_DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-no-code-service
+      NO_CODE_DATABASE_URL: postgresql+asyncpg://alphintra:alphintra123@postgres:5432/alphintra-no-code-service
       
       # Message queue and caching
       REDIS_URL: redis://:redis123@redis:6379
