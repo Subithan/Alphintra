@@ -1,0 +1,72 @@
+# Cloud Build pipeline to build and deploy the no-code-service to Cloud Run
+# Usage: Create a Cloud Build trigger targeting this file and branch: main
+# Prerequisites (one-time per project):
+# 1) Enable APIs: Artifact Registry, Cloud Build, Cloud Run
+# 2) Create Artifact Registry repo (e.g., alphintra) in your region
+# 3) Grant Cloud Build SA permissions: roles/artifactregistry.writer, roles/run.admin, roles/iam.serviceAccountUser
+# 4) Connect your repo to Cloud Build and create a trigger for branch 'main'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _LOCATION: "us-central1"        # Cloud Run + Artifact Registry region
+  _REPOSITORY: "alphintra"        # Artifact Registry repository name
+  _SERVICE_NAME: "no-code-service"# Cloud Run service name
+  _PORT: "8006"                   # Container port used by no-code-service
+  _MIN_INSTANCES: "0"
+  _MAX_INSTANCES: "2"
+
+steps:
+  - id: "Build container image"
+    name: "gcr.io/cloud-builders/docker"
+    dir: "src/backend/no-code-service"
+    args:
+      - "build"
+      - "-t"
+      - "${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$SHORT_SHA"
+      - "-t"
+      - "${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest"
+      - "."
+
+  - id: "Push image (SHA)"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$SHORT_SHA"
+
+  - id: "Push image (latest)"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest"
+
+  - id: "Deploy to Cloud Run"
+    name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "${_SERVICE_NAME}"
+      - "--image"
+      - "${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$SHORT_SHA"
+      - "--platform"
+      - "managed"
+      - "--region"
+      - "${_LOCATION}"
+      - "--allow-unauthenticated"
+      - "--port"
+      - "${_PORT}"
+      - "--min-instances"
+      - "${_MIN_INSTANCES}"
+      - "--max-instances"
+      - "${_MAX_INSTANCES}"
+      - "--memory"
+      - "512Mi"
+      - "--cpu"
+      - "1"
+
+images:
+  - "${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:$SHORT_SHA"
+  - "${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest"
+
+timeout: "1200s" # 20 minutes
