@@ -47,7 +47,8 @@ class TrainingJobRequest(BaseModel):
     priority: TrainingPriority = Field(default=TrainingPriority.NORMAL)
     hyperparameters: Dict[str, Any] = Field(default_factory=dict)
     training_config: Dict[str, Any] = Field(default_factory=dict)
-    model_config: Dict[str, Any] = Field(default_factory=dict)
+    ml_model_config: Dict[str, Any] = Field(default_factory=dict)
+
 
 
 class WorkflowTrainingRequest(BaseModel):

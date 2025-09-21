@@ -15,8 +15,7 @@ from app.services.ai_code_service import (
     ComplexityLevel,
     OptimizationType
 )
-from app.core.auth import get_current_user
-from app.models.user import User
+from app.core.auth import get_current_user_with_permissions
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/ai", tags=["AI Code"])
@@ -153,24 +152,10 @@ class UsageStatsResponse(BaseModel):
 
 # Dependency for authentication
 async def get_authenticated_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> User:
+    user_info: Dict[str, Any] = Depends(get_current_user_with_permissions)
+) -> Dict[str, Any]:
     """Get authenticated user from token"""
-    try:
-        # In production, implement proper JWT validation
-        user = await get_current_user(credentials.credentials)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication credentials"
-            )
-        return user
-    except Exception as e:
-        logger.error(f"Authentication failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed"
-        )
+    return user_info
 
 # Utility function to generate request IDs
 def generate_request_id() -> str:
@@ -184,7 +169,7 @@ def generate_request_id() -> str:
 async def generate_code(
     request: CodeGenerationRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_authenticated_user)
+    user: Dict[str, Any] = Depends(get_authenticated_user)
 ):
     """
     Generate code from natural language prompt
@@ -195,7 +180,7 @@ async def generate_code(
     request_id = generate_request_id()
     
     try:
-        logger.info(f"Code generation request {request_id} from user {user.id}")
+        logger.info(f"Code generation request {request_id} from user {user['user_id']}")
         
         # Call AI service
         result = await ai_code_service.generate_code(
@@ -211,7 +196,7 @@ async def generate_code(
         # Log usage for monitoring
         background_tasks.add_task(
             log_ai_usage,
-            user_id=user.id,
+            user_id=user['user_id'],
             operation="generate_code",
             tokens_used=result.tokens_used,
             provider=result.provider,
@@ -242,7 +227,7 @@ async def generate_code(
 async def explain_code(
     request: CodeExplanationRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_authenticated_user)
+    user: Dict[str, Any] = Depends(get_authenticated_user)
 ):
     """
     Explain existing code with AI analysis
@@ -253,7 +238,7 @@ async def explain_code(
     request_id = generate_request_id()
     
     try:
-        logger.info(f"Code explanation request {request_id} from user {user.id}")
+        logger.info(f"Code explanation request {request_id} from user {user['user_id']}")
         
         result = await ai_code_service.explain_code(
             code=request.code,
@@ -264,7 +249,7 @@ async def explain_code(
         
         background_tasks.add_task(
             log_ai_usage,
-            user_id=user.id,
+            user_id=user['user_id'],
             operation="explain_code",
             tokens_used=result.tokens_used,
             provider=result.provider,
@@ -294,7 +279,7 @@ async def explain_code(
 async def optimize_code(
     request: CodeOptimizationRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_authenticated_user)
+    user: Dict[str, Any] = Depends(get_authenticated_user)
 ):
     """
     Optimize existing code using AI analysis
@@ -305,7 +290,7 @@ async def optimize_code(
     request_id = generate_request_id()
     
     try:
-        logger.info(f"Code optimization request {request_id} from user {user.id}")
+        logger.info(f"Code optimization request {request_id} from user {user['user_id']}")
         
         result = await ai_code_service.optimize_code(
             code=request.code,
@@ -317,7 +302,7 @@ async def optimize_code(
         
         background_tasks.add_task(
             log_ai_usage,
-            user_id=user.id,
+            user_id=user['user_id'],
             operation="optimize_code",
             tokens_used=result.tokens_used,
             provider=result.provider,
@@ -347,7 +332,7 @@ async def optimize_code(
 async def debug_code(
     request: CodeDebuggingRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_authenticated_user)
+    user: Dict[str, Any] = Depends(get_authenticated_user)
 ):
     """
     Debug code issues using AI analysis
@@ -358,7 +343,7 @@ async def debug_code(
     request_id = generate_request_id()
     
     try:
-        logger.info(f"Code debugging request {request_id} from user {user.id}")
+        logger.info(f"Code debugging request {request_id} from user {user['user_id']}")
         
         result = await ai_code_service.debug_code(
             code=request.code,
@@ -369,7 +354,7 @@ async def debug_code(
         
         background_tasks.add_task(
             log_ai_usage,
-            user_id=user.id,
+            user_id=user['user_id'],
             operation="debug_code",
             tokens_used=result.tokens_used,
             provider=result.provider,
@@ -399,7 +384,7 @@ async def debug_code(
 async def generate_tests(
     request: TestGenerationRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_authenticated_user)
+    user: Dict[str, Any] = Depends(get_authenticated_user)
 ):
     """
     Generate unit tests for code using AI
@@ -410,7 +395,7 @@ async def generate_tests(
     request_id = generate_request_id()
     
     try:
-        logger.info(f"Test generation request {request_id} from user {user.id}")
+        logger.info(f"Test generation request {request_id} from user {user['user_id']}")
         
         result = await ai_code_service.generate_tests(
             code=request.code,
@@ -422,7 +407,7 @@ async def generate_tests(
         
         background_tasks.add_task(
             log_ai_usage,
-            user_id=user.id,
+            user_id=user['user_id'],
             operation="generate_tests",
             tokens_used=result.tokens_used,
             provider=result.provider,
@@ -450,7 +435,7 @@ async def generate_tests(
 
 @router.get("/usage", response_model=UsageStatsResponse)
 async def get_usage_stats(
-    user: User = Depends(get_authenticated_user)
+    user: Dict[str, Any] = Depends(get_authenticated_user)
 ):
     """
     Get AI service usage statistics
@@ -459,7 +444,7 @@ async def get_usage_stats(
     provider usage, and operation counts.
     """
     try:
-        logger.info(f"Usage stats request from user {user.id}")
+        logger.info(f"Usage stats request from user {user['user_id']}")
         
         stats = ai_code_service.get_usage_stats()
         
@@ -480,7 +465,7 @@ async def get_usage_stats(
 
 @router.delete("/cache")
 async def clear_cache(
-    user: User = Depends(get_authenticated_user)
+    user: Dict[str, Any] = Depends(get_authenticated_user)
 ):
     """
     Clear AI service cache
@@ -489,7 +474,7 @@ async def clear_cache(
     or during development/testing.
     """
     try:
-        logger.info(f"Cache clear request from user {user.id}")
+        logger.info(f"Cache clear request from user {user['user_id']}")
         
         ai_code_service.clear_cache()
         

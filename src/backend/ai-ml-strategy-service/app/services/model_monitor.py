@@ -21,7 +21,7 @@ import redis.asyncio as redis
 from app.models.model_registry import ModelDeployment, ModelMetrics, DeploymentStatus
 from app.services import prediction_service as prediction_service_module
 from app.services.prediction_service import ModelMetrics as PredictionMetrics
-from app.core.database import get_db_session
+from app.database.connection import get_db_session
 from app.core.config import get_settings
 from sqlalchemy.orm import Session
 
@@ -51,8 +51,8 @@ class ConceptDriftAlert:
     p_value: float
     threshold: float = 0.05
     timestamp: float = field(default_factory=time.time)
-    severity: str # "low", "medium", "high"
-    description: str
+    severity: str = "medium" # "low", "medium", "high"
+    description: str = ""
 
 
 @dataclass
@@ -63,9 +63,9 @@ class DataDriftAlert:
     drift_score: float
     threshold: float
     detection_method: str
-    timestamp: float
-    severity: str  # "low", "medium", "high"
-    description: str
+    timestamp: float = field(default_factory=time.time)
+    severity: str = "medium"  # "low", "medium", "high"
+    description: str = ""
 
 
 @dataclass
@@ -88,9 +88,9 @@ class PerformanceDegradationAlert:
     expected_value: float
     degradation_percentage: float
     threshold: float
-    timestamp: float
-    severity: str
-    description: str
+    timestamp: float = field(default_factory=time.time)
+    severity: str = "medium"
+    description: str = ""
 
 
 @dataclass

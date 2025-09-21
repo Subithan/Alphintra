@@ -317,6 +317,7 @@ class ModelVersion(BaseModel):
     Individual model version in the registry.
     """
     __tablename__ = "model_versions"
+    __table_args__ = {'extend_existing': True}
     
     model_registry_id = Column(UUID(as_uuid=True), ForeignKey("model_registry.id"), nullable=False)
     version = Column(String(50), nullable=False)

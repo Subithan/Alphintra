@@ -91,6 +91,14 @@ from app.models.experiment import (
     ArtifactType
 )
 
+from app.models.file_management import (
+    Project,
+    ProjectFile,
+    ProjectTemplate,
+    FileSession,
+    FileVersion
+)
+
 __all__ = [
     # Base classes
     "BaseModel",
@@ -178,4 +186,11 @@ __all__ = [
     "RunStatus",
     "ModelStage",
     "ArtifactType",
+    
+    # File management models
+    "Project",
+    "ProjectFile",
+    "ProjectTemplate",
+    "FileSession",
+    "FileVersion",
 ]

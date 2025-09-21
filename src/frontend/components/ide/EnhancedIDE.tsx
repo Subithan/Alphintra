@@ -44,6 +44,7 @@ import { useAICodeOperationStates } from '@/lib/stores/ai-code-store'
 import { useTheme } from 'next-themes'
 import { CommandPalette } from './CommandPalette'
 import { StatusBar } from './StatusBar'
+import { fileManagementApi, type ProjectInfo as BackendProject, type FileInfo as BackendFile } from '@/lib/api/file-management-api'
 
 export type EditorMode = 'traditional' | 'ai-assisted' | 'ai-first'
 
@@ -140,10 +141,38 @@ export function EnhancedIDE({
     if (projectId) {
       loadProject(projectId)
     } else {
-      // Create default project
+      // Create or load default project from backend
+      createOrLoadDefaultProject()
+    }
+  }, [projectId, editorMode])
+
+  const createOrLoadDefaultProject = async () => {
+    try {
+      setIsLoading(true)
+      
+      // Try to get existing projects first
+      const existingProjects = await fileManagementApi.listProjects()
+      
+      if (existingProjects.length > 0) {
+        // Load the first existing project
+        const firstProject = existingProjects[0]
+        await loadProject(firstProject.id)
+      } else {
+        // Create a new default project
+        const newProject = await fileManagementApi.createProjectFromTemplate(
+          'Trading Strategy',
+          'trading',
+          'AI-powered trading strategy development'
+        )
+        await loadProject(newProject.id)
+      }
+    } catch (error) {
+      console.error('Failed to create or load default project:', error)
+      
+      // Fall back to client-side default project if backend fails
       const defaultProject: Project = {
         id: 'default',
-        name: 'Trading Strategy',
+        name: 'Trading Strategy (Offline)',
         description: 'AI-powered trading strategy development',
         files: [
           {
@@ -167,26 +196,61 @@ export function EnhancedIDE({
       setCurrentProject(defaultProject)
       setActiveFile(defaultProject.files[0])
       setOpenFiles([defaultProject.files[0]])
+      
+      setNotification({ 
+        type: 'error', 
+        message: 'Failed to connect to backend. Working offline.' 
+      })
+      setTimeout(() => setNotification(null), 5000)
+    } finally {
+      setIsLoading(false)
     }
-  }, [projectId, editorMode])
+  }
 
   const loadProject = async (id: string) => {
     try {
       setIsLoading(true)
-      // In real implementation, fetch from API
-      const response = await fetch(`/api/projects/${id}`)
-      if (response.ok) {
-        const project = await response.json()
-        setCurrentProject(project)
-        if (project.files.length > 0) {
-          setActiveFile(project.files[0])
-          setOpenFiles([project.files[0]])
+      // Load project from backend API
+      const backendProject = await fileManagementApi.loadProject(id, true)
+      
+      // Convert backend format to frontend format
+      const project: Project = {
+        id: backendProject.id,
+        name: backendProject.name,
+        description: backendProject.description || 'AI-powered trading strategy development',
+        files: backendProject.files.map((file): IDEFile => ({
+          id: file.id,
+          name: file.name,
+          path: file.path,
+          content: file.content || '',
+          language: file.language,
+          modified: false,
+          isActive: false
+        })),
+        settings: {
+          aiEnabled: backendProject.settings.aiEnabled ?? true,
+          suggestions: backendProject.settings.suggestions ?? true,
+          autoComplete: backendProject.settings.autoComplete ?? true,
+          errorDetection: backendProject.settings.errorDetection ?? true,
+          testGeneration: backendProject.settings.testGeneration ?? true
         }
       }
+      
+      setCurrentProject(project)
+      if (project.files.length > 0) {
+        const mainFile = project.files.find(f => f.name === 'main.py') || project.files[0]
+        setActiveFile({ ...mainFile, isActive: true })
+        setOpenFiles([{ ...mainFile, isActive: true }])
+      }
+      
+      setNotification({ type: 'success', message: `Loaded project: ${project.name}` })
+      
     } catch (error) {
       console.error('Failed to load project:', error)
+      setNotification({ type: 'error', message: `Failed to load project: ${error instanceof Error ? error.message : 'Unknown error'}` })
     } finally {
       setIsLoading(false)
+      setTimeout(() => setNotification(null), 3000)
     }
   }
 
@@ -315,14 +379,28 @@ export function EnhancedIDE({
   }, [openFiles, activeFile?.id])
 
   const saveFile = useCallback(async () => {
-    if (!activeFile) return
+    if (!activeFile || !currentProject) return
 
     try {
-      if (onSave) {
-        await onSave(activeFile)
+      // Save file using backend API
+      const savedFile = await fileManagementApi.saveFile(
+        currentProject.id,
+        activeFile.name,
+        activeFile.content,
+        activeFile.language
+      )
+
+      const updatedFile: IDEFile = { 
+        ...activeFile, 
+        modified: false,
+        // Update with backend response data
+        content: savedFile.content || activeFile.content
       }
 
-      const updatedFile: IDEFile = { ...activeFile, modified: false }
+      // Call onSave callback if provided
+      if (onSave) {
+        await onSave(updatedFile)
+      }
 
       startTransition(() => {
         setActiveFile(updatedFile)
@@ -331,12 +409,13 @@ export function EnhancedIDE({
       })
     } catch (error) {
       console.error('Failed to save file:', error)
-      setNotification({ type: 'error', message: `Failed to save ${activeFile.name}` })
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setNotification({ type: 'error', message: `Failed to save ${activeFile.name}: ${errorMessage}` })
     } finally {
       // Clear notification after 3 seconds
       setTimeout(() => setNotification(null), 3000)
     }
-  }, [activeFile, onSave])
+  }, [activeFile, currentProject, onSave])
 
   const runCode = useCallback(async () => {
     if (!activeFile) return
@@ -425,48 +504,61 @@ export function EnhancedIDE({
   }, [resolvedTheme])
 
   // New file creation
-  const createNewFile = useCallback(() => {
+  const createNewFile = useCallback(async () => {
+    if (!currentProject) {
+      setNotification({ type: 'error', message: 'No project selected' })
+      setTimeout(() => setNotification(null), 3000)
+      return
+    }
+
     const fileName = prompt('Enter file name (with extension):', 'untitled.py')
 
     if (fileName && fileName.trim()) {
-      const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'txt'
-      const languageMap: Record<string, string> = {
-        'py': 'python',
-        'js': 'javascript',
-        'ts': 'typescript',
-        'tsx': 'typescript',
-        'jsx': 'javascript',
-        'html': 'html',
-        'css': 'css',
-        'json': 'json',
-        'md': 'markdown',
-        'sql': 'sql',
-        'txt': 'plaintext'
-      }
-
-      const getTemplateContent = (extension: string): string => {
-        const templates: Record<string, string> = {
-          'py': '# New Python file\n\ndef main():\n    pass\n\nif __name__ == "__main__":\n    main()\n',
-          'js': '// New JavaScript file\n\nfunction main() {\n    // Your code here\n}\n\nmain();\n',
-          'ts': '// New TypeScript file\n\nfunction main(): void {\n    // Your code here\n}\n\nmain();\n',
-          'html': '<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Document</title>\n</head>\n<body>\n    \n</body>\n</html>\n',
-          'css': '/* New CSS file */\n\nbody {\n    margin: 0;\n    padding: 0;\n}\n',
-          'json': '{\n    "name": "example",\n    "version": "1.0.0"\n}\n',
-          'md': '# New Document\n\n## Overview\n\nYour content here...\n'
+      try {
+        const fileExtension = fileName.split('.').pop()?.toLowerCase() || 'txt'
+        const languageMap: Record<string, string> = {
+          'py': 'python',
+          'js': 'javascript',
+          'ts': 'typescript',
+          'tsx': 'typescript',
+          'jsx': 'javascript',
+          'html': 'html',
+          'css': 'css',
+          'json': 'json',
+          'md': 'markdown',
+          'sql': 'sql',
+          'txt': 'plaintext'
         }
-        return templates[extension] || ''
-      }
 
-      const newFile: IDEFile = {
-        id: `file-${Date.now()}`,
-        name: fileName.trim(),
-        path: `/${fileName.trim()}`,
-        content: getTemplateContent(fileExtension),
-        language: languageMap[fileExtension] || 'plaintext',
-        modified: false
-      }
+        const getTemplateContent = (extension: string): string => {
+          const templates: Record<string, string> = {
+            'py': '# New Python file\n\ndef main():\n    pass\n\nif __name__ == "__main__":\n    main()\n',
+            'js': '// New JavaScript file\n\nfunction main() {\n    // Your code here\n}\n\nmain();\n',
+            'ts': '// New TypeScript file\n\nfunction main(): void {\n    // Your code here\n}\n\nmain();\n',
+            'html': '<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Document</title>\n</head>\n<body>\n    \n</body>\n</html>\n',
+            'css': '/* New CSS file */\n\nbody {\n    margin: 0;\n    padding: 0;\n}\n',
+            'json': '{\n    "name": "example",\n    "version": "1.0.0"\n}\n',
+            'md': '# New Document\n\n## Overview\n\nYour content here...\n'
+          }
+          return templates[extension] || ''
+        }
 
-      if (currentProject) {
+        // Create file using backend API
+        const createdFile = await fileManagementApi.createFile(currentProject.id, {
+          name: fileName.trim(),
+          content: getTemplateContent(fileExtension),
+          language: languageMap[fileExtension] || 'plaintext'
+        })
+
+        const newFile: IDEFile = {
+          id: createdFile.id,
+          name: createdFile.name,
+          path: createdFile.path,
+          content: createdFile.content || '',
+          language: createdFile.language,
+          modified: false
+        }
+
         const updatedProject = {
           ...currentProject,
           files: [...currentProject.files, newFile]
@@ -478,6 +570,10 @@ export function EnhancedIDE({
           setOpenFiles(prev => [...prev, newFile])
           setNotification({ type: 'success', message: `Created ${fileName}` })
         })
+      } catch (error) {
+        console.error('Failed to create file:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        setNotification({ type: 'error', message: `Failed to create ${fileName}: ${errorMessage}` })
       }
     }
 

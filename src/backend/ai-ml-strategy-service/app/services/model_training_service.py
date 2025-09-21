@@ -13,7 +13,7 @@ from app.ml_models.base import BaseModel
 from app.ml_models.xgboost_model import XGBoostModel
 # This is a placeholder, I'll need to find the correct way to load data.
 # from app.services.dataset_catalog import get_dataset_data
-from app.core.database import get_session
+from app.core.database import get_db
 
 class ModelTrainingService:
     """
@@ -32,7 +32,7 @@ class ModelTrainingService:
         """
         Main method to run the training and optimization process.
         """
-        async with get_session() as db:
+        async with get_db() as db:
             self.db = db
             job = await self._get_job()
             if not job:

@@ -15,9 +15,11 @@ import logging
 from functools import wraps
 
 import openai
+from openai import RateLimitError
 from anthropic import Anthropic
 import httpx
 from pydantic import BaseModel, Field
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
@@ -212,7 +214,7 @@ class AICodeService:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((httpx.RequestError, openai.error.RateLimitError))
+        retry=retry_if_exception_type((httpx.RequestError, RateLimitError))
     )
     async def _call_openai(self, messages: List[Dict], **kwargs) -> Dict[str, Any]:
         """Call OpenAI API with retries"""

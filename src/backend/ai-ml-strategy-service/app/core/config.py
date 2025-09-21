@@ -87,6 +87,11 @@ class Settings(BaseSettings):
     TRADING_ENGINE_URL: str = Field(default="http://trading-engine:8080", description="Trading engine service URL")
     MARKET_DATA_SERVICE_URL: str = Field(default="http://market-data-service:8080", description="Market data service URL")
     
+    # Model storage settings
+    MODEL_STORAGE_BACKEND: str = Field(default="local", description="Model storage backend: s3, gcs, or local")
+    MODEL_STORAGE_BUCKET: Optional[str] = Field(default=None, description="Storage bucket name for models")
+    LOCAL_MODEL_STORAGE_PATH: str = Field(default="/tmp/models", description="Local path for model storage")
+    
     @property
     def is_development(self) -> bool:
         """Check if running in development environment."""

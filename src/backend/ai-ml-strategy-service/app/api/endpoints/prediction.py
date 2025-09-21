@@ -14,8 +14,7 @@ from app.services.prediction_service import (
     PredictionResponse,
     ModelMetrics
 )
-from app.core.auth import get_current_user
-from app.models.user import User
+from app.core.auth import get_current_user_with_permissions
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/predictions", tags=["Real-time Predictions"])
@@ -89,11 +88,11 @@ async def shutdown_event():
 @router.post("/predict", response_model=PredictionResponseModel)
 async def make_prediction(
     request: PredictionRequestModel,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Make a single prediction"""
     try:
-        logger.info(f"Prediction request for deployment {request.model_deployment_id} by user {current_user.id}")
+        logger.info(f"Prediction request for deployment {request.model_deployment_id} by user {current_user['user_id']}")
         
         # Convert to internal request format
         pred_request = PredictionRequest(
@@ -132,11 +131,11 @@ async def make_prediction(
 @router.post("/predict/batch", response_model=BatchPredictionResponseModel)
 async def make_batch_prediction(
     request: BatchPredictionRequestModel,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Make batch predictions with concurrency control"""
     try:
-        logger.info(f"Batch prediction request for {len(request.requests)} items by user {current_user.id}")
+        logger.info(f"Batch prediction request for {len(request.requests)} items by user {current_user['user_id']}")
         
         # Convert to internal request format
         pred_requests = []
@@ -200,11 +199,11 @@ async def make_batch_prediction(
 async def enqueue_prediction(
     request: PredictionRequestModel,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Enqueue prediction for background processing"""
     try:
-        logger.info(f"Async prediction request for deployment {request.model_deployment_id} by user {current_user.id}")
+        logger.info(f"Async prediction request for deployment {request.model_deployment_id} by user {current_user['user_id']}")
         
         # Convert to internal request format
         pred_request = PredictionRequest(
@@ -241,7 +240,7 @@ async def enqueue_prediction(
 @router.get("/metrics/{deployment_id}", response_model=ModelMetricsResponse)
 async def get_model_metrics(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Get performance metrics for a specific model deployment"""
     try:
@@ -276,7 +275,7 @@ async def get_model_metrics(
 
 @router.get("/metrics", response_model=AllMetricsResponse)
 async def get_all_metrics(
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Get performance metrics for all model deployments"""
     try:
@@ -311,13 +310,13 @@ async def get_all_metrics(
 @router.delete("/cache/{deployment_id}")
 async def clear_model_cache(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Clear cache for specific model deployment"""
     try:
         await prediction_service.clear_cache(deployment_id)
         
-        logger.info(f"Cleared cache for deployment {deployment_id} by user {current_user.id}")
+        logger.info(f"Cleared cache for deployment {deployment_id} by user {current_user['user_id']}")
         return {"message": f"Cache cleared for deployment {deployment_id}"}
         
     except Exception as e:
@@ -329,13 +328,13 @@ async def clear_model_cache(
 
 @router.delete("/cache")
 async def clear_all_cache(
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Clear all prediction cache"""
     try:
         await prediction_service.clear_cache()
         
-        logger.info(f"Cleared all prediction cache by user {current_user.id}")
+        logger.info(f"Cleared all prediction cache by user {current_user['user_id']}")
         return {"message": "All prediction cache cleared"}
         
     except Exception as e:
@@ -380,7 +379,7 @@ async def prediction_service_health():
 @router.get("/status/{deployment_id}")
 async def get_deployment_prediction_status(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Get prediction service status for specific deployment"""
     try:
@@ -414,7 +413,7 @@ async def get_deployment_prediction_status(
 @router.get("/stream/{deployment_id}")
 async def stream_predictions(
     deployment_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user_with_permissions)
 ):
     """Stream prediction results (placeholder for WebSocket implementation)"""
     try:

@@ -7,6 +7,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, ForeignKey, Boolean, Text, JSON, Float
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -90,7 +91,7 @@ class StrategyExecution(Base):
     __tablename__ = "strategy_executions"
     
     id = Column(Integer, primary_key=True, index=True)
-    strategy_id = Column(Integer, ForeignKey("strategies.id"), nullable=False)
+    strategy_id = Column(UUID(as_uuid=True), ForeignKey("strategies.id"), nullable=False)
     environment_id = Column(Integer, ForeignKey("execution_environments.id"), nullable=False)
     
     # Execution configuration
