@@ -3,6 +3,8 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--target'
+      - 'production'
       - '-t'
       - 'gcr.io/$_PROJECT_ID/alphintra-frontend:${_BUILD_TAG}'
       - '-t'
