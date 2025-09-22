@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+resources:
+  - namespace.yaml
+  - alphintra-frontend.yaml
+  - alphintra-frontend-service.yaml
+  - alphintra-frontend-ingress.yaml
+
+commonLabels:
+  app: alphintra-frontend
+  environment: dev
+
+images:
+  - name: gcr.io/PROJECT_ID/alphintra-frontend
+    newTag: latest
