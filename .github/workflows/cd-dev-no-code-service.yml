@@ -1,4 +1,4 @@
-name: Deploy no-code-service to GKE (on main)
+name: Deploy no-code-service to GKE using Cloud Build
 
 on:
   push:
@@ -10,16 +10,14 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: gcr.io
   PROJECT_ID: alphintra-472817   # match Cloud SQL instance project
-  GKE_CLUSTER: alphintra-cluster  # corrected cluster name
-  GKE_ZONE: us-central1-a      # TODO: set to your GKE cluster zone/region
-  IMAGE_NAME: no-code-service
-  NAMESPACE: alphintra
+  GKE_CLUSTER: alphintra-cluster
+  GKE_ZONE: us-central1-a
+  SERVICE_NAME: no-code-service
 
 jobs:
-  build-and-deploy:
-    name: Build and deploy no-code-service
+  deploy:
+    name: Build and deploy using Cloud Build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,83 +26,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check authentication secrets
-        id: auth-check
-        run: |
-          if [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
-            echo "Using Service Account JSON key"
-            echo "USE_WIF=false" >> $GITHUB_ENV
-          elif [ -n "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ -n "${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}" ]; then
-            echo "Using Workload Identity Federation"
-            echo "USE_WIF=true" >> $GITHUB_ENV
-          else
-            echo "No authentication credentials found"
-            exit 1
-          fi
-
+      # Prefer Workload Identity Federation; fall back to JSON key if provided
       - name: Authenticate to Google Cloud (WIF)
-        if: ${{ env.USE_WIF == 'true' }}
-        id: auth
-        uses: google-github-actions/auth@v3
+        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
+        uses: google-github-actions/auth@v1
         with:
-          project_id: alphintra-472817
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
-          audience: 'https://iam.googleapis.com/projects/472817/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
 
       - name: Authenticate to Google Cloud (JSON key fallback)
-        if: ${{ env.USE_WIF != 'true' }}
+        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '' }}
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+      - name: Fail if no auth credentials are configured
+        if: ${{ (secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '') && secrets.GCP_SA_KEY == '' }}
+        run: |
+          echo "Missing authentication configuration. Provide either:" >&2
+          echo "- GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT_EMAIL secrets (recommended), or" >&2
+          echo "- GCP_SA_KEY secret with a service account JSON key." >&2
+          exit 1
+
       - name: Set up gcloud SDK
         uses: google-github-actions/setup-gcloud@v1
 
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker gcr.io
-
-      - name: Prepare image tags
-        id: prep
+      - name: Submit build to Cloud Build
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          TAGS="$IMAGE"
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            TAGS+=" , ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest"
-          fi
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          gcloud builds submit \
+            --config=src/backend/no-code-service/cloudbuild.yaml \
+            --project=$PROJECT_ID \
+            --substitutions=COMMIT_SHA=$GITHUB_SHA \
+            .
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push container image
-        uses: docker/build-push-action@v5
-        with:
-          context: src/backend/no-code-service
-          push: true
-          tags: ${{ steps.prep.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Get GKE credentials
+      - name: Verify deployment status
         run: |
-          gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$PROJECT_ID"
-
-      - name: Apply dev overlay (manifests)
-        run: |
-          kubectl apply -k infra/kubernetes/overlays/dev
-
-      - name: Update Deployment image to freshly built tag
-        run: |
-          kubectl -n "$NAMESPACE" set image deployment/no-code-service no-code-service="${{ steps.prep.outputs.image }}"
-
-      - name: Wait for rollout
-        run: |
-          kubectl -n "$NAMESPACE" rollout status deployment/no-code-service --timeout=300s
-
-      - name: Post-deploy sanity
-        run: |
-          kubectl -n "$NAMESPACE" get pods -l app=no-code-service -o wide
-          # Optional in-cluster health probe (non-fatal)
-          kubectl -n "$NAMESPACE" exec deploy/no-code-service -- wget -qO- http://127.0.0.1:8006/health || true
+          echo "Cloud Build completed. Checking deployment status..."
+          gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+          kubectl get deployment $SERVICE_NAME -n alphintra -o wide
+          kubectl get pods -l app=$SERVICE_NAME -n alphintra
