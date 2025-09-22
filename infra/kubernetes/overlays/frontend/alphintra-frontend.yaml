@@ -25,15 +25,17 @@ spec:
           name: http
         env:
         - name: NODE_ENV
-          value: "production"
+          value: "development"
         - name: PORT
           value: "3000"
+        - name: NEXT_TELEMETRY_DISABLED
+          value: "1"
         resources:
           requests:
-            memory: "64Mi"
+            memory: "256Mi"
             cpu: "10m"
           limits:
-            memory: "128Mi"
+            memory: "512Mi"
             cpu: "100m"
         # Temporarily disable health checks to allow startup
         # livenessProbe:
