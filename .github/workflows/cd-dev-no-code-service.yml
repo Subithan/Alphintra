@@ -48,6 +48,19 @@ jobs:
             --substitutions=_PROJECT_ID=$GCP_PROJECT_ID,_COMMIT_SHA=$GITHUB_SHA \
             .
 
+      - name: Trigger Frontend Deployment
+        if: success()
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: no-code-service-deployed
+          client-payload: |
+            {
+              "commit_sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "service": "no-code-service"
+            }
+
       - name: Verify deployment status
         run: |
           echo "Cloud Build completed. Checking deployment status..."
