@@ -87,3 +87,4 @@ timeout: '1200s'
 substitutions:
   _BUILD_TAG: 'v1.0.0'
   _PROJECT_ID: 'alphintra-472817'
+  _TARGET_ENV: 'dev'
