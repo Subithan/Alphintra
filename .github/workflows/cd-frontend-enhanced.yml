@@ -1,0 +1,360 @@
+name: Enhanced Frontend Build & Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'src/frontend/**'
+      - 'infra/kubernetes/overlays/frontend/**'
+      - '.github/workflows/cd-frontend-enhanced.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      build_tag:
+        description: 'Build tag (optional)'
+        required: false
+        type: string
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'alphintra-472817' }}
+  GCP_REGION: us-central1
+  CLUSTER_NAME: alphintra-cluster
+  CLUSTER_ZONE: us-central1-a
+  SERVICE_NAME: alphintra-frontend
+  NODE_VERSION: '18'
+
+jobs:
+  pre-build-validation:
+    name: Pre-build Validation
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      build-tag: ${{ steps.build-info.outputs.tag }}
+      target-env: ${{ steps.build-info.outputs.env }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          CACHE_KEY="frontend-deps-${{ hashFiles('src/frontend/package-lock.json') }}-${{ env.NODE_VERSION }}"
+          echo "key=$CACHE_KEY" >> $GITHUB_OUTPUT
+          echo "Cache key: $CACHE_KEY"
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/frontend/node_modules
+            src/frontend/.next/cache
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            frontend-deps-${{ hashFiles('src/frontend/package-lock.json') }}-
+            frontend-deps-
+
+      - name: Install dependencies
+        working-directory: src/frontend
+        run: |
+          echo "Installing frontend dependencies..."
+          npm ci --prefer-offline --no-audit
+          echo "Dependencies installed successfully"
+
+      - name: Validate package integrity
+        working-directory: src/frontend
+        run: |
+          echo "Validating package integrity..."
+          npm ls --depth=0
+          echo "Package validation completed"
+
+      - name: TypeScript type checking
+        working-directory: src/frontend
+        run: |
+          echo "Running TypeScript type checking..."
+          npm run type-check
+          echo "Type checking completed successfully"
+
+      - name: ESLint validation
+        working-directory: src/frontend
+        run: |
+          echo "Running ESLint validation..."
+          npm run lint
+          echo "Linting completed successfully"
+
+      - name: Determine build information
+        id: build-info
+        run: |
+          # Determine target environment
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TARGET_ENV="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TARGET_ENV="prod"
+          else
+            TARGET_ENV="dev"
+          fi
+
+          # Generate build tag
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.build_tag }}" ]]; then
+            BUILD_TAG="${{ github.event.inputs.build_tag }}"
+          else
+            BUILD_TAG="v$(date +%Y%m%d)-${GITHUB_SHA:0:8}"
+          fi
+
+          echo "env=$TARGET_ENV" >> $GITHUB_OUTPUT
+          echo "tag=$BUILD_TAG" >> $GITHUB_OUTPUT
+          echo "Target environment: $TARGET_ENV"
+          echo "Build tag: $BUILD_TAG"
+
+  build-and-deploy:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: pre-build-validation
+    environment: ${{ needs.pre-build-validation.outputs.target-env }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: 'latest'
+
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker gcr.io --quiet
+          echo "Docker configured for Google Container Registry"
+
+      - name: Validate build environment
+        run: |
+          echo "Validating build environment..."
+          echo "GCP Project: ${{ env.GCP_PROJECT_ID }}"
+          echo "Target Environment: ${{ needs.pre-build-validation.outputs.target-env }}"
+          echo "Build Tag: ${{ needs.pre-build-validation.outputs.build-tag }}"
+          echo "Cluster: ${{ env.CLUSTER_NAME }}"
+          echo "Node Version: ${{ env.NODE_VERSION }}"
+
+          # Verify GCP authentication
+          gcloud auth list --filter=status:ACTIVE --format="value(account)"
+
+          # Verify cluster access
+          gcloud container clusters describe ${{ env.CLUSTER_NAME }} \
+            --zone ${{ env.CLUSTER_ZONE }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format="value(name,status)" || exit 1
+
+      - name: Pre-build cleanup
+        working-directory: src/frontend
+        run: |
+          echo "Cleaning up previous build artifacts..."
+          rm -rf .next dist node_modules/.cache
+          echo "Cleanup completed"
+
+      - name: Submit Cloud Build
+        id: cloud-build
+        run: |
+          echo "Submitting build to Cloud Build..."
+
+          BUILD_ID=$(gcloud builds submit \
+            --config=src/frontend/cloudbuild.yaml \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --region=${{ env.GCP_REGION }} \
+            --substitutions=_BUILD_TAG=${{ needs.pre-build-validation.outputs.build-tag }},_PROJECT_ID=${{ env.GCP_PROJECT_ID }},_TARGET_ENV=${{ needs.pre-build-validation.outputs.target-env }} \
+            --format="value(id)" \
+            .)
+
+          echo "build-id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "Cloud Build submitted with ID: $BUILD_ID"
+
+      - name: Verify Cloud Build completion
+        run: |
+          echo "Waiting for Cloud Build to complete..."
+
+          BUILD_STATUS=$(gcloud builds describe ${{ steps.cloud-build.outputs.build-id }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --region=${{ env.GCP_REGION }} \
+            --format="value(status)")
+
+          echo "Final build status: $BUILD_STATUS"
+
+          if [[ "$BUILD_STATUS" != "SUCCESS" ]]; then
+            echo "Cloud Build failed with status: $BUILD_STATUS"
+
+            # Get build logs for debugging
+            echo "Build logs:"
+            gcloud builds log ${{ steps.cloud-build.outputs.build-id }} \
+              --project=${{ env.GCP_PROJECT_ID }} \
+              --region=${{ env.GCP_REGION }}
+
+            exit 1
+          fi
+
+      - name: Verify container image
+        run: |
+          echo "Verifying container image..."
+
+          IMAGE_URI="gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ needs.pre-build-validation.outputs.build-tag }}"
+
+          # Check if image exists
+          gcloud container images describe $IMAGE_URI \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --format="value(name)" || exit 1
+
+          echo "Container image verified: $IMAGE_URI"
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} \
+            --zone ${{ env.CLUSTER_ZONE }} \
+            --project ${{ env.GCP_PROJECT_ID }}
+
+      - name: Verify deployment status
+        run: |
+          echo "Verifying deployment status..."
+
+          # Wait for deployment rollout to complete
+          kubectl rollout status deployment/${{ env.SERVICE_NAME }} \
+            -n default \
+            --timeout=300s
+
+          # Get deployment details
+          kubectl get deployment ${{ env.SERVICE_NAME }} -n default -o wide
+
+          # Get pod status
+          kubectl get pods -l app=${{ env.SERVICE_NAME }} -n default -o wide
+
+          # Check if pods are ready
+          READY_PODS=$(kubectl get pods -l app=${{ env.SERVICE_NAME }} -n default \
+            --field-selector=status.phase=Running \
+            --no-headers | wc -l)
+
+          if [[ $READY_PODS -eq 0 ]]; then
+            echo "No running pods found for ${{ env.SERVICE_NAME }}"
+            kubectl describe pods -l app=${{ env.SERVICE_NAME }} -n default
+            exit 1
+          fi
+
+          echo "Deployment verification completed successfully"
+
+  post-deployment-tests:
+    name: Post-Deployment Tests
+    runs-on: ubuntu-latest
+    needs: [pre-build-validation, build-and-deploy]
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} \
+            --zone ${{ env.CLUSTER_ZONE }} \
+            --project ${{ env.GCP_PROJECT_ID }}
+
+      - name: Service health check
+        run: |
+          echo "Performing service health check..."
+
+          # Get service endpoint
+          SERVICE_IP=$(kubectl get service ${{ env.SERVICE_NAME }}-service -n default \
+            -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+
+          if [[ -z "$SERVICE_IP" ]]; then
+            echo "Service IP not available, checking ClusterIP..."
+            SERVICE_IP=$(kubectl get service ${{ env.SERVICE_NAME }}-service -n default \
+              -o jsonpath='{.spec.clusterIP}')
+          fi
+
+          echo "Service IP: $SERVICE_IP"
+
+          # Port forward for health check
+          kubectl port-forward service/${{ env.SERVICE_NAME }}-service 8080:3000 -n default &
+          PF_PID=$!
+
+          sleep 10
+
+          # Health check
+          HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
+
+          kill $PF_PID 2>/dev/null || true
+
+          if [[ "$HEALTH_STATUS" == "200" ]]; then
+            echo "Health check passed"
+          else
+            echo "Health check failed with status: $HEALTH_STATUS"
+            exit 1
+          fi
+
+      - name: Generate deployment summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ needs.pre-build-validation.outputs.target-env }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Tag**: ${{ needs.pre-build-validation.outputs.build-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ needs.pre-build-validation.outputs.build-tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cluster**: ${{ env.CLUSTER_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+
+  cleanup:
+    name: Cleanup Resources
+    runs-on: ubuntu-latest
+    needs: [pre-build-validation, build-and-deploy]
+    if: failure()
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Cleanup failed resources
+        run: |
+          echo "Cleaning up failed deployment resources..."
+
+          # Remove failed container images (keep last 5)
+          gcloud container images list-tags gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }} \
+            --limit=999 \
+            --sort-by=TIMESTAMP \
+            --format="get(digest)" \
+            | tail -n +6 \
+            | xargs -I {} gcloud container images delete gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.SERVICE_NAME }}@{} --quiet || true
+
+          echo "Cleanup completed"

@@ -1,13 +1,18 @@
 # Multi-stage build for Next.js application
 FROM node:18-alpine AS base
+# Add compatibility for native deps (e.g., sharp for Next.js images)
+RUN apk add --no-cache libc6-compat
 
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
 
+# Add build toolchain required by some native modules
+RUN apk add --no-cache python3 make g++ git
+
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Build the app
 FROM base AS builder
@@ -25,6 +30,9 @@ RUN npm run build
 # Production image, copy all the files and run next
 FROM base AS production
 WORKDIR /app
+
+# Install tools required for health checks
+RUN apk add --no-cache curl
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
