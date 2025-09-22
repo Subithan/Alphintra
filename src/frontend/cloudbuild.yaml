@@ -4,9 +4,9 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/alphintra-frontend:$COMMIT_SHA'
+      - 'gcr.io/$_PROJECT_ID/alphintra-frontend:${_BUILD_TAG}'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/alphintra-frontend:latest'
+      - 'gcr.io/$_PROJECT_ID/alphintra-frontend:latest'
       - '.'
     dir: 'src/frontend'
 
@@ -14,12 +14,12 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/alphintra-frontend:$COMMIT_SHA'
+      - 'gcr.io/$_PROJECT_ID/alphintra-frontend:${_BUILD_TAG}'
 
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/alphintra-frontend:latest'
+      - 'gcr.io/$_PROJECT_ID/alphintra-frontend:latest'
 
   # Apply Kubernetes manifests for frontend
   - name: 'gcr.io/cloud-builders/kubectl'
@@ -37,7 +37,7 @@ steps:
       - 'set'
       - 'image'
       - 'deployment/alphintra-frontend'
-      - 'alphintra-frontend=gcr.io/$PROJECT_ID/alphintra-frontend:$COMMIT_SHA'
+      - 'alphintra-frontend=gcr.io/$_PROJECT_ID/alphintra-frontend:${_BUILD_TAG}'
       - '-n'
       - 'default'
     env:
@@ -72,8 +72,8 @@ steps:
 
 # Store images in Google Container Registry
 images:
-  - 'gcr.io/$PROJECT_ID/alphintra-frontend:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/alphintra-frontend:latest'
+  - 'gcr.io/$_PROJECT_ID/alphintra-frontend:${_BUILD_TAG}'
+  - 'gcr.io/$_PROJECT_ID/alphintra-frontend:latest'
 
 # Build options
 options:
@@ -82,3 +82,8 @@ options:
 
 # Timeout for the entire build
 timeout: '1200s'
+
+# Substitutions with default values
+substitutions:
+  _BUILD_TAG: 'v1.0.0'
+  _PROJECT_ID: 'alphintra-472817'

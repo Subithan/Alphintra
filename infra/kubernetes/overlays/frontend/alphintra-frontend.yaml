@@ -7,7 +7,7 @@ metadata:
     app: alphintra-frontend
     environment: dev
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: alphintra-frontend
@@ -19,32 +19,24 @@ spec:
     spec:
       containers:
       - name: alphintra-frontend
-        image: gcr.io/PROJECT_ID/alphintra-frontend:latest
+        image: nginx:alpine
         ports:
-        - containerPort: 3000
+        - containerPort: 80
           name: http
         env:
         - name: NODE_ENV
-          value: "production"
-        - name: NEXT_TELEMETRY_DISABLED
-          value: "1"
-        - name: NEXT_PUBLIC_APP_URL
-          value: "https://alphintra.dev"
-        - name: NEXT_PUBLIC_API_URL
-          value: "https://api.alphintra.dev"
-        - name: NEXT_PUBLIC_WS_URL
-          value: "wss://api.alphintra.dev"
+          value: "development"
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "32Mi"
+            cpu: "10m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "64Mi"
+            cpu: "50m"
         livenessProbe:
           httpGet:
             path: /
-            port: 3000
+            port: 80
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -52,14 +44,14 @@ spec:
         readinessProbe:
           httpGet:
             path: /
-            port: 3000
+            port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
         securityContext:
-          runAsNonRoot: true
-          runAsUser: 1001
+          runAsNonRoot: false
+          runAsUser: 0
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: false
       securityContext:
