@@ -21,6 +21,19 @@ steps:
       - 'push'
       - 'gcr.io/$_PROJECT_ID/alphintra-frontend:latest'
 
+  # Delete existing deployment to handle selector immutability
+  - name: 'gcr.io/cloud-builders/kubectl'
+    args:
+      - 'delete'
+      - 'deployment'
+      - 'alphintra-frontend'
+      - '-n'
+      - 'default'
+      - '--ignore-not-found=true'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+
   # Apply Kubernetes manifests for frontend
   - name: 'gcr.io/cloud-builders/kubectl'
     args:

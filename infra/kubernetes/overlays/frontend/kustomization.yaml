@@ -9,9 +9,7 @@ resources:
   - alphintra-frontend-service.yaml
   - alphintra-frontend-ingress.yaml
 
-commonLabels:
-  app: alphintra-frontend
-  environment: dev
+# Removed commonLabels to avoid selector immutability issues
 
 images:
   - name: gcr.io/PROJECT_ID/alphintra-frontend
