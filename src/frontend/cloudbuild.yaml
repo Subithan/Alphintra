@@ -26,7 +26,7 @@ steps:
     args:
       - 'delete'
       - 'deployment'
-      - 'alphintra-frontend'
+      - 'frontend-app'
       - '-n'
       - 'default'
       - '--ignore-not-found=true'
@@ -49,7 +49,7 @@ steps:
     args:
       - 'set'
       - 'image'
-      - 'deployment/alphintra-frontend'
+      - 'deployment/frontend-app'
       - 'alphintra-frontend=gcr.io/$_PROJECT_ID/alphintra-frontend:${_BUILD_TAG}'
       - '-n'
       - 'default'
@@ -62,7 +62,7 @@ steps:
     args:
       - 'rollout'
       - 'status'
-      - 'deployment/alphintra-frontend'
+      - 'deployment/frontend-app'
       - '-n'
       - 'default'
       - '--timeout=300s'
@@ -76,7 +76,7 @@ steps:
       - 'get'
       - 'pods'
       - '-l'
-      - 'app=alphintra-frontend'
+      - 'app=frontend-app'
       - '-n'
       - 'default'
     env:
