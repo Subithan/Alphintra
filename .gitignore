@@ -491,9 +491,7 @@ Dockerfile.local
 docker-compose.override.yml
 docker-compose.local.yml
 
-# Kubernetes
-*.kubeconfig
-kustomization.yaml
+# Kubernetes - ignore kustomization.yaml files except in infra/kubernetes
 
 # Terraform
 *.tfstate
