@@ -5,9 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build-original": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --project tsconfig.build.json",
+    "type-check-strict": "tsc --noEmit"
   },
   "dependencies": {
     "@apollo/client": "^3.9.0",

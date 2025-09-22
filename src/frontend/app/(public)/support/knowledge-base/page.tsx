@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+
+// Disable static generation for this page as it uses searchParams
+export const dynamic = 'force-dynamic';
 import KnowledgeBaseSearch from '@/components/support/knowledge-base/KnowledgeBaseSearch';
 import ArticleViewer from '@/components/support/knowledge-base/ArticleViewer';
 
