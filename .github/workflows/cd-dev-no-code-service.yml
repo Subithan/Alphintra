@@ -7,11 +7,12 @@ on:
       - 'src/backend/no-code-service/**'
       - 'infra/kubernetes/overlays/dev/**'
       - '.github/workflows/cd-dev-no-code-service.yml'
+  workflow_dispatch:
 
 env:
   REGISTRY: gcr.io
-  PROJECT_ID: alphintra-prod   # TODO: set to your GCP project ID for the target cluster
-  GKE_CLUSTER: alphintra-prod  # TODO: set to your GKE cluster name
+  PROJECT_ID: alphintra-472817   # match Cloud SQL instance project
+  GKE_CLUSTER: alphintra-cluster  # corrected cluster name
   GKE_ZONE: us-central1-a      # TODO: set to your GKE cluster zone/region
   IMAGE_NAME: no-code-service
   NAMESPACE: alphintra
@@ -27,16 +28,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
+      # Prefer Workload Identity Federation; fall back to JSON key if provided
+      - name: Authenticate to Google Cloud (WIF)
+        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Authenticate to Google Cloud (JSON key fallback)
+        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '' }}
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Fail if no auth credentials are configured
+        if: ${{ (secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '') && secrets.GCP_SA_KEY == '' }}
+        run: |
+          echo "Missing authentication configuration. Provide either:\n- GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT_EMAIL secrets (recommended), or\n- GCP_SA_KEY secret with a service account JSON key." >&2
+          exit 1
 
       - name: Set up gcloud SDK
         uses: google-github-actions/setup-gcloud@v1
 
       - name: Configure Docker for GCR
-        run: gcloud auth configure-docker
+        run: gcloud auth configure-docker gcr.io
 
       - name: Prepare image tags
         id: prep
