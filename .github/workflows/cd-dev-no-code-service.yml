@@ -28,23 +28,23 @@ jobs:
 
       # Prefer Workload Identity Federation; fall back to JSON key if provided
       - name: Authenticate to Google Cloud (WIF)
-        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
         uses: google-github-actions/auth@v1
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}
 
       - name: Authenticate to Google Cloud (JSON key fallback)
-        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '' }}
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT_EMAIL == '' || secrets.GCP_SA_KEY != '' }}
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Fail if no auth credentials are configured
-        if: ${{ (secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '') && secrets.GCP_SA_KEY == '' }}
+        if: ${{ (vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT_EMAIL == '') && secrets.GCP_SA_KEY == '' }}
         run: |
           echo "Missing authentication configuration. Provide either:" >&2
-          echo "- GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT_EMAIL secrets (recommended), or" >&2
+          echo "- GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT_EMAIL variables (recommended), or" >&2
           echo "- GCP_SA_KEY secret with a service account JSON key." >&2
           exit 1
 
