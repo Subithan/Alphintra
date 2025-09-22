@@ -1,0 +1,54 @@
+name: Deploy Frontend to Dev
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'src/frontend/**'
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  CLUSTER_NAME: alphintra-cluster
+  CLUSTER_ZONE: us-central1-a
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: 'latest'
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: |
+          gcloud auth configure-docker
+
+      - name: Submit build to Cloud Build
+        run: |
+          gcloud builds submit \
+            --config=src/frontend/cloudbuild.yaml \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --region=${{ env.GCP_REGION }} \
+            .
+
+      - name: Verify deployment
+        run: |
+          gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} \
+            --zone ${{ env.CLUSTER_ZONE }} \
+            --project ${{ env.GCP_PROJECT_ID }}
+          
+          kubectl get deployment alphintra-frontend -n default
+          kubectl get pods -l app=alphintra-frontend -n default
