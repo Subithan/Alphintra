@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: alphintra-472817   # match Cloud SQL instance project
+  PROJECT_ID: alphintra-472817
   GKE_CLUSTER: alphintra-cluster
   GKE_ZONE: us-central1-a
   SERVICE_NAME: no-code-service
@@ -22,34 +22,18 @@ jobs:
     permissions:
       contents: read
       id-token: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Prefer Workload Identity Federation; fall back to JSON key if provided
-      - name: Authenticate to Google Cloud (WIF)
-        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
-        uses: google-github-actions/auth@v1
-        with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}
-
-      - name: Authenticate to Google Cloud (JSON key fallback)
-        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT_EMAIL == '' || secrets.GCP_SA_KEY != '' }}
-        uses: google-github-actions/auth@v1
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Fail if no auth credentials are configured
-        if: ${{ (vars.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || vars.GCP_SERVICE_ACCOUNT_EMAIL == '') && secrets.GCP_SA_KEY == '' }}
-        run: |
-          echo "Missing authentication configuration. Provide either:" >&2
-          echo "- GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT_EMAIL variables (recommended), or" >&2
-          echo "- GCP_SA_KEY secret with a service account JSON key." >&2
-          exit 1
-
       - name: Set up gcloud SDK
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Submit build to Cloud Build
         run: |
