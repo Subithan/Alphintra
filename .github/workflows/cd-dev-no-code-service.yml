@@ -51,6 +51,7 @@ jobs:
           project_id: alphintra-472817
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          audience: 'https://iam.googleapis.com/projects/472817/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
 
       - name: Authenticate to Google Cloud (JSON key fallback)
         if: ${{ env.USE_WIF != 'true' }}
