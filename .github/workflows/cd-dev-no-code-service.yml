@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: alphintra-472817
+  GCP_PROJECT_ID: alphintra-472817
   GKE_CLUSTER: alphintra-cluster
   GKE_ZONE: us-central1-a
   SERVICE_NAME: no-code-service
@@ -39,13 +39,13 @@ jobs:
         run: |
           gcloud builds submit \
             --config=src/backend/no-code-service/cloudbuild.yaml \
-            --project=$PROJECT_ID \
-            --substitutions=COMMIT_SHA=$GITHUB_SHA \
+            --project=$GCP_PROJECT_ID \
+            --substitutions=PROJECT_ID=$GCP_PROJECT_ID,COMMIT_SHA=$GITHUB_SHA \
             .
 
       - name: Verify deployment status
         run: |
           echo "Cloud Build completed. Checking deployment status..."
-          gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+          gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $GCP_PROJECT_ID
           kubectl get deployment $SERVICE_NAME -n alphintra -o wide
           kubectl get pods -l app=$SERVICE_NAME -n alphintra
