@@ -30,7 +30,7 @@ spec:
           service:
             name: alphintra-frontend-service
             port:
-              number: 80
+              number: 3000
   - host: www.alphintra.dev
     http:
       paths:
@@ -40,4 +40,4 @@ spec:
           service:
             name: alphintra-frontend-service
             port:
-              number: 80
+              number: 3000
