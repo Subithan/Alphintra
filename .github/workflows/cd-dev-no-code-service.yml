@@ -45,7 +45,7 @@ jobs:
           gcloud builds submit \
             --config=src/backend/no-code-service/cloudbuild.yaml \
             --project=$GCP_PROJECT_ID \
-            --substitutions=PROJECT_ID=$GCP_PROJECT_ID,COMMIT_SHA=$GITHUB_SHA \
+            --substitutions=_PROJECT_ID=$GCP_PROJECT_ID,_COMMIT_SHA=$GITHUB_SHA \
             .
 
       - name: Verify deployment status
