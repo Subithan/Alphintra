@@ -1,0 +1,84 @@
+name: Deploy no-code-service to GKE (on main)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/backend/no-code-service/**'
+      - 'infra/kubernetes/overlays/dev/**'
+      - '.github/workflows/cd-dev-no-code-service.yml'
+
+env:
+  REGISTRY: gcr.io
+  PROJECT_ID: alphintra-prod   # TODO: set to your GCP project ID for the target cluster
+  GKE_CLUSTER: alphintra-prod  # TODO: set to your GKE cluster name
+  GKE_ZONE: us-central1-a      # TODO: set to your GKE cluster zone/region
+  IMAGE_NAME: no-code-service
+  NAMESPACE: alphintra
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy no-code-service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Prepare image tags
+        id: prep
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          TAGS="$IMAGE"
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TAGS+=" , ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest"
+          fi
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push container image
+        uses: docker/build-push-action@v5
+        with:
+          context: src/backend/no-code-service
+          push: true
+          tags: ${{ steps.prep.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" --project "$PROJECT_ID"
+
+      - name: Apply dev overlay (manifests)
+        run: |
+          kubectl apply -k infra/kubernetes/overlays/dev
+
+      - name: Update Deployment image to freshly built tag
+        run: |
+          kubectl -n "$NAMESPACE" set image deployment/no-code-service no-code-service="${{ steps.prep.outputs.image }}"
+
+      - name: Wait for rollout
+        run: |
+          kubectl -n "$NAMESPACE" rollout status deployment/no-code-service --timeout=300s
+
+      - name: Post-deploy sanity
+        run: |
+          kubectl -n "$NAMESPACE" get pods -l app=no-code-service -o wide
+          # Optional in-cluster health probe (non-fatal)
+          kubectl -n "$NAMESPACE" exec deploy/no-code-service -- wget -qO- http://127.0.0.1:8006/health || true

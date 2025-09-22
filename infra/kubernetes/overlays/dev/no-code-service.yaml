@@ -1,0 +1,144 @@
+# Minimal no-code-service manifests for dev overlay (self-contained)
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-code-service-code
+  namespace: alphintra
+  labels:
+    app: no-code-service
+    part-of: alphintra
+    environment: development
+    managed-by: kustomize
+data:
+  main.py: |
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+
+    app = FastAPI(
+        title="Alphintra No-Code Service",
+        description="Minimal dev app",
+        version="0.1.0"
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/health")
+    async def health():
+        return {"status": "healthy", "service": "no-code-service"}
+
+    @app.get("/")
+    async def root():
+        return {"message": "Alphintra No-Code Service (dev minimal)"}
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run("main:app", host="0.0.0.0", port=8006)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: no-code-service
+  namespace: alphintra
+  labels:
+    app: no-code-service
+    service: no-code-service
+spec:
+  type: ClusterIP
+  selector:
+    app: no-code-service
+  ports:
+    - name: http
+      port: 8006
+      targetPort: 8006
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: no-code-service
+  namespace: alphintra
+  labels:
+    app: no-code-service
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: no-code-service
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: no-code-service
+        version: v1
+    spec:
+      serviceAccountName: default
+      containers:
+        - name: no-code-service
+          image: python:3.11-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+          command: ["sh", "-c"]
+          args:
+            - pip install --no-cache-dir fastapi==0.104.1 uvicorn[standard]==0.24.0 && python main.py
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NAMESPACE
+              valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            - name: REDIS_URL
+              value: "redis://:redis123@redis:6379"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka:29092"
+            - name: BACKTEST_SERVICE_URL
+              value: "http://backtest-service:8007"
+            - name: PYTHONPATH
+              value: "/app"
+          ports:
+            - name: http
+              containerPort: 8006
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8006
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8006
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+      volumes:
+        - name: app-code
+          configMap:
+            name: no-code-service-code
+            items:
+              - key: main.py
+                path: main.py
