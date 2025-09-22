@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+
+// Disable static generation for this page as it uses searchParams
+export const dynamic = 'force-dynamic';
 import {
   Card,
   CardContent,

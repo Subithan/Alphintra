@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+
+// Disable static generation for this page as it uses searchParams
+export const dynamic = 'force-dynamic';
 import { NoCodeWorkflowEditorWrapper } from '@/components/no-code/NoCodeWorkflowEditor';
 import { ComponentLibrary } from '@/components/no-code/ComponentLibrary';
 import { TemplateLibrary } from '@/components/no-code/TemplateLibrary';

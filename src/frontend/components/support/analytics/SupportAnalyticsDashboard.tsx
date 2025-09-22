@@ -800,8 +800,8 @@ export default function SupportAnalyticsDashboard({
                       <span className="font-medium text-yellow-800">Areas for Improvement</span>
                     </div>
                     <div className="text-sm text-yellow-700">
-                      <div>Escalation Rate: 8.5% (Target: <5%)</div>
-                      <div>Reopen Rate: 3.2% (Target: <2%)</div>
+                      <div>Escalation Rate: 8.5% (Target: &lt;5%)</div>
+                      <div>Reopen Rate: 3.2% (Target: &lt;2%)</div>
                     </div>
                   </div>
                 </div>

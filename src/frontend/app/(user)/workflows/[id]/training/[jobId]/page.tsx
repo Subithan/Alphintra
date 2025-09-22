@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+
+// Disable static generation for this page as it uses searchParams
+export const dynamic = 'force-dynamic';
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
