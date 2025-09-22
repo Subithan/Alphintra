@@ -28,25 +28,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Prefer Workload Identity Federation; fall back to JSON key if provided
+      - name: Check authentication secrets
+        id: auth-check
+        run: |
+          if [ -n "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ -n "${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}" ]; then
+            echo "Using Workload Identity Federation"
+            echo "USE_WIF=true" >> $GITHUB_ENV
+          elif [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "Using Service Account JSON key"
+            echo "USE_WIF=false" >> $GITHUB_ENV
+          else
+            echo "No authentication credentials found"
+            echo "USE_WIF=false" >> $GITHUB_ENV
+            exit 1
+          fi
+
       - name: Authenticate to Google Cloud (WIF)
-        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
+        if: ${{ env.USE_WIF == 'true' }}
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
       - name: Authenticate to Google Cloud (JSON key fallback)
-        if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '' }}
+        if: ${{ env.USE_WIF != 'true' }}
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Fail if no auth credentials are configured
-        if: ${{ (secrets.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || secrets.GCP_SERVICE_ACCOUNT_EMAIL == '') && secrets.GCP_SA_KEY == '' }}
-        run: |
-          echo "Missing authentication configuration. Provide either:\n- GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT_EMAIL secrets (recommended), or\n- GCP_SA_KEY secret with a service account JSON key." >&2
-          exit 1
 
       - name: Set up gcloud SDK
         uses: google-github-actions/setup-gcloud@v1
