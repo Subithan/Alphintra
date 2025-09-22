@@ -17,6 +17,7 @@ import asyncio
 import os
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
+from migrations.run_migrations import apply_all_migrations
 import redis
 import httpx
 import strawberry
@@ -93,6 +94,18 @@ app.add_middleware(
 # Prometheus metrics
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app)
+
+# Run DB migrations on startup
+@app.on_event("startup")
+async def on_startup():
+    try:
+        logger.info("Running database migrations on startup...")
+        apply_all_migrations()
+        logger.info("Database migrations completed.")
+    except Exception as e:
+        logger.exception(f"Database migration failed: {e}")
+        if not DEV_MODE:
+            raise
 
 # Security
 security = HTTPBearer(auto_error=False)  # Don't auto-error for missing auth in dev mode
