@@ -31,15 +31,14 @@ jobs:
       - name: Check authentication secrets
         id: auth-check
         run: |
-          if [ -n "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ -n "${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}" ]; then
-            echo "Using Workload Identity Federation"
-            echo "USE_WIF=true" >> $GITHUB_ENV
-          elif [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
+          if [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
             echo "Using Service Account JSON key"
             echo "USE_WIF=false" >> $GITHUB_ENV
+          elif [ -n "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ -n "${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}" ]; then
+            echo "Using Workload Identity Federation"
+            echo "USE_WIF=true" >> $GITHUB_ENV
           else
             echo "No authentication credentials found"
-            echo "USE_WIF=false" >> $GITHUB_ENV
             exit 1
           fi
 
