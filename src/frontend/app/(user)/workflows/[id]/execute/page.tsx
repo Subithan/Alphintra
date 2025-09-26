@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 
 // Disable static generation for this page as it uses searchParams
@@ -25,7 +25,11 @@ interface WorkflowData {
   updatedAt: string
 }
 
-export default function ExecuteWorkflowPage() {
+type ExecutionModeSelectorProps = React.ComponentProps<typeof ExecutionModeSelector>
+type ExecutionMode = Parameters<ExecutionModeSelectorProps['onModeSelect']>[0]
+type ExecutionModeConfig = Parameters<ExecutionModeSelectorProps['onModeSelect']>[1]
+
+function ExecuteWorkflowContent() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -61,16 +65,21 @@ export default function ExecuteWorkflowPage() {
       setIsLoading(true)
       
       // First try to use current workflow from store if it matches
-      if (currentWorkflow && currentWorkflow.id === workflowId) {
+      const currentWorkflowId = Number(currentWorkflow?.id)
+      if (currentWorkflow && !Number.isNaN(currentWorkflowId) && currentWorkflowId === workflowId) {
         setWorkflow({
-          id: currentWorkflow.id,
+          id: currentWorkflowId,
           name: currentWorkflow.name || `Workflow ${workflowId}`,
           description: currentWorkflow.description,
           complexity: getWorkflowComplexity(currentWorkflow),
           nodeCount: currentWorkflow.nodes?.length || 0,
           edgeCount: currentWorkflow.edges?.length || 0,
-          createdAt: currentWorkflow.createdAt || new Date().toISOString(),
-          updatedAt: currentWorkflow.updatedAt || new Date().toISOString()
+          createdAt: currentWorkflow.createdAt instanceof Date
+            ? currentWorkflow.createdAt.toISOString()
+            : currentWorkflow.createdAt ?? new Date().toISOString(),
+          updatedAt: currentWorkflow.updatedAt instanceof Date
+            ? currentWorkflow.updatedAt.toISOString()
+            : currentWorkflow.updatedAt ?? new Date().toISOString()
         })
         setIsLoading(false)
         return
@@ -103,35 +112,66 @@ export default function ExecuteWorkflowPage() {
     return 'complex'
   }
   
-  const getEstimatedDuration = (complexity: string, nodeCount: number) => {
-    const baseDurations = {
-      simple: { strategy: '< 30 seconds', model: '30-60 minutes' },
-      medium: { strategy: '< 1 minute', model: '1-4 hours' },
-      complex: { strategy: '< 2 minutes', model: '4-12 hours' }
-    }
-    
-    return baseDurations[complexity as keyof typeof baseDurations] || baseDurations.medium
-  }
-  
-  const handleModeSelect = async (mode: 'strategy' | 'model', config: any) => {
-    try {
-      setExecutionStatus('executing')
-      await startExecution(workflowId, mode, config)
-      
-      // Navigate based on execution mode
-      if (mode === 'strategy') {
-        // For strategy mode, navigate to results page
-        router.push(`/workflows/${workflowId}/results/strategy?executionId=${Date.now()}`)
-      } else {
-        // For model mode, navigate to training dashboard
-        const jobId = currentExecution.jobId
-        if (jobId) {
-          router.push(`/workflows/${workflowId}/training/${jobId}`)
-        }
+  const estimatedDuration = useMemo(() => {
+    const baseDurations: Record<'simple' | 'medium' | 'complex', NonNullable<ExecutionModeSelectorProps['estimatedDuration']>> = {
+      simple: {
+        strategy: '< 30 seconds',
+        model: '30-60 minutes',
+        hybrid: '15-45 minutes',
+        backtesting: '10-20 minutes',
+        paper_trading: 'Live (setup < 5 minutes)',
+        research: 'Instant'
+      },
+      medium: {
+        strategy: '< 1 minute',
+        model: '1-4 hours',
+        hybrid: '30-90 minutes',
+        backtesting: '20-45 minutes',
+        paper_trading: 'Live (setup < 10 minutes)',
+        research: 'Instant'
+      },
+      complex: {
+        strategy: '< 2 minutes',
+        model: '4-12 hours',
+        hybrid: '1-3 hours',
+        backtesting: '45-120 minutes',
+        paper_trading: 'Live (setup < 15 minutes)',
+        research: 'Instant'
       }
-    } catch (error) {
-      console.error('Execution failed:', error)
     }
+
+    const complexitySource = currentWorkflow
+      ? getWorkflowComplexity(currentWorkflow)
+      : workflow
+        ? workflow.complexity ?? getWorkflowComplexity({ nodes: Array.from({ length: workflow.nodeCount }), edges: Array.from({ length: workflow.edgeCount }) })
+        : 'medium'
+
+    return baseDurations[complexitySource]
+  }, [currentWorkflow, workflow])
+
+  const handleModeSelect: ExecutionModeSelectorProps['onModeSelect'] = (mode: ExecutionMode, config: ExecutionModeConfig) => {
+    void (async () => {
+      try {
+        setExecutionStatus('executing')
+        if (mode !== 'strategy' && mode !== 'model') {
+          console.warn(`Execution mode "${mode}" is not yet supported in this flow.`)
+          return
+        }
+
+        await startExecution(workflowId, mode, config)
+
+        if (mode === 'strategy') {
+          router.push(`/workflows/${workflowId}/results/strategy?executionId=${Date.now()}`)
+        } else if (mode === 'model') {
+          const jobId = currentExecution.jobId
+          if (jobId) {
+            router.push(`/workflows/${workflowId}/training/${jobId}`)
+          }
+        }
+      } catch (error) {
+        console.error('Execution failed:', error)
+      }
+    })()
   }
   
   const handleCancel = () => {
@@ -273,9 +313,28 @@ export default function ExecuteWorkflowPage() {
           onModeSelect={handleModeSelect}
           onCancel={handleCancel}
           isLoading={currentExecution.status === 'executing'}
-          estimatedDuration={getEstimatedDuration(workflow.complexity || 'medium', workflow.nodeCount)}
+          estimatedDuration={estimatedDuration}
         />
       </div>
     </div>
+  )
+}
+
+export default function ExecuteWorkflowPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center space-y-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-muted-foreground">Loading workflow...</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <ExecuteWorkflowContent />
+    </Suspense>
   )
 }

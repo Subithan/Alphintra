@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { Suspense, useState, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // Disable static generation for this page as it uses searchParams
@@ -43,6 +43,23 @@ interface ExecutionResult {
 }
 
 export default function NoCodeConsolePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+          <div className="text-center space-y-3">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-slate-200 border-t-transparent" />
+            <p className="text-sm text-slate-300">Loading no-code console...</p>
+          </div>
+        </div>
+      }
+    >
+      <NoCodeConsoleContent />
+    </Suspense>
+  );
+}
+
+function NoCodeConsoleContent() {
   const { toast } = useToast();
   const { user } = useUser();
   const searchParams = useSearchParams();

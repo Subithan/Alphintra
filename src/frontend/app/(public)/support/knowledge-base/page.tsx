@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 // Disable static generation for this page as it uses searchParams
@@ -28,7 +28,7 @@ interface KnowledgeBaseArticle {
   attachments?: string[];
 }
 
-export default function KnowledgeBasePage() {
+function KnowledgeBaseContent() {
   const searchParams = useSearchParams();
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeBaseArticle | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -250,5 +250,19 @@ Good luck with your algorithmic trading journey!`,
         )}
       </div>
     </div>
+  );
+};
+
+export default function KnowledgeBasePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      }
+    >
+      <KnowledgeBaseContent />
+    </Suspense>
   );
 }
