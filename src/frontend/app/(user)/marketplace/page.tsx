@@ -1,122 +1,123 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, TrendingUp, Star, Users, Download, ChevronDown, Grid, List } from 'lucide-react';
+import { Search, Filter, TrendingUp, Star, Users, Trophy, MessageSquare, Book, Download, Grid, List, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useTheme } from 'next-themes';
 import StrategyCard from '@/components/marketplace/StrategyCard';
 import FilterSidebar from '@/components/marketplace/FilterSidebar';
-import { useTheme } from 'next-themes';
+import CommunityForum from '@/components/marketplace/CommunityForum';
+import Leaderboard from '@/components/marketplace/Leaderboard';
+import SocialTradingPanel from '@/components/marketplace/SocialTradingPanel';
+import EducationalContent from '@/components/marketplace/EducationalContent';
 
 interface Strategy {
   id: string;
   name: string;
-  developer: string;
+  creatorId: string;
+  creatorName: string;
   description: string;
-  roi: number;
-  roiChange: number;
-  tradingPairs: string[];
-  rating: number;
-  reviews: number;
-  downloads: number;
-  price: number | 'free';
-  riskLevel: 'low' | 'medium' | 'high';
   category: string;
   assetType: string;
-  version: string;
-  lastUpdated: string;
-  backtestResults: {
+  tradingPairs: string[];
+  price: number | 'free';
+  pricingModel: 'SUBSCRIPTION' | 'REVENUE_SHARE' | 'FREE';
+  revenueSharePercentage?: number;
+  riskLevel: 'low' | 'medium' | 'high';
+  verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  performance: {
     totalReturn: number;
-    sharpeRatio: number;
+    annualizedReturn: number;
     maxDrawdown: number;
+    sharpeRatio: number;
     winRate: number;
   };
-  isPro: boolean;
+  rating: number;
+  reviewCount: number;
+  subscriberCount: number;
+  lastUpdated: string;
   isVerified: boolean;
+}
+
+interface LeaderboardEntry {
+  id: string;
+  userId: string;
+  username: string;
+  rank: number;
+  totalReturn: number;
+  sharpeRatio: number;
+  winRate: number;
+}
+
+interface ForumTopic {
+  id: string;
+  title: string;
+  category: string;
+  author: string;
+  replyCount: number;
+  viewCount: number;
+  lastReplyAt: string;
 }
 
 const mockStrategies: Strategy[] = [
   {
     id: '1',
-    name: 'Quantum Momentum Pro',
-    developer: 'AlgoMaster',
-    description: 'Advanced momentum strategy using quantum-inspired algorithms for crypto markets',
-    roi: 142.5,
-    roiChange: 12.3,
-    tradingPairs: ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'],
-    rating: 4.8,
-    reviews: 247,
-    downloads: 1523,
-    price: 99,
-    riskLevel: 'medium',
+    name: 'Alpha Momentum Strategy',
+    creatorId: 'creator1',
+    creatorName: 'TradeMaster',
+    description: 'High-performance momentum strategy for crypto markets',
     category: 'Momentum',
     assetType: 'Cryptocurrency',
-    version: '2.1.0',
-    lastUpdated: '2024-01-15',
-    backtestResults: {
-      totalReturn: 142.5,
-      sharpeRatio: 2.3,
-      maxDrawdown: -8.5,
-      winRate: 67.2
+    tradingPairs: ['BTC/USDT', 'ETH/USDT'],
+    price: 99,
+    pricingModel: 'SUBSCRIPTION',
+    revenueSharePercentage: 30,
+    riskLevel: 'medium',
+    verificationStatus: 'APPROVED',
+    performance: {
+      totalReturn: 152.3,
+      annualizedReturn: 85.6,
+      maxDrawdown: -10.2,
+      sharpeRatio: 2.4,
+      winRate: 68.5,
     },
-    isPro: true,
-    isVerified: true
+    rating: 4.7,
+    reviewCount: 189,
+    subscriberCount: 342,
+    lastUpdated: '2025-08-15',
+    isVerified: true,
   },
+  // Additional mock strategies...
+];
+
+const mockLeaderboard: LeaderboardEntry[] = [
   {
-    id: '2',
-    name: 'Mean Reversion Master',
-    developer: 'TradeWiz',
-    description: 'Statistical mean reversion strategy with adaptive parameters',
-    roi: 89.7,
-    roiChange: -2.1,
-    tradingPairs: ['AAPL', 'MSFT', 'GOOGL'],
-    rating: 4.6,
-    reviews: 156,
-    downloads: 892,
-    price: 'free',
-    riskLevel: 'low',
-    category: 'Mean Reversion',
-    assetType: 'Stocks',
-    version: '1.5.2',
-    lastUpdated: '2024-01-10',
-    backtestResults: {
-      totalReturn: 89.7,
-      sharpeRatio: 1.8,
-      maxDrawdown: -5.2,
-      winRate: 72.5
-    },
-    isPro: false,
-    isVerified: true
+    id: '1',
+    userId: 'user1',
+    username: 'CryptoKing',
+    rank: 1,
+    totalReturn: 245.7,
+    sharpeRatio: 2.8,
+    winRate: 72.3,
   },
+  // Additional mock leaderboard entries...
+];
+
+const mockForumTopics: ForumTopic[] = [
   {
-    id: '3',
-    name: 'AI Grid Trading Bot',
-    developer: 'CryptoBot Labs',
-    description: 'Machine learning enhanced grid trading with dynamic adjustments',
-    roi: 215.8,
-    roiChange: 8.7,
-    tradingPairs: ['BTC/USD', 'ETH/USD'],
-    rating: 4.9,
-    reviews: 312,
-    downloads: 2156,
-    price: 149,
-    riskLevel: 'high',
-    category: 'Grid Trading',
-    assetType: 'Cryptocurrency',
-    version: '3.0.1',
-    lastUpdated: '2024-01-18',
-    backtestResults: {
-      totalReturn: 215.8,
-      sharpeRatio: 2.7,
-      maxDrawdown: -12.3,
-      winRate: 58.9
-    },
-    isPro: true,
-    isVerified: true
-  }
+    id: '1',
+    title: 'Best Practices for Momentum Trading',
+    category: 'Trading Strategies',
+    author: 'TradeMaster',
+    replyCount: 45,
+    viewCount: 1234,
+    lastReplyAt: '2025-08-30',
+  },
+  // Additional mock forum topics...
 ];
 
 export default function MarketplacePage() {
@@ -126,45 +127,47 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState('popularity');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('strategies');
   const [filters, setFilters] = useState({
     assetType: 'all',
     riskLevel: 'all',
     priceRange: 'all',
-    rating: 0
+    rating: 0,
+    verificationStatus: 'all',
   });
 
   const filteredStrategies = useMemo(() => {
-    return mockStrategies.filter(strategy => {
-      const matchesSearch = strategy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           strategy.developer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           strategy.description.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = selectedCategory === 'all' || strategy.category.toLowerCase() === selectedCategory.toLowerCase();
-      const matchesAssetType = filters.assetType === 'all' || strategy.assetType.toLowerCase() === filters.assetType.toLowerCase();
-      const matchesRiskLevel = filters.riskLevel === 'all' || strategy.riskLevel === filters.riskLevel;
-      const matchesRating = strategy.rating >= filters.rating;
+    return mockStrategies
+      .filter((strategy) => {
+        const matchesSearch =
+          strategy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          strategy.creatorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          strategy.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesSearch && matchesCategory && matchesAssetType && matchesRiskLevel && matchesRating;
-    }).sort((a, b) => {
-      switch (sortBy) {
-        case 'roi-desc':
-          return b.roi - a.roi;
-        case 'roi-asc':
-          return a.roi - b.roi;
-        case 'rating':
-          return b.rating - a.rating;
-        case 'price-asc':
-          const priceA = a.price === 'free' ? 0 : a.price;
-          const priceB = b.price === 'free' ? 0 : b.price;
-          return priceA - priceB;
-        case 'price-desc':
-          const priceA2 = a.price === 'free' ? 0 : a.price;
-          const priceB2 = b.price === 'free' ? 0 : b.price;
-          return priceB2 - priceA2;
-        default:
-          return b.downloads - a.downloads;
-      }
-    });
+        const matchesCategory = selectedCategory === 'all' || strategy.category.toLowerCase() === selectedCategory.toLowerCase();
+        const matchesAssetType = filters.assetType === 'all' || strategy.assetType.toLowerCase() === filters.assetType.toLowerCase();
+        const matchesRiskLevel = filters.riskLevel === 'all' || strategy.riskLevel === filters.riskLevel;
+        const matchesRating = strategy.rating >= filters.rating;
+        const matchesVerification = filters.verificationStatus === 'all' || strategy.verificationStatus === filters.verificationStatus;
+
+        return matchesSearch && matchesCategory && matchesAssetType && matchesRiskLevel && matchesRating && matchesVerification;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'roi-desc':
+            return b.performance.totalReturn - a.performance.totalReturn;
+          case 'rating':
+            return b.rating - a.rating;
+          case 'price-asc':
+            const priceA = a.price === 'free' ? 0 : a.price;
+            const priceB = b.price === 'free' ? 0 : b.price;
+            return priceA - priceB;
+          case 'popularity':
+            return b.subscriberCount - a.subscriberCount;
+          default:
+            return 0;
+        }
+      });
   }, [searchQuery, selectedCategory, filters, sortBy]);
 
   return (
@@ -175,15 +178,21 @@ export default function MarketplacePage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Strategy & Model Marketplace
+                Alphintra Marketplace
               </h1>
               <p className={`text-lg ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'} mt-1`}>
-                Discover and deploy AI-powered trading strategies from top developers
+                Discover, share, and monetize trading strategies with our vibrant community
               </p>
             </div>
-            <Button className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-semibold">
-              Become a Developer
-            </Button>
+            <div className="flex gap-3">
+              <Button className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white">
+                Become a Creator
+              </Button>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Join Community
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -194,13 +203,12 @@ export default function MarketplacePage() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search strategies, developers, or keywords..."
+              placeholder="Search strategies, creators, or topics..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-12"
             />
           </div>
-          
           <div className="flex flex-wrap gap-3">
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-48">
@@ -214,7 +222,6 @@ export default function MarketplacePage() {
                 <SelectItem value="arbitrage">Arbitrage</SelectItem>
               </SelectContent>
             </Select>
-
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-40">
                 <SelectValue />
@@ -222,13 +229,10 @@ export default function MarketplacePage() {
               <SelectContent>
                 <SelectItem value="popularity">Most Popular</SelectItem>
                 <SelectItem value="roi-desc">Highest ROI</SelectItem>
-                <SelectItem value="roi-asc">Lowest ROI</SelectItem>
                 <SelectItem value="rating">Top Rated</SelectItem>
                 <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
               </SelectContent>
             </Select>
-
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
@@ -237,7 +241,6 @@ export default function MarketplacePage() {
               <Filter className="h-4 w-4" />
               Filters
             </Button>
-
             <div className="flex border rounded-lg overflow-hidden">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -270,13 +273,19 @@ export default function MarketplacePage() {
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-blue-500" />
             <span className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}`}>
-              Avg ROI: 149.3%
+              Avg ROI: {filteredStrategies.reduce((sum, s) => sum + s.performance.totalReturn, 0) / (filteredStrategies.length || 1)}%
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4 text-yellow-500" />
             <span className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}`}>
-              Avg Rating: 4.7/5
+              Avg Rating: {(filteredStrategies.reduce((sum, s) => sum + s.rating, 0) / (filteredStrategies.length || 1)).toFixed(1)}/5
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-purple-500" />
+            <span className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}`}>
+              {filteredStrategies.reduce((sum, s) => sum + s.subscriberCount, 0)} active subscribers
             </span>
           </div>
         </div>
@@ -285,20 +294,33 @@ export default function MarketplacePage() {
           {/* Filter Sidebar */}
           {showFilters && (
             <div className="w-64 flex-shrink-0">
-              <FilterSidebar filters={filters} onFiltersChange={setFilters} />
+              <FilterSidebar
+                filters={filters}
+                onFiltersChange={setFilters}
+                additionalFilters={[
+                  {
+                    label: 'Verification Status',
+                    key: 'verificationStatus',
+                    options: ['all', 'APPROVED', 'PENDING'],
+                  },
+                ]}
+              />
             </div>
           )}
 
           {/* Main Content */}
           <div className="flex-1">
-            <Tabs defaultValue="browse" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
-                <TabsTrigger value="browse">Browse All</TabsTrigger>
-                <TabsTrigger value="trending">Trending</TabsTrigger>
-                <TabsTrigger value="new">New Releases</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
+                <TabsTrigger value="strategies">Strategies</TabsTrigger>
+                <TabsTrigger value="community">Community</TabsTrigger>
+                <TabsTrigger value="social">Social Trading</TabsTrigger>
+                <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
+                <TabsTrigger value="education">Education</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="browse" className="space-y-0">
+              {/* Strategies Tab */}
+              <TabsContent value="strategies" className="space-y-0">
                 {filteredStrategies.length === 0 ? (
                   <div className={`text-center py-12 ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}`}>
                     <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -306,60 +328,23 @@ export default function MarketplacePage() {
                     <p className="text-sm mt-2">Try adjusting your search or filters</p>
                   </div>
                 ) : (
-                  <div className={viewMode === 'grid' 
-                    ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' 
-                    : 'space-y-4'
-                  }>
+                  <div
+                    className={
+                      viewMode === 'grid'
+                        ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
+                        : 'space-y-4'
+                    }
+                  >
                     {filteredStrategies.map((strategy) => (
                       <StrategyCard
                         key={strategy.id}
                         strategy={strategy}
                         viewMode={viewMode}
+                        onSubscribe={() => console.log(`Subscribe to ${strategy.id}`)}
+                        onReview={() => console.log(`Review ${strategy.id}`)}
                       />
                     ))}
                   </div>
                 )}
-              </TabsContent>
-
-              <TabsContent value="trending" className="space-y-0">
-                <div className={viewMode === 'grid' 
-                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' 
-                  : 'space-y-4'
-                }>
-                  {filteredStrategies
-                    .filter(s => s.roiChange > 0)
-                    .slice(0, 6)
-                    .map((strategy) => (
-                      <StrategyCard
-                        key={strategy.id}
-                        strategy={strategy}
-                        viewMode={viewMode}
-                      />
-                    ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="new" className="space-y-0">
-                <div className={viewMode === 'grid' 
-                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' 
-                  : 'space-y-4'
-                }>
-                  {filteredStrategies
-                    .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime())
-                    .slice(0, 6)
-                    .map((strategy) => (
-                      <StrategyCard
-                        key={strategy.id}
-                        strategy={strategy}
-                        viewMode={viewMode}
-                      />
-                    ))}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+             
+             
