@@ -9,6 +9,7 @@ import { FAQ } from "./FAQ";
 import { CallToAction } from "./CallToAction";
 import { Footer } from "./Footer";
 import PinSection from "../gsap/PinSection";
+import StrategyPin from "../gsap/StrategyPin";
 
 type CanvasComponent = React.ComponentType<Record<string, unknown>>;
 
@@ -40,6 +41,7 @@ export default function LandingRoot() {
         <Hero />
         {/* Pinned scroll storytelling section */}
         <PinSection />
+        <StrategyPin />
         <Features />
         <FAQ />
         <CallToAction />
