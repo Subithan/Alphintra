@@ -42,7 +42,7 @@ export const FAQ = () => {
   };
 
   return (
-    <section id="faq" className="bg-black py-20">
+    <section id="faq" className="bg-transparent py-20 glass-gradient">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-white mb-4">Frequently Asked Questions</h2>
@@ -55,11 +55,11 @@ export const FAQ = () => {
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 overflow-hidden"
+              className="glass rounded-lg overflow-hidden"
             >
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/10 transition-colors"
               >
                 <h3 className="text-lg font-semibold text-white pr-4">
                   {faq.question}
