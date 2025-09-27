@@ -39,7 +39,7 @@ export const Features = () => {
   const [activeIndex, setActiveIndex] = useState<number>(0);
 
   return (
-    <section id="features" className="bg-gray-900 py-20">
+    <section id="features" className="bg-transparent py-20 glass-gradient">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-white mb-4">Powerful Features</h2>
@@ -57,7 +57,7 @@ export const Features = () => {
                   key={index}
                   onMouseEnter={() => setActiveIndex(index)}
                   onMouseLeave={() => setActiveIndex(index)}
-                  className={`bg-gray-800 rounded-[20px] p-6 flex items-start gap-4 max-w-[500px] transition-all duration-300 border border-white/10 ${
+                  className={`glass-card rounded-[20px] p-6 flex items-start gap-4 max-w-[500px] transition-all duration-300 ${
                     activeIndex === index
                       ? "shadow-[0_0_20px_rgba(255,221,0,0.4)] scale-105 border-yellow-400/50"
                       : "hover:border-white/20"
@@ -81,7 +81,7 @@ export const Features = () => {
           
           {/* Visual representation */}
           <div className="hidden md:flex items-center justify-center">
-            <div className="w-full h-96 bg-gradient-to-br from-yellow-400/10 to-purple-500/10 rounded-lg border border-white/10 flex items-center justify-center relative overflow-hidden">
+            <div className="w-full h-96 rounded-lg border border-white/10 glass bg-white/5 flex items-center justify-center relative overflow-hidden">
               <div className="text-center z-10">
                 <div className="w-24 h-24 mx-auto mb-6 bg-yellow-400 rounded-full flex items-center justify-center">
                   <BarChart3 className="w-12 h-12 text-black" />
@@ -89,7 +89,7 @@ export const Features = () => {
                 <h3 className="text-white text-xl font-semibold mb-2">No-Code Interface</h3>
                 <p className="text-gray-400">Drag, drop, and deploy</p>
               </div>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,221,0,0.1)_0%,transparent_70%)]"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,221,0,0.12)_0%,transparent_70%)]"></div>
             </div>
           </div>
         </div>

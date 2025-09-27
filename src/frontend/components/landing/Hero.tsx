@@ -1,11 +1,10 @@
 import { Zap } from "lucide-react";
-import Image from "next/image";
 import React from "react";
 import Loader from "@/components/ui/Loader";
 
 export const Hero = () => {
   return (
-    <section className="text-white bg-black pt-20 pb-16 min-h-screen flex items-center">
+    <section className="text-white bg-transparent pt-24 pb-16 min-h-screen flex items-center glass-gradient">
       <svg width="0" height="0" style={{ position: "absolute" }}>
         <defs>
           <linearGradient id="text-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -26,7 +25,7 @@ export const Hero = () => {
             {/* Text Column: badge, h1, p, button */}
             <div className="w-full lg:w-1/2 text-left">
               <div className="flex items-center justify-start">
-                <p className="inline-flex items-center gap-2 border py-1 px-2 rounded-lg border-white/30 bg-white/10">
+                <p className="inline-flex items-center gap-2 border py-1 px-2 rounded-lg border-white/30 bg-white/10 backdrop-blur-md">
                   <Zap
                     size={20}
                     className="text-transparent"
@@ -61,18 +60,13 @@ export const Hero = () => {
                 </button>
               </div>
             </div>
-            {/* Image Column */}
+            {/* Visual Column (gradient fallback instead of image) */}
             <div className="w-full lg:w-1/2 flex flex-col items-center">
-              <div className="w-full max-w-[800px] h-[450px] rounded-2xl border-2 overflow-hidden border-transparent [background:linear-gradient(#0a0a0a,#0a0a0a)_padding-box,conic-gradient(from_45deg,#a78bfa,#e879f9,#fcd34d,#5eead4,#a78bfa)_border-box] relative">
-                <Image
-                  src="/images/robot.jpg"
-                  alt="Robot trading bot interface"
-                  width={800}
-                  height={450}
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-full max-w-[800px] h-[450px] rounded-2xl overflow-hidden border border-white/10 bg-black/30 backdrop-blur-md relative">
+                <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_0%_0%,rgba(255,221,0,0.18),transparent_60%),radial-gradient(1000px_600px_at_100%_0%,rgba(168,85,247,0.16),transparent_60%),radial-gradient(1000px_800px_at_50%_100%,rgba(34,197,94,0.14),transparent_60%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_100%)]" />
                 <div className="absolute bottom-2 w-full px-4">
-                  <div className="bg-gray-950/80 flex items-center justify-center px-4 py-2 rounded-2xl w-[320px] max-w-full mx-auto">
+                  <div className="bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center px-4 py-2 rounded-2xl w-[320px] max-w-full mx-auto">
                     <div className="font-semibold text-xs text-gray-100 flex items-center gap-2">
                       <Loader className="text-gray-100 w-4 h-4" />
                       Starting Bot

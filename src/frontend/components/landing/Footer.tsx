@@ -4,7 +4,7 @@ import LogoIcon from "@/components/ui/LogoIcon";
 
 export const Footer = () => {
   return (
-    <footer className='py-8 bg-black text-white/60 border-t border-white/20'>
+    <footer className='py-8 bg-black/30 backdrop-blur-md text-white/70 border-t border-white/15 glass-gradient'>
       <div className="container mx-auto px-4">
         <div className='flex flex-col gap-6 sm:flex-row sm:justify-between items-center'>
           <div className='text-center sm:text-left'>
@@ -14,7 +14,7 @@ export const Footer = () => {
               </div>
               <span className="text-white font-bold">ALPHINTRA</span>
             </div>
-            <p>&copy; 2025 Alphintra, Inc. All rights reserved</p>
+            <p className='text-white/70'>&copy; 2025 Alphintra, Inc. All rights reserved</p>
           </div>
           <ul className='flex justify-center gap-4'>
             <li className="hover:text-yellow-400 transition-colors cursor-pointer">
