@@ -27,7 +27,7 @@ export const Navbar = () => {
   ];
 
   return (
-    <div className="bg-black/95 backdrop-blur-sm fixed w-full top-0 z-50 border-b border-white/10">
+    <div className="bg-black/40 backdrop-blur-xl fixed w-full top-0 z-50 border-b border-white/15">
       <div className="px-4">
         <div className="py-4 flex items-center justify-between">
           <Link href="/" aria-label="Homepage" className="flex items-center gap-2">
@@ -37,7 +37,7 @@ export const Navbar = () => {
             <span className="text-white font-bold text-xl hidden sm:block">ALPHINTRA</span>
           </Link>
           <div
-            className="text-white border border-white/30 h-10 w-10 inline-flex justify-center items-center rounded-lg lg:hidden cursor-pointer"
+            className="text-white border border-white/30 h-10 w-10 inline-flex justify-center items-center rounded-lg lg:hidden cursor-pointer bg-white/10 backdrop-blur-md"
             onClick={toggleMenu}
           >
             {isMenuOpen ? <X /> : <Menu />}
@@ -47,7 +47,7 @@ export const Navbar = () => {
               <Link
                 key={item.label}
                 href={item.href}
-                className="text-white/60 hover:text-yellow-400 transition"
+                className="text-white/70 hover:text-yellow-400 transition"
                 onClick={handleNavClick}
                 scroll={true}
               >
@@ -57,13 +57,13 @@ export const Navbar = () => {
             <div className="flex gap-2">
               <Link
                 href="/auth"
-                className="border-yellow-400 border-2 text-yellow-400 py-2 px-4 rounded-lg hover:scale-105 transition inline-block"
+                className="border-yellow-400 border-2 text-yellow-400 py-2 px-4 rounded-lg hover:scale-105 transition inline-block bg-white/10 backdrop-blur-md"
               >
                 Log In
               </Link>
               <Link
                 href="/auth"
-                className="bg-yellow-400 text-[#312e81] py-2 px-4 rounded-lg border-2 border-yellow-400 hover:scale-105 transition inline-block"
+                className="bg-yellow-400 text-[#312e81] py-2 px-4 rounded-lg border-2 border-yellow-400 hover:scale-105 transition inline-block shadow-lg"
               >
                 Get for Free
               </Link>
@@ -72,12 +72,12 @@ export const Navbar = () => {
         </div>
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <nav className="flex flex-col gap-4 pb-4 lg:hidden">
+          <nav className="flex flex-col gap-4 pb-4 lg:hidden bg-black/30 backdrop-blur-md rounded-lg p-4 border border-white/10">
             {navItems.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="text-white/60 hover:text-yellow-400 transition"
+                className="text-white/70 hover:text-yellow-400 transition"
                 onClick={handleNavClick}
                 scroll={true}
               >
@@ -86,14 +86,14 @@ export const Navbar = () => {
             ))}
             <Link
               href="/auth"
-              className="border-yellow-400 border-2 text-yellow-400 py-2 px-4 rounded-lg hover:bg-white/10 transition inline-block text-center"
+              className="border-yellow-400 border-2 text-yellow-400 py-2 px-4 rounded-lg hover:bg-white/10 transition inline-block text-center bg-white/5"
               onClick={handleNavClick}
             >
               Log In
             </Link>
             <Link
               href="/auth"
-              className="bg-yellow-400 text-[#312e81] py-2 px-4 rounded-lg border-2 border-yellow-400 hover:bg-gray-200 transition inline-block text-center"
+              className="bg-yellow-400 text-[#312e81] py-2 px-4 rounded-lg border-2 border-yellow-400 hover:bg-gray-200 transition inline-block text-center shadow-lg"
               onClick={handleNavClick}
             >
               Get for Free

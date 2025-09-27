@@ -397,3 +397,30 @@ select option {
     transition-timing-function: ease-in-out;
   }
 }
+/* 3D Canvas container */
+.three-canvas-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+@layer components {
+  /* Glassmorphism utilities */
+  .glass {
+    @apply bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/15;
+  }
+  .glass-strong {
+    @apply bg-white/15 dark:bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg;
+  }
+  .glass-card {
+    @apply glass rounded-2xl shadow-lg;
+  }
+  .glass-border {
+    @apply border border-white/20;
+  }
+  .glass-gradient {
+    background: radial-gradient(1200px 600px at 0% 0%, rgba(255,221,0,0.06), transparent 60%),
+                radial-gradient(1000px 600px at 100% 0%, rgba(168,85,247,0.05), transparent 60%),
+                radial-gradient(1000px 800px at 50% 100%, rgba(34,197,94,0.05), transparent 60%);
+  }
+}
