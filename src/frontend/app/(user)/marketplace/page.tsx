@@ -346,5 +346,365 @@ export default function MarketplacePage() {
                     ))}
                   </div>
                 )}
-             
+             </TabsContent>
+
+              {/* Community Tab */}
+              <TabsContent value="community" className="space-y-0">
+                <CommunityForum topics={mockForumTopics} onTopicClick={(id) => console.log(View topic ${id})} />
+              </TabsContent>
+
+              {/* Social Trading Tab */}
+              <TabsContent value="social" className="space-y-0">
+                <SocialTradingPanel
+                  onFollow={(userId) => console.log(Follow ${userId})}
+                  onCopyTrade={(traderId) => console.log(Copy trade ${traderId})}
+                />
+              </TabsContent>
+
+              {/* Leaderboards Tab */}
+              <TabsContent value="leaderboards" className="space-y-0">
+                <Leaderboard
+                  entries={mockLeaderboard}
+                  onViewProfile={(userId) => console.log(View profile ${userId})}
+                />
+              </TabsContent>
+
+              {/* Education Tab */}
+              <TabsContent value="education" className="space-y-0">
+                <EducationalContent
+                  onContentClick={(id) => console.log(View content ${id})}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// StrategyCard Component
+interface StrategyCardProps {
+  strategy: Strategy;
+  viewMode: 'grid' | 'list';
+  onSubscribe: () => void;
+  onReview: () => void;
+}
+
+const StrategyCard: React.FC<StrategyCardProps> = ({ strategy, viewMode, onSubscribe, onReview }) => {
+  const { theme } = useTheme();
+  return (
+    <div
+      className={`rounded-lg border p-4 ${
+        viewMode === 'grid'
+          ? 'flex flex-col'
+          : 'flex flex-col md:flex-row gap-4'
+      } ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}
+    >
+      <div className={viewMode === 'grid' ? 'flex-1' : 'w-1/3'}>
+        <h3 className="text-lg font-semibold">{strategy.name}</h3>
+        <p className={text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}}>
+          by {strategy.creatorName}
+        </p>
+        <p className={text-sm mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}}>
+          {strategy.description}
+        </p>
+        <div className="flex flex-wrap gap-2 mt-2">
+          <Badge variant={strategy.isVerified ? 'success' : 'secondary'}>
+            {strategy.isVerified ? 'Verified' : 'Pending'}
+          </Badge>
+          <Badge>{strategy.riskLevel}</Badge>
+          <Badge>{strategy.assetType}</Badge>
+        </div>
+      </div>
+      <div
+        className={
+          viewMode === 'grid'
+            ? 'mt-4 space-y-2'
+            : 'w-2/3 grid grid-cols-2 md:grid-cols-3 gap-4'
+        }
+      >
+        <div>
+          <p className="text-sm font-medium">ROI</p>
+          <p className="text-lg font-bold text-green-500">{strategy.performance.totalReturn}%</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium">Sharpe Ratio</p>
+          <p className="text-lg font-bold">{strategy.performance.sharpeRatio.toFixed(2)}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium">Win Rate</p>
+          <p className="text-lg font-bold">{strategy.performance.winRate}%</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium">Rating</p>
+          <p className="flex items-center gap-1">
+            <Star className="h-4 w-4 text-yellow-500" />
+            {strategy.rating}/5 ({strategy.reviewCount})
+          </p>
+        </div>
+        <div>
+          <p className="text-sm font-medium">Subscribers</p>
+          <p className="text-lg font-bold">{strategy.subscriberCount}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium">Price</p>
+          <p className="text-lg font-bold">
+            {strategy.price === 'free' ? 'Free' : $${strategy.price}/mo}
+          </p>
+        </div>
+      </div>
+      <div className={viewMode === 'grid' ? 'mt-4 flex gap-2' : 'flex gap-2 items-end'}>
+        <Button onClick={onSubscribe} className="flex-1">
+          Subscribe
+        </Button>
+        <Button variant="outline" onClick={onReview}>
+          Review
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// FilterSidebar Component
+interface FilterSidebarProps {
+  filters: any;
+  onFiltersChange: (filters: any) => void;
+  additionalFilters?: Array<{ label: string; key: string; options: string[] }>;
+}
+
+const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onFiltersChange, additionalFilters = [] }) => {
+  const { theme } = useTheme();
+  return (
+    <div className={p-4 rounded-lg ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} border ${theme === 'dark' ? 'border-slate-700' : 'border-gray-200'}}>
+      <h3 className="text-lg font-semibold mb-4">Filters</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium">Asset Type</label>
+          <Select
+            value={filters.assetType}
+            onValueChange={(value) => onFiltersChange({ ...filters, assetType: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assets</SelectItem>
+              <SelectItem value="cryptocurrency">Cryptocurrency</SelectItem>
+              <SelectItem value="stocks">Stocks</SelectItem>
+              <SelectItem value="forex">Forex</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Risk Level</label>
+          <Select
+            value={filters.riskLevel}
+            onValueChange={(value) => onFiltersChange({ ...filters, riskLevel: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Levels</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Minimum Rating</label>
+          <Select
+            value={filters.rating.toString()}
+            onValueChange={(value) => onFiltersChange({ ...filters, rating: parseInt(value) })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Any</SelectItem>
+              <SelectItem value="3">3+</SelectItem>
+              <SelectItem value="4">4+</SelectItem>
+              <SelectItem value="4.5">4.5+</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {additionalFilters.map((filter) => (
+          <div key={filter.key}>
+            <label className="text-sm font-medium">{filter.label}</label>
+            <Select
+              value={filters[filter.key]}
+              onValueChange={(value) => onFiltersChange({ ...filters, [filter.key]: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {filter.options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option.charAt(0).toUpperCase() + option.slice(1).toLowerCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// CommunityForum Component
+interface CommunityForumProps {
+  topics: ForumTopic[];
+  onTopicClick: (id: string) => void;
+}
+
+const CommunityForum: React.FC<CommunityForumProps> = ({ topics, onTopicClick }) => {
+  const { theme } = useTheme();
+  return (
+    <div className={rounded-lg p-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} border ${theme === 'dark' ? 'border-slate-700' : 'border-gray-200'}}>
+      <h3 className="text-lg font-semibold mb-4">Community Discussions</h3>
+      <div className="space-y-2">
+        {topics.map((topic) => (
+          <div
+            key={topic.id}
+            className="flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-slate-700 rounded cursor-pointer"
+            onClick={() => onTopicClick(topic.id)}
+          >
+            <div>
+              <h4 className="font-medium">{topic.title}</h4>
+              <p className={text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}}>
+                {topic.category} • by {topic.author} • {topic.replyCount} replies
+              </p>
+            </div>
+            <div className="text-sm">{new Date(topic.lastReplyAt).toLocaleDateString()}</div>
+          </div>
+        ))}
+      </div>
+      <Button className="mt-4" variant="outline">
+        <MessageSquare className="h-4 w-4 mr-2" />
+        Start New Discussion
+      </Button>
+    </div>
+  );
+};
+
+// SocialTradingPanel Component
+interface SocialTradingPanelProps {
+  onFollow: (userId: string) => void;
+  onCopyTrade: (traderId: string) => void;
+}
+
+const SocialTradingPanel: React.FC<SocialTradingPanelProps> = ({ onFollow, onCopyTrade }) => {
+  const { theme } = useTheme();
+  return (
+    <div className={rounded-lg p-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} border ${theme === 'dark' ? 'border-slate-700' : 'border-gray-200'}}>
+      <h3 className="text-lg font-semibold mb-4">Social Trading</h3>
+      <div className="space-y-4">
+        <div>
+          <h4 className="font-medium">Top Traders to Follow</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            {mockLeaderboard.slice(0, 4).map((trader) => (
+              <div
+                key={trader.id}
+                className="p-3 border rounded flex justify-between items-center"
+              >
+                <div>
+                  <p className="font-medium">{trader.username}</p>
+                  <p className="text-sm text-green-500">ROI: {trader.totalReturn}%</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => onFollow(trader.userId)}>
+                    Follow
+                  </Button>
+                  <Button size="sm" onClick={() => onCopyTrade(trader.userId)}>
+                    Copy Trades
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h4 className="font-medium">Social Feed</h4>
+          <p className={text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}}>
+            Follow traders to see their latest trades and updates
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Leaderboard Component
+interface LeaderboardProps {
+  entries: LeaderboardEntry[];
+  onViewProfile: (userId: string) => void;
+}
+
+const Leaderboard: React.FC<LeaderboardProps> = ({ entries, onViewProfile }) => {
+  const { theme } = useTheme();
+  return (
+    <div className={rounded-lg p-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} border ${theme === 'dark' ? 'border-slate-700' : 'border-gray-200'}}>
+      <h3 className="text-lg font-semibold mb-4">Leaderboards</h3>
+      <div className="space-y-2">
+        {entries.map((entry) => (
+          <div
+            key={entry.id}
+            className="flex items-center justify-between p-3 hover:bg-gray-100 dark:hover:bg-slate-700 rounded cursor-pointer"
+            onClick={() => onViewProfile(entry.userId)}
+          >
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              <span className="font-medium">#{entry.rank} {entry.username}</span>
+            </div>
+            <div className="text-sm">
+              <p>ROI: {entry.totalReturn}%</p>
+              <p>Sharpe: {entry.sharpeRatio.toFixed(2)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Button className="mt-4" variant="outline">
+        View All Leaderboards
+      </Button>
+    </div>
+  );
+};
+
+// EducationalContent Component
+interface EducationalContentProps {
+  onContentClick: (id: string) => void;
+}
+
+const EducationalContent: React.FC<EducationalContentProps> = ({ onContentClick }) => {
+  const { theme } = useTheme();
+  return (
+    <div className={rounded-lg p-4 ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'} border ${theme === 'dark' ? 'border-slate-700' : 'border-gray-200'}}>
+      <h3 className="text-lg font-semibold mb-4">Educational Content</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[{ id: '1', title: 'Trading 101', type: 'ARTICLE', views: 1234 }].map((content) => (
+          <div
+            key={content.id}
+            className="p-3 border rounded flex items-center justify-between cursor-pointer"
+            onClick={() => onContentClick(content.id)}
+          >
+            <div>
+              <p className="font-medium">{content.title}</p>
+              <p className={text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}}>
+                {content.type} • {content.views} views
+              </p>
+            </div>
+            <Book className="h-5 w-5 text-blue-500" />
+          </div>
+        ))}
+      </div>
+      <Button className="mt-4" variant="outline">
+        Browse All Content
+      </Button>
+    </div>
+  );
+};
              
