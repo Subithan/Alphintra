@@ -2,9 +2,12 @@ package com.alphintra.trading_engine;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+
 import jakarta.annotation.PostConstruct;
 
 @SpringBootApplication
+@EnableAsync
 public class MainApplication {
 
     public static void main(String[] args) {
@@ -23,9 +26,7 @@ public class MainApplication {
 
     @PostConstruct
     public void init() {
-        // The database is now initialized in the main method,
-        // so this PostConstruct is no longer needed for initialization.
-        // We can keep it for other post-startup logic if necessary.
+
     }
 }
 
