@@ -424,3 +424,147 @@ select option {
                 radial-gradient(1000px 800px at 50% 100%, rgba(34,197,94,0.05), transparent 60%);
   }
 }
+
+/* ===== Immersive Scroll Stage (PinSection) ===== */
+.pin-orb {
+  width: 140px;
+  height: 140px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 30% 30%, rgba(56,189,248,0.9), rgba(2,6,23,0.4) 70%),
+              radial-gradient(circle at 70% 70%, rgba(14,165,233,0.6), rgba(2,6,23,0.2) 60%);
+  border: 1px solid rgba(148,163,184,0.25);
+  box-shadow: 0 0 40px rgba(56,189,248,0.35) inset;
+  transform: translateZ(0);
+}
+
+.pin-pulse {
+  width: 220px;
+  height: 220px;
+  border-radius: 9999px;
+  border: 2px solid rgba(56,189,248,0.4);
+  box-shadow: 0 0 30px rgba(56,189,248,0.25);
+  pointer-events: none;
+}
+
+.pin-beam {
+  height: 10px;
+  width: 60%;
+  transform: translateX(0) scaleX(0);
+  background: linear-gradient(90deg, rgba(250,204,21,0.0) 0%, rgba(250,204,21,0.8) 40%, rgba(250,204,21,1) 60%, rgba(250,204,21,0.0) 100%);
+  filter: drop-shadow(0 0 10px rgba(250,204,21,0.6));
+  border-radius: 9999px;
+}
+
+.pin-candle-body {
+  width: 12px;
+  background: #f87171; /* red */
+  border: 1px solid #7f1d1d;
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(248,113,113,0.35);
+  transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.pin-candle-wick {
+  width: 2px;
+  background: #1e3a8a; /* indigo */
+  border: 1px solid #1e3a8a;
+  border-radius: 1px;
+}
+
+.pin-chip {
+  will-change: transform, opacity;
+  letter-spacing: 0.02em;
+}
+
+/* ===== Hero Robot and Enhanced Loader ===== */
+.robot {
+  display: grid;
+  place-items: center;
+  transform: translateY(0);
+  animation: robot-bob 6s ease-in-out infinite;
+}
+
+.robot-head {
+  position: relative;
+  width: 220px;
+  height: 140px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(2,6,23,0.85), rgba(2,6,23,0.6));
+  border: 1px solid rgba(148,163,184,0.2);
+  box-shadow: inset 0 0 40px rgba(56,189,248,0.15), 0 20px 60px rgba(0,0,0,0.35);
+}
+
+.robot-eye {
+  position: absolute;
+  top: 48%;
+  width: 28px;
+  height: 18px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 40% 40%, #a7f3d0, #06b6d4 70%);
+  box-shadow: 0 0 16px rgba(6,182,212,0.55);
+  transform-origin: center;
+  animation: robot-blink 4.5s infinite ease-in-out;
+}
+.robot-eye.left { left: 64px; }
+.robot-eye.right { right: 64px; animation-delay: 1.2s; }
+
+.robot-scan {
+  position: absolute;
+  left: 12px; right: 12px; top: 56%; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(56,189,248,0.8), transparent);
+  filter: drop-shadow(0 0 8px rgba(56,189,248,0.7));
+  animation: robot-scan 2.2s linear infinite;
+}
+
+.robot-body {
+  position: relative;
+  width: 180px;
+  height: 120px;
+  margin-top: 20px;
+  border-radius: 20px 20px 28px 28px;
+  background: linear-gradient(180deg, rgba(2,6,23,0.8), rgba(2,6,23,0.5));
+  border: 1px solid rgba(148,163,184,0.2);
+}
+
+.robot-chest-led {
+  position: absolute;
+  left: 50%; top: 26px; transform: translateX(-50%);
+  width: 14px; height: 14px; border-radius: 9999px;
+  background: #22c55e;
+  box-shadow: 0 0 16px rgba(34,197,94,0.7);
+  animation: robotled 1.8s ease-in-out infinite;
+}
+
+@keyframes robot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes robot-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  92% { transform: scaleY(0.15); }
+  94% { transform: scaleY(1); }
+}
+@keyframes robot-scan {
+  0% { transform: translateX(-20%); opacity: 0.2; }
+  50% { transform: translateX(20%); opacity: 0.7; }
+  100% { transform: translateX(-20%); opacity: 0.2; }
+}
+@keyframes robotled {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.bot-loader {
+  position: relative;
+  border-radius: 9999px;
+  border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(0,0,0,0.35);
+}
+.bot-progress { position: relative; height: 4px; border-radius: 9999px; overflow: hidden; background: rgba(255,255,255,0.1); margin-top: 6px; }
+.bot-progress-bar {
+  position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, rgba(56,189,248,0.4), rgba(34,197,94,0.5), rgba(250,204,21,0.4));
+  background-size: 200% 100%;
+  animation: progress-shimmer 1.2s linear infinite;
+}
+@keyframes progress-shimmer { 0% { transform: translateX(-60%); } 100% { transform: translateX(160%); } }

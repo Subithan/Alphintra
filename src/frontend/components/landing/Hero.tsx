@@ -1,8 +1,10 @@
 import { Zap } from "lucide-react";
 import React from "react";
 import Loader from "@/components/ui/Loader";
+import { useBotProgress } from "@/components/hooks/useBotProgress";
 
 export const Hero = () => {
+  const { progress, status } = useBotProgress(7000);
   return (
     <section className="text-white bg-transparent pt-24 pb-16 min-h-screen flex items-center glass-gradient">
       <svg width="0" height="0" style={{ position: "absolute" }}>
@@ -60,17 +62,36 @@ export const Hero = () => {
                 </button>
               </div>
             </div>
-            {/* Visual Column (gradient fallback instead of image) */}
+            {/* Visual Column: Alphintra Robot + enhanced loader */}
             <div className="w-full lg:w-1/2 flex flex-col items-center">
               <div className="w-full max-w-[800px] h-[450px] rounded-2xl overflow-hidden border border-white/10 bg-black/30 backdrop-blur-md relative">
+                {/* Ambient gradients */}
                 <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_0%_0%,rgba(255,221,0,0.18),transparent_60%),radial-gradient(1000px_600px_at_100%_0%,rgba(168,85,247,0.16),transparent_60%),radial-gradient(1000px_800px_at_50%_100%,rgba(34,197,94,0.14),transparent_60%)]" />
                 <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_100%)]" />
-                <div className="absolute bottom-2 w-full px-4">
-                  <div className="bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center px-4 py-2 rounded-2xl w-[320px] max-w-full mx-auto">
-                    <div className="font-semibold text-xs text-gray-100 flex items-center gap-2">
+
+                {/* Robot */}
+                <div className="robot absolute inset-0">
+                  <div className="robot-head mx-auto mt-10">
+                    <span className="robot-eye left" />
+                    <span className="robot-eye right" />
+                    <span className="robot-scan" />
+                  </div>
+                  <div className="robot-body mx-auto">
+                    <span className="robot-chest-led" />
+                  </div>
+                </div>
+
+                {/* Enhanced loader - bound to bot progress */}
+                <div className="absolute bottom-3 w-full px-4">
+                  <div className="bot-loader backdrop-blur-md flex items-center justify-between gap-3 px-4 py-3 rounded-2xl w-[360px] max-w-full mx-auto">
+                    <div className="flex items-center gap-2 text-sm text-gray-100 font-medium">
                       <Loader className="text-gray-100 w-4 h-4" />
-                      Starting Bot
+                      {status === "online" ? "Bot Online" : status === "syncing" ? "Syncing" : "Starting Bot"}
                     </div>
+                    <span className="text-[10px] text-gray-300">{progress}%</span>
+                  </div>
+                  <div className="bot-progress w-[360px] max-w-full mx-auto">
+                    <div className="bot-progress-bar" style={{ width: `${Math.max(10, progress)}%` }} />
                   </div>
                 </div>
               </div>
