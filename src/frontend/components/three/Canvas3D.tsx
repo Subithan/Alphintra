@@ -31,6 +31,27 @@ export default function Canvas3D({ onProgress, onReady }: Canvas3DProps) {
     }
   }, [onReady, progress.active, progress.progress]);
 
+function ProgressBridge({ onProgress, onReady }: Canvas3DProps) {
+  const { progress, active } = useProgress();
+  const readyEmittedRef = useRef(false);
+
+  useEffect(() => {
+    if (onProgress) {
+      onProgress(progress);
+    }
+  }, [progress, onProgress]);
+
+  useEffect(() => {
+    if (!active && !readyEmittedRef.current) {
+      readyEmittedRef.current = true;
+      onReady?.();
+    }
+  }, [active, onReady]);
+
+  return null;
+}
+
+export default function Canvas3D({ onProgress, onReady }: Canvas3DProps) {
   return (
     <Canvas
       gl={{ antialias: true, powerPreference: "high-performance" }}
@@ -42,6 +63,7 @@ export default function Canvas3D({ onProgress, onReady }: Canvas3DProps) {
       <Suspense fallback={<CanvasFallback />}>
         <Scene />
         <Preload all />
+        <ProgressBridge onProgress={onProgress} onReady={onReady} />
       </Suspense>
     </Canvas>
   );
