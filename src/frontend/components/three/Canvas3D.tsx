@@ -10,6 +10,27 @@ type Canvas3DProps = {
   onReady?: () => void;
 };
 
+export default function Canvas3D({ onProgress, onReady }: Canvas3DProps) {
+  const progress = useProgress();
+  const hasNotifiedReadyRef = useRef(false);
+
+  useEffect(() => {
+    if (onProgress) {
+      onProgress(progress.progress);
+    }
+  }, [onProgress, progress.progress]);
+
+  useEffect(() => {
+    if (!progress.active && progress.progress === 100) {
+      if (!hasNotifiedReadyRef.current) {
+        hasNotifiedReadyRef.current = true;
+        onReady?.();
+      }
+    } else {
+      hasNotifiedReadyRef.current = false;
+    }
+  }, [onReady, progress.active, progress.progress]);
+
 function ProgressBridge({ onProgress, onReady }: Canvas3DProps) {
   const { progress, active } = useProgress();
   const readyEmittedRef = useRef(false);
@@ -39,11 +60,19 @@ export default function Canvas3D({ onProgress, onReady }: Canvas3DProps) {
       shadows={false}
       frameloop="always"
     >
-      <Suspense fallback={null}>
+      <Suspense fallback={<CanvasFallback />}>
         <Scene />
         <Preload all />
         <ProgressBridge onProgress={onProgress} onReady={onReady} />
       </Suspense>
     </Canvas>
+  );
+}
+
+function CanvasFallback() {
+  return (
+    <group>
+      <color attach="background" args={["#050505"]} />
+    </group>
   );
 }
