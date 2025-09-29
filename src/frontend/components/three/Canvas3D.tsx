@@ -1,11 +1,36 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useEffect, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Preload } from "@react-three/drei";
+import { Preload, useProgress } from "@react-three/drei";
 import Scene from "./Scene";
 
-export default function Canvas3D() {
+type Canvas3DProps = {
+  onProgress?: (progress: number) => void;
+  onReady?: () => void;
+};
+
+export default function Canvas3D({ onProgress, onReady }: Canvas3DProps) {
+  const progress = useProgress();
+  const hasNotifiedReadyRef = useRef(false);
+
+  useEffect(() => {
+    if (onProgress) {
+      onProgress(progress.progress);
+    }
+  }, [onProgress, progress.progress]);
+
+  useEffect(() => {
+    if (!progress.active && progress.progress === 100) {
+      if (!hasNotifiedReadyRef.current) {
+        hasNotifiedReadyRef.current = true;
+        onReady?.();
+      }
+    } else {
+      hasNotifiedReadyRef.current = false;
+    }
+  }, [onReady, progress.active, progress.progress]);
+
   return (
     <Canvas
       gl={{ antialias: true, powerPreference: "high-performance" }}
@@ -14,10 +39,18 @@ export default function Canvas3D() {
       shadows={false}
       frameloop="always"
     >
-      <Suspense fallback={null}>
+      <Suspense fallback={<CanvasFallback />}>
         <Scene />
         <Preload all />
       </Suspense>
     </Canvas>
+  );
+}
+
+function CanvasFallback() {
+  return (
+    <group>
+      <color attach="background" args={["#050505"]} />
+    </group>
   );
 }
