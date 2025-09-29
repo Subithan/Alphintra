@@ -10,27 +10,6 @@ type Canvas3DProps = {
   onReady?: () => void;
 };
 
-export default function Canvas3D({ onProgress, onReady }: Canvas3DProps) {
-  const progress = useProgress();
-  const hasNotifiedReadyRef = useRef(false);
-
-  useEffect(() => {
-    if (onProgress) {
-      onProgress(progress.progress);
-    }
-  }, [onProgress, progress.progress]);
-
-  useEffect(() => {
-    if (!progress.active && progress.progress === 100) {
-      if (!hasNotifiedReadyRef.current) {
-        hasNotifiedReadyRef.current = true;
-        onReady?.();
-      }
-    } else {
-      hasNotifiedReadyRef.current = false;
-    }
-  }, [onReady, progress.active, progress.progress]);
-
 function ProgressBridge({ onProgress, onReady }: Canvas3DProps) {
   const { progress, active } = useProgress();
   const readyEmittedRef = useRef(false);
