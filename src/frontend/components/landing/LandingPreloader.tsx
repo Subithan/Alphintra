@@ -1,60 +1,56 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { gsap } from 'gsap';
-
-const clampProgress = (value: number) => Math.min(100, Math.max(0, value));
-
-const CHART_HEIGHT = 240;
-const waveColors = [
-  'url(#water-fill)',
-  'url(#water-fill-secondary)',
-  'url(#water-fill-tertiary)',
-];
-
-const candleData = [
-  { x: 36, bodyHeight: 82, wickHeight: 112 },
-  { x: 66, bodyHeight: 68, wickHeight: 92 },
-  { x: 96, bodyHeight: 116, wickHeight: 150 },
-  { x: 126, bodyHeight: 74, wickHeight: 110 },
-  { x: 156, bodyHeight: 94, wickHeight: 138 },
-  { x: 186, bodyHeight: 62, wickHeight: 96 },
-];
 
 type LandingPreloaderProps = {
   progress: number;
   isReady: boolean;
 };
 
+const clampProgress = (value: number) => Math.min(100, Math.max(0, value));
+const FILL_HEIGHT = 200;
+
 export function LandingPreloader({ progress, isReady }: LandingPreloaderProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const waterGroupRef = useRef<SVGGElement>(null);
-  const highlightRef = useRef<SVGPathElement>(null);
-  const rippleRef = useRef<SVGCircleElement>(null);
-  const percentageRef = useRef<HTMLSpanElement>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const percentageRef = useRef<HTMLSpanElement | null>(null);
   const percentageTween = useRef({ value: 0 });
-  const completionTimeline = useRef<gsap.core.Timeline | null>(null);
+  const waterContainerRef = useRef<SVGGElement | null>(null);
+  const waterLevelRef = useRef<SVGGElement | null>(null);
   const waveRefs = useRef<(SVGPathElement | null)[]>([]);
+  const sparklesRef = useRef<SVGGElement | null>(null);
+  const completionTimeline = useRef<gsap.core.Timeline | null>(null);
 
   const normalizedProgress = useMemo(() => clampProgress(progress), [progress]);
 
-  const setWaveRef = (index: number) => (node: SVGPathElement | null) => {
+  const setWaveRef = useCallback((index: number) => (node: SVGPathElement | null) => {
     waveRefs.current[index] = node;
-  };
+  }, []);
 
   useEffect(() => {
-    if (!overlayRef.current || !waterGroupRef.current) {
+    if (!overlayRef.current) {
       return;
     }
 
     const ctx = gsap.context(() => {
       gsap.set(overlayRef.current, { autoAlpha: 1 });
-      gsap.set(waterGroupRef.current, { y: CHART_HEIGHT });
-      if (highlightRef.current) {
-        gsap.set(highlightRef.current, { y: CHART_HEIGHT - 16, autoAlpha: 0.95 });
+
+      if (waterLevelRef.current) {
+        gsap.set(waterLevelRef.current, { y: FILL_HEIGHT });
       }
-      if (rippleRef.current) {
-        gsap.set(rippleRef.current, { scale: 0.8, autoAlpha: 0, transformOrigin: '50% 50%' });
+
+      if (sparklesRef.current) {
+        gsap.set(sparklesRef.current, { autoAlpha: 0, scale: 0.85, transformOrigin: '50% 50%' });
+      }
+
+      if (waterContainerRef.current) {
+        gsap.to(waterContainerRef.current, {
+          duration: 6,
+          y: '+=8',
+          ease: 'sine.inOut',
+          repeat: -1,
+          yoyo: true,
+        });
       }
 
       waveRefs.current.forEach((wave, index) => {
@@ -62,49 +58,38 @@ export function LandingPreloader({ progress, isReady }: LandingPreloaderProps) {
           return;
         }
 
-        gsap.set(wave, { transformOrigin: '50% 50%' });
-        gsap.to(wave, {
-          duration: 6 + index * 0.5,
-          x: index % 2 === 0 ? -120 : 120,
-          repeat: -1,
-          yoyo: true,
-          ease: 'sine.inOut',
+        const direction = index % 2 === 0 ? -1 : 1;
+        gsap.set(wave, {
+          transformOrigin: '50% 50%',
+          xPercent: direction * 10,
         });
+
         gsap.to(wave, {
-          duration: 4 + index,
-          y: '+=10',
+          duration: 5.5 + index * 0.8,
+          xPercent: direction * 35,
+          y: index === 0 ? -10 : -6,
+          ease: 'sine.inOut',
           repeat: -1,
           yoyo: true,
-          ease: 'sine.inOut',
         });
       });
     }, overlayRef);
 
-    return () => {
-      ctx.revert();
-    };
+    return () => ctx.revert();
   }, []);
 
   useEffect(() => {
-    if (!waterGroupRef.current) {
+    if (!waterLevelRef.current) {
       return;
     }
 
-    const targetY = CHART_HEIGHT - (normalizedProgress / 100) * CHART_HEIGHT;
+    const targetY = FILL_HEIGHT - (normalizedProgress / 100) * FILL_HEIGHT;
 
-    gsap.to(waterGroupRef.current, {
+    gsap.to(waterLevelRef.current, {
       y: targetY,
       duration: 1.1,
       ease: 'power3.out',
     });
-
-    if (highlightRef.current) {
-      gsap.to(highlightRef.current, {
-        y: targetY - 18,
-        duration: 1,
-        ease: 'power3.out',
-      });
-    }
   }, [normalizedProgress]);
 
   useEffect(() => {
@@ -116,8 +101,8 @@ export function LandingPreloader({ progress, isReady }: LandingPreloaderProps) {
 
     gsap.to(target, {
       value: normalizedProgress,
-      duration: 0.7,
-      ease: 'power3.out',
+      duration: 0.8,
+      ease: 'power2.out',
       onUpdate: () => {
         if (percentageRef.current) {
           percentageRef.current.textContent = `${Math.round(target.value)}%`;
@@ -133,62 +118,50 @@ export function LandingPreloader({ progress, isReady }: LandingPreloaderProps) {
 
     if (isReady) {
       completionTimeline.current?.kill();
-      const timeline = gsap.timeline();
-      if (waterGroupRef.current) {
-        timeline.to(waterGroupRef.current, {
-          duration: 0.7,
-          y: -12,
+      completionTimeline.current = gsap.timeline();
+
+      if (waterLevelRef.current) {
+        completionTimeline.current.to(waterLevelRef.current, {
+          duration: 0.8,
+          y: 0,
           ease: 'power3.out',
         });
       }
-      if (highlightRef.current) {
-        timeline.to(
-          highlightRef.current,
+
+      if (sparklesRef.current) {
+        completionTimeline.current.to(
+          sparklesRef.current,
           {
             duration: 0.6,
-            y: '-=18',
-            ease: 'power3.out',
+            autoAlpha: 1,
+            scale: 1,
+            ease: 'power2.out',
           },
-          '<',
+          '-=0.4',
         );
       }
-      if (rippleRef.current) {
-        timeline
-          .fromTo(
-            rippleRef.current,
-            { autoAlpha: 0, scale: 0.85 },
-            { autoAlpha: 0.75, scale: 1.2, duration: 0.45, ease: 'power1.out' },
-            '<',
-          )
-          .to(
-            rippleRef.current,
-            {
-              duration: 1.2,
-              autoAlpha: 0,
-              scale: 2.2,
-              ease: 'power2.out',
-            },
-            '-=0.2',
-          );
-      }
-      timeline.to(
+
+      completionTimeline.current.to(
         overlayRef.current,
         {
-          duration: 0.8,
+          duration: 0.7,
           autoAlpha: 0,
           pointerEvents: 'none',
           ease: 'power2.out',
         },
-        '-=0.35',
+        '-=0.2',
       );
-      completionTimeline.current = timeline;
     } else {
       completionTimeline.current?.kill();
       gsap.to(overlayRef.current, {
-        duration: 0.4,
+        duration: 0.3,
         autoAlpha: 1,
         pointerEvents: 'auto',
       });
+
+      if (sparklesRef.current) {
+        gsap.set(sparklesRef.current, { autoAlpha: 0, scale: 0.85 });
+      }
     }
   }, [isReady]);
 
@@ -200,165 +173,180 @@ export function LandingPreloader({ progress, isReady }: LandingPreloaderProps) {
       role="status"
       aria-live="polite"
       aria-busy={!isReady}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.35),_transparent_55%),_linear-gradient(145deg,_#020817_5%,_#041b25_40%,_#020617_100%)] text-primary-foreground"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-primary-foreground"
     >
-      <div className="flex w-full max-w-5xl flex-col items-center gap-12 px-6 py-16 text-center">
-        <div className="w-full max-w-3xl rounded-[2.5rem] border border-white/10 bg-white/5 p-10 shadow-[0_40px_120px_rgba(9,35,51,0.45)] backdrop-blur-xl">
-          <div className="mb-8 flex flex-col items-center gap-3">
-            <span className="rounded-full bg-emerald-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-emerald-200/80">
-              Initializing marketsphere
-            </span>
-            <h2 className="text-3xl font-semibold text-white/90">Modeling liquidity gradients</h2>
-            <p className="max-w-xl text-sm text-white/70">
-              Generating multidimensional signals and syncing institutional-grade datasets to prime your trading
-              cockpit.
-            </p>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.18),transparent_55%)]" />
+      <div className="relative flex w-full max-w-3xl flex-col items-center gap-12 px-6 py-10 text-center">
+        <div className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-cyan-200/20 bg-white/5 p-10 shadow-[0_40px_120px_rgba(15,118,110,0.35)] backdrop-blur">
+          <div className="mb-8 text-sm font-semibold uppercase tracking-[0.4em] text-cyan-100/80">
+            Synchronizing market cockpit
           </div>
-          <div className="relative mx-auto flex w-full max-w-[28rem] items-center justify-center">
+          <div className="relative mx-auto flex h-72 w-full max-w-xl items-center justify-center">
             <svg
-              viewBox="0 0 320 360"
+              viewBox="0 0 260 260"
               role="img"
               aria-label={`Loading ${Math.round(normalizedProgress)} percent`}
               className="h-full w-full"
             >
               <defs>
-                <linearGradient id="chart-border" x1="0" x2="1" y1="1" y2="0">
-                  <stop offset="0%" stopColor="rgba(21, 128, 61, 0.25)" />
-                  <stop offset="50%" stopColor="rgba(56, 189, 248, 0.35)" />
-                  <stop offset="100%" stopColor="rgba(16, 185, 129, 0.65)" />
-                </linearGradient>
-                <linearGradient id="chart-bg" x1="0" x2="0" y1="1" y2="0">
-                  <stop offset="0%" stopColor="rgba(2, 10, 25, 0.9)" />
-                  <stop offset="100%" stopColor="rgba(4, 36, 45, 0.9)" />
+                <linearGradient id="chart-frame" x1="0" x2="1" y1="1" y2="0">
+                  <stop offset="0%" stopColor="rgba(15, 118, 110, 0.9)" />
+                  <stop offset="50%" stopColor="rgba(56, 189, 248, 0.9)" />
+                  <stop offset="100%" stopColor="rgba(59, 130, 246, 0.9)" />
                 </linearGradient>
                 <linearGradient id="water-fill" x1="0" x2="0" y1="1" y2="0">
-                  <stop offset="0%" stopColor="rgba(0, 88, 60, 0.95)" />
-                  <stop offset="70%" stopColor="rgba(16, 185, 129, 0.95)" />
-                  <stop offset="100%" stopColor="rgba(236, 255, 246, 0.9)" />
+                  <stop offset="0%" stopColor="rgba(16, 185, 129, 0.95)" />
+                  <stop offset="35%" stopColor="rgba(45, 212, 191, 0.98)" />
+                  <stop offset="75%" stopColor="rgba(56, 189, 248, 0.95)" />
+                  <stop offset="100%" stopColor="rgba(165, 243, 252, 0.95)" />
                 </linearGradient>
-                <linearGradient id="water-fill-secondary" x1="0" x2="0" y1="1" y2="0">
-                  <stop offset="0%" stopColor="rgba(0, 77, 53, 0.8)" />
-                  <stop offset="65%" stopColor="rgba(12, 164, 111, 0.9)" />
-                  <stop offset="100%" stopColor="rgba(206, 255, 234, 0.85)" />
+                <linearGradient id="water-shine" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+                  <stop offset="35%" stopColor="rgba(255,255,255,0.15)" />
+                  <stop offset="100%" stopColor="rgba(255,255,255,0)" />
                 </linearGradient>
-                <linearGradient id="water-fill-tertiary" x1="0" x2="0" y1="1" y2="0">
-                  <stop offset="0%" stopColor="rgba(0, 61, 45, 0.75)" />
-                  <stop offset="60%" stopColor="rgba(10, 142, 101, 0.85)" />
-                  <stop offset="100%" stopColor="rgba(186, 255, 230, 0.78)" />
-                </linearGradient>
-                <linearGradient id="water-top" x1="0" x2="0" y1="1" y2="0">
-                  <stop offset="0%" stopColor="rgba(255, 255, 255, 0.0)" />
-                  <stop offset="45%" stopColor="rgba(255, 255, 255, 0.35)" />
-                  <stop offset="100%" stopColor="rgba(255, 255, 255, 0.7)" />
-                </linearGradient>
-                <filter id="inner-glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="12" result="glow" />
-                  <feComposite in="glow" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" />
-                </filter>
-                <clipPath id="chart-window">
-                  <rect x="44" y="40" width="232" height="240" rx="32" ry="32" />
+                <radialGradient id="water-depth" cx="50%" cy="35%" r="75%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
+                  <stop offset="55%" stopColor="rgba(45,212,191,0.4)" />
+                  <stop offset="100%" stopColor="rgba(12,74,110,0.65)" />
+                </radialGradient>
+                <radialGradient id="water-caustics" cx="50%" cy="20%" r="60%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.45)" />
+                  <stop offset="65%" stopColor="rgba(191,235,255,0.12)" />
+                  <stop offset="100%" stopColor="rgba(59,130,246,0)" />
+                </radialGradient>
+                <clipPath id="chart-mask">
+                  <rect x="30" y="30" width="200" height="200" rx="34" ry="34" />
                 </clipPath>
+                <filter id="water-glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
-              <rect x="36" y="28" width="248" height="268" rx="40" ry="40" fill="url(#chart-bg)" />
               <rect
-                x="36"
-                y="28"
-                width="248"
-                height="268"
+                x="20"
+                y="20"
+                width="220"
+                height="220"
                 rx="40"
-                ry="40"
-                fill="none"
-                stroke="url(#chart-border)"
-                strokeWidth="3"
+                className="fill-slate-900/60"
+                stroke="url(#chart-frame)"
+                strokeWidth="5"
               />
-              <g clipPath="url(#chart-window)">
-                <rect x="44" y="40" width="232" height="240" fill="rgba(2,12,32,0.75)" />
-                {[0, 1, 2, 3, 4, 5].map((index) => (
-                  <line
-                    key={`grid-horizontal-${index}`}
-                    x1="44"
-                    x2="276"
-                    y1={40 + index * 48}
-                    y2={40 + index * 48}
-                    stroke="rgba(148, 163, 184, 0.18)"
-                    strokeWidth="1"
-                  />
-                ))}
-                {[0, 1, 2, 3, 4, 5, 6].map((index) => (
-                  <line
-                    key={`grid-vertical-${index}`}
-                    x1={44 + index * 38}
-                    x2={44 + index * 38}
-                    y1="40"
-                    y2="280"
-                    stroke="rgba(30, 64, 175, 0.15)"
-                    strokeWidth="1"
-                  />
-                ))}
-                {candleData.map((candle, index) => (
-                  <g key={`candle-${index}`} transform={`translate(${candle.x} 64)`}>
-                    <line
-                      x1="0"
-                      x2="0"
-                      y1={-candle.wickHeight * 0.5}
-                      y2={candle.wickHeight * 0.55}
-                      stroke="rgba(203, 213, 225, 0.25)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
+              <g clipPath="url(#chart-mask)">
+                <g ref={waterContainerRef}>
+                  <g ref={waterLevelRef}>
                     <rect
-                      x="-8"
-                      y={-candle.bodyHeight * 0.5}
-                      width="16"
-                      height={candle.bodyHeight}
-                      rx="4"
-                      fill="rgba(125, 211, 252, 0.35)"
-                      stroke="rgba(56, 189, 248, 0.45)"
-                      strokeWidth="2"
+                      x="30"
+                      y="30"
+                      width="200"
+                      height="200"
+                      fill="url(#water-depth)"
+                      filter="url(#water-glow)"
+                    />
+                    <path
+                      ref={setWaveRef(0)}
+                      d="M30 190 Q 60 175 90 190 T 150 190 T 210 190 L 230 230 L 30 230 Z"
+                      fill="url(#water-fill)"
+                      opacity="0.88"
+                    />
+                    <path
+                      ref={setWaveRef(1)}
+                      d="M30 200 Q 70 185 110 200 T 190 200 T 230 200 L 230 230 L 30 230 Z"
+                      fill="url(#water-shine)"
+                      opacity="0.75"
+                    />
+                    <ellipse
+                      cx="130"
+                      cy="170"
+                      rx="95"
+                      ry="28"
+                      fill="url(#water-caustics)"
+                      opacity="0.7"
                     />
                   </g>
-                ))}
-                <g ref={waterGroupRef} filter="url(#inner-glow)">
-                  {waveColors.map((fill, index) => (
-                    <path
-                      key={`wave-${index}`}
-                      ref={setWaveRef(index)}
-                      d="M-80 220 Q -20 200 40 220 T 160 220 T 280 220 L 320 320 L -120 320 Z"
-                      fill={fill}
-                      opacity={0.66 - index * 0.12}
+                </g>
+                <path
+                  d="M30 65 C 110 18 150 18 230 62 L 230 30 L 30 30 Z"
+                  fill="rgba(255,255,255,0.08)"
+                />
+                <rect x="30" y="200" width="200" height="30" fill="rgba(2,6,23,0.35)" />
+                <g className="opacity-40">
+                  {[0, 1, 2, 3, 4].map((index) => (
+                    <line
+                      key={`grid-${index}`}
+                      x1="30"
+                      x2="230"
+                      y1={30 + (index * FILL_HEIGHT) / 4}
+                      y2={30 + (index * FILL_HEIGHT) / 4}
+                      stroke="rgba(148, 163, 184, 0.18)"
+                      strokeWidth="1.5"
+                    />
+                  ))}
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <line
+                      key={`grid-vertical-${index}`}
+                      x1={30 + (index * 200) / 5}
+                      x2={30 + (index * 200) / 5}
+                      y1="30"
+                      y2="230"
+                      stroke="rgba(148, 163, 184, 0.12)"
+                      strokeWidth="1"
                     />
                   ))}
                 </g>
-                <path
-                  ref={highlightRef}
-                  d="M44 210 Q 160 196 276 212 L 276 228 Q 160 212 44 226 Z"
-                  fill="url(#water-top)"
-                  opacity="0.9"
-                />
-                <circle ref={rippleRef} cx="160" cy="220" r="90" fill="rgba(167, 243, 208, 0.18)" />
+                <g className="opacity-90">
+                  {[40, 70, 110, 150, 190].map((x, idx) => (
+                    <g key={`candle-${x}`}>
+                      <line
+                        x1={x + idx * 12}
+                        x2={x + idx * 12}
+                        y1={90 - (idx % 2 === 0 ? 20 : 10)}
+                        y2={210 + (idx % 2 === 0 ? 10 : 18)}
+                        stroke="rgba(56, 189, 248, 0.4)"
+                        strokeWidth="3"
+                      />
+                      <rect
+                        x={x - 6 + idx * 12}
+                        y={idx % 2 === 0 ? 110 : 140}
+                        width="18"
+                        height={idx % 2 === 0 ? 70 : 50}
+                        rx="4"
+                        fill={idx % 2 === 0 ? 'rgba(74, 222, 128, 0.65)' : 'rgba(59, 130, 246, 0.5)'}
+                      />
+                    </g>
+                  ))}
+                </g>
               </g>
-              <text
-                x="50"
-                y="316"
-                className="fill-emerald-200/80 text-[14px] tracking-[0.25em] uppercase"
-              >
-                Liquidity charge level
-              </text>
-              <text x="50" y="336" className="fill-white/60 text-[13px]">
-                AI strategy stack alignment in progress
+              <g ref={sparklesRef} className="pointer-events-none">
+                {[0, 1, 2].map((index) => (
+                  <circle
+                    key={`sparkle-${index}`}
+                    cx={90 + index * 50}
+                    cy={70 + (index % 2 === 0 ? 0 : 20)}
+                    r="6"
+                    fill="rgba(224, 242, 254, 0.95)"
+                  />
+                ))}
+              </g>
+              <text x="130" y="258" textAnchor="middle" className="fill-cyan-100 text-[14px] tracking-[0.4em] uppercase">
+                Liquidity rising
               </text>
             </svg>
           </div>
-          <div className="mt-10 flex flex-col items-center gap-2">
-            <span ref={percentageRef} className="text-6xl font-extrabold tracking-tight text-emerald-200">
+          <div className="flex flex-col items-center gap-3">
+            <span ref={percentageRef} className="text-6xl font-black tracking-tight text-white">
               0%
             </span>
-            <span className="text-base font-medium text-white/80">Stabilizing predictive liquidity curves…</span>
+            <span className="text-base text-cyan-100/70">Priming alpha streams for launch…</span>
           </div>
         </div>
-        <p className="max-w-2xl text-sm text-white/70">
-          This immersive visualization mirrors capital inflow projections while we ready cross-venue execution,
-          sentiment models, and compliance safeguards tailored to your portfolio.
+        <p className="max-w-2xl text-sm text-cyan-100/70">
+          Our engines are hydrating your strategy dashboard with live liquidity flows, volatility clusters, and
+          predictive signal overlays so you arrive to a fully-charged trading command center.
         </p>
       </div>
     </div>
