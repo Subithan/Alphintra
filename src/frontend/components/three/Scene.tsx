@@ -147,29 +147,59 @@ function CoinField() {
   const total = Math.min(320, materials.length * density);
   const indices = useMemo(() => Array.from({ length: total }, (_, i) => i % materials.length), [materials.length, total]);
 
-  const { viewport, gl } = useThree();
+  const { viewport } = useThree();
   const pointerActiveRef = useRef(false);
+  const pointerNormRef = useRef(new THREE.Vector2(0, 0));
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const pointerWorld = useMemo(() => new THREE.Vector3(), []);
+  const pointerLocal = useMemo(() => new THREE.Vector3(), []);
+  const tmpPos = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => {
-    const el = gl.domElement as HTMLElement;
-    const onEnter = () => (pointerActiveRef.current = true);
-    const onMove = () => (pointerActiveRef.current = true);
-    const onLeave = () => (pointerActiveRef.current = false);
-    const onTouchStart = () => (pointerActiveRef.current = true);
-    const onTouchEnd = () => (pointerActiveRef.current = false);
-    el.addEventListener('pointerenter', onEnter);
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerleave', onLeave);
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener('pointerenter', onEnter);
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerleave', onLeave);
-      el.removeEventListener('touchstart', onTouchStart as any);
-      el.removeEventListener('touchend', onTouchEnd as any);
+    const updateFromPointer = (event: PointerEvent | TouchEvent) => {
+      let clientX: number | null = null;
+      let clientY: number | null = null;
+      if (event instanceof TouchEvent) {
+        if (event.touches.length > 0) {
+          clientX = event.touches[0].clientX;
+          clientY = event.touches[0].clientY;
+        } else if (event.changedTouches.length > 0) {
+          clientX = event.changedTouches[0].clientX;
+          clientY = event.changedTouches[0].clientY;
+        }
+      } else {
+        clientX = event.clientX;
+        clientY = event.clientY;
+      }
+
+      if (clientX === null || clientY === null) return;
+      const nx = (clientX / window.innerWidth) * 2 - 1;
+      const ny = -(clientY / window.innerHeight) * 2 + 1;
+      pointerNormRef.current.set(nx, ny);
+      pointerActiveRef.current = true;
     };
-  }, [gl.domElement]);
+
+    const onPointerMove = (event: PointerEvent) => updateFromPointer(event);
+    const onPointerLeave = () => (pointerActiveRef.current = false);
+    const onTouchMove = (event: TouchEvent) => updateFromPointer(event);
+    const onTouchEnd = () => (pointerActiveRef.current = false);
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerleave', onPointerLeave, { passive: true });
+    window.addEventListener('blur', onPointerLeave);
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerleave', onPointerLeave);
+      window.removeEventListener('blur', onPointerLeave);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, []);
 
   useEffect(() => {
     const w = viewport.width;
@@ -212,23 +242,32 @@ function CoinField() {
   useFrame((state, delta) => {
     const w = state.viewport.width;
     const h = state.viewport.height;
-    let mouseX = state.pointer.x * (w / 2);
-    let mouseY = state.pointer.y * (h / 2);
-    const repelRadius = Math.min(w, h) * 0.3; // slightly smaller to avoid large voids
-    const repelStrength = 2.2;
+    const repelRadius = Math.min(w, h) * 0.28; // compact, focused interaction
+    const repelStrength = 3.2; // stronger baseline impulse
     const t = state.clock.elapsedTime;
 
-    // Disable repel when pointer not active to prevent a permanent void at center
-    const repelEnabled = pointerActiveRef.current === true;
-    if (!repelEnabled) {
-      mouseX = 99999;
-      mouseY = 99999;
+    // Intersect pointer ray with the z-plane of the group to get accurate world coords
+    let repelEnabled = false;
+    let localMX = 0, localMY = 0;
+    if (groupRef.current) {
+      groupRef.current.getWorldPosition(tmpPos);
+      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -tmpPos.z);
+      raycaster.setFromCamera(pointerNormRef.current, state.camera);
+      const hit = raycaster.ray.intersectPlane(plane, pointerWorld);
+      if (hit) {
+        pointerLocal.copy(pointerWorld);
+        groupRef.current.worldToLocal(pointerLocal);
+        localMX = pointerLocal.x;
+        localMY = pointerLocal.y;
+        // Enable repel only when pointer is actually over the canvas OR moving
+        repelEnabled = pointerActiveRef.current === true;
+      }
     }
 
     // Parallax group motion
     if (groupRef.current) {
-      const targetX = repelEnabled ? state.pointer.x * 0.25 : 0;
-      const targetY = repelEnabled ? -state.pointer.y * 0.18 : 0;
+      const targetX = repelEnabled ? pointerNormRef.current.x * 0.5 : 0;
+      const targetY = repelEnabled ? pointerNormRef.current.y * 0.35 : 0;
       groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, targetX, 0.06);
       groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, targetY, 0.06);
       groupRef.current.position.z = -2.2;
@@ -239,11 +278,11 @@ function CoinField() {
     if (repelEnabled) {
       const prev = prevMouseRef.current;
       if (prev) {
-        const ddx = mouseX - prev.x;
-        const ddy = mouseY - prev.y;
+        const ddx = localMX - prev.x;
+        const ddy = localMY - prev.y;
         mouseV = Math.hypot(ddx, ddy) / Math.max(1e-3, delta);
       }
-      prevMouseRef.current = { x: mouseX, y: mouseY };
+      prevMouseRef.current = { x: localMX, y: localMY };
     } else {
       prevMouseRef.current = null;
     }
@@ -259,8 +298,8 @@ function CoinField() {
 
       // pointer repel
       let ox = px, oy = py;
-      const dx = px - mouseX;
-      const dy = py - mouseY;
+      const dx = px - localMX;
+      const dy = py - localMY;
       const d2 = dx * dx + dy * dy;
       const r2 = repelRadius * repelRadius;
       if (d2 < r2 && d2 > 1e-4 && repelEnabled) {
