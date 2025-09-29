@@ -24,42 +24,48 @@ export const Hero = () => {
             {/* Gradient background effects can be added here */}
           </div>
           <div className="relative z-10 flex flex-col lg:flex-row items-center justify-center gap-12">
-            {/* Text Column: badge, h1, p, button */}
-            <div className="w-full lg:w-1/2 text-left">
-              <div className="flex items-center justify-start">
-                <p className="inline-flex items-center gap-2 border py-1 px-2 rounded-lg border-white/30 bg-white/10 backdrop-blur-md">
-                  <Zap
-                    size={20}
-                    className="text-transparent"
-                    style={{
-                      stroke: "url(#text-gradient)",
-                      fill: "none",
-                      strokeWidth: 1,
-                    }}
-                    aria-hidden="true"
-                  />
-                  <span className="bg-[linear-gradient(to_right,#F87AFF,#FB93D0,#FFDD00,#C3F0B2,#2FD8FE)] text-transparent bg-clip-text [-webkit-background-clip:text]">
-                    No-Code Trading Automation
-                  </span>
-                </p>
-              </div>
-              <h1 className="text-5xl lg:text-6xl font-bold leading-tight text-gray-100 mt-5">
-                Build Trading Bots
-                <br />
-                <span>Without Code</span>
-              </h1>
-              <p className="text-lg mt-4 max-w-2xl text-gray-100">
-                Create sophisticated trading strategies using our intuitive drag-and-drop interface. Automate your trades with
-                AI-powered bots - 24/7.
-              </p>
-              <div className="mt-6">
-                <button
-                  type="button"
-                  className="inline-block bg-yellow-400 text-[#312e81] px-6 py-3 rounded-lg font-semibold text-lg hover:scale-105 transition-colors"
-                  aria-label="Get started with trading automation"
-                >
-                  Get Started
-                </button>
+            {/* Text Column: badge, h1, p, button inside glass card */}
+            <div className="w-full lg:w-1/2">
+              <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-black/35 backdrop-blur-2xl shadow-[0_40px_120px_rgba(15,23,42,0.45)] px-8 py-10 max-w-xl">
+                <div className="absolute inset-0 bg-[radial-gradient(900px_600px_at_0%_0%,rgba(248,122,255,0.22),transparent_70%),radial-gradient(900px_600px_at_100%_0%,rgba(47,216,254,0.18),transparent_70%),radial-gradient(1200px_900px_at_50%_100%,rgba(234,179,8,0.16),transparent_75%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(130deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.02)_100%)]" />
+                <div className="relative z-10 text-left">
+                  <div className="flex items-center justify-start">
+                    <p className="inline-flex items-center gap-2 border py-1 px-3 rounded-lg border-white/30 bg-white/10 backdrop-blur-md text-sm uppercase tracking-wide">
+                      <Zap
+                        size={18}
+                        className="text-transparent"
+                        style={{
+                          stroke: "url(#text-gradient)",
+                          fill: "none",
+                          strokeWidth: 1.2,
+                        }}
+                        aria-hidden="true"
+                      />
+                      <span className="bg-[linear-gradient(to_right,#F87AFF,#FB93D0,#FFDD00,#C3F0B2,#2FD8FE)] text-transparent bg-clip-text [-webkit-background-clip:text]">
+                        No-Code Trading Automation
+                      </span>
+                    </p>
+                  </div>
+                  <h1 className="text-5xl lg:text-6xl font-bold leading-tight text-gray-100 mt-6">
+                    Build Trading Bots
+                    <br />
+                    <span>Without Code</span>
+                  </h1>
+                  <p className="text-lg mt-6 text-gray-100/90">
+                    Create sophisticated trading strategies using our intuitive drag-and-drop interface. Automate your trades with
+                    AI-powered bots&nbsp;– 24/7.
+                  </p>
+                  <div className="mt-8">
+                    <button
+                      type="button"
+                      className="inline-block bg-yellow-400 text-[#312e81] px-6 py-3 rounded-lg font-semibold text-lg hover:scale-105 transition-transform"
+                      aria-label="Get started with trading automation"
+                    >
+                      Get Started
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             {/* Visual Column: Alphintra Robot + enhanced loader */}

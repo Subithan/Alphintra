@@ -7,6 +7,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 // Register plugin once in module scope (safe in client-only file)
 gsap.registerPlugin(ScrollTrigger);
 
+function createSeededRandom(seed: number) {
+  return () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return (seed >>> 0) / 4294967296;
+  };
+}
+
 export default function PinSection() {
   const ref = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -32,6 +39,15 @@ export default function PinSection() {
     ],
     []
   );
+
+  const candleData = useMemo(() => {
+    const rand = createSeededRandom(0x51f2a1);
+    return Array.from({ length: candlesCount }).map(() => {
+      const body = 16 + Math.round(rand() * 48);
+      const wick = body + 20 + Math.round(rand() * 16);
+      return { body, wick };
+    });
+  }, [candlesCount]);
 
   useEffect(() => {
     const el = ref.current;
@@ -110,12 +126,9 @@ export default function PinSection() {
           duration: 0.9,
         },
         ">-0.4"
-      ).fromTo(
-        stage.querySelector(".pin-pulse") as HTMLElement,
-        { scale: 1, opacity: 0.35 },
-        { scale: 6, opacity: 0, duration: 0.9 },
-        "<"
-      ).to(captions[1], { opacity: 1, y: 0, duration: 0.45 }, ">-0.2")
+      )
+      // Removed .pin-pulse animation step
+      .to(captions[1], { opacity: 1, y: 0, duration: 0.45 }, ">-0.2")
         .to(captions[1], { opacity: 0, y: -6, duration: 0.45 }, ">0.6");
 
       // Phase 3: Execution — beam fires + candles flip green
@@ -196,7 +209,7 @@ export default function PinSection() {
               ref={coreRef}
               className="pin-orb absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
             />
-            <div className="pin-pulse absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+            {/* pin-pulse removed */}
 
             {/* Execution beam */}
             <div
@@ -206,22 +219,18 @@ export default function PinSection() {
 
             {/* Candlestick strip */}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-end gap-2">
-              {Array.from({ length: candlesCount }).map((_, i) => {
-                const h = 16 + Math.round(Math.random() * 48);
-                const wick = h + 20 + Math.round(Math.random() * 16);
-                return (
-                  <div key={i} className="flex flex-col items-center">
-                    <div
-                      className="pin-candle-wick"
-                      style={{ height: wick }}
-                    />
-                    <div
-                      className="pin-candle-body"
-                      style={{ height: h }}
-                    />
-                  </div>
-                );
-              })}
+              {candleData.map(({ body, wick }, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <div
+                    className="pin-candle-wick"
+                    style={{ height: wick }}
+                  />
+                  <div
+                    className="pin-candle-body"
+                    style={{ height: body }}
+                  />
+                </div>
+              ))}
             </div>
 
             {/* Progress bar */}
