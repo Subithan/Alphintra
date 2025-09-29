@@ -11,7 +11,7 @@ class TestDataProcessor:
     
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.processor = DataProcessor()
+        self.processor = DataProcessor(name="Test Processor", description="A test processor")
         self.sample_data = pd.DataFrame({
             'timestamp': pd.date_range(start='2023-01-01', periods=100, freq='D'),
             'open': np.random.uniform(100, 200, 100),

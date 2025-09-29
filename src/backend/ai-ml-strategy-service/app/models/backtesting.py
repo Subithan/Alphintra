@@ -138,6 +138,8 @@ class BacktestJob(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
+    strategy = relationship("Strategy", back_populates="backtest_jobs")
+    dataset = relationship("Dataset", back_populates="backtest_jobs")
     trades = relationship("BacktestTrade", back_populates="backtest_job", cascade="all, delete-orphan")
     daily_returns = relationship("DailyReturn", back_populates="backtest_job", cascade="all, delete-orphan")
     portfolio_snapshots = relationship("PortfolioSnapshot", back_populates="backtest_job", cascade="all, delete-orphan")

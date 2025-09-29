@@ -1,19 +1,21 @@
 """Pytest configuration and fixtures for the AI/ML Strategy Service."""
 import os
 import pytest
+from dotenv import load_dotenv
+
+# Load test environment variables BEFORE importing application modules
+# This ensures that the settings object is created with the test environment
+load_dotenv('src/backend/ai-ml-strategy-service/.env.test')
+os.environ['TESTING'] = 'True'
+
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
-
-# Load test environment variables
-try:
-    from dotenv import load_dotenv
-    load_dotenv('.env.test')
-except ModuleNotFoundError:
-    print("python-dotenv not found, skipping .env file loading.")
-
-# Ensure we're using test database
-os.environ['TESTING'] = 'True'
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.types import CHAR, JSON
+import uuid
+from app.core.auth import get_current_user_id
 
 # Import app after environment is set
 from main import app
@@ -26,12 +28,21 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
     connect_args={"check_same_thread": False},
-    echo=True  # Enable SQL logging for tests
+    echo=False  # Disable SQL logging for tests to reduce noise
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Override the database URL in settings
 settings.DATABASE_URL = SQLALCHEMY_DATABASE_URL
+
+# Add a compilation directive for UUID on SQLite
+@compiles(UUID, "sqlite")
+def compile_uuid_sqlite(element, compiler, **kw):
+    return "CHAR(32)"
+
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(element, compiler, **kw):
+    return "JSON"
 
 # Create test database tables
 Base.metadata.create_all(bind=engine)
@@ -62,8 +73,15 @@ def client():
         finally:
             db.close()
 
+    def override_get_current_user_id():
+        return uuid.uuid4()
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user_id] = override_get_current_user_id
     with TestClient(app) as test_client:
+        test_client.headers = {
+            "Authorization": "Bearer dummy-test-token"
+        }
         yield test_client
 
 # Common test data fixtures

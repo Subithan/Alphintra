@@ -231,6 +231,7 @@ class PaperOrder(BaseModel):
     
     account_id = Column(UUID(as_uuid=True), ForeignKey("paper_accounts.id"), nullable=False, index=True)
     strategy_id = Column(UUID(as_uuid=True), ForeignKey("strategies.id"), index=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("paper_trading_sessions.id"), index=True)
     
     # Order identification
     order_id = Column(String(100), nullable=False, unique=True, index=True)
@@ -276,7 +277,7 @@ class PaperOrder(BaseModel):
     # Relationships
     account = relationship("PaperAccount", back_populates="orders")
     strategy = relationship("Strategy")
-    session = relationship("PaperTradingSession", back_populates="orders")
+    session = relationship("PaperTradingSession", foreign_keys=[session_id], back_populates="orders")
     trades = relationship("PaperTrade", back_populates="order", cascade="all, delete-orphan")
 
 

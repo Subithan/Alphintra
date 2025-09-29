@@ -129,7 +129,7 @@ class Dataset(BaseModel, UserMixin, MetadataMixin):
     training_jobs = relationship("TrainingJob", back_populates="dataset")
     backtest_jobs = relationship("BacktestJob", back_populates="dataset")
     debug_sessions = relationship("DebugSession", back_populates="dataset")
-    preprocessing_jobs = relationship("DataPreprocessingJob", back_populates="dataset")
+    preprocessing_jobs = relationship("DataPreprocessingJob", foreign_keys="DataPreprocessingJob.dataset_id", back_populates="dataset")
     validation_reports = relationship("DatasetValidationReport", back_populates="dataset", cascade="all, delete-orphan")
     statistics = relationship("DatasetStatistics", back_populates="dataset", uselist=False, cascade="all, delete-orphan")
     

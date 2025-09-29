@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = Field(default="development", description="Environment: development, staging, production")
     PORT: int = Field(default=8002, description="Port to run the service on")
     DEBUG: bool = Field(default=True, description="Enable debug mode")
+    TESTING: bool = Field(default=False, description="Enable testing mode")
+    API_V1_STR: str = Field(default="/api", description="API prefix")
     
     # Security settings
     SECRET_KEY: str = Field(..., description="Secret key for JWT token generation")

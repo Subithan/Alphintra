@@ -13,7 +13,7 @@ class TestBacktestingEngineIntegration:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.engine = BacktestingEngine()
-        self.data_processor = DataProcessor()
+        self.data_processor = DataProcessor(name="Test Processor", description="A test processor")
         
         # Generate sample market data
         dates = pd.date_range(start='2023-01-01', periods=100, freq='D')

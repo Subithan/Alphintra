@@ -89,11 +89,13 @@ class TrainingJob(BaseModel, UserMixin, MetadataMixin):
     
     # Basic information
     strategy_id = Column(UUID(as_uuid=True), ForeignKey("strategies.id"), nullable=False)
+    model_id = Column(Integer, ForeignKey("models.id"), nullable=True)
     dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     job_name = Column(String(255), nullable=False, index=True)
     job_type = Column(Enum(JobType), nullable=False, index=True)
     
     # Compute configuration
+    compute_resource_id = Column(UUID(as_uuid=True), ForeignKey("compute_resources.id"))
     instance_type = Column(Enum(InstanceType), nullable=False)
     machine_type = Column(String(100))  # Specific machine configuration
     disk_size = Column(Integer, default=100)  # GB
@@ -138,7 +140,9 @@ class TrainingJob(BaseModel, UserMixin, MetadataMixin):
     
     # Relationships
     strategy = relationship("Strategy", back_populates="training_jobs")
+    model = relationship("Model", back_populates="training_jobs")
     dataset = relationship("Dataset", back_populates="training_jobs")
+    compute_resource = relationship("ComputeResource", back_populates="training_jobs")
     artifacts = relationship("ModelArtifact", back_populates="training_job", cascade="all, delete-orphan")
     hyperparameter_trials = relationship("HyperparameterTrial", back_populates="training_job", cascade="all, delete-orphan")
 
@@ -230,7 +234,7 @@ class HyperparameterTrial(BaseModel, MetadataMixin):
     
     # Relationships
     training_job = relationship("TrainingJob", back_populates="hyperparameter_trials")
-    tuning_job = relationship("HyperparameterTuningJob", back_populates="trials")
+    tuning_job = relationship("HyperparameterTuningJob", foreign_keys=[tuning_job_id], back_populates="trials")
     
     # Indexes
     __table_args__ = (
@@ -278,79 +282,6 @@ class TrainingMetric(BaseModel):
     )
 
 
-class ModelRegistry(BaseModel, UserMixin):
-    """
-    Centralized model registry for version control.
-    """
-    __tablename__ = "model_registry"
-    
-    model_name = Column(String(255), nullable=False, index=True)
-    description = Column(Text)
-    model_type = Column(String(100), nullable=False)
-    framework = Column(Enum(ModelFramework), nullable=False)
-    
-    # Version information
-    current_version = Column(String(50))
-    latest_version = Column(String(50))
-    
-    # Model metadata
-    input_schema = Column(JSON)
-    output_schema = Column(JSON)
-    feature_importance = Column(JSON, default=dict)
-    model_signature = Column(JSON)
-    
-    # Usage and performance
-    total_predictions = Column(BigInteger, default=0)
-    avg_prediction_time_ms = Column(Float)
-    success_rate = Column(Float, default=1.0)
-    
-    # Tags and labels
-    tags = Column(StringArray(), default=list)
-    labels = Column(JSON, default=dict)
-    
-    # Relationships
-    versions = relationship("ModelVersion", back_populates="model_registry", cascade="all, delete-orphan")
-
-
-class ModelVersion(BaseModel):
-    """
-    Individual model version in the registry.
-    """
-    __tablename__ = "model_versions"
-    __table_args__ = {'extend_existing': True}
-    
-    model_registry_id = Column(UUID(as_uuid=True), ForeignKey("model_registry.id"), nullable=False)
-    version = Column(String(50), nullable=False)
-    artifact_id = Column(UUID(as_uuid=True), ForeignKey("model_artifacts.id"), nullable=False)
-    
-    # Version metadata
-    description = Column(Text)
-    changelog = Column(Text)
-    is_current = Column(Boolean, default=False, nullable=False)
-    stage = Column(String(50), default="development")  # development, staging, production, archived
-    
-    # Performance comparison
-    performance_metrics = Column(JSON, default=dict)
-    performance_improvement = Column(Float)  # vs previous version
-    
-    # Approval and governance
-    approved_by = Column(UUID(as_uuid=True))
-    approval_date = Column(String(30))
-    approval_notes = Column(Text)
-    
-    # Relationships
-    model_registry = relationship("ModelRegistry", back_populates="versions")
-    artifact = relationship("ModelArtifact")
-    
-    # Indexes
-    __table_args__ = (
-        Index('idx_model_versions_registry', 'model_registry_id'),
-        Index('idx_model_versions_version', 'version'),
-        Index('idx_model_versions_current', 'is_current'),
-        Index('idx_model_versions_stage', 'stage'),
-    )
-
-
 class ComputeResource(BaseModel):
     """
     Available compute resources for training.
@@ -384,7 +315,7 @@ class ComputeResource(BaseModel):
     benchmark_date = Column(DateTime)
     
     # Relationships
-    training_jobs = relationship("TrainingJob")
+    training_jobs = relationship("TrainingJob", back_populates="compute_resource")
     
     # Indexes
     __table_args__ = (
@@ -445,7 +376,7 @@ class HyperparameterTuningJob(BaseModel, UserMixin, MetadataMixin):
     # Relationships
     strategy = relationship("Strategy")
     dataset = relationship("Dataset")
-    trials = relationship("HyperparameterTrial", back_populates="tuning_job", cascade="all, delete-orphan")
+    trials = relationship("HyperparameterTrial", foreign_keys="HyperparameterTrial.tuning_job_id", back_populates="tuning_job", cascade="all, delete-orphan")
     best_trial = relationship("HyperparameterTrial", foreign_keys=[best_trial_id], post_update=True)
     
     # Indexes

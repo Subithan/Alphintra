@@ -37,8 +37,6 @@ from app.models.training import (
     ModelArtifact,
     HyperparameterTrial,
     TrainingMetric,
-    ModelRegistry,
-    ModelVersion,
     ComputeResource,
     JobType,
     JobStatus,
@@ -79,15 +77,11 @@ from app.models.experiment import (
     ExperimentRun,
     RunMetricHistory,
     RunArtifact,
-    ModelRegistryEntry,
-    ModelVersion,
-    ModelDeployment,
     ExperimentComparison,
     HyperparameterOptimization,
     OptimizationTrial,
     ExperimentStatus,
     RunStatus,
-    ModelStage,
     ArtifactType
 )
 
@@ -98,6 +92,17 @@ from app.models.file_management import (
     FileSession,
     FileVersion
 )
+
+from app.models.model_registry import (
+    Model,
+    ModelVersion,
+    ModelDeployment,
+    ModelABTest,
+    ModelMetrics,
+    ModelStatus,
+    DeploymentStatus
+)
+
 
 __all__ = [
     # Base classes
@@ -137,8 +142,6 @@ __all__ = [
     "ModelArtifact",
     "HyperparameterTrial",
     "TrainingMetric",
-    "ModelRegistry",
-    "ModelVersion",
     "ComputeResource",
     "JobType",
     "JobStatus",
@@ -176,16 +179,21 @@ __all__ = [
     "ExperimentRun",
     "RunMetricHistory",
     "RunArtifact",
-    "ModelRegistryEntry",
-    "ModelVersion",
-    "ModelDeployment",
     "ExperimentComparison",
     "HyperparameterOptimization",
     "OptimizationTrial",
     "ExperimentStatus",
     "RunStatus",
-    "ModelStage",
     "ArtifactType",
+
+    # Model Registry models
+    "Model",
+    "ModelVersion",
+    "ModelDeployment",
+    "ModelABTest",
+    "ModelMetrics",
+    "ModelStatus",
+    "DeploymentStatus",
     
     # File management models
     "Project",

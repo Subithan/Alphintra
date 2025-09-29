@@ -73,6 +73,7 @@ class Model(Base):
     # Relationships
     versions = relationship("ModelVersion", back_populates="model", cascade="all, delete-orphan")
     deployments = relationship("ModelDeployment", back_populates="model", cascade="all, delete-orphan")
+    training_jobs = relationship("TrainingJob", back_populates="model")
     
     # Indexes
     __table_args__ = (

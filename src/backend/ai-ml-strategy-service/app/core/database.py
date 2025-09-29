@@ -66,6 +66,10 @@ async def init_db() -> None:
     """
     Initialize database - create tables if they don't exist.
     """
+    # Do not initialize database when running tests, as it's handled by pytest fixtures
+    if settings.TESTING:
+        return
+
     try:
         async with engine.begin() as conn:
             # Import all models to ensure they are registered
