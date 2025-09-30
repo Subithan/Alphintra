@@ -19,10 +19,10 @@ public class TradingService {
     public TradingBot startBot(Long userId, Long strategyId) {
         System.out.println("TradingService: startBot method called for userId=" + userId + ", strategyId=" + strategyId);
 
-        System.out.println("⚠️ WARN: Using hardcoded API credentials for testing.");
+        System.out.println("🔧 Using Binance TESTNET API credentials for testing.");
         WalletCredentialsDTO credentials = new WalletCredentialsDTO(
-            "t6w9HbuLwN7F1m9fQi8CDf9e8w33pwRnu5fL0P7YoiawhbY4Y26fe2jTlPJiuUuU",
-            "Ar355LF9iLmcRRYxdJVgqg0a6yu5xcVcCvHRbrQ94fUOkipPa18CNclxKP5QfHB8"
+            "HCwZWzdNFNVj6jYlunDyqh1tFScpTnxktaPLGDkZDaorhhQRoq5LGFReqQYN8Fbi",
+            "1hbOBVTw20W1tOFSdXgn1VZBtQ8DWzrwC4w5p4CnfUDnGH5aRyhP7Ys6KOFuDzoq"
         );
 
         TradingBot bot = new TradingBot();
