@@ -274,7 +274,6 @@ The AI/ML Strategy Service is built as a FastAPI-based microservice with the fol
 - `GET /datasets` - List all datasets
 - `GET /datasets/{id}` - Get dataset details
 - `POST /datasets/{id}/process` - Process dataset
-- `GET /datasets/{id}/preview` - Preview dataset
 
 ### Model Training
 - `POST /training/train` - Start training job
