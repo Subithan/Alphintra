@@ -189,58 +189,12 @@
 **Goal**: Enable advanced users to create custom ML models with AI assistance
 
 ### 3.1 AI Code Service (Backend)
-**File**: `src/backend/ai-ml-strategy-service/app/services/ai_code_service.py` (new)
 
-**Core Methods**:
-```python
-class AICodeService:
-    async def generate_code(prompt: str, context: str, language: str) -> CodeGenResult
-    async def explain_code(code: str, context: str) -> ExplanationResult  
-    async def optimize_code(code: str, optimization_type: str) -> OptimizationResult
-    async def debug_code(code: str, error_message: str) -> DebugResult
-    async def generate_tests(code: str, test_type: str) -> TestGenResult
-```
-
-**LLM Integration**:
-- OpenAI GPT-4 for code generation
-- Claude for code explanation and optimization
-- Fallback providers for reliability
-- Token usage tracking and limits
-- Response caching for repeated requests
-
-**Context Management**:
-- Alphintra platform-specific prompts
-- Trading domain knowledge injection
-- Code style and pattern enforcement
-- Security constraint enforcement
+> **Update (Security Hardening)**: The original AI code service and its endpoints were decommissioned to remove direct LLM provider dependencies from the core platform. These capabilities are now intentionally disabled on the backend until a hardened alternative is delivered.
 
 ### 3.2 AI Code Endpoints
-**File**: `src/backend/ai-ml-strategy-service/app/api/endpoints/ai_code.py` (new)
 
-**Endpoints**:
-- `POST /api/ai/generate` - Generate code from natural language
-- `POST /api/ai/explain` - Explain existing code sections  
-- `POST /api/ai/optimize` - Suggest code improvements
-- `POST /api/ai/debug` - Debug code issues
-- `POST /api/ai/tests` - Generate unit tests
-
-**Request/Response Models**:
-```python
-class CodeGenerationRequest(BaseModel):
-    prompt: str
-    context: str = ""
-    language: str = "python"
-    complexity_level: str = "intermediate"
-    include_comments: bool = True
-    max_tokens: int = 2000
-
-class CodeGenerationResponse(BaseModel):
-    generated_code: str
-    explanation: str
-    suggested_improvements: List[str]
-    estimated_execution_time: Optional[int]
-    security_warnings: List[str]
-```
+> **Update (Security Hardening)**: The `/api/ai/*` routes were removed from the FastAPI service. Frontend requests now terminate at the Next.js proxy layer, which responds with a clear message that the AI assistant is unavailable.
 
 ### 3.3 Enhanced IDE Interface
 **File**: `src/frontend/components/ide/EnhancedIDE.tsx` (new)
