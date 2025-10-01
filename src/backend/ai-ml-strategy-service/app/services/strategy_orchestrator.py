@@ -25,7 +25,7 @@ from app.models.execution import (
 )
 from app.models.strategy import Strategy
 from app.services.live_execution_engine import live_execution_engine, SignalData
-from app.services.broker_integration import broker_integration_service
+from app.services.broker_integration import trading_engine_client
 from app.services.market_data_service import market_data_service
 from app.services.risk_manager import risk_manager
 from app.database.connection import get_db_session
@@ -196,6 +196,15 @@ class StrategyOrchestrator:
             if not orchestration:
                 raise ValueError(f"Orchestration {orchestration_id} not found")
             
+            # Ensure the trading engine session is healthy before starting strategies
+            environment_id = orchestration["environment_id"]
+            try:
+                status = await trading_engine_client.test_connection(environment_id)
+                if not status.get("connected", True):
+                    await trading_engine_client.initialize_environment(environment_id)
+            except Exception as exc:
+                raise Exception(f"Failed to prepare trading engine session: {exc}") from exc
+
             # Start all strategy executions
             success_count = 0
             for execution_id in orchestration["strategy_executions"]:
@@ -226,10 +235,20 @@ class StrategyOrchestrator:
             # Stop all strategy executions
             for execution_id in orchestration["strategy_executions"]:
                 await live_execution_engine.stop_execution(execution_id)
-            
+
             orchestration["status"] = "stopped"
             orchestration["stopped_at"] = datetime.utcnow()
-            
+
+            # Attempt to clean up the trading engine session
+            environment_id = orchestration["environment_id"]
+            try:
+                await trading_engine_client.disconnect_environment(environment_id)
+            except Exception as exc:
+                self.logger.warning(
+                    "Trading engine disconnect failed",
+                    extra={"orchestration_id": orchestration_id, "environment_id": environment_id, "error": str(exc)},
+                )
+
             # Remove from active orchestrations
             del self.active_orchestrations[orchestration_id]
             
