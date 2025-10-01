@@ -4,7 +4,6 @@ Manages ML model training jobs with queue management, resource allocation, and p
 """
 
 import logging
-import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Union
 from uuid import UUID, uuid4
@@ -23,7 +22,7 @@ from app.models.training import (
 from app.models.dataset import Dataset
 from app.models.strategy import Strategy
 from app.core.config import get_settings
-from app.services.model_training_service import ModelTrainingService
+from app.services.vertex_ai_integration import VertexAIIntegrationService
 
 
 class TrainingJobQueue:
@@ -412,6 +411,7 @@ class TrainingJobManager:
         self.settings = get_settings()
         self.queue = TrainingJobQueue()
         self.resource_manager = ResourceManager()
+        self.vertex_service = VertexAIIntegrationService()
     
     async def create_training_job(self, job_data: Dict[str, Any], user_id: str, 
                                 db: AsyncSession) -> Dict[str, Any]:
@@ -537,30 +537,49 @@ class TrainingJobManager:
             if not allocated:
                 return {"success": False, "error": "Failed to allocate resource"}
             
-            # Update job status
-            job.status = JobStatus.RUNNING
-            job.start_time = datetime.utcnow()
             job.progress_percentage = 0
-            
             await db.commit()
 
-            # Check if this is an ML model training job
-            if job.model_config and job.model_config.get("model_name"):
-                self.logger.info(f"Handing off job {job.id} to ModelTrainingService.")
-                # Run the training in a background task
-                training_service = ModelTrainingService(job.id)
-                asyncio.create_task(training_service.run_training())
-            else:
-                # Keep the old simulation logic for other job types for now
-                self.logger.info(f"Simulating training for job {job.id} (not an ML model job).")
-            
-            self.logger.info(f"Started training job {job.id}")
-            
-            return {
+            # Retrieve dataset path for orchestration payload
+            dataset_path = None
+            dataset_result = await db.execute(
+                select(Dataset.file_path).where(Dataset.id == job.dataset_id)
+            )
+            dataset_path = dataset_result.scalar_one_or_none()
+
+            submission = await self.vertex_service.submit_training_job(job, dataset_path, db)
+
+            if not submission.get("success"):
+                self.logger.error(
+                    "Failed to submit training job %s to orchestration backend: %s",
+                    job.id,
+                    submission.get("error"),
+                )
+
+                await self.resource_manager.release_resource(resource_check["resource_id"], db)
+                # Re-queue the job for later retry
+                job.status = JobStatus.PENDING
+                job.start_time = None
+                await db.commit()
+                await self.queue.enqueue_job(job, db)
+
+                return {"success": False, "error": submission.get("error", "Submission failed")}
+
+            self.logger.info(
+                "Started training job %s with backend job %s",
+                job.id,
+                submission.get("vertex_ai_job_id"),
+            )
+
+            response = {
                 "success": True,
                 "job_id": str(job.id),
-                "resource_info": resource_check
+                "resource_info": resource_check,
+                "backend_job_id": submission.get("vertex_ai_job_id"),
+                "backend_state": submission.get("backend_state"),
             }
+
+            return response
             
         except Exception as e:
             self.logger.error(f"Failed to start next job: {str(e)}")
@@ -669,20 +688,21 @@ class TrainingJobManager:
             if job.status in [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED]:
                 return {"success": False, "error": f"Cannot cancel job with status {job.status.value}"}
             
-            # Update job status
-            job.status = JobStatus.CANCELLED
-            job.end_time = datetime.utcnow()
-            
-            if job.start_time:
-                job.duration_seconds = int((job.end_time - job.start_time).total_seconds())
-            
-            await db.commit()
-            
-            # Release any allocated resources
-            # This would need resource tracking implementation
-            
+            if job.vertex_ai_job_id:
+                cancel_result = await self.vertex_service.cancel_job(job, db)
+                if not cancel_result.get("success"):
+                    return cancel_result
+            else:
+                job.status = JobStatus.CANCELLED
+                job.end_time = datetime.utcnow()
+
+                if job.start_time:
+                    job.duration_seconds = int((job.end_time - job.start_time).total_seconds())
+
+                await db.commit()
+
             self.logger.info(f"Cancelled training job {job.id}")
-            
+
             return {"success": True, "message": "Job cancelled successfully"}
             
         except Exception as e:
@@ -736,7 +756,16 @@ class TrainingJobManager:
             # Execute query
             result = await db.execute(query)
             jobs = result.scalars().all()
-            
+
+            # Refresh job states from orchestration backend when applicable
+            for job in jobs:
+                if job.vertex_ai_job_id and job.status not in [
+                    JobStatus.COMPLETED,
+                    JobStatus.FAILED,
+                    JobStatus.CANCELLED,
+                ]:
+                    await self.vertex_service.sync_job_status(job, db)
+
             # Get total count for pagination
             count_query = select(func.count(TrainingJob.id)).where(TrainingJob.user_id == UUID(user_id))
             count_result = await db.execute(count_query)
@@ -797,7 +826,14 @@ class TrainingJobManager:
             
             if not job:
                 return {"error": "Job not found or access denied"}
-            
+
+            if job.vertex_ai_job_id and job.status not in [
+                JobStatus.COMPLETED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            ]:
+                await self.vertex_service.sync_job_status(job, db)
+
             # Format detailed response
             job_details = {
                 "id": str(job.id),
