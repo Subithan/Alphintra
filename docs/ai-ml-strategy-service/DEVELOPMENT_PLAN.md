@@ -142,8 +142,8 @@ POST /api/code/validate - Validate Python code syntax
 - **Dataset Validator**: Comprehensive validation for uploaded datasets
 - **Data Processor**: Cleaning, normalization, and feature engineering
 - **Dataset Catalog**: Searchable repository of available datasets
-- **Visualization Engine**: Interactive charts and data exploration
 - **Storage Manager**: Efficient storage and retrieval of large datasets
+- **Metadata & Statistics**: Summary insights and profiling for datasets
 
 **API Endpoints:**
 ```
@@ -151,7 +151,6 @@ GET /api/datasets - List available datasets
 GET /api/datasets/{id} - Get dataset details
 POST /api/datasets/upload - Upload custom dataset
 POST /api/datasets/{id}/validate - Validate dataset
-GET /api/datasets/{id}/preview - Preview dataset with visualization
 POST /api/datasets/{id}/process - Process and clean dataset
 GET /api/datasets/{id}/statistics - Get dataset statistics
 ```

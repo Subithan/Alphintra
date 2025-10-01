@@ -461,49 +461,6 @@ Validates dataset quality and structure.
 }
 ```
 
-#### Preview Dataset
-
-```http
-GET /api/datasets/{dataset_id}/preview
-```
-
-Gets a preview of dataset contents.
-
-**Query Parameters:**
-- `limit`: Number of records (default: 100, max: 1000)
-- `symbol`: Filter by symbol
-- `start_date`: Start date for preview
-- `end_date`: End date for preview
-
-**Response:**
-```json
-{
-  "records": [
-    {
-      "timestamp": "2024-01-15T10:00:00Z",
-      "symbol": "BTCUSDT",
-      "open": 42500.0,
-      "high": 42750.0,
-      "low": 42400.0,
-      "close": 42650.0,
-      "volume": 125.45
-    }
-  ],
-  "total_records": 150000,
-  "preview_count": 100,
-  "columns": ["timestamp", "symbol", "open", "high", "low", "close", "volume"],
-  "data_types": {
-    "timestamp": "datetime",
-    "symbol": "string",
-    "open": "float64",
-    "high": "float64",
-    "low": "float64",
-    "close": "float64",
-    "volume": "float64"
-  }
-}
-```
-
 ### Model Training
 
 Endpoints for training machine learning models on strategies and market data.

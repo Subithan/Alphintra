@@ -121,7 +121,6 @@ When running in development mode, API documentation is available at:
 - `GET /api/datasets` - List datasets
 - `POST /api/datasets/upload` - Upload custom dataset
 - `POST /api/datasets/{id}/validate` - Validate dataset
-- `GET /api/datasets/{id}/preview` - Preview dataset
 
 #### Model Training
 - `POST /api/training/jobs` - Create training job
