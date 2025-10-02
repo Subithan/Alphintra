@@ -64,7 +64,7 @@ src/backend/no-code-service/
 **Objective**: Extend existing code generator to create Vertex AI-compatible training scripts
 
 **Current Code Generator Enhancement**:
-- Modify `workflow_compiler.py` to generate Vertex AI training containers
+- Modify `workflow_compiler_updated.py` to generate Vertex AI training containers
 - Add support for custom training script generation
 - Implement automatic dependency management
 - Create Vertex AI Pipeline definitions from workflows
