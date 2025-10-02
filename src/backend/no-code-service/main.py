@@ -133,44 +133,129 @@ def get_db():
     finally:
         db.close()
 
+def _get_or_create_dev_user(db: Session) -> User:
+    logger.info("Development mode: using test user")
+    test_user = db.query(User).filter(User.email == "dev@alphintra.com").first()
+    if not test_user:
+        test_user = User(
+            email="dev@alphintra.com",
+            password_hash="dev_hash",
+            first_name="Development",
+            last_name="User",
+            is_verified=True
+        )
+        db.add(test_user)
+        db.commit()
+        db.refresh(test_user)
+    return test_user
+
+
+def _extract_identity_from_auth_payload(payload: Any) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("Authentication payload must be a JSON object")
+
+    combined: Dict[str, Any] = dict(payload)
+    nested_user = payload.get("user")
+    if isinstance(nested_user, dict):
+        combined.update(nested_user)
+
+    def _coalesce(*keys: str) -> Optional[Any]:
+        for key in keys:
+            if key in combined and combined[key]:
+                return combined[key]
+        return None
+
+    email = _coalesce("email", "username")
+    if not email:
+        raise ValueError("Authentication payload missing email")
+
+    first_name = _coalesce("first_name", "firstName")
+    last_name = _coalesce("last_name", "lastName")
+    is_verified = combined.get("is_verified")
+
+    return {
+        "email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+        "is_verified": is_verified,
+    }
+
+
+def _get_or_create_user_from_payload(db: Session, payload: Dict[str, Any]) -> User:
+    email = payload["email"]
+    first_name = payload.get("first_name")
+    last_name = payload.get("last_name")
+    is_verified = payload.get("is_verified")
+    is_verified_value = True if is_verified is None else bool(is_verified)
+
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        user = User(
+            email=email,
+            password_hash="external_auth",
+            first_name=first_name,
+            last_name=last_name,
+            is_verified=is_verified_value,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+
+    updated = False
+    if first_name and user.first_name != first_name:
+        user.first_name = first_name
+        updated = True
+    if last_name and user.last_name != last_name:
+        user.last_name = last_name
+        updated = True
+    if is_verified is not None and user.is_verified != bool(is_verified):
+        user.is_verified = bool(is_verified)
+        updated = True
+
+    if updated:
+        db.commit()
+        db.refresh(user)
+
+    return user
+
+
+async def _authenticate_token(credentials: str, db: Session) -> User:
+    headers = {"Authorization": f"Bearer {credentials}"}
+    try:
+        response = await http_client.get(f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers)
+    except Exception as e:
+        logger.error(f"Error validating token: {e}")
+        raise HTTPException(status_code=401, detail="Authentication service unavailable")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+    try:
+        payload = _extract_identity_from_auth_payload(response.json())
+    except ValueError as exc:
+        logger.error(f"Invalid authentication payload: {exc}")
+        raise HTTPException(status_code=401, detail="Invalid authentication payload")
+    except Exception as exc:
+        logger.error(f"Failed to parse authentication payload: {exc}")
+        raise HTTPException(status_code=401, detail="Invalid authentication payload")
+
+    return _get_or_create_user_from_payload(db, payload)
+
+
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)  # Add db dependency
 ):
     """Validate JWT token with Auth Service or return mock user in dev mode"""
     if DEV_MODE:
-        # In development mode, create/get test user
-        logger.info("Development mode: using test user")
-        test_user = db.query(User).filter(User.email == "dev@alphintra.com").first()
-        if not test_user:
-            test_user = User(
-                email="dev@alphintra.com",
-                password_hash="dev_hash",
-                first_name="Development",
-                last_name="User",
-                is_verified=True
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
-        return test_user
+        return _get_or_create_dev_user(db)
 
-    if not credentials:
+    if not credentials or not credentials.credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    try:
-        headers = {"Authorization": f"Bearer {credentials.credentials}"}
-        response = await http_client.get(f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers)
-
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise HTTPException(status_code=401, detail="Invalid authentication token")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error validating token: {e}")
-        raise HTTPException(status_code=401, detail="Authentication service unavailable")
+    return await _authenticate_token(credentials.credentials, db)
 
 # Health checks
 @app.get("/health")
@@ -240,48 +325,18 @@ schema = strawberry.Schema(query=Query, mutation=Mutation, subscription=Subscrip
 # GraphQL context function
 async def get_graphql_context(request: Request, db: Session = Depends(get_db)):
     """Create GraphQL context with database session and user authentication"""
-    current_user = None
-
     if DEV_MODE:
-        # Development mode: create/get test user
-        test_user = db.query(User).filter(User.email == "dev@alphintra.com").first()
-        if not test_user:
-            test_user = User(
-                email="dev@alphintra.com",
-                password_hash="dev_hash",
-                first_name="Development",
-                last_name="User",
-                is_verified=True
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
-        current_user = test_user
+        current_user = _get_or_create_dev_user(db)
     else:
-        # Production mode: get user from authorization header
         authorization = request.headers.get("Authorization")
-        if authorization:
-            try:
-                # Extract token from Authorization header
-                token = authorization.replace("Bearer ", "")
-                # In production, validate token with auth service
-                # For now, create test user for development
-                test_user = db.query(User).filter(User.email == "test@alphintra.com").first()
-                if not test_user:
-                    test_user = User(
-                        email="test@alphintra.com",
-                        password_hash="test_hash",
-                        first_name="Test",
-                        last_name="User",
-                        is_verified=True
-                    )
-                    db.add(test_user)
-                    db.commit()
-                    db.refresh(test_user)
-                current_user = test_user
-            except Exception:
-                # Default to test user for development
-                current_user = db.query(User).filter(User.email == "test@alphintra.com").first()
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
+        token = authorization[7:] if authorization.lower().startswith("bearer ") else authorization
+        if not token:
+            raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+        current_user = await _authenticate_token(token, db)
 
     return {
         "db_session": db,
