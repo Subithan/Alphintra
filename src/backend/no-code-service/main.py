@@ -71,7 +71,7 @@ except Exception as e:
     redis_client = None
 
 # HTTP client for service communication
-http_client = httpx.AsyncClient(timeout=30.0)
+HTTP_CLIENT_TIMEOUT = 30.0
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -107,6 +107,17 @@ async def on_startup():
         if not DEV_MODE:
             raise
 
+    # Initialize shared HTTP client after migrations succeed (or are skipped)
+    app.state.http_client = httpx.AsyncClient(timeout=HTTP_CLIENT_TIMEOUT)
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    """Clean up resources when the service shuts down."""
+    http_client: Optional[httpx.AsyncClient] = getattr(app.state, "http_client", None)
+    if http_client and not http_client.is_closed:
+        await http_client.aclose()
+
 # Security
 security = HTTPBearer(auto_error=False)  # Don't auto-error for missing auth in dev mode
 
@@ -134,6 +145,7 @@ def get_db():
         db.close()
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)  # Add db dependency
 ):
@@ -160,7 +172,20 @@ async def get_current_user(
 
     try:
         headers = {"Authorization": f"Bearer {credentials.credentials}"}
-        response = await http_client.get(f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers)
+        http_client: Optional[httpx.AsyncClient] = getattr(request.app.state, "http_client", None)
+        if http_client is None:
+            # Fallback for unexpected scenarios (e.g., startup not completed)
+            http_client = httpx.AsyncClient(timeout=HTTP_CLIENT_TIMEOUT)
+            try:
+                response = await http_client.get(
+                    f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers
+                )
+            finally:
+                await http_client.aclose()
+        else:
+            response = await http_client.get(
+                f"{AUTH_SERVICE_URL}/api/v1/auth/validate", headers=headers
+            )
 
         if response.status_code == 200:
             return response.json()
@@ -178,8 +203,8 @@ async def health_check():
     """Health check endpoint for Kubernetes"""
     try:
         # Check database connection
-        db = next(get_db())
-        db.execute(text("SELECT 1"))
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
 
         # Check Redis connection if available
         if redis_client:
