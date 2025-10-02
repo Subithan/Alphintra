@@ -1931,7 +1931,7 @@ rm -f src/backend/no-code-service/test_strategy.py
 
 # Move production code to proper service structure
 echo "Moving production code to proper microservice structure..."
-mv src/backend/no-code-service/workflow_compiler.py src/backend/services/no-code-builder/src/main/python/
+mv src/backend/no-code-service/workflow_compiler_updated.py src/backend/services/no-code-builder/src/main/python/
 mv src/backend/no-code-service/graphql_*.py src/backend/services/no-code-builder/src/main/python/
 mv src/backend/no-code-service/models.py src/backend/services/no-code-builder/src/main/python/
 mv src/backend/no-code-service/schemas.py src/backend/services/no-code-builder/src/main/python/
@@ -2112,7 +2112,7 @@ cleanup_no_code_service() {
     
     # Move to proper service structure
     mkdir -p src/backend/services/no-code-builder/src/main/python/com/alphintra/nocode
-    mv src/backend/no-code-service/workflow_compiler.py src/backend/services/no-code-builder/src/main/python/com/alphintra/nocode/
+    mv src/backend/no-code-service/workflow_compiler_updated.py src/backend/services/no-code-builder/src/main/python/com/alphintra/nocode/
     mv src/backend/no-code-service/graphql_*.py src/backend/services/no-code-builder/src/main/python/com/alphintra/nocode/
 }
 

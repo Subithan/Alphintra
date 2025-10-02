@@ -104,10 +104,11 @@ POST /api/workflows/123/execution-mode
 - `output_manager.py` - Organized file management
 - `cleanup_generated_files.py` - File organization utility
 - `test_strategy_integration.py` - Integration tests
-- `main_integration_patch.py` - Integration documentation
 
 ### **Files Modified:**
 - `main.py` - Updated strategy mode execution + new API endpoints
+- `database_strategy_handler.py` - Production strategy execution path
+- `workflow_compiler_updated.py` - Active workflow compiler implementation
 - `test_enhanced_compiler.py` - Updated to use organized folders
 - `simple_test.py` - Updated paths
 - `validate_generated.py` - Updated to find organized files

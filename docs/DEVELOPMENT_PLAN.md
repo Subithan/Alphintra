@@ -16,11 +16,11 @@
 - [x] Store execution mode in database for tracking (pending schema updates)
 - [x] Return structured response with next_action based on mode
 
-#### 1.1.2 Workflow-to-Training Converter  
-**File**: `src/backend/no-code-service/workflow_converter.py` (new)
-**Problem Solved**: Convert visual workflow to ML training configuration
-- [x] Create `WorkflowConverter` class
-- [x] Implement `convert_to_training_config(workflow_data)` method
+#### 1.1.2 Workflow Compilation Pipeline
+**File**: `src/backend/no-code-service/workflow_compiler_updated.py`
+**Problem Solved**: Convert visual workflows into executable trading and training artifacts
+- [x] Provide a `WorkflowCompiler` class for strategy generation
+- [x] Implement `compile_workflow(nodes, edges, strategy_name)` to emit Python code
 - [x] **Node Mapping**: dataSource → dataset requirements for training
 - [x] **Node Mapping**: technicalIndicator → feature engineering pipeline
 - [x] **Node Mapping**: condition → target/label generation logic

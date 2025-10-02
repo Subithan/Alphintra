@@ -32,7 +32,6 @@ from models import Base, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCod
 from schemas_updated import *
 from workflow_compiler_updated import WorkflowCompiler
 from database_strategy_handler import execute_database_strategy_mode
-from workflow_converter import WorkflowConverter
 from clients.aiml_client import AIMLClient, AIMLServiceError, AIMLServiceUnavailable
 from clients.backtest_client import BacktestClient, BacktestServiceError, BacktestServiceUnavailable
 
@@ -123,7 +122,6 @@ security = HTTPBearer(auto_error=False)  # Don't auto-error for missing auth in 
 
 # Initialize services
 workflow_compiler = WorkflowCompiler()
-workflow_converter = WorkflowConverter()
 backtest_client = BacktestClient()
 
 # Request models
