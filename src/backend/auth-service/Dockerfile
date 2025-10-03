@@ -23,4 +23,8 @@ ENV DATABASE_URL=jdbc:postgresql://alphintra:alphintra123@postgres:5432/alphintr
 ENV DB_USER=alphintra
 ENV DB_PASSWORD=alphintra123
 
+# JWT secret for signing tokens (should match other services)
+ARG JWT_SECRET
+ENV JWT_SECRET=${OTc0MjZhMWMtM2NmOS00OGZlLTk1MjEtNzYwNWRlZTg=}
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

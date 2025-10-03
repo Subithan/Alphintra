@@ -24,8 +24,8 @@ public class AuthService {
     private final long jwtExpiration;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                      @Value("${jwt.secret}") String jwtSecret,
-                      @Value("${jwt.expiration}") long jwtExpiration) {
+                      @Value("${OTc0MjZhMWMtM2NmOS00OGZlLTk1MjEtNzYwNWRlZTg=}") String jwtSecret,
+                      @Value("${86400000}") long jwtExpiration) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecret = jwtSecret;
@@ -66,4 +66,8 @@ public class AuthService {
             return false;
         }
     }
+    
+    public String getJwtSecret() {
+    return jwtSecret;
+}
 }
