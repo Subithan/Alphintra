@@ -5,6 +5,7 @@ package com.alphintra.auth_service.service;
 
 import com.alphintra.auth_service.entity.User;
 import com.alphintra.auth_service.entity.Role;
+import com.alphintra.auth_service.dto.AuthResponse;
 import com.alphintra.auth_service.repository.UserRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -24,8 +25,8 @@ public class AuthService {
     private final long jwtExpiration;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                      @Value("${OTc0MjZhMWMtM2NmOS00OGZlLTk1MjEtNzYwNWRlZTg=}") String jwtSecret,
-                      @Value("${86400000}") long jwtExpiration) {
+                      @Value("${jwt.secret}") String jwtSecret,
+                      @Value("${jwt.expiration}") long jwtExpiration) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtSecret = jwtSecret;
@@ -41,19 +42,20 @@ public class AuthService {
         return userRepository.save(user);
     }
 
-    public String authenticate(String username, String password) {
-        User user = userRepository.findByUsername(username)
+    public AuthResponse authenticate(String email, String password) {
+        User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new RuntimeException("User not found"));
         if (passwordEncoder.matches(password, user.getPassword())) {
             Map<String, Object> claims = new HashMap<>();
             claims.put("roles", user.getRoles().stream().map(Role::getName).toList());
-            return Jwts.builder()
+            String token = Jwts.builder()
                 .setClaims(claims)
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(SignatureAlgorithm.HS512, jwtSecret)
                 .compact();
+            return new AuthResponse(token, user);
         }
         throw new RuntimeException("Invalid credentials");
     }

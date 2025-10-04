@@ -64,7 +64,7 @@ class AuthApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8000';
+    this.baseUrl = process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8009';
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

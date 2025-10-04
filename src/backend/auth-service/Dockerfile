@@ -24,7 +24,6 @@ ENV DB_USER=alphintra
 ENV DB_PASSWORD=alphintra123
 
 # JWT secret for signing tokens (should match other services)
-ARG JWT_SECRET
-ENV JWT_SECRET=${OTc0MjZhMWMtM2NmOS00OGZlLTk1MjEtNzYwNWRlZTg=}
+ENV JWT_SECRET=U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

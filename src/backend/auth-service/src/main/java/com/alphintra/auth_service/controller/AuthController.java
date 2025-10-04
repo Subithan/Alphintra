@@ -34,8 +34,8 @@ public ResponseEntity<User> register(@RequestBody RegisterRequest request) {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
-        String token = authService.authenticate(request.getUsername(), request.getPassword());
-        return ResponseEntity.ok(new AuthResponse(token));
+        AuthResponse response = authService.authenticate(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/validate")

@@ -4,6 +4,7 @@
 package com.alphintra.auth_service.service;
 
 import com.alphintra.auth_service.entity.User;
+import com.alphintra.auth_service.dto.AuthResponse;
 import com.alphintra.auth_service.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,16 +43,21 @@ class AuthServiceTest {
     void testAuthenticateSuccess() {
         User user = new User();
         user.setUsername("test");
+        user.setEmail("test@example.com");
         user.setPassword(passwordEncoder.encode("password"));
-        when(userRepository.findByUsername("test")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
 
-        String token = authService.authenticate("test", "password");
-        assertNotNull(token);
+        AuthResponse response = authService.authenticate("test@example.com", "password");
+        assertNotNull(response);
+        assertNotNull(response.getToken());
+        assertNotNull(response.getUser());
+        assertEquals("test", response.getUser().getUsername());
+        assertEquals("test@example.com", response.getUser().getEmail());
     }
 
     @Test
     void testAuthenticateFailure() {
-        when(userRepository.findByUsername("test")).thenReturn(Optional.empty());
-        assertThrows(RuntimeException.class, () -> authService.authenticate("test", "password"));
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+        assertThrows(RuntimeException.class, () -> authService.authenticate("test@example.com", "password"));
     }
 }
