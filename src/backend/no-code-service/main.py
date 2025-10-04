@@ -142,6 +142,94 @@ def get_db():
     finally:
         db.close()
 
+def find_workflow_by_identifier(
+    workflow_id: str,
+    current_user: User,
+    db: Session,
+    allow_public: bool = True
+) -> Optional[NoCodeWorkflow]:
+    """
+    Find a workflow by identifier (supports both UUIDs and template names)
+
+    Args:
+        workflow_id: The workflow identifier (UUID or template name)
+        current_user: The current user object
+        db: Database session
+        allow_public: Whether to include public workflows in search
+
+    Returns:
+        NoCodeWorkflow object if found, None otherwise
+    """
+    workflow = None
+
+    # First, try to find workflow by UUID
+    try:
+        import uuid as uuid_module
+        uuid_module.UUID(workflow_id)  # Validate UUID format
+
+        # It's a valid UUID, try to find the workflow
+        query = db.query(NoCodeWorkflow).filter(NoCodeWorkflow.uuid == workflow_id)
+
+        if allow_public:
+            query = query.filter(
+                (NoCodeWorkflow.user_id == current_user.id) |
+                (NoCodeWorkflow.is_public == True)
+            )
+        else:
+            query = query.filter(NoCodeWorkflow.user_id == current_user.id)
+
+        workflow = query.first()
+
+    except ValueError:
+        # Not a valid UUID, treat as template name or custom identifier
+        # Try to find by name first (for templates)
+        query = db.query(NoCodeWorkflow).filter(NoCodeWorkflow.name == workflow_id)
+
+        if allow_public:
+            query = query.filter(
+                (NoCodeWorkflow.user_id == current_user.id) |
+                (NoCodeWorkflow.is_public == True)
+            )
+        else:
+            query = query.filter(NoCodeWorkflow.user_id == current_user.id)
+
+        workflow = query.first()
+
+        # If not found by name, try to find templates where name contains the identifier
+        if not workflow:
+            query = db.query(NoCodeWorkflow).filter(NoCodeWorkflow.name.contains(workflow_id))
+
+            if allow_public:
+                query = query.filter(
+                    (NoCodeWorkflow.user_id == current_user.id) |
+                    (NoCodeWorkflow.is_public == True)
+                )
+            else:
+                query = query.filter(NoCodeWorkflow.user_id == current_user.id)
+
+            workflow = query.first()
+
+    # Special handling for template identifiers (like "template-moving-average-crossover-...")
+    if not workflow and workflow_id.startswith("template-"):
+        # Extract the base template name (remove the timestamp suffix)
+        template_name = workflow_id.rsplit("-", 2)[0]  # Remove last two parts (timestamp)
+        template_name = template_name.replace("template-", "").replace("-", " ").title()
+
+        # Search for templates with similar names
+        query = db.query(NoCodeWorkflow).filter(NoCodeWorkflow.name.ilike(f"%{template_name}%"))
+
+        if allow_public:
+            query = query.filter(
+                (NoCodeWorkflow.user_id == current_user.id) |
+                (NoCodeWorkflow.is_public == True)
+            )
+        else:
+            query = query.filter(NoCodeWorkflow.user_id == current_user.id)
+
+        workflow = query.first()
+
+    return workflow
+
 async def get_current_user(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
@@ -430,21 +518,20 @@ async def generate_code(
         logger.info(f"Current user: {current_user}")
         logger.info(f"Generation options: {request.dict()}")
 
-        # Check if workflow exists (with more detailed logging)
-        workflow = db.query(NoCodeWorkflow).filter(
-            NoCodeWorkflow.uuid == workflow_id
-        ).first()
+        # Check if workflow exists (supports both UUIDs and template names)
+        workflow = find_workflow_by_identifier(workflow_id, current_user, db, allow_public=False)
 
         if not workflow:
             all_workflows = db.query(NoCodeWorkflow).all()
             logger.error(f"Workflow not found with ID: {workflow_id}")
             logger.info(f"Available workflows: {[str(w.uuid) for w in all_workflows]}")
+            logger.info(f"Available workflow names: {[w.name for w in all_workflows]}")
             return {
                 "workflow_id": workflow_id,
                 "generated_code": "",
                 "requirements": [],
                 "success": False,
-                "errors": [f"Workflow not found with ID: {workflow_id}"],
+                "errors": [f"Workflow not found with identifier '{workflow_id}'. You can use either a UUID or a template name."],
                 "message": "Workflow not found"
             }
 
@@ -486,15 +573,15 @@ async def get_generated_code(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get the generated code for a workflow"""
+    """Get the generated code for a workflow (supports both UUIDs and template names)"""
     try:
-        workflow = db.query(NoCodeWorkflow).filter(
-            NoCodeWorkflow.uuid == workflow_id,
-            NoCodeWorkflow.user_id == current_user.id
-        ).first()
+        workflow = find_workflow_by_identifier(workflow_id, current_user, db, allow_public=False)
 
         if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow not found with identifier '{workflow_id}'. You can use either a UUID or a template name."
+            )
 
         return {
             "workflow_id": str(workflow.uuid),
@@ -758,29 +845,25 @@ async def get_strategy_details(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get detailed information about a generated strategy from database"""
+    """Get detailed information about a generated strategy from database (supports both UUIDs and template names)"""
     from database_strategy_handler import get_strategy_from_database
-    
+
     try:
-        # Convert workflow_id to int if it's numeric, otherwise find by UUID
-        try:
-            workflow_id_int = int(workflow_id)
-        except ValueError:
-            # If it's a UUID, find the workflow first
-            workflow = db.query(NoCodeWorkflow).filter(
-                NoCodeWorkflow.uuid == workflow_id
-            ).first()
-            if not workflow:
-                raise HTTPException(status_code=404, detail="Workflow not found")
-            workflow_id_int = workflow.id
-        
-        details = get_strategy_from_database(workflow_id_int, db, include_code)
-        
+        workflow = find_workflow_by_identifier(workflow_id, current_user, db, allow_public=False)
+
+        if not workflow:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow not found with identifier '{workflow_id}'. You can use either a UUID or a template name."
+            )
+
+        details = get_strategy_from_database(workflow.id, db, include_code)
+
         if not details['success']:
             raise HTTPException(status_code=404, detail=details['error'])
-            
+
         return details
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -882,21 +965,21 @@ async def get_workflow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get a specific workflow by ID"""
+    """Get a specific workflow by ID (supports both UUIDs and template names)"""
     try:
-        workflow = db.query(NoCodeWorkflow).filter(
-            NoCodeWorkflow.uuid == workflow_id,
-            (NoCodeWorkflow.user_id == current_user.id) |
-            (NoCodeWorkflow.is_public == True)
-        ).first()
+        workflow = find_workflow_by_identifier(workflow_id, current_user, db, allow_public=True)
 
         if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow not found with identifier '{workflow_id}'. You can use either a UUID or a template name."
+            )
 
         return WorkflowResponse.from_orm(workflow)
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error fetching workflow '{workflow_id}': {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch workflow: {str(e)}")
 
 @app.put("/api/workflows/{workflow_id}", response_model=WorkflowResponse)
