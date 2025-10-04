@@ -12,7 +12,7 @@ from app.services.live_execution_engine import live_execution_engine, SignalData
 from app.services.strategy_orchestrator import strategy_orchestrator
 from app.services.deployment_manager import deployment_manager, DeploymentConfig
 from app.services.signal_processor import signal_processor, SignalPriority, ProcessingMode
-from app.services.broker_integration import broker_integration_service
+from app.services.broker_integration import trading_engine_client
 from app.models.execution import ExecutionStatus, SignalType
 
 
@@ -486,7 +486,7 @@ async def trigger_rebalance(orchestration_id: str = Path(..., description="Orche
 async def get_broker_status(environment_id: int = Path(..., description="Environment ID")):
     """Get broker connection status."""
     try:
-        status = await broker_integration_service.test_connection(environment_id)
+        status = await trading_engine_client.test_connection(environment_id)
         return status
         
     except Exception as e:
@@ -497,7 +497,7 @@ async def get_broker_status(environment_id: int = Path(..., description="Environ
 async def connect_broker(environment_id: int = Path(..., description="Environment ID")):
     """Connect to broker for environment."""
     try:
-        success = await broker_integration_service.initialize_environment(environment_id)
+        success = await trading_engine_client.initialize_environment(environment_id)
         if not success:
             raise HTTPException(status_code=400, detail="Failed to connect to broker")
         
@@ -513,7 +513,7 @@ async def connect_broker(environment_id: int = Path(..., description="Environmen
 async def disconnect_broker(environment_id: int = Path(..., description="Environment ID")):
     """Disconnect from broker for environment."""
     try:
-        success = await broker_integration_service.disconnect_environment(environment_id)
+        success = await trading_engine_client.disconnect_environment(environment_id)
         if not success:
             raise HTTPException(status_code=400, detail="Failed to disconnect from broker")
         
@@ -529,7 +529,7 @@ async def disconnect_broker(environment_id: int = Path(..., description="Environ
 async def get_broker_positions(environment_id: int = Path(..., description="Environment ID")):
     """Get positions from broker."""
     try:
-        positions = await broker_integration_service.get_positions(environment_id)
+        positions = await trading_engine_client.get_positions(environment_id)
         
         return {
             "environment_id": environment_id,
@@ -555,7 +555,7 @@ async def get_broker_positions(environment_id: int = Path(..., description="Envi
 async def get_broker_account(environment_id: int = Path(..., description="Environment ID")):
     """Get account information from broker."""
     try:
-        account = await broker_integration_service.get_account_info(environment_id)
+        account = await trading_engine_client.get_account_info(environment_id)
         if not account:
             raise HTTPException(status_code=404, detail="Account information not available")
         

@@ -83,6 +83,18 @@ interface CodeDebuggingResponse {
   request_id: string
 }
 
+interface TestGenerationResponse {
+  success: boolean
+  test_code: string
+  test_cases: string[]
+  coverage_analysis: string
+  testing_strategy: string
+  mock_data_suggestions: string[]
+  tokens_used: number
+  provider: string
+  request_id: string
+}
+
 // Store State
 interface AICodeState {
   // Operation states
@@ -97,7 +109,7 @@ interface AICodeState {
   lastExplanation: CodeExplanationResponse | null
   lastOptimization: CodeOptimizationResponse | null
   lastDebugging: CodeDebuggingResponse | null
-  lastTestGeneration: any | null
+  lastTestGeneration: TestGenerationResponse | null
   
   // Settings
   settings: {
@@ -145,7 +157,7 @@ interface AICodeActions {
   explainCode: (request: CodeExplanationRequest) => Promise<CodeExplanationResponse>
   optimizeCode: (request: CodeOptimizationRequest) => Promise<CodeOptimizationResponse>
   debugCode: (request: CodeDebuggingRequest) => Promise<CodeDebuggingResponse>
-  generateTests: (request: { code: string; context?: string; test_type?: string }) => Promise<any>
+  generateTests: (request: { code: string; context?: string; test_type?: string }) => Promise<TestGenerationResponse>
   
   // Settings management
   updateSettings: (settings: Partial<AICodeState['settings']>) => void
@@ -175,6 +187,26 @@ const defaultSettings: AICodeState['settings'] = {
   contextMode: 'full',
   autoExplain: false,
   autoOptimize: false
+}
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  let data: any = null
+
+  try {
+    data = await response.json()
+  } catch (error) {
+    data = null
+  }
+
+  if (!response.ok) {
+    const message =
+      (data && (data.message || data.detail)) ||
+      (typeof data === 'string' ? data : `Request failed with status ${response.status}`)
+
+    throw new Error(message)
+  }
+
+  return data as T
 }
 
 const initialUsage: AICodeState['usage'] = {
@@ -235,11 +267,7 @@ export const useAICodeStore = create<AICodeStore>()(
             })
           })
           
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          
-          const result: CodeGenerationResponse = await response.json()
+          const result = await parseJsonResponse<CodeGenerationResponse>(response)
           
           set({ 
             lastGeneration: result,
@@ -297,11 +325,7 @@ export const useAICodeStore = create<AICodeStore>()(
             })
           })
           
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          
-          const result: CodeExplanationResponse = await response.json()
+          const result = await parseJsonResponse<CodeExplanationResponse>(response)
           
           set({ 
             lastExplanation: result,
@@ -359,11 +383,7 @@ export const useAICodeStore = create<AICodeStore>()(
             })
           })
           
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          
-          const result: CodeOptimizationResponse = await response.json()
+          const result = await parseJsonResponse<CodeOptimizationResponse>(response)
           
           set({ 
             lastOptimization: result,
@@ -421,11 +441,7 @@ export const useAICodeStore = create<AICodeStore>()(
             })
           })
           
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          
-          const result: CodeDebuggingResponse = await response.json()
+          const result = await parseJsonResponse<CodeDebuggingResponse>(response)
           
           set({ 
             lastDebugging: result,
@@ -484,11 +500,7 @@ export const useAICodeStore = create<AICodeStore>()(
             })
           })
           
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          
-          const result = await response.json()
+          const result = await parseJsonResponse<TestGenerationResponse>(response)
           
           set({ 
             lastTestGeneration: result,
