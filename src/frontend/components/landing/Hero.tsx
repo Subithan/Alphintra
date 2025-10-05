@@ -1,267 +1,209 @@
 "use client";
 
 import { Zap } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import Loader from "@/components/ui/Loader";
 import { useBotProgress } from "@/components/hooks/useBotProgress";
 
-type PixelCanvasTextProps = {
+type PixelRepelTextProps = {
   text: string;
   className?: string;
-  fontSize?: number;
-  sample?: number;
-  pixelSize?: number;
   radius?: number;
   strength?: number;
-  easing?: number;
-  color?: string;
-  glowColor?: string;
+  spring?: number;
+  damping?: number;
+  glow?: string;
+  idleGlow?: string;
 };
 
-type PixelPoint = {
+type CharState = {
   x: number;
   y: number;
-  offsetX: number;
-  offsetY: number;
+  vx: number;
+  vy: number;
 };
 
-const PixelCanvasText: React.FC<PixelCanvasTextProps> = ({
+type RenderToken =
+  | { type: 'char'; value: string }
+  | { type: 'break' };
+
+const PixelRepelText: React.FC<PixelRepelTextProps> = ({
   text,
   className,
-  fontSize = 140,
-  sample = 6,
-  pixelSize = 4,
   radius = 260,
-  strength = 36,
-  easing = 0.2,
-  color = "rgba(255,255,255,0.96)",
-  glowColor = "rgba(250,204,21,0.4)",
+  strength = 38,
+  spring = 0.18,
+  damping = 0.82,
+  glow = '0 0 16px rgba(250,204,21,0.45)',
+  idleGlow = '0 0 8px rgba(250,204,21,0.2)',
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const pointsRef = useRef<PixelPoint[]>([]);
+  const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const statesRef = useRef<CharState[]>([]);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const displayRef = useRef<{ width: number; height: number; pixel: number; dpr: number }>({
-    width: 0,
-    height: 0,
-    pixel: pixelSize,
-    dpr: 1,
-  });
-  const [pixelCount, setPixelCount] = useState(0);
+  const frameRef = useRef<number | null>(null);
 
-  const draw = useCallback(() => {
-    const ctx = ctxRef.current;
-    if (!ctx) return;
-    const { width, height, pixel, dpr } = displayRef.current;
-    ctx.save();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = color;
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = Math.max(4, pixel * 1.8);
-    pointsRef.current.forEach((point) => {
-      ctx.fillRect(point.x + point.offsetX, point.y + point.offsetY, pixel, pixel);
-    });
-    ctx.restore();
-  }, [color, glowColor]);
-
-  const step = useCallback(() => {
-    animationRef.current = null;
-    const pointer = pointerRef.current;
-    let needsNextFrame = false;
-
-    pointsRef.current.forEach((point) => {
-      let targetX = 0;
-      let targetY = 0;
-      if (pointer) {
-        const dx = point.x - pointer.x;
-        const dy = point.y - pointer.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist < radius) {
-          const power = 1 - dist / radius;
-          targetX = (dx / (dist || 1)) * strength * power;
-          targetY = (dy / (dist || 1)) * strength * power;
-        }
-      }
-
-      point.offsetX += (targetX - point.offsetX) * easing;
-      point.offsetY += (targetY - point.offsetY) * easing;
-
-      if (Math.abs(point.offsetX) > 0.05 || Math.abs(point.offsetY) > 0.05 || pointer) {
-        needsNextFrame = true;
-      }
-    });
-
-    draw();
-
-    if (needsNextFrame) {
-      animationRef.current = requestAnimationFrame(step);
-    }
-  }, [draw, radius, strength, easing]);
-
-  const rebuild = useCallback(() => {
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas) {
-      setPixelCount(0);
-      return;
-    }
-
-    const temp = document.createElement("canvas");
-    const ctx = temp.getContext("2d");
-    if (!ctx) {
-      setPixelCount(0);
-      return;
-    }
-
-    const lines = text.toUpperCase().split(/\n+/);
-    const pad = Math.ceil(fontSize * 0.22);
-    const lineHeight = fontSize * 1.18;
-
-    ctx.font = `${fontSize}px 'Pixelify Sans', 'JetBrains Mono', monospace`;
-    ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffffff";
-
-    let width = 0;
-    lines.forEach((line) => {
-      width = Math.max(width, ctx.measureText(line).width);
-    });
-    const height = lineHeight * lines.length;
-
-    temp.width = Math.ceil(width + pad * 2);
-    temp.height = Math.ceil(height + pad * 2);
-
-    ctx.clearRect(0, 0, temp.width, temp.height);
-    ctx.font = `${fontSize}px 'Pixelify Sans', 'JetBrains Mono', monospace`;
-
-    lines.forEach((line, index) => {
-      ctx.fillText(line, pad, pad + index * lineHeight);
-    });
-
-    const img = ctx.getImageData(0, 0, temp.width, temp.height);
-    const data = img.data;
-    const stepSize = Math.max(1, sample);
-    const rawPoints: PixelPoint[] = [];
-
-    for (let y = 0; y < img.height; y += stepSize) {
-      for (let x = 0; x < img.width; x += stepSize) {
-        const alpha = data[(y * img.width + x) * 4 + 3];
-        if (alpha > 160) {
-          rawPoints.push({ x, y, offsetX: 0, offsetY: 0 });
-        }
-      }
-    }
-
-    if (rawPoints.length === 0) {
-      setPixelCount(0);
-      return;
-    }
-
-    const containerWidth = container.getBoundingClientRect().width || temp.width;
-    const scale = Math.min(1, containerWidth / temp.width);
-    const displayWidth = Math.max(1, temp.width * scale);
-    const displayHeight = Math.max(1, temp.height * scale);
-    const dpr = Math.min(window.devicePixelRatio ?? 1, 2);
-
-    canvas.width = Math.ceil(displayWidth * dpr);
-    canvas.height = Math.ceil(displayHeight * dpr);
-    canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${displayHeight}px`;
-
-    const ctxOut = canvas.getContext("2d");
-    if (!ctxOut) {
-      setPixelCount(0);
-      return;
-    }
-
-    ctxOut.imageSmoothingEnabled = false;
-    ctxRef.current = ctxOut;
-
-    displayRef.current = {
-      width: displayWidth,
-      height: displayHeight,
-      pixel: Math.max(1.5, pixelSize * scale),
-      dpr,
-    };
-
-    pointsRef.current = rawPoints.map((point) => ({
-      x: point.x * scale,
-      y: point.y * scale,
-      offsetX: 0,
-      offsetY: 0,
-    }));
-
-    pointerRef.current = null;
-    setPixelCount(rawPoints.length);
-    draw();
-  }, [text, fontSize, sample, pixelSize, draw]);
+  const normalized = useMemo(() => {
+  return text.split('\r\n').join('\n').split('\r').join('\n');
+}, [text]);
+const lines = useMemo(() => normalized.split('\n'), [normalized]);
+const charCount = useMemo(() => lines.reduce((acc, line) => acc + line.length, 0), [lines]);
 
   useEffect(() => {
-    rebuild();
+    statesRef.current = Array.from({ length: charCount }, () => ({ x: 0, y: 0, vx: 0, vy: 0 }));
+    charRefs.current = Array.from({ length: charCount }, () => null);
+    pointerRef.current = null;
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+  }, [charCount]);
 
-    const handleResize = () => rebuild();
-    window.addEventListener("resize", handleResize);
+  const animate = useCallback(() => {
+    frameRef.current = null;
+    const pointer = pointerRef.current;
+    let active = false;
 
-    let cancelled = false;
-    const fontReady = (document as any).fonts?.ready;
-    if (fontReady) {
-      fontReady.then(() => {
-        if (!cancelled) rebuild();
+    statesRef.current.forEach((state, index) => {
+      const node = charRefs.current[index];
+      if (!node) {
+        return;
+      }
+
+      const rect = node.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      let fx = -state.x * spring;
+      let fy = -state.y * spring;
+
+      if (pointer) {
+        const dx = cx - pointer.x;
+        const dy = cy - pointer.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < radius) {
+          const influence = (1 - dist / radius) ** 2;
+          const force = strength * influence;
+          fx += (dx / (dist || 1)) * force;
+          fy += (dy / (dist || 1)) * force;
+        }
+      }
+
+      state.vx = (state.vx + fx) * damping;
+      state.vy = (state.vy + fy) * damping;
+      state.x += state.vx;
+      state.y += state.vy;
+
+      if (
+        Math.abs(state.vx) > 0.04 ||
+        Math.abs(state.vy) > 0.04 ||
+        Math.abs(state.x) > 0.25 ||
+        Math.abs(state.y) > 0.25 ||
+        pointer
+      ) {
+        active = true;
+      }
+
+      node.style.transform = `translate3d(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px, 0)`;
+      node.style.textShadow = pointer ? glow : idleGlow;
+    });
+
+    if (active) {
+      frameRef.current = requestAnimationFrame(animate);
+    } else {
+      charRefs.current.forEach((node) => {
+        if (node) node.style.textShadow = idleGlow;
       });
     }
+  }, [radius, strength, spring, damping, glow, idleGlow]);
 
-    return () => {
-      cancelled = true;
-      window.removeEventListener("resize", handleResize);
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, [rebuild]);
+  const ensureAnimating = useCallback(() => {
+    if (frameRef.current === null) {
+      frameRef.current = requestAnimationFrame(animate);
+    }
+  }, [animate]);
+
+  const updatePointer = useCallback(
+    (clientX: number, clientY: number) => {
+      const container = containerRef.current;
+      if (!container) return;
+      pointerRef.current = { x: clientX, y: clientY };
+      ensureAnimating();
+    },
+    [ensureAnimating],
+  );
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas || pixelCount === 0) return;
-      const rect = canvas.getBoundingClientRect();
-      pointerRef.current = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      };
-      if (animationRef.current == null) {
-        animationRef.current = requestAnimationFrame(step);
-      }
+      updatePointer(event.clientX, event.clientY);
     },
-    [step, pixelCount],
+    [updatePointer],
   );
 
-  const handlePointerLeave = useCallback(() => {
-    pointerRef.current = null;
-    if (animationRef.current == null) {
-      animationRef.current = requestAnimationFrame(step);
-    }
-  }, [step]);
+  const handleTouchMove = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      const touch = event.touches[0] ?? event.changedTouches[0];
+      if (!touch) return;
+      updatePointer(touch.clientX, touch.clientY);
+    },
+    [updatePointer],
+  );
 
-  if (pixelCount === 0) {
-    return (
-      <span className={`font-pixel uppercase tracking-[0.18em] text-inherit ${className ?? ""}`}>
-        {text.toUpperCase()}
-      </span>
-    );
-  }
+  const handleLeave = useCallback(() => {
+    pointerRef.current = null;
+    ensureAnimating();
+  }, [ensureAnimating]);
+
+  useEffect(() => () => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+  }, []);
+
+  let runningIndex = 0;
 
   return (
     <div
       ref={containerRef}
-      className={`relative select-none ${className ?? ""}`}
+      className={`inline-flex flex-wrap items-baseline gap-[0.08em] select-none ${className ?? ''}`}
+      onPointerEnter={handlePointerMove}
       onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
+      onPointerLeave={handleLeave}
+      onMouseMove={handlePointerMove}
+      onMouseLeave={handleLeave}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleLeave}
+      style={{ touchAction: 'none' }}
     >
-      <canvas ref={canvasRef} className="block w-full h-auto" />
+      {lines.map((line, lineIndex) => (
+        <React.Fragment key={`line-${lineIndex}`}>
+          {[...line].map((ch, charIndex) => {
+            const displayChar = ch === ' ' ? ' ' : ch.toUpperCase();
+            const index = runningIndex++;
+            return (
+              <span
+                key={`char-${lineIndex}-${charIndex}`}
+                ref={(node) => {
+                  charRefs.current[index] = node;
+                }}
+                className="inline-block will-change-transform"
+                style={{ textShadow: idleGlow }}
+              >
+                {displayChar}
+              </span>
+            );
+          })}
+          {lineIndex !== lines.length - 1 ? (
+            <span key={`break-${lineIndex}`} className="basis-full w-full h-0" aria-hidden="true" />
+          ) : null}
+        </React.Fragment>
+      ))}
       <span className="sr-only">{text}</span>
     </div>
   );
 };
+
 
 export const Hero = () => {
   const { progress, status } = useBotProgress(7000);
@@ -308,39 +250,33 @@ export const Hero = () => {
                   </div>
 
                   <div className="mt-6 space-y-6">
-                    <PixelCanvasText
+                    <PixelRepelText
                       text="Build Trading Bots"
-                      className="block w-full max-w-2xl"
-                      fontSize={170}
-                      sample={4}
-                      pixelSize={5}
+                      className="font-pixel uppercase text-4xl sm:text-5xl lg:text-6xl tracking-[0.2em] text-gray-100"
                       radius={320}
-                      strength={46}
-                      easing={0.18}
+                      strength={42}
+                      spring={0.2}
+                      damping={0.84}
                     />
-                    <PixelCanvasText
+                    <PixelRepelText
                       text="Without Code"
-                      className="block w-full max-w-2xl"
-                      fontSize={170}
-                      sample={4}
-                      pixelSize={5}
+                      className="font-pixel uppercase text-4xl sm:text-5xl lg:text-6xl tracking-[0.2em] text-gray-100"
                       radius={320}
-                      strength={46}
-                      easing={0.18}
+                      strength={42}
+                      spring={0.2}
+                      damping={0.84}
                     />
                   </div>
 
-                  <PixelCanvasText
+                  <PixelRepelText
                     text={paragraphText}
-                    className="mt-8 block w-full max-w-xl"
-                    fontSize={52}
-                    sample={6}
-                    pixelSize={3}
+                    className="mt-8 block max-w-xl font-pixel uppercase text-sm sm:text-base tracking-[0.1em] leading-relaxed text-gray-100/85"
                     radius={260}
                     strength={28}
-                    easing={0.22}
-                    color="rgba(255,255,255,0.85)"
-                    glowColor="rgba(250,204,21,0.25)"
+                    spring={0.18}
+                    damping={0.86}
+                    glow="0 0 10px rgba(250,204,21,0.35)"
+                    idleGlow="0 0 6px rgba(250,204,21,0.2)"
                   />
 
                   <div className="mt-10">
