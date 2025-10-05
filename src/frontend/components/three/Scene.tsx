@@ -345,21 +345,26 @@ function CoinField() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const updatePointer = (event: PointerEvent | TouchEvent) => {
+    const updatePointer = (event: PointerEvent | TouchEvent | any) => {
       let clientX: number | null = null;
       let clientY: number | null = null;
 
-      if (event instanceof TouchEvent) {
-        if (event.touches.length > 0) {
-          clientX = event.touches[0].clientX;
-          clientY = event.touches[0].clientY;
-        } else if (event.changedTouches.length > 0) {
-          clientX = event.changedTouches[0].clientX;
-          clientY = event.changedTouches[0].clientY;
+      const isTouch = (evt: any): evt is TouchEvent =>
+        typeof evt === 'object' && (('touches' in evt) || ('changedTouches' in evt));
+
+      if (isTouch(event)) {
+        const t = event.touches && event.touches.length > 0
+          ? event.touches[0]
+          : event.changedTouches && event.changedTouches.length > 0
+          ? event.changedTouches[0]
+          : null;
+        if (t) {
+          clientX = t.clientX;
+          clientY = t.clientY;
         }
       } else {
-        clientX = event.clientX;
-        clientY = event.clientY;
+        clientX = (event as PointerEvent).clientX;
+        clientY = (event as PointerEvent).clientY;
       }
 
       if (clientX === null || clientY === null) return;
@@ -372,7 +377,7 @@ function CoinField() {
 
     const onPointerMove = (event: PointerEvent) => updatePointer(event);
     const onPointerLeave = () => (pointerActiveRef.current = false);
-    const onTouchMove = (event: TouchEvent) => updatePointer(event);
+    const onTouchMove = (event: any) => updatePointer(event);
     const onTouchEnd = () => (pointerActiveRef.current = false);
 
     window.addEventListener("pointermove", onPointerMove, { passive: true });
