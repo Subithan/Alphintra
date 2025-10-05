@@ -3,6 +3,34 @@ import React from "react";
 import Loader from "@/components/ui/Loader";
 import { useBotProgress } from "@/components/hooks/useBotProgress";
 
+// Helper function to split text into characters with repulsion effect
+const RepulsiveText = ({ text, className }: { text: string; className?: string }) => {
+  return (
+    <div className={className}>
+      {text.split('').map((char, index) => {
+        if (char === ' ') {
+          return <span key={index} className="char" style={{ '--x-offset': '0px', '--y-offset': '0px' } as React.CSSProperties}>{char}</span>;
+        }
+        // Generate random repulsion offsets for each character
+        const xOffset = `${(Math.random() - 0.5) * 20}px`;
+        const yOffset = `${(Math.random() - 0.5) * 20}px`;
+        return (
+          <span
+            key={index}
+            className="char"
+            style={{
+              '--x-offset': xOffset,
+              '--y-offset': yOffset
+            } as React.CSSProperties}
+          >
+            {char}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+
 export const Hero = () => {
   const { progress, status } = useBotProgress(7000);
   return (
@@ -26,9 +54,8 @@ export const Hero = () => {
           <div className="relative z-10 flex flex-col lg:flex-row items-center justify-center gap-12">
             {/* Text Column: badge, h1, p, button inside glass card */}
             <div className="w-full lg:w-1/2">
-              <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-black/35 backdrop-blur-2xl shadow-[0_40px_120px_rgba(15,23,42,0.45)] px-8 py-10 max-w-xl">
-                <div className="absolute inset-0 bg-[radial-gradient(900px_600px_at_0%_0%,rgba(248,122,255,0.22),transparent_70%),radial-gradient(900px_600px_at_100%_0%,rgba(47,216,254,0.18),transparent_70%),radial-gradient(1200px_900px_at_50%_100%,rgba(234,179,8,0.16),transparent_75%)]" />
-                <div className="absolute inset-0 bg-[linear-gradient(130deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.02)_100%)]" />
+              <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/5 backdrop-blur-2xl shadow-[0_40px_120px_rgba(15,23,42,0.45)] px-8 py-10 max-w-xl liquid-glass">
+                <div className="absolute inset-0 liquid-glass-effect" />
                 <div className="relative z-10 text-left">
                   <div className="flex items-center justify-start">
                     <p className="inline-flex items-center gap-2 border py-1 px-3 rounded-lg border-white/30 bg-white/10 backdrop-blur-md text-sm uppercase tracking-wide">
@@ -47,10 +74,10 @@ export const Hero = () => {
                       </span>
                     </p>
                   </div>
-                  <h1 className="text-5xl lg:text-6xl font-bold leading-tight text-gray-100 mt-6">
-                    Build Trading Bots
+                  <h1 className="text-5xl lg:text-6xl leading-tight text-gray-100 mt-6 boxy-font repulsion-text">
+                    <RepulsiveText text="BUILD TRADING BOTS" />
                     <br />
-                    <span>Without Code</span>
+                    <RepulsiveText text="WITHOUT CODE" />
                   </h1>
                   <p className="text-lg mt-6 text-gray-100/90">
                     Create sophisticated trading strategies using our intuitive drag-and-drop interface. Automate your trades with
@@ -70,10 +97,9 @@ export const Hero = () => {
             </div>
             {/* Visual Column: Alphintra Robot + enhanced loader */}
             <div className="w-full lg:w-1/2 flex flex-col items-center">
-              <div className="w-full max-w-[800px] h-[450px] rounded-2xl overflow-hidden border border-white/10 bg-black/30 backdrop-blur-md relative">
-                {/* Ambient gradients */}
-                <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_0%_0%,rgba(255,221,0,0.18),transparent_60%),radial-gradient(1000px_600px_at_100%_0%,rgba(168,85,247,0.16),transparent_60%),radial-gradient(1000px_800px_at_50%_100%,rgba(34,197,94,0.14),transparent_60%)]" />
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_100%)]" />
+              <div className="w-full max-w-[800px] h-[450px] rounded-2xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-md relative liquid-glass">
+                {/* Liquid glass effect */}
+                <div className="absolute inset-0 liquid-glass-effect" />
 
                 {/* Robot */}
                 <div className="robot absolute inset-0">
