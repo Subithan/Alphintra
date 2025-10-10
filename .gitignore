@@ -612,3 +612,7 @@ infra/backups/
 **/.claude-flow/
 .swarm/
 **/.swarm/
+AGENTS.md
+plan.md
+research.md
+tasks.md

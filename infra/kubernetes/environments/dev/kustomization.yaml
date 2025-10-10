@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: alphintra
+resources:
+  - ../../base/auth-service
+  - ../../base/gateway
+patches:
+  - path: patches/auth-deployment.yaml
+  - path: patches/gateway-deployment.yaml
+  - path: patches/gateway-hpa.yaml
+images:
+  - name: us-central1-docker.pkg.dev/alphintra-472817/alphintra/auth-service
+    newTag: latest
+  - name: us-central1-docker.pkg.dev/alphintra-472817/alphintra/service-gateway
+    newTag: latest
+configMapGenerator:
+  - name: auth-service-config
+    behavior: merge
+    literals:
+      - kyc-endpoint=https://dev-kyc.alphintra.internal
+      - log-level=DEBUG
+  - name: service-gateway-config
+    behavior: merge
+    literals:
+      - AUTH_SERVICE_URI=http://auth-service.alphintra.svc.cluster.local:8009
+      - TRADING_ENGINE_URI=http://trading-engine.alphintra.svc.cluster.local:8100
+      - MARKETPLACE_SERVICE_URI=http://marketplace-service.alphintra.svc.cluster.local:8200
+      - GRAPHQL_SERVICE_URI=http://graphql-service.alphintra.svc.cluster.local:8300
+      - MARKET_DATA_WS_URI=ws://market-data.alphintra.svc.cluster.local:8082
+      - GATEWAY_RATE_LIMIT_REPLENISH=30
+      - GATEWAY_RATE_LIMIT_BURST=60
+      - RISK_MANAGEMENT_URI=http://risk-management-service.alphintra.svc.cluster.local:8002
+      - STRATEGY_SERVICE_URI=http://strategy-service.alphintra.svc.cluster.local:8003
+      - NO_CODE_SERVICE_URI=http://no-code-service.alphintra.svc.cluster.local:8004
+      - AI_ML_SERVICE_URI=http://ai-ml-strategy-service.alphintra.svc.cluster.local:8002
+      - CUSTOMER_SUPPORT_SERVICE_URI=http://customer-support-service.alphintra.svc.cluster.local:8010
