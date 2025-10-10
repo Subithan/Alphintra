@@ -37,16 +37,56 @@ steps:
       - push
       - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}'
 
-  - name: gcr.io/cloud-builders/gke-deploy
-    id: Render Manifests
-    entrypoint: bash
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: Apply Manifests
     args:
-      - -c
-      - |
-        gke-deploy prepare \
-          --filename=infra/kubernetes/environments/dev \
-          --image='gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}' \
-          --output=./rendered-manifests
+      - 'apply'
+      - '-k'
+      - 'infra/kubernetes/environments/dev'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: Update Image
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/auth-service'
+      - 'auth-service=gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}'
+      - '-n'
+      - 'alphintra'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: Wait For Rollout
+    args:
+      - 'rollout'
+      - 'status'
+      - 'deployment/auth-service'
+      - '-n'
+      - 'alphintra'
+      - '--timeout=300s'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: Verify Pods
+    args:
+      - 'get'
+      - 'pods'
+      - '-l'
+      - 'app=auth-service'
+      - '-n'
+      - 'alphintra'
+      - '-o'
+      - 'wide'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
 
 images:
   - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}'
