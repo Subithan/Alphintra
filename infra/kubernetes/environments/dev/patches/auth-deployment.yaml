@@ -16,6 +16,7 @@ spec:
             - name: SPRING_PROFILES_ACTIVE
               value: cloud
             - name: KYC_ENDPOINT
+              valueFrom: null
               value: https://dev-kyc.alphintra.internal
             - name: LOG_LEVEL
               value: DEBUG
