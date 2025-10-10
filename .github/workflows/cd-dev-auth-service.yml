@@ -43,7 +43,7 @@ jobs:
           gcloud builds submit \
             --config=src/backend/auth-service/cloudbuild.yaml \
             --project=$GCP_PROJECT_ID \
-            --substitutions=_PROJECT_ID=$GCP_PROJECT_ID,_COMMIT_SHA=$GITHUB_SHA,_SERVICE_NAME=$SERVICE_NAME
+            --substitutions=_COMMIT_SHA=$GITHUB_SHA,_SERVICE_NAME=$SERVICE_NAME
 
       - name: Configure kubectl
         run: |
