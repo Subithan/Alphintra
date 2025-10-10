@@ -56,7 +56,7 @@
     "pg": "^8.16.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-hook-form": "^7.48.0",
+    "react-hook-form": "^7.64.0",
     "react-hot-toast": "^2.6.0",
     "react-resizable-panels": "^3.0.4",
     "react-use-websocket": "^4.13.0",
