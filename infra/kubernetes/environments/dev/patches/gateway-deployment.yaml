@@ -14,18 +14,26 @@ spec:
           imagePullPolicy: Always
           env:
             - name: AUTH_SERVICE_URI
+              valueFrom: null
               value: http://auth-service.alphintra.svc.cluster.local:8009
             - name: TRADING_ENGINE_URI
+              valueFrom: null
               value: http://trading-engine.alphintra.svc.cluster.local:8100
             - name: MARKETPLACE_SERVICE_URI
+              valueFrom: null
               value: http://marketplace-service.alphintra.svc.cluster.local:8200
             - name: GRAPHQL_SERVICE_URI
+              valueFrom: null
               value: http://graphql-service.alphintra.svc.cluster.local:8300
             - name: MARKET_DATA_WS_URI
+              valueFrom: null
               value: ws://market-data.alphintra.svc.cluster.local:8082
             - name: GATEWAY_RATE_LIMIT_REPLENISH
+              valueFrom: null
               value: "30"
             - name: GATEWAY_RATE_LIMIT_BURST
+              valueFrom: null
               value: "60"
             - name: REDIS_HOST
+              valueFrom: null
               value: redis-gateway.platform
