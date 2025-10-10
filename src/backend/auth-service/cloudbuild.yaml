@@ -7,7 +7,6 @@ substitutions:
   _SERVICE_NAME: auth-service
   _COMMIT_SHA: BUILDER_SHA
   _DOCKERFILE: Dockerfile
-  _AR_REPOSITORY: us-central1-docker.pkg.dev/$_PROJECT_ID/alphintra
 
 steps:
   - name: gcr.io/cloud-builders/mvn
@@ -28,14 +27,14 @@ steps:
         cd src/backend/${_SERVICE_NAME}
         docker build \
           --file=${_DOCKERFILE} \
-          --tag=${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          --tag='gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}' \
           .
 
   - name: gcr.io/cloud-builders/docker
     id: Push Image
     args:
       - push
-      - '${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+      - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}'
 
   - name: gcr.io/cloud-builders/gke-deploy
     id: Render Manifests
@@ -45,8 +44,8 @@ steps:
       - |
         gke-deploy prepare \
           --filename=infra/kubernetes/environments/dev \
-          --image=${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          --image='gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}' \
           --output=./rendered-manifests
 
 images:
-  - '${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+  - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}'
