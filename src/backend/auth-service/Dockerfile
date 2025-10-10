@@ -16,7 +16,7 @@ RUN mvn clean package -DskipTests -B
 FROM gcr.io/distroless/java17-debian12
 WORKDIR /app
 COPY --from=builder /app/target/auth-service-0.0.1-SNAPSHOT.jar app.jar
-COPY --from=builder /app/src/main/resources/init_database.sql init_database.sql
+COPY --from=builder /app/src/main/resources/db/migration/V1__init_schema.sql init_database.sql
 
 ENV SPRING_PROFILES_ACTIVE=standalone
 ENV DATABASE_URL=jdbc:postgresql://alphintra:alphintra123@postgres:5432/alphintra_auth_service
