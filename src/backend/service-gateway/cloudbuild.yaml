@@ -1,0 +1,52 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+  substitutionOption: ALLOW_LOOSE
+
+substitutions:
+  _SERVICE_NAME: service-gateway
+  _COMMIT_SHA: BUILDER_SHA
+  _DOCKERFILE: Dockerfile
+  _AR_REPOSITORY: us-central1-docker.pkg.dev/$PROJECT_ID/alphintra
+
+steps:
+  - name: gcr.io/cloud-builders/mvn
+    id: Run Tests
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        cd src/backend/${_SERVICE_NAME}
+        mvn -B -ntp clean verify
+
+  - name: gcr.io/cloud-builders/docker
+    id: Build Image
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        cd src/backend/${_SERVICE_NAME}
+        docker build \
+          -f ${_DOCKERFILE} \
+          -t ${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          .
+
+  - name: gcr.io/cloud-builders/docker
+    id: Push Image
+    args:
+      - push
+      - ${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA}
+
+  - name: gcr.io/cloud-builders/gke-deploy
+    id: Render Manifests
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gke-deploy prepare \
+          --filename=infra/kubernetes/environments/dev \
+          --image=${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          --output=./rendered-manifests
+
+images:
+  - ${_AR_REPOSITORY}/${_SERVICE_NAME}:${_COMMIT_SHA}

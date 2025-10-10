@@ -74,16 +74,18 @@ export interface PositionRiskAssessment {
   recommendations: string[];
 }
 
+import { gatewayHttpBaseUrl } from '../config/gateway';
+
 class RiskManagementApiService {
   private baseUrl: string;
 
   constructor() {
-    // Use environment variable or default to risk management service
-    this.baseUrl = process.env.NEXT_PUBLIC_RISK_API_URL || 'http://localhost:8002';
+    this.baseUrl = gatewayHttpBaseUrl;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const base = this.baseUrl.replace(/\/+$/, '');
+    const url = `${base}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     
     const response = await fetch(url, {
       headers: {

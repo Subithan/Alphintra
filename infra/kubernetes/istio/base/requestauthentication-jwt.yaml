@@ -1,0 +1,15 @@
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: gateway-jwt
+  namespace: gateway
+spec:
+  selector:
+    matchLabels:
+      app: service-gateway
+  jwtRules:
+    - issuer: "alphintra-auth"
+      audiences:
+        - "alphintra-clients"
+      jwksUri: https://auth.alphintra.dev/.well-known/jwks.json
+      forwardOriginalToken: true

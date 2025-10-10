@@ -1,6 +1,8 @@
 // API service for market data operations
 // This replaces direct database access with proper API calls to backend services
 
+import { buildGatewayUrl } from '../config/gateway';
+
 export interface MarketDataPoint {
   symbol: string;
   timestamp: string;
@@ -55,11 +57,12 @@ class MarketDataApiService {
 
   constructor() {
     // Use environment variable or default to market data service
-    this.baseUrl = process.env.NEXT_PUBLIC_MARKET_DATA_API_URL || 'http://localhost:8001';
+    this.baseUrl = buildGatewayUrl('/api/market-data');
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const base = this.baseUrl.replace(/\/+$/, '');
+    const url = `${base}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     
     const response = await fetch(url, {
       headers: {

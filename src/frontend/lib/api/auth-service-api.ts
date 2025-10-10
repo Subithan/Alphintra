@@ -2,6 +2,7 @@
 
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
+import { gatewayHttpBaseUrl } from '../config/gateway';
 
 
 // Types for Auth API
@@ -46,7 +47,7 @@ export class AuthServiceApiClient {
 
   constructor() {
     this.api = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8009',
+      baseURL: gatewayHttpBaseUrl,
       headers: {
         'Content-Type': 'application/json',
       },

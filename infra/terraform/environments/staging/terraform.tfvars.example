@@ -1,0 +1,80 @@
+project_id = "alphintra-472817"
+
+region = "us-central1"
+zone   = "us-central1-f"
+
+network_name = "alphintra-staging-vpc"
+
+subnets = [
+  {
+    name          = "staging-apps-subnet"
+    region        = "us-central1"
+    ip_cidr_range = "10.20.0.0/24"
+    secondary_ip_ranges = [
+      {
+        range_name    = "staging-pods"
+        ip_cidr_range = "10.20.8.0/21"
+      },
+      {
+        range_name    = "staging-services"
+        ip_cidr_range = "10.20.16.0/21"
+      }
+    ]
+  }
+]
+
+artifact_registry_repositories = [
+  {
+    repository_id = "alphintra-staging"
+    location      = "us-central1"
+    format        = "DOCKER"
+    description   = "Container images for staging workloads"
+    labels = {
+      environment = "staging"
+      service     = "platform"
+    }
+  }
+]
+
+workload_identity_project = "alphintra-472817"
+
+workload_identity_service_accounts = [
+  {
+    name         = "auth-cloudsql-staging"
+    account_id   = "auth-cloudsql-stg"
+    display_name = "Auth Service Cloud SQL (staging)"
+    roles = [
+      "roles/cloudsql.client",
+      "roles/secretmanager.secretAccessor",
+      "roles/logging.logWriter"
+    ]
+    kubernetes_service_accounts = [
+      {
+        namespace = "auth-service"
+        name      = "auth-service"
+      }
+    ]
+  },
+  {
+    name         = "gateway-runtime-staging"
+    account_id   = "gateway-runtime-stg"
+    display_name = "Gateway Runtime (staging)"
+    roles = [
+      "roles/monitoring.metricWriter",
+      "roles/cloudtrace.agent",
+      "roles/logging.logWriter"
+    ]
+    kubernetes_service_accounts = [
+      {
+        namespace = "gateway"
+        name      = "gateway"
+      }
+    ]
+  }
+]
+
+cloudsql_instance_name     = "alphintra-db-instance"
+auth_database_name         = "alphintra_auth_service"
+auth_database_user         = "alphintra"
+auth_database_password     = "CHANGE_ME_IN_SECRET_MANAGER"
+auth_database_secret_name  = "auth-service-db-password"

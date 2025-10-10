@@ -1,21 +1,30 @@
-// Path: Alphintra/src/backend/auth-service/src/main/java/com/alphintra/auth_service/dto/AuthResponse.java
-// Purpose: DTO for login response with JWT.
-
 package com.alphintra.auth_service.dto;
 
-import com.alphintra.auth_service.entity.User;
+import jakarta.validation.constraints.NotBlank;
 
 public class AuthResponse {
-    private String token;
-    private User user;
 
-    public AuthResponse(String token, User user) {
-        this.token = token;
-        this.user = user;
-    }
+  @NotBlank private String token;
+  private UserProfile user;
 
-    public String getToken() { return token; }
-    public void setToken(String token) { this.token = token; }
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+  public AuthResponse(String token, UserProfile user) {
+    this.token = token;
+    this.user = user;
+  }
+
+  public String getToken() {
+    return token;
+  }
+
+  public void setToken(String token) {
+    this.token = token;
+  }
+
+  public UserProfile getUser() {
+    return user;
+  }
+
+  public void setUser(UserProfile user) {
+    this.user = user;
+  }
 }

@@ -65,7 +65,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.createWorkflow(workflowCreate);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows',
+        'http://localhost:8080/api/workflows',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -90,7 +90,7 @@ describe('NoCodeApiClient', () => {
       await client.getWorkflows(filters);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows?category=custom&limit=10',
+        'http://localhost:8080/api/workflows?category=custom&limit=10',
         expect.any(Object)
       );
     });
@@ -115,7 +115,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.compileWorkflow('test-uuid');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows/test-uuid/compile',
+        'http://localhost:8080/api/workflows/test-uuid/compile',
         expect.objectContaining({
           method: 'POST',
         })
@@ -162,7 +162,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.executeWorkflow('test-uuid', config);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows/test-uuid/execute',
+        'http://localhost:8080/api/workflows/test-uuid/execute',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(config),
@@ -210,7 +210,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.healthCheck();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/health',
+        'http://localhost:8080/health',
         expect.any(Object)
       );
 
