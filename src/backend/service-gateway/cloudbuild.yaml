@@ -7,6 +7,7 @@ substitutions:
   _SERVICE_NAME: service-gateway
   _COMMIT_SHA: BUILDER_SHA
   _DOCKERFILE: Dockerfile
+  _PROJECT_ID: alphintra-472817
 
 steps:
   - name: gcr.io/cloud-builders/mvn
