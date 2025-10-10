@@ -7,7 +7,7 @@ substitutions:
   _SERVICE_NAME: auth-service
   _COMMIT_SHA: BUILDER_SHA
   _DOCKERFILE: Dockerfile
-  _AR_REPOSITORY: us-central1-docker.pkg.dev/$PROJECT_ID/alphintra
+  _AR_REPOSITORY: us-central1-docker.pkg.dev/$_PROJECT_ID/alphintra
 
 steps:
   - name: gcr.io/cloud-builders/mvn
