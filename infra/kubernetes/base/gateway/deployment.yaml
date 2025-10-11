@@ -43,10 +43,10 @@ spec:
                   key: REDIS_PORT
           resources:
             requests:
-              cpu: 100m
+              cpu: 250m
               memory: 256Mi
             limits:
-              cpu: 250m
+              cpu: 500m
               memory: 512Mi
           readinessProbe:
             httpGet:
