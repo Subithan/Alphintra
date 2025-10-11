@@ -5,7 +5,7 @@ metadata:
   labels:
     app: service-gateway
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: service-gateway
@@ -17,7 +17,7 @@ spec:
       serviceAccountName: service-gateway
       containers:
         - name: service-gateway
-          image: us-central1-docker.pkg.dev/alphintra-472817/alphintra/service-gateway:latest
+          image: gcr.io/alphintra-472817/service-gateway:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -43,11 +43,11 @@ spec:
                   key: REDIS_PORT
           resources:
             requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
               cpu: 250m
               memory: 512Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
@@ -68,4 +68,6 @@ spec:
             periodSeconds: 10
       securityContext:
         runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
         fsGroup: 2000

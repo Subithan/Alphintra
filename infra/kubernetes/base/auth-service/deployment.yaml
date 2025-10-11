@@ -5,7 +5,7 @@ metadata:
   labels:
     app: auth-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: auth-service
@@ -17,7 +17,7 @@ spec:
       serviceAccountName: auth-service
       containers:
         - name: auth-service
-          image: us-central1-docker.pkg.dev/alphintra-472817/alphintra/auth-service:latest
+          image: gcr.io/alphintra-472817/auth-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8009
@@ -30,37 +30,38 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secrets
-                  key: db-host
+                  key: DB_HOST
             - name: DB_PORT
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secrets
-                  key: db-port
+                  key: DB_PORT
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secrets
-                  key: db-name
+                  key: DB_NAME
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secrets
-                  key: db-username
+                  key: DB_USERNAME
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secrets
-                  key: db-password
+                  key: DB_PASSWORD
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secrets
-                  key: jwt-secret
+                  key: JWT_SECRET
             - name: KYC_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: auth-service-secrets
-                  key: kyc-api-key
+                  key: KYC_API_KEY
+                  optional: true
             - name: KYC_ENDPOINT
               valueFrom:
                 configMapKeyRef:
@@ -68,11 +69,11 @@ spec:
                   key: kyc-endpoint
           resources:
             requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
               cpu: 250m
               memory: 512Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
@@ -93,4 +94,6 @@ spec:
             periodSeconds: 10
       securityContext:
         runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
         fsGroup: 2000
