@@ -36,4 +36,4 @@ spec:
               value: "60"
             - name: REDIS_HOST
               valueFrom: null
-              value: redis-gateway.platform
+              value: redis.alphintra.svc.cluster.local

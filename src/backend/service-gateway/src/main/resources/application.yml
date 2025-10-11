@@ -3,11 +3,12 @@ spring:
     name: service-gateway
   main:
     web-application-type: reactive
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-    timeout: 2000ms
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
   cloud:
     gateway:
       httpclient:

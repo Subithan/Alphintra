@@ -43,10 +43,10 @@ spec:
                   key: REDIS_PORT
           resources:
             requests:
-              cpu: 250m
+              cpu: 100m
               memory: 512Mi
             limits:
-              cpu: 500m
+              cpu: 250m
               memory: 1Gi
           readinessProbe:
             httpGet:
@@ -64,7 +64,8 @@ spec:
             httpGet:
               path: /actuator/health
               port: 8080
-            failureThreshold: 10
+            initialDelaySeconds: 120
+            failureThreshold: 12
             periodSeconds: 10
       securityContext:
         runAsNonRoot: true

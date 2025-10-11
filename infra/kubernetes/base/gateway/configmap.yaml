@@ -13,7 +13,7 @@ data:
   GATEWAY_MAX_REQUEST_SIZE: 10MB
   GATEWAY_RATE_LIMIT_REPLENISH: "60"
   GATEWAY_RATE_LIMIT_BURST: "120"
-  REDIS_HOST: redis-gateway.platform
+  REDIS_HOST: redis.alphintra.svc.cluster.local
   REDIS_PORT: "6379"
   RISK_MANAGEMENT_URI: http://risk-management-service.platform:8002
   STRATEGY_SERVICE_URI: http://strategy-service.platform:8003

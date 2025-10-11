@@ -6,6 +6,8 @@ resources:
   - ../../base/gateway
 patches:
   - path: patches/auth-deployment.yaml
+  - path: patches/auth-service-cloudsql.yaml
+  - path: patches/auth-service-serviceaccount.yaml
   - path: patches/gateway-deployment.yaml
   - path: patches/gateway-hpa.yaml
 images:

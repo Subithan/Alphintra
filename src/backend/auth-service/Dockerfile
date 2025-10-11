@@ -19,9 +19,9 @@ COPY --from=builder /app/target/auth-service-0.0.1-SNAPSHOT.jar app.jar
 COPY --from=builder /app/src/main/resources/db/migration/V1__init_schema.sql init_database.sql
 
 ENV SPRING_PROFILES_ACTIVE=standalone
-ENV DATABASE_URL=jdbc:postgresql://alphintra:alphintra123@postgres:5432/alphintra_auth_service
-ENV DB_USER=alphintra
-ENV DB_PASSWORD=alphintra123
+ENV DATABASE_URL=
+ENV DB_USER=
+ENV DB_PASSWORD=
 
 # JWT secret for signing tokens (should match other services)
 ENV JWT_SECRET=U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=
