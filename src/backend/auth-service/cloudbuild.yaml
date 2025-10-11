@@ -29,6 +29,7 @@ steps:
         docker build \
           --file=${_DOCKERFILE} \
           --tag='gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}' \
+          --tag='gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:latest' \
           .
 
   - name: gcr.io/cloud-builders/docker
@@ -37,6 +38,11 @@ steps:
       - push
       - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}'
 
+  - name: gcr.io/cloud-builders/docker
+    id: Push Latest Tag
+    args:
+      - push
+      - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:latest'
   - name: 'gcr.io/cloud-builders/kubectl'
     id: Apply Manifests
     args:
@@ -90,3 +96,4 @@ steps:
 
 images:
   - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:${_COMMIT_SHA}'
+  - 'gcr.io/$_PROJECT_ID/${_SERVICE_NAME}:latest'
