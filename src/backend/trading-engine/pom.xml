@@ -58,6 +58,11 @@
             <artifactId>xchange-binance</artifactId>
             <version>5.2.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
 
     </dependencies>
 
