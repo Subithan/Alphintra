@@ -18,7 +18,7 @@ spec:
       containers:
         - name: auth-service
           image: gcr.io/alphintra-472817/auth-service:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8009
           env:
