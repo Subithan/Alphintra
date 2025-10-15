@@ -33,15 +33,16 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json* ./
 
-# ========================================================================
-# ===               THIS IS THE CORRECTED SECTION                      ===
-# ========================================================================
-# Copy the rest of the application source code.
-# The '.' copies everything from the build context (respecting .dockerignore)
-# into the current WORKDIR (/app). This includes your 'app', 'public',
-# 'components' directories, and all config files.
-COPY . .
-# ========================================================================
+# Copy source code in order of change frequency
+# Copy configuration files first (less frequent changes)
+COPY next.config.js* ./
+COPY tsconfig.json* ./
+COPY tailwind.config.js* ./
+COPY .eslintrc* ./
+
+# Copy source code (more frequent changes)
+COPY src/ ./src/
+COPY public/ ./public/
 
 # Set build-time environment variables for optimized builds
 ENV NEXT_TELEMETRY_DISABLED=1

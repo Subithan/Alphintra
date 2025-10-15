@@ -1,0 +1,79 @@
+# This file tells gcloud to ignore files when 'gcloud builds submit'
+# is run from within the 'trading-engine' directory.
+
+# Maven build output and cache
+target/
+.mvn/
+!target/trading-engine-1.0-SNAPSHOT.jar  # Include the built JAR
+
+# IDE and editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*~
+.eslintcache
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs and runtime files
+*.log
+*.out
+logs/
+
+# Environment and configuration files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing and coverage
+coverage/
+.nyc_output/
+test-results/
+surefire-reports/
+
+# Git and version control
+.git/
+.gitignore
+
+# Backup files created by our optimization
+*.backup
+Dockerfile.distroless.backup
+
+# Documentation and markdown (not needed for build)
+*.md
+Readme.md
+README.md
+
+# Source files that aren't needed for the build (Maven handles this)
+src/test/
+!src/main/resources/
+
+# Keep only essential resource files
+!src/main/resources/init_database.sql
+!src/main/resources/application.properties
+
+# Node.js related files (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.pid
+
+# Build scripts (not needed in Docker context)
+build.sh
+database-init.sh
+
+# Cloud Build and Docker files (context will include them)
+cloudbuild*.yaml
+Dockerfile*
+.gcloudignore
