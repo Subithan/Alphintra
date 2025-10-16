@@ -9,7 +9,7 @@ resources:
   - deployment.yaml
   - hpa.yaml
 
-namespace: alphintra-dev
+namespace: alphintra
 
 commonLabels:
   app: trading-engine

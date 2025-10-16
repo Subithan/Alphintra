@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: trading-engine
-  namespace: alphintra-dev
+  namespace: alphintra
   labels:
     app: trading-engine
     component: backend

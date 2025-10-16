@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: trading-engine-config
-  namespace: alphintra-dev
+  namespace: alphintra
   labels:
     app: trading-engine
     component: backend
@@ -18,16 +18,16 @@ data:
   DATABASE_URL: "postgresql://trading_engine:alphintra@123@127.0.0.1:5432/alphintra_trading_engine"
 
   # Redis Configuration
-  REDIS_HOST: "redis-service.alphintra-dev.svc.cluster.local"
+  REDIS_HOST: "redis-service.alphintra.svc.cluster.local"
   REDIS_PORT: "6379"
 
   # Kafka Configuration
-  KAFKA_BOOTSTRAP_SERVERS: "kafka-service.alphintra-dev.svc.cluster.local:29092"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service.alphintra.svc.cluster.local:29092"
   ORDER_TOPIC_NAME: "new-orders"
 
   # External Service URLs
-  SERVICES_WALLET_URL: "http://wallet-service.alphintra-dev.svc.cluster.local:8011"
-  SERVICES_STRATEGY_URL: "http://strategy-service.alphintra-dev.svc.cluster.local:8002"
+  SERVICES_WALLET_URL: "http://wallet-service.alphintra.svc.cluster.local:8011"
+  SERVICES_STRATEGY_URL: "http://strategy-service.alphintra.svc.cluster.local:8002"
 
   # Health and Monitoring
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,metrics"

@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: trading-engine-hpa
-  namespace: alphintra-dev
+  namespace: alphintra
   labels:
     app: trading-engine
     component: backend

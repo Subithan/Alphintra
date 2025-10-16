@@ -2,7 +2,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: auth-service
-  namespace: auth-service
+  namespace: alphintra
 spec:
   host: auth-service
   trafficPolicy:

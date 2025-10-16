@@ -26,11 +26,10 @@ This guide covers installation and configuration of Istio for the Alphintra plat
    kubectl apply -k infra/kubernetes/istio/overlays/dev    # or staging/prod
    ```
 
-4. Label application namespaces to enable sidecar injection:
+4. Label the workload namespace to enable sidecar injection (the repo's `namespace.yaml` already sets this for dev/staging/prod, but `kubectl` is handy for ad-hoc clusters):
 
    ```bash
-   kubectl label namespace gateway istio-injection=enabled --overwrite
-   kubectl label namespace auth-service istio-injection=enabled --overwrite
+   kubectl label namespace alphintra istio-injection=enabled --overwrite
    ```
 
 ## mTLS & JWT
@@ -77,6 +76,6 @@ Sidecars export metrics and traces once Prometheus and Jaeger are deployed (see 
 
 ## Troubleshooting
 
-- Verify sidecar injection: `kubectl get pods -n gateway -o jsonpath='{.items[*].spec.containers[*].name}'` should list `istio-proxy`.
-- Inspect JWT issues with `kubectl logs -n gateway deploy/service-gateway -c istio-proxy`.
+- Verify sidecar injection: `kubectl get pods -n alphintra -o jsonpath='{.items[*].spec.containers[*].name}' | tr ' ' '\n' | sort -u` should list `istio-proxy`.
+- Inspect JWT issues with `kubectl logs -n alphintra deploy/service-gateway -c istio-proxy`.
 - For mTLS failures, run `istioctl proxy-status` and `istioctl analyze` to surface config drift.

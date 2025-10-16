@@ -230,7 +230,7 @@ steps:
       - 'deployment/trading-engine'
       - 'trading-engine=gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
       - '-n'
-      - 'alphintra-dev'
+      - 'alphintra'
     env:
       - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
       - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
@@ -284,11 +284,11 @@ steps:
         echo "🔍 Verifying Trading Engine deployment configuration..."
 
         # Check if deployment exists
-        if kubectl get deployment trading-engine -n alphintra-dev -o name; then
+        if kubectl get deployment trading-engine -n alphintra -o name; then
           echo "✅ Deployment configuration verified"
 
           # Get current image
-          current_image=$(kubectl get deployment trading-engine -n alphintra-dev -o jsonpath='{.spec.template.spec.containers[0].image}')
+          current_image=$(kubectl get deployment trading-engine -n alphintra -o jsonpath='{.spec.template.spec.containers[0].image}')
           echo "📦 Current deployment image: $current_image"
 
           echo "🚀 Trading Engine deployment triggered successfully"
