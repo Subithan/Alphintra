@@ -16,7 +16,7 @@ spec:
             prefix: /
       route:
         - destination:
-            host: service-gateway.gateway.svc.cluster.local
+            host: service-gateway.alphintra.svc.cluster.local
             port:
               number: 8080
       headers:

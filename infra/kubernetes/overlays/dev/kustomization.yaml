@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: alphintra
 
 resources:
+  - ../../base/auth-service
   - namespace.yaml
   - no-code-service.yaml
   - no-code-service-db-secret.yaml
@@ -19,6 +20,10 @@ patches:
     target:
       kind: Deployment
       name: no-code-service
+  - path: auth-service-cloudsql-patch.yaml
+    target:
+      kind: Deployment
+      name: auth-service
 
 replicas:
   - name: no-code-service

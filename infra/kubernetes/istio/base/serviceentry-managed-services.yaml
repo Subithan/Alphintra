@@ -2,7 +2,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: ServiceEntry
 metadata:
   name: cloudsql-entry
-  namespace: gateway
+  namespace: alphintra
 spec:
   hosts:
     - alphintra-472817:us-central1:alphintra-db-instance
@@ -19,7 +19,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: ServiceEntry
 metadata:
   name: memorystore-entry
-  namespace: gateway
+  namespace: alphintra
 spec:
   hosts:
     - redis.alphintra.internal

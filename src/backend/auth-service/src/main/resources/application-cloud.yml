@@ -2,18 +2,18 @@ spring:
   config:
     activate:
       on-profile: cloud
-    import: optional:secretmanager:
+    import: "optional:secretmanager:"
   datasource:
-    url: ${DB_JDBC_URL:jdbc:postgresql://localhost:5432/alphintra_auth_service}
-    username: ${sm://auth-db-username:${DB_USERNAME:alphintra}}
-    password: ${sm://auth-db-password:${DB_PASSWORD:alphintra123}}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:alphintra_auth_service}
+    username: ${DB_USERNAME:alphintra}
+    password: ${DB_PASSWORD:alphintra123}
   flyway:
     url: ${spring.datasource.url}
     user: ${spring.datasource.username}
     password: ${spring.datasource.password}
 
 jwt:
-  secret: ${sm://auth-jwt-secret:${JWT_SECRET:ZGV2LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLXdoaWNoLWlzLXZlcnktbG9uZy0xMjM0NTY3ODkwMTIzNDU2Nzg5MA==}}
+  secret: ${JWT_SECRET:ZGV2LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLXdoaWNoLWlzLXZlcnktbG9uZy0xMjM0NTY3ODkwMTIzNDU2Nzg5MA==}
 
 server:
   port: ${SERVER_PORT:8009}

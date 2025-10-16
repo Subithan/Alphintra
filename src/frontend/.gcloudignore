@@ -1,0 +1,58 @@
+# This file tells gcloud to ignore files when 'gcloud builds submit'
+# is run from within the 'frontend' directory.
+
+# Node.js build output and cache
+.next/
+out/
+build/
+dist/
+
+# Dependency directories (node_modules will be cached in GCS)
+node_modules/
+
+# Environment and configuration files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing and coverage
+coverage/
+.nyc_output/
+test-results/
+
+# Development and editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*~
+.eslintcache
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs and runtime files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Documentation and markdown (not needed for build)
+*.md
+docs/
+
+# Git and version control
+.git/
+.gitignore
+
+# Backup files created by our optimization
+*.backup
+
+# Cloud Build and Docker files (context will include them)
+cloudbuild*.yaml
+.gcloudignore

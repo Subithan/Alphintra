@@ -2,7 +2,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: service-gateway
-  namespace: gateway
+  namespace: alphintra
 spec:
   host: service-gateway
   trafficPolicy:

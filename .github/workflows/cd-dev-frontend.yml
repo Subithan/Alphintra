@@ -1,12 +1,13 @@
 name: Deploy Frontend to Dev
 
 on:
-  push:
-    branches:
-      - dev
-    paths:
-      - 'src/frontend/**'
   workflow_dispatch:
+    inputs:
+      trigger_source:
+        description: 'Trigger source'
+        required: false
+        default: 'manual'
+        type: string
   repository_dispatch:
     types: [no-code-service-deployed]
 
