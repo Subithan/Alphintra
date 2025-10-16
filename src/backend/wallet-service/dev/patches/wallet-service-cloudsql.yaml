@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wallet-service
+spec:
+  template:
+    spec:
+      containers:
+      # Add Cloud SQL proxy sidecar to wallet service deployment
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.10.1
+        args:
+          - "--port=5432"
+          - "--address=0.0.0.0"
+          - "--credentials-file=/secrets/service-account.json"
+          - "alphintra-472817:us-central1:alphintra-db-instance"
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+          - name: service-account-secret
+            mountPath: /secrets/
+            readOnly: true
+
+      # Add service account secret volume
+      volumes:
+        - name: service-account-secret
+          secret:
+            secretName: wallet-service-sa-key

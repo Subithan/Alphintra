@@ -1,0 +1,18 @@
+# This file tells gcloud to ignore files when 'gcloud builds submit'
+# is run from within the 'service-gateway' directory.
+
+# Maven build output directory
+target/
+
+# IDE and editor specific files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db

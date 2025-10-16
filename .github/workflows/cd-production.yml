@@ -1,9 +1,6 @@
 name: Production Deployment Pipeline
 
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*' ]
   workflow_dispatch:
     inputs:
       environment:
@@ -90,7 +87,7 @@ jobs:
       
     - name: Check GKE cluster health
       run: |
-        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $_PROJECT_ID
         
         # Check cluster health
         kubectl cluster-info
@@ -152,7 +149,7 @@ jobs:
         
         for service in $services; do
           echo "Scanning $service:${{ needs.validate-deployment.outputs.deploy-version }}"
-          gcloud container images scan $REGISTRY/$PROJECT_ID/$service:${{ needs.validate-deployment.outputs.deploy-version }} \
+          gcloud container images scan $REGISTRY/$_PROJECT_ID/$service:${{ needs.validate-deployment.outputs.deploy-version }} \
             --format="table(vulnerability.severity,vulnerability.cvss_score,package,version)"
         done
 
@@ -176,7 +173,7 @@ jobs:
       
     - name: Configure kubectl
       run: |
-        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $_PROJECT_ID
         
     - name: Prepare deployment manifests
       run: |
@@ -187,11 +184,11 @@ jobs:
         cd infra/kubernetes/environments/$DEPLOY_ENV
         
         # Use kustomize to generate final manifests
-        kustomize edit set image auth-service=$REGISTRY/$PROJECT_ID/auth-service:$DEPLOY_VERSION
-        kustomize edit set image trading-api=$REGISTRY/$PROJECT_ID/trading-api:$DEPLOY_VERSION
-        kustomize edit set image strategy-engine=$REGISTRY/$PROJECT_ID/strategy-engine:$DEPLOY_VERSION
-        kustomize edit set image broker-connector=$REGISTRY/$PROJECT_ID/broker-connector:$DEPLOY_VERSION
-        kustomize edit set image broker-simulator=$REGISTRY/$PROJECT_ID/broker-simulator:$DEPLOY_VERSION
+        kustomize edit set image auth-service=$REGISTRY/$_PROJECT_ID/auth-service:$DEPLOY_VERSION
+        kustomize edit set image trading-api=$REGISTRY/$_PROJECT_ID/trading-api:$DEPLOY_VERSION
+        kustomize edit set image strategy-engine=$REGISTRY/$_PROJECT_ID/strategy-engine:$DEPLOY_VERSION
+        kustomize edit set image broker-connector=$REGISTRY/$_PROJECT_ID/broker-connector:$DEPLOY_VERSION
+        kustomize edit set image broker-simulator=$REGISTRY/$_PROJECT_ID/broker-simulator:$DEPLOY_VERSION
         
         # Generate final manifests
         kustomize build . > deployment-manifests.yaml
@@ -290,7 +287,7 @@ jobs:
       
     - name: Configure kubectl
       run: |
-        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $_PROJECT_ID
         
     - name: Run integration tests
       run: |
@@ -331,7 +328,7 @@ jobs:
       
     - name: Configure kubectl
       run: |
-        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+        gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $_PROJECT_ID
         
     - name: Rollback to previous version
       run: |
@@ -428,10 +425,10 @@ jobs:
         
         for service in $services; do
           echo "Cleaning up old images for $service..."
-          gcloud container images list-tags $REGISTRY/$PROJECT_ID/$service \
+          gcloud container images list-tags $REGISTRY/$_PROJECT_ID/$service \
             --sort-by=~timestamp --limit=999 --format="get(digest)" | \
             tail -n +11 | \
-            xargs -I {} gcloud container images delete $REGISTRY/$PROJECT_ID/$service@{} --force-delete-tags --quiet || true
+            xargs -I {} gcloud container images delete $REGISTRY/$_PROJECT_ID/$service@{} --force-delete-tags --quiet || true
         done
         
     - name: Cleanup old deployments

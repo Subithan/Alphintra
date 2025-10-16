@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Zap, AlertCircle, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { buildGatewayUrl } from '@/lib/config/gateway';
 
 interface FeatureEngineeringPanelProps {
   workflowDefinition: object;
@@ -35,7 +36,7 @@ export function FeatureEngineeringPanel({
 
     try {
       // The API endpoint is on a different port, so we need the full URL
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'}/feature-engineering`;
+      const apiUrl = buildGatewayUrl('/feature-engineering');
 
       const response = await fetch(apiUrl, {
         method: 'POST',

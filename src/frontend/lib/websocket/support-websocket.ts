@@ -2,6 +2,7 @@
 
 import SockJS from 'sockjs-client';
 import { Client, StompSubscription, IMessage } from '@stomp/stompjs';
+import { buildGatewayUrl } from '../config/gateway';
 
 interface WebSocketMessage {
   type: string;
@@ -32,7 +33,7 @@ export class SupportWebSocketClient {
 
   constructor(config: Partial<WebSocketConfig> = {}) {
     this.config = {
-      url: process.env.NEXT_PUBLIC_SUPPORT_API_URL || 'http://localhost:8010/api/customer-support',
+      url: buildGatewayUrl('/api/customer-support'),
       reconnectInterval: 3000,
       maxReconnectAttempts: 5,
       heartbeatInterval: 30000,

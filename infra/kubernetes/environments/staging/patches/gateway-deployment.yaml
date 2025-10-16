@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-gateway
+spec:
+  replicas: 2
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: service-gateway
+          env:
+            - name: AUTH_SERVICE_URI
+              value: http://auth-service.alphintra.svc.cluster.local:8009
+            - name: TRADING_ENGINE_URI
+              value: http://trading-engine.alphintra.svc.cluster.local:8100
+            - name: MARKETPLACE_SERVICE_URI
+              value: http://marketplace-service.alphintra.svc.cluster.local:8200
+            - name: GRAPHQL_SERVICE_URI
+              value: http://graphql-service.alphintra.svc.cluster.local:8300
+            - name: MARKET_DATA_WS_URI
+              value: ws://market-data.alphintra.svc.cluster.local:8082
+            - name: GATEWAY_RATE_LIMIT_REPLENISH
+              value: "50"
+            - name: GATEWAY_RATE_LIMIT_BURST
+              value: "100"
+            - name: REDIS_HOST
+              value: redis-gateway.platform

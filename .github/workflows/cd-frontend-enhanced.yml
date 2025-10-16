@@ -1,14 +1,6 @@
 name: Enhanced Frontend Build & Deploy to GKE
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-    paths:
-      - 'src/frontend/**'
-      - 'infra/kubernetes/overlays/frontend/**'
-      - '.github/workflows/cd-frontend-enhanced.yml'
   workflow_dispatch:
     inputs:
       environment:
