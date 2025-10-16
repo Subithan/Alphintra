@@ -5,9 +5,9 @@ metadata:
   namespace: alphintra
 spec:
   hosts:
-    - alphintra-472817:us-central1:alphintra-db-instance
+    - alphintra-db-instance.alphintra.internal # logical DNS alias to satisfy Istio validation
   addresses:
-    - 10.0.0.5
+    - 10.6.124.3
   ports:
     - number: 5432
       name: tcp-postgres
