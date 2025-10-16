@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import {
   Tabs,
   TabsContent,
@@ -27,6 +27,18 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import type { Position, Bot, Order, Trade } from '@/lib/api/types';
+
+interface TradeOrderData {
+  id: number;
+  botId: number;
+  symbol: string;
+  type: string;
+  side: string;
+  price: number;
+  amount: number;
+  status: string;
+  createdAt: string;
+}
 
 const positions: Position[] = [
   {
@@ -108,58 +120,55 @@ const mockPendingOrders: Order[] = [
   },
 ];
 
-const mockTradeHistory: Trade[] = [
-  {
-    time: new Date().toISOString(),
-    asset: 'BTC/USDT',
-    side: 'Buy',
-    price: 67000,
-    quantity: 0.5,
-    pnl: 500.25,
-  },
-  {
-    time: new Date().toISOString(),
-    asset: 'ETH/USDT',
-    side: 'Sell',
-    price: 3500,
-    quantity: 5,
-    pnl: -120.75,
-  },
-];
-
 const ROW_HEIGHT = 40;
 const VISIBLE_ROWS = 4;
 const MAX_HEIGHT = 240; // 40px * 4 rows
 
 export default function MainPanel() {
   const [pendingOrders, setPendingOrders] = useState<Order[]>(mockPendingOrders);
-  const [tradeHistory, setTradeHistory] = useState<Trade[]>(mockTradeHistory);
-  const [loading, setLoading] = useState(false); // Set to false for demo
+  const [tradeHistory, setTradeHistory] = useState<TradeOrderData[]>([]);
+  const [loading, setLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
 
-  // Commenting out backend API call for demo
-  // useEffect(() => {
-  //   fetchData();
-  // }, []);
+  useEffect(() => {
+    let mounted = true; 
+    const fetchTradeHistory = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  // Commenting out backend API call for demo
-  // const fetchData = async () => {
-  //   try {
-  //     const [ordRes, tradeRes] = await Promise.all([
-  //       axios.get<Order[]>('/api/proxy/orders?status=PENDING'),
-  //       axios.get<Trade[]>('/api/proxy/trades'),
-  //     ]);
-  //     setPendingOrders(ordRes.data);
-  //     setTradeHistory(tradeRes.data);
-  //   } catch (err: any) {
-  //     setError('Network error. Please check API or server connection.');
-  //     console.error(err);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+        const response = await fetch('http://localhost:8008/api/trading/trades?limit=20');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data: TradeOrderData[] = await response.json();
+        
+        if (mounted) {
+          setTradeHistory(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError("Failed to fetch trade history");
+        } 
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return (
+    fetchTradeHistory();
+    
+    // Poll for updates every 10 seconds
+    const interval = setInterval(fetchTradeHistory, 10000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  return ( 
     <Tabs defaultValue="orders" className="w-full max-w-full">
       <TabsList className="flex flex-col flex-nowrap w-full gap-1 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:gap-2 min-w-[300px] p-0">
         <TabsTrigger
@@ -353,29 +362,41 @@ const PendingOrdersTable = ({ data }: { data: Order[] }) => (
   </div>
 );
 
-const TradeHistoryTable = ({ data }: { data: Trade[] }) => (
+const TradeHistoryTable = ({ data }: { data: TradeOrderData[] }) => (
   <div className="overflow-x-auto">
     <Table className="min-w-[600px]">
       <TableHeader>
         <TableRow>
           <TableHead className="text-xs sm:text-sm">Time</TableHead>
           <TableHead className="text-xs sm:text-sm">Asset</TableHead>
+          <TableHead className="text-xs sm:text-sm">Type</TableHead>
           <TableHead className="text-xs sm:text-sm">Side</TableHead>
           <TableHead className="text-xs sm:text-sm text-right">Price</TableHead>
-          <TableHead className="text-xs sm:text-sm text-right">Quantity</TableHead>
-          <TableHead className="text-xs sm:text-sm text-right">PNL</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Amount</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Status</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.map((trade, index) => (
-          <TableRow key={`${trade.asset}-${index}`} style={{ height: ROW_HEIGHT }}>
-            <TableCell className="text-xs sm:text-sm">{new Date(trade.time).toLocaleTimeString()}</TableCell>
-            <TableCell className="font-medium text-xs sm:text-sm">{trade.asset}</TableCell>
+        {data.map((trade) => (
+          <TableRow key={trade.id} style={{ height: ROW_HEIGHT }}>
+            <TableCell className="text-xs sm:text-sm">
+              {new Date(trade.createdAt).toLocaleString()}
+            </TableCell>
+            <TableCell className="font-medium text-xs sm:text-sm">
+              {trade.symbol}
+            </TableCell>
+            <TableCell className="text-xs sm:text-sm">
+              <Badge variant="outline" className="text-xs">
+                {trade.type}
+              </Badge>
+            </TableCell>
             <TableCell
-              className={`font-medium text-xs sm:text-sm ${trade.side === 'Buy' ? 'text-[#0b9981]' : 'text-red-500'}`}
+              className={`font-medium text-xs sm:text-sm ${
+                trade.side === 'BUY' ? 'text-[#0b9981]' : 'text-red-500'
+              }`}
             >
               <div className="flex items-center gap-1">
-                {trade.side === 'Buy' ? (
+                {trade.side === 'BUY' ? (
                   <ArrowUpRight className="h-3 sm:h-4 w-3 sm:w-4" />
                 ) : (
                   <ArrowDownRight className="h-3 sm:h-4 w-3 sm:w-4" />
@@ -383,12 +404,19 @@ const TradeHistoryTable = ({ data }: { data: Trade[] }) => (
                 {trade.side}
               </div>
             </TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">${trade.price.toLocaleString()}</TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">{trade.quantity}</TableCell>
-            <TableCell
-              className={`text-right text-xs sm:text-sm ${trade.pnl >= 0 ? 'text-[#0b9981]' : 'text-red-500'}`}
-            >
-              {trade.pnl.toFixed(2)}
+            <TableCell className="text-right text-xs sm:text-sm">
+              ${trade.price.toFixed(2)}
+            </TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">
+              {trade.amount.toFixed(4)}
+            </TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">
+              <Badge 
+                variant={trade.status === 'FILLED' ? 'default' : 'secondary'}
+                className={trade.status === 'FILLED' ? 'bg-[#0b9981]' : ''}
+              >
+                {trade.status}
+              </Badge>
             </TableCell>
           </TableRow>
         ))}

@@ -12,7 +12,7 @@
    - [Paper Trading](#paper-trading)
    - [Live Execution](#live-execution)
    - [Model Registry](#model-registry)
-   - [AI Code Assistant](#ai-code-assistant)
+   - [AI Code Assistant (Deprecated)](#ai-code-assistant)
 4. [SDK Components](#sdk-components)
 5. [Data Models](#data-models)
 6. [Error Handling](#error-handling)
@@ -457,49 +457,6 @@ Validates dataset quality and structure.
     },
     "completeness": 0.995,
     "consistency_score": 0.98
-  }
-}
-```
-
-#### Preview Dataset
-
-```http
-GET /api/datasets/{dataset_id}/preview
-```
-
-Gets a preview of dataset contents.
-
-**Query Parameters:**
-- `limit`: Number of records (default: 100, max: 1000)
-- `symbol`: Filter by symbol
-- `start_date`: Start date for preview
-- `end_date`: End date for preview
-
-**Response:**
-```json
-{
-  "records": [
-    {
-      "timestamp": "2024-01-15T10:00:00Z",
-      "symbol": "BTCUSDT",
-      "open": 42500.0,
-      "high": 42750.0,
-      "low": 42400.0,
-      "close": 42650.0,
-      "volume": 125.45
-    }
-  ],
-  "total_records": 150000,
-  "preview_count": 100,
-  "columns": ["timestamp", "symbol", "open", "high", "low", "close", "volume"],
-  "data_types": {
-    "timestamp": "datetime",
-    "symbol": "string",
-    "open": "float64",
-    "high": "float64",
-    "low": "float64",
-    "close": "float64",
-    "volume": "float64"
   }
 }
 ```
@@ -1101,75 +1058,7 @@ Retrieves model details and metadata.
 
 ### AI Code Assistant
 
-Endpoints for AI-powered code assistance and generation.
-
-#### Generate Strategy Code
-
-```http
-POST /api/ai-code/generate-strategy
-```
-
-Generates strategy code based on natural language description.
-
-**Request Body:**
-```json
-{
-  "description": "Create a mean reversion strategy using RSI indicator with 14-period lookback. Buy when RSI is below 30 and sell when above 70.",
-  "style": "professional",
-  "include_comments": true,
-  "target_symbols": ["BTCUSDT", "ETHUSDT"]
-}
-```
-
-**Response:**
-```json
-{
-  "generated_code": "from alphintra import BaseStrategy\nfrom alphintra.indicators import RSI\n\nclass RSIMeanReversionStrategy(BaseStrategy):\n    \"\"\"RSI Mean Reversion Strategy\"\"\"\n    \n    def initialize(self, context):\n        # Initialize RSI indicator with 14-period\n        self.rsi = RSI(period=14)\n        context.set_variable('position', 0)\n    \n    def on_bar(self, context):\n        # Calculate RSI for current symbol\n        current_rsi = self.rsi.calculate(context.market_data.get_bars())\n        \n        if current_rsi < 30 and context.get_variable('position') <= 0:\n            # Buy signal - RSI oversold\n            context.order_manager.market_order(context.symbol, 1.0)\n            context.set_variable('position', 1)\n            context.log(f'Buy signal: RSI={current_rsi:.2f}')\n            \n        elif current_rsi > 70 and context.get_variable('position') >= 0:\n            # Sell signal - RSI overbought  \n            context.order_manager.market_order(context.symbol, -1.0)\n            context.set_variable('position', -1)\n            context.log(f'Sell signal: RSI={current_rsi:.2f}')",
-  "explanation": "This strategy implements RSI mean reversion logic with the following features:\n- Uses 14-period RSI indicator\n- Generates buy signals when RSI < 30 (oversold)\n- Generates sell signals when RSI > 70 (overbought)\n- Maintains position state to avoid duplicate signals\n- Includes logging for trade decisions",
-  "suggested_parameters": {
-    "rsi_period": 14,
-    "oversold_threshold": 30,
-    "overbought_threshold": 70,
-    "position_size": 1.0
-  },
-  "confidence_score": 0.92
-}
-```
-
-#### Code Completion
-
-```http
-POST /api/ai-code/complete
-```
-
-Provides intelligent code completion suggestions.
-
-**Request Body:**
-```json
-{
-  "code": "from alphintra import BaseStrategy\n\nclass MyStrategy(BaseStrategy):\n    def on_bar(self, context):\n        data = context.market_data.get_bars()\n        sma_20 = data.close.rolling(",
-  "line": 5,
-  "column": 35
-}
-```
-
-**Response:**
-```json
-{
-  "completions": [
-    {
-      "text": "20).mean()",
-      "description": "Calculate 20-period simple moving average",
-      "type": "method_completion"
-    },
-    {
-      "text": "window=20).mean()",
-      "description": "Calculate rolling mean with explicit window parameter",
-      "type": "method_completion"
-    }
-  ]
-}
-```
+> **Deprecated**: The AI code assistant endpoints were removed from the public API as part of the security hardening effort. Requests routed through the frontend will now receive a message indicating that the assistant is unavailable.
 
 ## SDK Components
 

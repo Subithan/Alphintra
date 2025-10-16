@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface TradeOrderRepository extends JpaRepository<TradeOrder, Long> {
-    List<TradeOrder> findByBotIdOrderByCreatedAtDesc(Long botId);
+    // List<TradeOrder> findByBotIdOrderByCreatedAtDesc(Long botId);
+    List<TradeOrder> findAllByOrderByCreatedAtDesc();
 }

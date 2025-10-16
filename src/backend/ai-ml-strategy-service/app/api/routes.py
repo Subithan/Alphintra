@@ -6,7 +6,21 @@ from fastapi import APIRouter
 
 # Import endpoint routers
 
-from app.api.endpoints import strategies, templates, datasets, training, backtesting, paper_trading, live_execution, ai_code, model_registry, prediction, model_monitoring, hybrid_execution, research, files
+from app.api.endpoints import (
+    strategies,
+    templates,
+    datasets,
+    training,
+    backtesting,
+    paper_trading,
+    live_execution,
+    model_registry,
+    prediction,
+    model_monitoring,
+    hybrid_execution,
+    research,
+    files,
+)
 # feature_engineering temporarily disabled due to talib dependency
 # model_deployment and model_lifecycle temporarily disabled due to kubernetes dependency
 
@@ -34,10 +48,7 @@ api_router.include_router(paper_trading.router, tags=["Paper Trading"])
 api_router.include_router(live_execution.router, tags=["Live Execution"])
 # api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
 
-# Include AI Code endpoints
-api_router.include_router(ai_code.router, tags=["AI Code Assistant"])
-
-# Include Model Registry endpoints  
+# Include Model Registry endpoints
 api_router.include_router(model_registry.router, tags=["Model Registry"])
 
 # Include Model Deployment endpoints

@@ -9,7 +9,7 @@ from uuid import UUID
 import tempfile
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
@@ -19,8 +19,6 @@ from app.services.data_ingestion_service import DataIngestionService
 from app.services.dataset_validator import DatasetValidator
 from app.services.data_processor import DataProcessingService
 from app.services.dataset_catalog import DatasetCatalogService
-# Temporarily commented out to fix startup issues
-# from app.services.data_visualization import DataVisualizationService
 from app.services.storage_manager import StorageManager
 from app.models.dataset import AssetClass, DataSource, DataFrequency, DataFormat
 
@@ -31,7 +29,6 @@ data_ingestion_service = DataIngestionService()
 dataset_validator = DatasetValidator()
 data_processor = DataProcessingService()
 catalog_service = DatasetCatalogService()
-# visualization_service = DataVisualizationService()
 storage_manager = StorageManager()
 
 # Rate limiting
@@ -82,12 +79,6 @@ class ProcessingJobRequest(BaseModel):
 
 class ValidationRequest(BaseModel):
     dataset_id: str
-
-
-class ChartRequest(BaseModel):
-    dataset_id: str
-    chart_type: str = Field(..., min_length=1)
-    config: Dict[str, Any] = Field(default_factory=dict)
 
 
 class DatasetSearchRequest(BaseModel):
@@ -862,74 +853,6 @@ async def get_available_processors():
         )
 
 
-# Visualization Endpoints  
-@router.post("/{dataset_id}/charts")
-async def create_chart(
-    dataset_id: str,
-    request: ChartRequest,
-    user_id: UUID = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-    _: UUID = Depends(rate_limit)
-):
-    """Create a chart from dataset."""
-    try:
-        chart_config = request.config.copy()
-        chart_config["chart_type"] = request.chart_type
-        
-        # Temporary placeholder - visualization service disabled
-        result = {
-            "success": False,
-            "error": "Data visualization temporarily unavailable during service startup"
-        }
-        
-        if result.get("success"):
-            return result
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("error", "Chart creation failed")
-            )
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-
-@router.get("/{dataset_id}/preview")
-async def get_dataset_preview(
-    dataset_id: str,
-    user_id: UUID = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get dataset preview with sample data and charts."""
-    try:
-        # Temporary placeholder - visualization service disabled
-        result = {
-            "success": False,
-            "error": "Data visualization temporarily unavailable during service startup"
-        }
-        
-        if result.get("success"):
-            return result
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("error", "Preview creation failed")
-            )
-            
-    except HTTPException:
-        raise  
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-
 @router.get("/{dataset_id}/statistics")
 async def get_dataset_statistics(
     dataset_id: str,
@@ -950,23 +873,6 @@ async def get_dataset_statistics(
         
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-
-@router.get("/charts/types")
-async def get_chart_types():
-    """Get available chart types and their configurations."""
-    try:
-        # Temporary placeholder - visualization service disabled
-        return {
-            "chart_types": [],
-            "message": "Data visualization temporarily unavailable during service startup"
-        }
-        
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

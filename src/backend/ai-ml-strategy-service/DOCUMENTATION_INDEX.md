@@ -166,7 +166,6 @@ The AI/ML Strategy Service documentation is organized into three main categories
 - `POST /datasets/upload` - Upload dataset
 - `GET /datasets/{id}` - Get dataset details
 - `POST /datasets/{id}/validate` - Validate dataset
-- `GET /datasets/{id}/preview` - Preview data
 
 ### Model Training (`/api/training`)
 - `POST /training/jobs` - Create training job

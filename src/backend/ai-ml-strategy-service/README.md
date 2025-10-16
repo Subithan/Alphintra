@@ -121,12 +121,13 @@ When running in development mode, API documentation is available at:
 - `GET /api/datasets` - List datasets
 - `POST /api/datasets/upload` - Upload custom dataset
 - `POST /api/datasets/{id}/validate` - Validate dataset
-- `GET /api/datasets/{id}/preview` - Preview dataset
 
 #### Model Training
 - `POST /api/training/jobs` - Create training job
 - `GET /api/training/jobs/{id}` - Get training job status
 - `POST /api/training/hyperparameter-tune` - Start hyperparameter tuning
+
+> **Note:** Training jobs are dispatched asynchronously to the configured orchestration backend. The service publishes job specifications to Vertex AI (or another compatible orchestrator) and relies on callback URLs or polling to track progress and completion.
 
 #### Backtesting
 - `POST /api/backtests` - Create backtest
@@ -149,6 +150,10 @@ Key configuration options (see `.env.example` for complete list):
 - `GCP_PROJECT_ID`: Google Cloud Project ID
 - `MLFLOW_TRACKING_URI`: MLflow tracking server URI
 - `SECRET_KEY`: JWT signing secret
+- `TRAINING_ORCHESTRATOR_URL`: Base URL for the external training orchestration service (e.g., Vertex AI proxy)
+- `TRAINING_JOB_QUEUE_TOPIC`: Optional message queue topic for fire-and-forget submissions when no HTTP endpoint is available
+- `TRAINING_ORCHESTRATOR_TOKEN`: Optional bearer token used when calling the orchestration service
+- `TRAINING_CALLBACK_BASE_URL`: Public URL where the orchestration service can send progress/completion callbacks
 
 ### Database Migrations
 

@@ -24,7 +24,7 @@ from app.models.execution import (
 from app.models.strategy import Strategy
 from app.services.live_execution_engine import live_execution_engine
 from app.services.strategy_orchestrator import strategy_orchestrator
-from app.services.broker_integration import broker_integration_service
+from app.services.broker_integration import trading_engine_client
 from app.services.market_data_service import market_data_service
 from app.database.connection import get_db_session
 
@@ -495,10 +495,10 @@ class DeploymentManager:
             deployment["execution"] = execution
         
         elif step == "initialize_broker_connection":
-            # Initialize broker connection for the environment
-            success = await broker_integration_service.initialize_environment(config.environment_id)
+            # Initialize trading engine session for the environment
+            success = await trading_engine_client.initialize_environment(config.environment_id)
             if not success:
-                raise Exception("Failed to initialize broker connection")
+                raise Exception("Failed to initialize trading engine session")
         
         elif step == "setup_market_data_feeds":
             # Subscribe to market data for symbols
@@ -571,7 +571,8 @@ class DeploymentManager:
         elif step == "disconnect_broker":
             if "execution" in deployment:
                 environment_id = deployment["execution"].environment_id
-                await broker_integration_service.disconnect_environment(environment_id)
+                # Maintain compatibility with historical step name while delegating to the trading engine
+                await trading_engine_client.disconnect_environment(environment_id)
         
         elif step == "cleanup_resources":
             # Cleanup any allocated resources

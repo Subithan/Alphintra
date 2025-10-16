@@ -110,9 +110,9 @@
    - The system shall ensure the secure storage and access control of user-uploaded datasets, allowing users to access only their own data.
    - **Explanation:** Custom datasets uploaded by a trader will be kept private and secure, typically using cloud storage, so only the uploader can use them.
 
-8. **Data Visualization Tool**
-   - The system shall provide a simple data visualization tool for traders to get a quick visual overview (e.g., price line chart, volume bar chart) of selected platform-provided or user-uploaded datasets before using them.
-   - **Explanation:** Traders can quickly plot the data they've chosen or uploaded to see basic charts (like price trends). This helps them confirm it's the right data or spot obvious issues before training or testing.
+8. **Data Visualization Tool (Future Enhancement)**
+   - The platform roadmap includes adding a simple data visualization tool for traders to get a quick visual overview (e.g., price line chart, volume bar chart) of selected datasets. This capability is not part of the current supported feature set.
+   - **Explanation:** Traders will eventually be able to quickly plot chosen or uploaded data to confirm it is correct. Until that enhancement is delivered, users should rely on external tools or the dataset statistics provided by the platform.
 
 ### B. Model Training Process
 
