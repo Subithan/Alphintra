@@ -404,7 +404,10 @@ export default function TicketAssignmentPanel({
           <div className="space-y-4">
             <div>
               <Label htmlFor="targetLevel">Target Level</Label>
-              <Select value={targetLevel} onValueChange={setTargetLevel}>
+              <Select
+                value={targetLevel}
+                onValueChange={(value) => setTargetLevel(value as AgentLevel)}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select escalation level" />
                 </SelectTrigger>

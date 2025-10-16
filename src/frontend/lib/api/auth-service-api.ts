@@ -1,7 +1,6 @@
 // file path: "D:\Alphintra\Alphintra\src\frontend\lib\api\auth-service-api.ts"
 
 import axios from 'axios';
-import type { AxiosInstance } from 'axios';
 import { gatewayHttpBaseUrl } from '../config/gateway';
 
 
@@ -43,7 +42,7 @@ export interface AuthResponse {
 }
 
 export class AuthServiceApiClient {
-  private api: AxiosInstance;
+  private api: ReturnType<typeof axios.create>;
 
   constructor() {
     this.api = axios.create({

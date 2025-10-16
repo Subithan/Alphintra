@@ -729,6 +729,20 @@ export class ConfigurationManager {
               position_sizing_method: 'volatility_adjusted',
               volatility_lookback_days: 30,
               rebalance_threshold: 3
+            },
+            stop_loss: {
+              default_stop_loss: 5,
+              max_stop_loss: 10,
+              trailing_stop_enabled: true,
+              atr_multiplier: 2,
+              volatility_adjusted: true
+            },
+            drawdown_protection: {
+              max_portfolio_drawdown: 12,
+              max_strategy_drawdown: 8,
+              emergency_stop_enabled: true,
+              recovery_threshold: 5,
+              position_reduction_factor: 0.5
             }
           }
         },
@@ -759,6 +773,20 @@ export class ConfigurationManager {
               position_sizing_method: 'kelly',
               volatility_lookback_days: 10,
               rebalance_threshold: 10
+            },
+            stop_loss: {
+              default_stop_loss: 10,
+              max_stop_loss: 20,
+              trailing_stop_enabled: true,
+              atr_multiplier: 3,
+              volatility_adjusted: true
+            },
+            drawdown_protection: {
+              max_portfolio_drawdown: 25,
+              max_strategy_drawdown: 18,
+              emergency_stop_enabled: true,
+              recovery_threshold: 10,
+              position_reduction_factor: 0.7
             }
           }
         },
@@ -775,25 +803,85 @@ export class ConfigurationManager {
         category: 'trading_style',
         configuration: {
           trading: {
+            default_execution_mode: 'paper',
+            order_management: {
+              default_order_type: 'market',
+              default_time_in_force: 'ioc',
+              max_order_size: 100000,
+              min_order_size: 100,
+              price_precision: 2,
+              quantity_precision: 4
+            },
             execution_timing: {
               max_execution_delay_ms: 100,
               order_timeout_seconds: 5,
               cancel_timeout_seconds: 2,
               retry_attempts: 5,
               retry_delay_ms: 200
+            },
+            market_hours: {
+              pre_market_start: '07:00',
+              market_open: '09:30',
+              market_close: '16:00',
+              after_hours_end: '20:00',
+              trading_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+              holidays: ['2024-01-01', '2024-12-25']
             }
           },
           data: {
+            providers: {
+              primary_provider: 'polygon',
+              backup_providers: ['alpaca'],
+              data_quality_threshold: 0.98,
+              latency_threshold_ms: 250,
+              reconnection_attempts: 3,
+              reconnection_delay_ms: 2000
+            },
+            storage: {
+              historical_data_retention_days: 30,
+              real_time_buffer_size: 2000,
+              compression_enabled: true,
+              backup_frequency: 'daily',
+              local_storage_path: './day-trader-data',
+              cloud_storage_enabled: true
+            },
             subscriptions: {
               default_timeframes: ['1s', '1m', '5m'],
+              data_types: ['trades', 'order_book', 'quotes'],
+              symbols_per_provider: 50,
               streaming_buffer_size: 5000,
               batch_size: 10
             }
           },
           ui: {
+            layout: {
+              default_layout: 'compact',
+              sidebar_width: 220,
+              panel_heights: { chart: 420, table: 260, alerts: 180 },
+              auto_hide_panels: true,
+              responsive_breakpoints: { mobile: 640, tablet: 960, desktop: 1280 }
+            },
             charts: {
+              default_chart_type: 'candlestick',
+              default_timeframe: '1m',
+              max_indicators_per_chart: 8,
               chart_update_interval_ms: 100,
-              default_timeframe: '1m'
+              price_precision: 2,
+              volume_display: true
+            },
+            tables: {
+              rows_per_page: 25,
+              auto_refresh_interval: 2000,
+              sort_persistence: true,
+              filter_persistence: true,
+              export_formats: ['csv', 'json']
+            },
+            notifications: {
+              position: 'top-right',
+              auto_dismiss_time: 3000,
+              max_notifications: 5,
+              sound_enabled: true,
+              vibration_enabled: false
             }
           }
         },
@@ -952,7 +1040,7 @@ export class ConfigurationManager {
       result.warnings.push({
         field: 'general.session_timeout',
         message: 'Long session timeout in production environment',
-        impact: 'security',
+        impact: 'risk',
         recommendation: 'Consider shorter session timeout for production'
       });
     }

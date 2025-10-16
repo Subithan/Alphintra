@@ -52,6 +52,7 @@ export interface TrainingJobState {
   status:
     | "queued"
     | "running"
+    | "paused"
     | "completed"
     | "failed"
     | "cancelled"

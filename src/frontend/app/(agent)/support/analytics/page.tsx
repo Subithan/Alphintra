@@ -16,7 +16,10 @@ export default function SupportAnalyticsPage() {
     id: 'dev-agent',
     email: 'dev-agent@alphintra.com',
     name: 'Development Agent',
-    role: 'agent'
+    role: 'agent',
+    roles: ['SUPPORT_AGENT', 'SUPPORT_MANAGER'],
+    agentLevel: 'L4_MANAGER',
+    agentId: 'dev-agent'
   };
   const isLoading = false;
   const [mounted, setMounted] = useState(false);

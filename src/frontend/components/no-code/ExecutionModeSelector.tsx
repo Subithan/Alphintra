@@ -13,9 +13,9 @@ import { Switch } from '@/components/ui/switch'
 import { AlertCircle, Clock, Zap, Settings, TrendingUp, Brain, CheckCircle, ArrowRight, GitMerge, History, Clipboard, Search, ShieldCheck, AreaChart, Server, Layers } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-type ExecutionMode = 'strategy' | 'model' | 'hybrid' | 'backtesting' | 'paper_trading' | 'research';
+export type ExecutionMode = 'strategy' | 'model' | 'hybrid' | 'backtesting' | 'paper_trading' | 'research';
 
-interface ExecutionModeConfig {
+export interface ExecutionModeConfig {
   // Common
   risk_management?: {
     max_drawdown?: number;
@@ -60,8 +60,8 @@ interface ExecutionModeConfig {
   export_data_format?: 'csv' | 'json' | 'parquet';
 }
 
-interface ExecutionModeSelectorProps {
-  workflowId: number
+export interface ExecutionModeSelectorProps {
+  workflowId: string | number
   workflowName: string
   workflowComplexity?: 'simple' | 'medium' | 'complex'
   onModeSelect: (mode: ExecutionMode, config: ExecutionModeConfig) => void

@@ -25,7 +25,8 @@ import {
   Clock,
   Users,
   Briefcase,
-  Globe
+  Globe,
+  Pause
 } from 'lucide-react';
 import {
   PortfolioOrchestrator,
@@ -35,8 +36,7 @@ import {
 } from '@/lib/portfolio-orchestrator';
 import {
   AdvancedRiskManager,
-  RiskMetrics,
-  PortfolioRiskMetrics
+  RiskMetrics
 } from '@/lib/advanced-risk-manager';
 
 interface PortfolioAnalyticsDashboardProps {

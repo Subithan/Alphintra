@@ -46,6 +46,7 @@ export interface Workflow {
   validation_errors: any[];
   deployment_status: string;
   execution_mode: "backtest" | "paper_trade" | "live_trade";
+  execution_metadata?: Record<string, any>;
   version: number;
   parent_workflow_id?: number;
   is_template: boolean;

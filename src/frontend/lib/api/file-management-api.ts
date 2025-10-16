@@ -226,7 +226,7 @@ export class FileManagementApi extends BaseApiClient {
   }
 
   // Health check for file management service
-  async healthCheck(): Promise<{ status: string; service: string }> {
+  async getHealthStatus(): Promise<{ status: string; service: string }> {
     return this.get<{ status: string; service: string }>('/health');
   }
 
