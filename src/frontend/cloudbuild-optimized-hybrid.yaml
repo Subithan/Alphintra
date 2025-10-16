@@ -99,6 +99,8 @@ steps:
     id: 'build-image'
     args:
       - 'build'
+      - '--target'
+      - 'production'
       - '-f'
       - 'Dockerfile'
       # Tag the image with the unique BUILD_ID
