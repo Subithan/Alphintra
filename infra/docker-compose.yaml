@@ -1,3 +1,4 @@
+# Alphintra local development stack
 version: '3.8'
 
 services:
