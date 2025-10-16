@@ -1,13 +1,16 @@
 name: Deploy auth-service to Dev
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'src/backend/auth-service/**'
-      - 'infra/kubernetes/environments/dev/**'
-      - '.github/workflows/cd-dev-auth-service.yml'
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'alphintra-472817' }}

@@ -1,18 +1,7 @@
 name: Platform CI
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'src/backend/**'
-      - 'src/frontend/**'
-      - '.github/workflows/ci-backend.yml'
-  pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'src/backend/**'
-      - 'src/frontend/**'
-      - '.github/workflows/ci-backend.yml'
+  workflow_dispatch:
 
 env:
   JAVA_VERSION: '17'
@@ -95,7 +84,7 @@ jobs:
   cloud-build:
     name: Trigger Cloud Build
     needs: [ backend, frontend, security ]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT != ''
+    if: secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT != ''
     runs-on: ubuntu-latest
     strategy:
       matrix:
