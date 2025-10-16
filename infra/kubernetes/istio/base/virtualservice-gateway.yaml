@@ -7,6 +7,8 @@ spec:
   hosts:
     - "alphintra.local"
     - "*.alphintra.dev"
+    - "alphintra.com"
+    - "api.alphintra.com"
   gateways:
     - alphintra-ingress-gateway
   http:

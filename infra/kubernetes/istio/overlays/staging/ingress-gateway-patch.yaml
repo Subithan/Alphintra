@@ -5,11 +5,20 @@ metadata:
   namespace: istio-system
 spec:
   servers:
-    - hosts:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
         - "staging.alphintra.dev"
         - "staging.alphintra.cloud"
-    - hosts:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
         - "staging.alphintra.dev"
         - "staging.alphintra.cloud"
       tls:
+        mode: SIMPLE
         credentialName: staging-alphintra-gateway-tls
