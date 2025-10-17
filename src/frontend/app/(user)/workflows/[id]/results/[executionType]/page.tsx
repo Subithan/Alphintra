@@ -37,7 +37,7 @@ import {
   Share,
 } from "lucide-react";
 
-interface ExecutionResultsPageParams {
+interface ExecutionResultsPageParams extends Record<string, string> {
   id: string; // workflow id
   executionType: "strategy" | "training";
 }
@@ -88,12 +88,12 @@ interface TrainingResults {
 }
 
 export default function ExecutionResultsPage() {
-  const params = useParams() as ExecutionResultsPageParams;
+  const params = useParams<ExecutionResultsPageParams>();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const workflowId = params.id;
-  const executionType = params.executionType as "strategy" | "training";
+  const executionType = params.executionType;
 
   const [results, setResults] = useState<
     StrategyResults | TrainingResults | null

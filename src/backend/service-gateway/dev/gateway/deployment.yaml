@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-gateway
+  labels:
+    app: service-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-gateway
+  template:
+    metadata:
+      labels:
+        app: service-gateway
+    spec:
+      serviceAccountName: service-gateway
+      containers:
+        - name: service-gateway
+          image: gcr.io/alphintra-472817/service-gateway:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: service-gateway-config
+            - secretRef:
+                name: service-gateway-secrets
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: cloud
+            - name: SERVER_PORT
+              value: "8080"
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: service-gateway-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: service-gateway-config
+                  key: REDIS_PORT
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 120
+            failureThreshold: 12
+            periodSeconds: 10
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 2000

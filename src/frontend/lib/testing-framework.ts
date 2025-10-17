@@ -26,7 +26,7 @@ export interface TestCase {
   case_id: string;
   name: string;
   description: string;
-  test_type: 'strategy' | 'indicator' | 'risk' | 'portfolio' | 'data' | 'ui' | 'api';
+  test_type: 'strategy' | 'indicator' | 'risk' | 'portfolio' | 'data' | 'ui' | 'api' | 'performance';
   test_data: TestData;
   expected_results: ExpectedResults;
   assertions: Assertion[];
@@ -892,7 +892,11 @@ export class TestingFramework {
         quantity: Math.floor(Math.random() * 100) + 10,
         price: 150 + Math.random() * 20,
         confidence: Math.random() * 0.4 + 0.6,
-        metadata: {}
+        metadata: {
+          indicators: {},
+          conditions: {},
+          logic_results: {}
+        }
       });
     }
 
@@ -1144,13 +1148,16 @@ export class TestingFramework {
       return { success: false, message: `Expected at most ${expected.max_signals} signals but got ${signalCount}` };
     }
 
-    // Check performance bounds
-    if (expected.performance_bounds && actual?.performance_metrics) {
+    // Check timing constraints
+    if (expected.timing_constraints && actual?.performance_metrics) {
       const perf = actual.performance_metrics;
-      const bounds = expected.performance_bounds;
-      
-      if (bounds.max_execution_time_ms !== undefined && perf.execution_time_ms > bounds.max_execution_time_ms) {
-        return { success: false, message: `Execution time ${perf.execution_time_ms}ms exceeded limit ${bounds.max_execution_time_ms}ms` };
+      const timing = expected.timing_constraints;
+
+      if (timing.max_execution_time_ms !== undefined && perf.execution_time_ms > timing.max_execution_time_ms) {
+        return {
+          success: false,
+          message: `Execution time ${perf.execution_time_ms}ms exceeded limit ${timing.max_execution_time_ms}ms`
+        };
       }
     }
 

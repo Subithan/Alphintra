@@ -1,14 +1,15 @@
 // Integration test for the no-code API client
 // This tests the API client structure and type definitions
 
-import { 
-  NoCodeApiClient, 
-  type Workflow, 
+import {
+  NoCodeApiClient,
+  type Workflow,
   type WorkflowCreate,
   type ExecutionConfig,
   type Component,
-  type Template 
+  type Template
 } from './no-code-api';
+import { buildGatewayUrl } from '../config/gateway';
 
 // Mock fetch for testing
 const mockFetch = jest.fn();
@@ -65,7 +66,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.createWorkflow(workflowCreate);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows',
+        buildGatewayUrl('/api/workflows'),
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -90,7 +91,7 @@ describe('NoCodeApiClient', () => {
       await client.getWorkflows(filters);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows?category=custom&limit=10',
+        buildGatewayUrl('/api/workflows?category=custom&limit=10'),
         expect.any(Object)
       );
     });
@@ -115,7 +116,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.compileWorkflow('test-uuid');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows/test-uuid/compile',
+        buildGatewayUrl('/api/workflows/test-uuid/compile'),
         expect.objectContaining({
           method: 'POST',
         })
@@ -162,7 +163,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.executeWorkflow('test-uuid', config);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/api/workflows/test-uuid/execute',
+        buildGatewayUrl('/api/workflows/test-uuid/execute'),
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(config),
@@ -210,7 +211,7 @@ describe('NoCodeApiClient', () => {
       const result = await client.healthCheck();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8004/health',
+        buildGatewayUrl('/health'),
         expect.any(Object)
       );
 

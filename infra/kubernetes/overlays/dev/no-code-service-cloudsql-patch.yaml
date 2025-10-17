@@ -23,6 +23,7 @@ spec:
         args:
           - "--port=5432"
           - "--address=0.0.0.0"
+          - "--private-ip"
           - "alphintra-472817:us-central1:alphintra-db-instance"
         securityContext:
           runAsNonRoot: true

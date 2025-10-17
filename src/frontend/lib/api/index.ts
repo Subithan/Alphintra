@@ -6,6 +6,7 @@ import { strategyApi } from './strategy-api';
 import { marketDataApi } from './market-data-api';
 import { riskManagementApi } from './risk-management-api';
 import { noCodeApiClient } from './no-code-api';
+import { gatewayHttpBaseUrl } from '../config/gateway';
 
 // Re-export for external use
 export { BaseApiClient, ApiError, type ApiConfig, type ApiResponse } from './api-client';
@@ -64,11 +65,11 @@ class AuthApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8009';
+    this.baseUrl = gatewayHttpBaseUrl;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const url = `${this.baseUrl.replace(/\/+$/, '')}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     
     const response = await fetch(url, {
       headers: {

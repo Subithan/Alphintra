@@ -2,6 +2,7 @@
 // Handles all API calls related to workflow management, compilation, and execution
 
 import { BaseApiClient } from "./api-client";
+import { gatewayHttpBaseUrl } from "../config/gateway";
 
 // Types for No-Code API
 export interface WorkflowNode {
@@ -45,6 +46,7 @@ export interface Workflow {
   validation_errors: any[];
   deployment_status: string;
   execution_mode: "backtest" | "paper_trade" | "live_trade";
+  execution_metadata?: Record<string, any>;
   version: number;
   parent_workflow_id?: number;
   is_template: boolean;
@@ -210,8 +212,7 @@ export interface TemplateFilters {
 export class NoCodeApiClient extends BaseApiClient {
   constructor() {
     super({
-      baseUrl:
-        process.env.NEXT_PUBLIC_NOCODE_API_URL || "http://localhost:8006",
+      baseUrl: gatewayHttpBaseUrl,
     });
 
     // Debug logging only in development mode and when explicitly enabled

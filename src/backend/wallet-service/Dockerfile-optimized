@@ -1,0 +1,91 @@
+# Optimized Multi-Stage Dockerfile for Wallet Service
+# This Dockerfile is optimized for Cloud Build with Python caching
+# It includes database auto-initialization and follows security best practices
+
+# Build stage with Python cache optimization
+FROM python:3.11-slim AS builder
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better layer caching
+COPY requirements.txt .
+
+# Install Python dependencies with optimization
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir -r requirements.txt
+
+# Runtime stage with minimal attack surface
+FROM python:3.11-slim AS runtime
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r walletservice && useradd -r -g walletservice walletservice
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python packages from builder stage
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application files
+COPY requirements.txt .
+COPY main.py .
+COPY database.py .
+COPY models.py .
+COPY init_database.py .
+
+# Copy database initialization script
+COPY init_database.py /app/init_database.py
+
+# Create a simple entrypoint script that handles database initialization
+RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
+    echo 'set -e' >> /app/entrypoint.sh && \
+    echo '' >> /app/entrypoint.sh && \
+    echo '# Auto-initialize database if DATABASE_URL is set' >> /app/entrypoint.sh && \
+    echo 'if [ -n "$DATABASE_URL" ]; then' >> /app/entrypoint.sh && \
+    echo '    echo "🔍 Auto-initializing database if needed..."' >> /app/entrypoint.sh && \
+    echo '    python3 /app/init_database.py || echo "⚠️  Database initialization failed or not needed"' >> /app/entrypoint.sh && \
+    echo 'else' >> /app/entrypoint.sh && \
+    echo '    echo "⚠️  DATABASE_URL not set, skipping database initialization"' >> /app/entrypoint.sh && \
+    echo 'fi' >> /app/entrypoint.sh && \
+    echo '' >> /app/entrypoint.sh && \
+    echo 'echo "🚀 Starting Wallet Service application..."' >> /app/entrypoint.sh && \
+    echo 'exec "$@"' >> /app/entrypoint.sh
+# Make entrypoint script executable  
+RUN chmod +x /app/entrypoint.sh
+
+# Change ownership to non-root user
+RUN chown -R walletservice:walletservice /app
+
+# Set environment variables with defaults
+ENV DATABASE_URL=postgresql://wallet_service:alphintra@123@localhost:5432/alphintra_wallet_service
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV SKIP_DB_INIT=false
+
+# Switch to non-root user
+USER walletservice
+
+# Health check configuration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8011/health || exit 1
+
+# Expose application port
+EXPOSE 8011
+
+# Start the application with database initialization
+ENTRYPOINT ["/app/entrypoint.sh", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8011"]

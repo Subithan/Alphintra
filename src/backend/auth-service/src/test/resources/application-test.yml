@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: auth-service-test
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+jwt:
+  secret: ${JWT_SECRET_FOR_TESTS:ZmFrZS1qd3Qtc2VjcmV0LXN1ZmZpY2llbnRseS1sb25nLXN0cmluZw==}
+  expiration: 3600000

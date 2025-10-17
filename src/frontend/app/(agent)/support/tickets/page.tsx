@@ -17,7 +17,10 @@ export default function TicketAssignmentPage() {
     id: 'dev-agent',
     email: 'dev-agent@alphintra.com',
     name: 'Development Agent',
-    role: 'agent'
+    role: 'agent',
+    roles: ['SUPPORT_AGENT'],
+    agentLevel: AgentLevel.L2,
+    agentId: 'dev-agent'
   };
   const isLoading = false;
   const [mounted, setMounted] = useState(false);

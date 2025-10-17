@@ -795,12 +795,20 @@ function CoinField() {
       {indices.map((materialIndex, index) => (
         <group key={index}>
           <sprite
-            ref={(el) => (glowRef.current[index] = el as THREE.Sprite)}
+            ref={(el) => {
+              if (el) {
+                glowRef.current[index] = el as THREE.Sprite;
+              }
+            }}
             material={glowMaterials[materialIndex]}
             position={[0, 0, -2.401]}
           />
           <sprite
-            ref={(el) => (spritesRef.current[index] = el as THREE.Sprite)}
+            ref={(el) => {
+              if (el) {
+                spritesRef.current[index] = el as THREE.Sprite;
+              }
+            }}
             material={materials[materialIndex]}
             position={[0, 0, -2.4]}
           />

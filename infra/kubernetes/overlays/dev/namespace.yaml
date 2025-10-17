@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: alphintra-platform
     app.kubernetes.io/managed-by: kustomize
-    istio-injection: disabled
+    istio-injection: enabled
   annotations:
     pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: baseline

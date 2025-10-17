@@ -1,6 +1,8 @@
 // API service for strategy-related operations
 // This replaces direct database access with proper API calls
 
+import { gatewayHttpBaseUrl } from '../config/gateway';
+
 export interface StrategyData {
   id: string;
   name: string;
@@ -60,12 +62,13 @@ class StrategyApiService {
   private baseUrl: string;
 
   constructor() {
-    // Use environment variable or default to backend service
-    this.baseUrl = process.env.NEXT_PUBLIC_STRATEGY_API_URL || 'http://localhost:8003';
+    // Route through the gateway
+    this.baseUrl = gatewayHttpBaseUrl;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const base = this.baseUrl.replace(/\/+$/, '');
+    const url = `${base}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     
     const response = await fetch(url, {
       headers: {

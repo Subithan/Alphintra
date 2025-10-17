@@ -24,7 +24,7 @@ import {
   Shield,
   Database,
   Cpu,
-  Memory,
+  Server,
   Wifi,
   WifiOff,
   RefreshCw,
@@ -712,7 +712,9 @@ export function AdvancedStrategyDashboard({
                           <div className="mt-4">
                             <PerformanceAnalytics
                               executionResults={[]} // Would be populated with actual results
-                              isRunning={strategy.status === 'running'}
+                              isExecuting={strategy.status === 'running'}
+                              onStartExecution={() => {}}
+                              onStopExecution={() => {}}
                               onClearHistory={() => {}}
                             />
                           </div>
@@ -939,7 +941,7 @@ export function AdvancedStrategyDashboard({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Memory className="h-5 w-5" />
+                  <Server className="h-5 w-5" />
                   <span>Resource Monitor</span>
                 </CardTitle>
               </CardHeader>

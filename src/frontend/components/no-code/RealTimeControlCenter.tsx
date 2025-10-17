@@ -90,6 +90,22 @@ interface SystemMetrics {
   success_rate: number;
 }
 
+type NormalizedAlert = {
+  alert_id: string;
+  timestamp: Date;
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  message: string;
+  category: string;
+  type?: string;
+  provider?: string;
+  source?: string;
+  symbol?: string;
+  auto_resolved: boolean;
+  resolution_action?: string;
+  source_type: 'orchestration' | 'data';
+  raw: OrchestrationAlert | DataAlert;
+};
+
 export function RealTimeControlCenter({
   orchestrationEngine,
   dataEngine,
@@ -318,19 +334,49 @@ export function RealTimeControlCenter({
     }
   };
 
-  const filteredAlerts = () => {
-    const allAlerts = [
-      ...(orchestrationState?.alerts || []).map(a => ({ ...a, source_type: 'orchestration' })),
-      ...dataAlerts.map(a => ({ ...a, source_type: 'data' }))
-    ];
+  const filteredAlerts = (): NormalizedAlert[] => {
+    const orchestrationAlerts: NormalizedAlert[] = (orchestrationState?.alerts || []).map(
+      (alert) => ({
+        alert_id: alert.alert_id,
+        timestamp: alert.timestamp,
+        severity: alert.severity,
+        message: alert.message,
+        category: alert.category,
+        type: alert.details?.type,
+        provider: alert.source,
+        source: alert.source,
+        auto_resolved: alert.auto_resolved,
+        resolution_action: alert.resolution_action,
+        source_type: 'orchestration',
+        raw: alert,
+      }),
+    );
 
-    return allAlerts.filter(alert => {
+    const dataEngineAlerts: NormalizedAlert[] = dataAlerts.map((alert) => ({
+      alert_id: alert.alert_id,
+      timestamp: alert.timestamp,
+      severity: alert.severity,
+      message: alert.message,
+      category: 'data',
+      type: alert.type,
+      provider: alert.provider,
+      source: alert.provider,
+      symbol: alert.symbol,
+      auto_resolved: alert.auto_resolved,
+      source_type: 'data',
+      raw: alert,
+    }));
+
+    const allAlerts = [...orchestrationAlerts, ...dataEngineAlerts];
+
+    return allAlerts.filter((alert) => {
       const severityMatch = controlState.alertFilters.severity.includes(alert.severity);
-      const categoryMatch = controlState.alertFilters.category.includes(alert.category || alert.type);
-      const searchMatch = searchTerm === '' || 
-        alert.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (alert.provider || alert.source).toLowerCase().includes(searchTerm.toLowerCase());
-      
+      const categoryMatch = controlState.alertFilters.category.includes(alert.category);
+      const haystack = `${alert.message} ${alert.provider ?? ''} ${alert.source ?? ''}`;
+      const searchMatch =
+        searchTerm.trim() === '' ||
+        haystack.toLowerCase().includes(searchTerm.toLowerCase());
+
       return severityMatch && categoryMatch && searchMatch;
     });
   };
@@ -428,8 +474,8 @@ export function RealTimeControlCenter({
           <div className="max-h-64 overflow-y-auto space-y-2">
             {alerts.slice(0, 20).map((alert, index) => (
               <div
-                key={`${alert.alert_id || alert.source}-${index}`}
-                onClick={() => onAlertClick(alert as any)}
+                key={alert.alert_id ?? `${alert.source}-${index}`}
+                onClick={() => onAlertClick(alert.raw)}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
               >
                 <div className="flex items-center space-x-3">
@@ -460,7 +506,7 @@ export function RealTimeControlCenter({
                     {alert.severity}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {alert.category || alert.type}
+                    {alert.category}
                   </Badge>
                 </div>
               </div>

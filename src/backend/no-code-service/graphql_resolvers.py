@@ -2,6 +2,7 @@ import strawberry
 from strawberry.types import Info
 from typing import List, Optional, Dict, Any, AsyncGenerator
 from datetime import datetime
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from models import NoCodeWorkflow, NoCodeExecution, NoCodeComponent, NoCodeTemplate, User
@@ -19,6 +20,9 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 
+from app.core.config import get_settings
+from app.services import workflows as workflow_service
+
 # Get database session from context
 def get_db_session(info: Info) -> Session:
     return info.context["db_session"]
@@ -29,6 +33,7 @@ def get_current_user(info: Info) -> User:
 
 # Initialize workflow compiler
 workflow_compiler = WorkflowCompiler()
+settings = get_settings()
 
 @strawberry.type
 class Query:
@@ -42,15 +47,12 @@ class Query:
         db = get_db_session(info)
         current_user = get_current_user(info)
         
-        # Build base query
-        query = db.query(NoCodeWorkflow).filter(
-            or_(
-                NoCodeWorkflow.user_id == current_user.id,
-                NoCodeWorkflow.is_public == True
-            )
+        query = workflow_service.accessible_workflows_query(
+            db,
+            current_user,
+            dev_mode=settings.dev_mode,
         )
-        
-        # Apply filters
+
         if filters:
             if filters.category:
                 query = query.filter(NoCodeWorkflow.category == filters.category)
@@ -64,22 +66,19 @@ class Query:
                         NoCodeWorkflow.description.ilike(search_term)
                     )
                 )
-        
-        # Get total count
+
         total = query.count()
-        
-        # Apply pagination
+
         if filters:
             if filters.skip:
                 query = query.offset(filters.skip)
             if filters.limit:
                 query = query.limit(filters.limit)
             else:
-                query = query.limit(100)  # Default limit
+                query = query.limit(100)
         else:
             query = query.limit(100)
-        
-        # Execute query
+
         workflows = query.order_by(NoCodeWorkflow.updated_at.desc()).all()
         
         # Convert to GraphQL types
@@ -103,17 +102,16 @@ class Query:
         db = get_db_session(info)
         current_user = get_current_user(info)
         
-        workflow = db.query(NoCodeWorkflow).filter(
-            NoCodeWorkflow.uuid == workflow_id,
-            or_(
-                NoCodeWorkflow.user_id == current_user.id,
-                NoCodeWorkflow.is_public == True
+        try:
+            workflow = workflow_service.ensure_workflow_access(
+                db,
+                workflow_id,
+                current_user,
+                dev_mode=settings.dev_mode,
             )
-        ).first()
-        
-        if not workflow:
+        except HTTPException:
             return None
-        
+
         return convert_db_workflow_to_graphql(workflow)
     
     @strawberry.field
