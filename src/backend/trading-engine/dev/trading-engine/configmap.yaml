@@ -14,7 +14,6 @@ data:
   DATABASE_HOST: "127.0.0.1"
   DATABASE_PORT: "5432"
   DATABASE_NAME: "alphintra_trading_engine"
-  DATABASE_URL: "postgresql://trading_engine:alphintra@123@127.0.0.1:5432/alphintra_trading_engine"
 
   # Redis Configuration
   REDIS_HOST: "redis-service.alphintra.svc.cluster.local"
@@ -54,4 +53,4 @@ data:
   SPRING_DATA_REDIS_CONNECT_TIMEOUT: "2000ms"
 
   # Application Settings
-  SKIP_DB_INIT: "false"
+  SKIP_DB_INIT: "true"

@@ -10,8 +10,9 @@ spec:
       - name: cloud-sql-proxy
         image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.10.1
         args:
+          - "--structured-logs"
           - "--port=5432"
-          - "--address=127.0.0.1"
+          - "--address=0.0.0.0"
           - "--private-ip"
           - "alphintra-472817:us-central1:alphintra-db-instance"
         securityContext:
