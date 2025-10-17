@@ -132,6 +132,9 @@ class GatewayIntegrationTest {
       assertThat(request).isNotNull();
       assertThat(request.getPath()).isEqualTo("/api/trading/orders");
       assertThat(request.getHeader("X-User-Id")).isEqualTo("demo-user");
+      // Verify that the original Authorization header is forwarded
+      assertThat(request.getHeader(HttpHeaders.AUTHORIZATION)).isEqualTo("Bearer " + token);
+      assertThat(request.getHeader("X-User-Roles")).isNotNull();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new AssertionError("Interrupted while verifying trading request", e);
