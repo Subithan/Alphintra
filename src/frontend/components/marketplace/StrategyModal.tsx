@@ -1,5 +1,6 @@
 import { Star, X, Twitter } from 'lucide-react';
-import { Badge, Button } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useTheme } from './useTheme';
 import { Strategy } from './types';
 
@@ -16,11 +17,43 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
   });
 
   const getThumbnailContent = () => {
-    // [Same as original implementation]
+    switch (strategy.thumbnail) {
+      case 'bull-rider':
+      case 'bear-trader':
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute inset-0" style={getGradientStyle(strategy.gradientColors)}></div>
+            <div className="relative z-10 text-center">
+              <div className="text-6xl mb-4">₿</div>
+              <div className="text-3xl font-bold text-white mb-2">{strategy.name}</div>
+              <div className="text-5xl font-black text-white">{strategy.description}</div>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="absolute inset-0" style={getGradientStyle(strategy.gradientColors)}></div>
+            <div className="relative z-10 text-center">
+              <div className="text-4xl font-bold text-white">{strategy.name}</div>
+              <div className="text-2xl font-medium text-white mt-2">{strategy.description}</div>
+            </div>
+          </div>
+        );
+    }
   };
 
   const getRiskVariant = () => {
-    // [Same as original implementation]
+    switch (strategy.riskLevel) {
+      case 'low':
+        return 'success';
+      case 'medium':
+        return 'warning';
+      case 'high':
+        return 'destructive';
+      default:
+        return 'default';
+    }
   };
 
   return (
@@ -98,6 +131,10 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
                 <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Last Updated</dt>
                 <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.lastUpdated}</dd>
               </div>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Price</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.price === 'free' ? 'Free' : `$${strategy.price.toFixed(2)}`}</dd>
+              </div>
             </dl>
           </div>
 
@@ -138,11 +175,11 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
           </div>
 
           <Button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white mb-4">
-            Use Strategy • {strategy.revenueSharePercentage}% Revenue Share
+            Buy {strategy.price === 'free' ? 'Free' : `$${strategy.price.toFixed(2)}`}
           </Button>
 
           <p className={`text-xs sm:text-sm text-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
-            Free to use with revenue share for creator.
+            Price includes 1 month of updates.
           </p>
 
           <div className="flex justify-center">

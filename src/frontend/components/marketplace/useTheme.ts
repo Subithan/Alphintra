@@ -17,5 +17,5 @@ export const useTheme = () => {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  return { theme, setTheme };
-};
+  return { theme };
+}

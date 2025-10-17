@@ -8,8 +8,6 @@ export interface Strategy {
   assetType: string;
   tradingPairs: string[];
   price: number | 'free';
-  pricingModel: 'SUBSCRIPTION' | 'REVENUE_SHARE' | 'FREE' | 'ONE_TIME';
-  revenueSharePercentage?: number;
   riskLevel: 'low' | 'medium' | 'high';
   verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   performance: {

@@ -7,7 +7,7 @@ import { useTheme } from './useTheme';
 interface FilterSectionProps {
   selectedCategory: string;
   setSelectedCategory: (value: string) => void;
-  filters: { assetType: string; riskLevel: string; priceRange: string; rating: number; verificationStatus: string };
+  filters: { assetType: string; riskLevel: string; rating: number; verificationStatus: string };
   setFilters: (filters: any) => void;
   searchQuery: string;
   setSearchQuery: (value: string) => void;
@@ -44,9 +44,12 @@ export default function FilterSection({
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="momentum">Momentum</SelectItem>
-            <SelectItem value="mean-reversion">Mean Reversion</SelectItem>
-            <SelectItem value="trend">Trend Following</SelectItem>
+            <SelectItem value="mean reversion">Mean Reversion</SelectItem>
+            <SelectItem value="trend following">Trend Following</SelectItem>
             <SelectItem value="arbitrage">Arbitrage</SelectItem>
+            <SelectItem value="scalping">Scalping</SelectItem>
+            <SelectItem value="quantitative">Quantitative</SelectItem>
+            <SelectItem value="ai trading">AI Trading</SelectItem>
           </SelectContent>
         </Select>
 
@@ -78,7 +81,7 @@ export default function FilterSection({
             onClick={() => setViewMode('grid')}
             className="rounded-none"
           >
-            <Grid className={`h-4 w-4 ${viewMode === 'grid' ? 'text-white' : 'text-gray-600'}`} />
+            <Grid className="h-4 w-4" />
           </Button>
           <Button
             variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -86,7 +89,7 @@ export default function FilterSection({
             onClick={() => setViewMode('list')}
             className="rounded-none"
           >
-            <List className={`h-4 w-4 ${viewMode === 'list' ? 'text-white' : 'text-gray-600'}`} />
+            <List className="h-4 w-4" />
           </Button>
         </div>
       </div>

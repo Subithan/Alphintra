@@ -1,14 +1,17 @@
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTheme } from './useTheme';
 
 interface FilterSidebarProps {
-  filters: { assetType: string; riskLevel: string; priceRange: string; rating: number; verificationStatus: string };
+  filters: { assetType: string; riskLevel: string; rating: number; verificationStatus: string };
   onFiltersChange: (filters: any) => void;
 }
 
 export default function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) {
+  const { theme } = useTheme();
+
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
       <div>
         <label className="block text-sm font-medium mb-1">Asset Type</label>
         <Select value={filters.assetType} onValueChange={(v) => onFiltersChange({ ...filters, assetType: v })}>

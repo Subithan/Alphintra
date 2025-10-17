@@ -1,12 +1,13 @@
 import { TrendingUp, Star } from 'lucide-react';
 import { Strategy } from './types';
+import { useTheme } from './useTheme';
 
 interface StatsBarProps {
   filteredStrategies: Strategy[];
-  theme: string;
 }
 
-export default function StatsBar({ filteredStrategies, theme }: StatsBarProps) {
+export default function StatsBar({ filteredStrategies }: StatsBarProps) {
+  const { theme } = useTheme();
   if (filteredStrategies.length === 0) return null;
 
   const avgRoi = (filteredStrategies.reduce((sum, s) => sum + s.performance.totalReturn, 0) / filteredStrategies.length).toFixed(1);

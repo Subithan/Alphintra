@@ -1,16 +1,14 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, TrendingUp, Star, Grid, List } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HeaderSection from '@/components/marketplace/HeaderSection';
 import FilterSection from '@/components/marketplace/FilterSection';
 import StatsBar from '@/components/marketplace/StatsBar';
 import StrategyGrid from '@/components/marketplace/StrategyGrid';
 import StrategyModal from '@/components/marketplace/StrategyModal';
 import FilterSidebar from '@/components/marketplace/FilterSidebar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Strategy } from '@/components/marketplace/types';
 import mockStrategies from '@/components/marketplace/mockStrategies';
 import { useTheme } from '@/components/marketplace/useTheme';
@@ -26,7 +24,6 @@ export default function MarketplacePage() {
   const [filters, setFilters] = useState({
     assetType: 'all',
     riskLevel: 'all',
-    priceRange: 'all',
     rating: 0,
     verificationStatus: 'all',
   });
@@ -58,19 +55,18 @@ export default function MarketplacePage() {
             const priceB = b.price === 'free' ? 0 : b.price;
             return priceA - priceB;
           case 'popularity':
-            return b.subscriberCount - a.subscriberCount;
           default:
-            return 0;
+            return b.subscriberCount - a.subscriberCount;
         }
       });
   }, [searchQuery, selectedCategory, filters, sortBy]);
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} text-foreground`}>
       <HeaderSection />
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <FilterSection 
-          selectedCategory={selectedCategory} 
+        <FilterSection
+          selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
           filters={filters}
           setFilters={setFilters}
@@ -83,7 +79,7 @@ export default function MarketplacePage() {
           viewMode={viewMode}
           setViewMode={setViewMode}
         />
-        <StatsBar filteredStrategies={filteredStrategies} theme={theme} />
+        <StatsBar filteredStrategies={filteredStrategies} />
         <div className="flex gap-6">
           {showFilters && (
             <div className="w-64 flex-shrink-0">
@@ -107,8 +103,8 @@ export default function MarketplacePage() {
                 ) : (
                   <StrategyGrid 
                     filteredStrategies={filteredStrategies} 
-                    setSelectedStrategy={setSelectedStrategy} 
                     viewMode={viewMode}
+                    onSelectStrategy={setSelectedStrategy}
                   />
                 )}
               </TabsContent>
@@ -117,8 +113,8 @@ export default function MarketplacePage() {
                   filteredStrategies={filteredStrategies
                     .sort((a, b) => b.performance.totalReturn - a.performance.totalReturn)
                     .slice(0, 6)} 
-                  setSelectedStrategy={setSelectedStrategy} 
                   viewMode={viewMode}
+                  onSelectStrategy={setSelectedStrategy}
                 />
               </TabsContent>
               <TabsContent value="new" className="space-y-0">
@@ -126,8 +122,8 @@ export default function MarketplacePage() {
                   filteredStrategies={filteredStrategies
                     .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime())
                     .slice(0, 6)} 
-                  setSelectedStrategy={setSelectedStrategy} 
                   viewMode={viewMode}
+                  onSelectStrategy={setSelectedStrategy}
                 />
               </TabsContent>
             </Tabs>
