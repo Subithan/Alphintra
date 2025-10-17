@@ -6,12 +6,12 @@ metadata:
 spec:
   host: service-gateway
   trafficPolicy:
-    tls:
-      mode: ISTIO_MUTUAL
     connectionPool:
       http:
         http1MaxPendingRequests: 1000
         maxRequestsPerConnection: 100
+    tls:
+      mode: DISABLE
   subsets:
     - name: stable
       labels:

@@ -11,6 +11,16 @@ spring:
       timeout: 2000ms
   cloud:
     gateway:
+      # Global CORS for browser clients
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: ${GATEWAY_CORS_ALLOWED_ORIGINS:*}
+            allowedMethods: "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+            allowedHeaders: "*"
+            exposedHeaders: "X-Correlation-Id,X-RateLimit-Remaining,X-RateLimit-Replenish-Rate,X-RateLimit-Burst-Capacity"
+            allowCredentials: false
       httpclient:
         connect-timeout: 4000
         response-timeout: 60000

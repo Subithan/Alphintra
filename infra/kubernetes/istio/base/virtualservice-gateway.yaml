@@ -13,6 +13,13 @@ spec:
     - alphintra-ingress-gateway
   http:
     - name: main-gateway-route
+      corsPolicy:
+        allowOrigins:
+          - regex: ".*"
+        allowMethods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"]
+        allowHeaders: ["*"]
+        exposeHeaders: ["x-correlation-id","x-ratelimit-remaining","x-ratelimit-replenish-rate","x-ratelimit-burst-capacity"]
+        allowCredentials: true
       match:
         - uri:
             prefix: /
@@ -20,11 +27,7 @@ spec:
         - destination:
             host: service-gateway.alphintra.svc.cluster.local
             port:
-              number: 8080
-      headers:
-        request:
-          set:
-            X-Forwarded-Proto: https
+              number: 80
       retries:
         attempts: 3
         perTryTimeout: 3s
