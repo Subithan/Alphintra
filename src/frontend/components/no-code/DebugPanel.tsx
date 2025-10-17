@@ -205,7 +205,10 @@ export function DebugPanel({
           trace_id: `trace_${traceId++}`,
           source_node: edge.source,
           target_node: edge.target,
-          signal_type: getSignalType(sourceNode.type, targetNode.type),
+          signal_type: getSignalType(
+            sourceNode.type ?? 'dataSource',
+            targetNode.type ?? 'logic'
+          ),
           value: getSignalValue(edge, result),
           timestamp: result.timestamp,
           propagation_delay_ms: Math.random() * 2, // Simulate propagation delay

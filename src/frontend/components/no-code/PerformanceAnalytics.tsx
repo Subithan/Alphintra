@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/no-code/card';
 import { Badge } from '@/components/ui/no-code/badge';
 import { Button } from '@/components/ui/no-code/button';
-import { 
-  Activity, 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
-  Cpu, 
-  Memory, 
+import {
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Cpu,
+  Server,
   Zap,
   AlertTriangle,
   CheckCircle,
@@ -341,7 +341,7 @@ export function PerformanceAnalytics({
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
-                  <Memory className="h-4 w-4 text-purple-500" />
+                  <Server className="h-4 w-4 text-purple-500" />
                   <div>
                     <div className="text-2xl font-bold">{metrics.avgMemoryUsage}MB</div>
                     <div className="text-sm text-gray-600">Avg Memory Usage</div>

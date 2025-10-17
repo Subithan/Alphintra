@@ -89,23 +89,52 @@ const activeBots: Bot[] = [
   },
 ];
 
+const generateMockId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `order-${Math.random().toString(36).slice(2)}`;
+
+const createMockOrder = (overrides: Partial<Order>): Order => ({
+  orderId: overrides.orderId ?? Math.floor(Math.random() * 100000),
+  orderUuid: overrides.orderUuid ?? generateMockId(),
+  userId: overrides.userId ?? 0,
+  accountId: overrides.accountId ?? 0,
+  symbol: overrides.symbol ?? '',
+  side: overrides.side ?? 'BUY',
+  orderType: overrides.orderType ?? 'LIMIT',
+  quantity: overrides.quantity ?? '0',
+  price: overrides.price ?? '0',
+  stopPrice: overrides.stopPrice ?? null,
+  timeInForce: overrides.timeInForce ?? 'GTC',
+  status: overrides.status ?? 'PENDING',
+  filledQuantity: overrides.filledQuantity ?? '0',
+  averagePrice: overrides.averagePrice ?? null,
+  fee: overrides.fee ?? '0',
+  exchange: overrides.exchange ?? 'MockExchange',
+  clientOrderId: overrides.clientOrderId ?? null,
+  exchangeOrderId: overrides.exchangeOrderId ?? null,
+  createdAt: overrides.createdAt ?? new Date().toISOString(),
+  updatedAt: overrides.updatedAt ?? new Date().toISOString(),
+  expiresAt: overrides.expiresAt ?? null,
+});
+
 const mockPendingOrders: Order[] = [
-  {
+  createMockOrder({
     symbol: 'BTC/USDT',
     orderType: 'LIMIT',
     side: 'SELL',
     price: '68000.0',
     quantity: '0.5',
     status: 'PENDING',
-  },
-  {
+  }),
+  createMockOrder({
     symbol: 'ETH/USDT',
     orderType: 'LIMIT',
     side: 'BUY',
     price: '3450.0',
     quantity: '5.0',
     status: 'PENDING',
-  },
+  }),
 ];
 
 const mockTradeHistory: Trade[] = [

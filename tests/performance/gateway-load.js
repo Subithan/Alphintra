@@ -10,7 +10,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.GATEWAY_URL || 'http://localhost:8080';
+const BASE_URL = __ENV.GATEWAY_URL || 'https://api.alphintra.com';
 const TOKEN = __ENV.JWT_TOKEN || '';
 
 export default function () {

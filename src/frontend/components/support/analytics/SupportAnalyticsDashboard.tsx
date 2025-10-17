@@ -40,6 +40,8 @@ interface SupportAnalyticsDashboardProps {
   dateRange?: 'today' | '7days' | '30days' | '90days' | 'custom';
 }
 
+type DateRangeOption = NonNullable<SupportAnalyticsDashboardProps['dateRange']>;
+
 interface AnalyticsData {
   overview: {
     totalTickets: number;
@@ -157,7 +159,7 @@ export default function SupportAnalyticsDashboard({
 }: SupportAnalyticsDashboardProps) {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>(mockAnalyticsData);
   const [loading, setLoading] = useState(false);
-  const [selectedDateRange, setSelectedDateRange] = useState(dateRange);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRangeOption>(dateRange);
   const [selectedMetric, setSelectedMetric] = useState<'volume' | 'resolution' | 'satisfaction'>('volume');
   const [customDateRange, setCustomDateRange] = useState<{ start: Date; end: Date } | null>(null);
 
@@ -290,8 +292,13 @@ export default function SupportAnalyticsDashboard({
     );
   };
 
-  const CategoryBreakdown = ({ data, title }: any) => {
-    const total = Object.values(data).reduce((sum: number, val: number) => sum + val, 0);
+  interface CategoryBreakdownProps {
+    data: Record<string, number>;
+    title: string;
+  }
+
+  const CategoryBreakdown = ({ data, title }: CategoryBreakdownProps) => {
+    const total = Object.values(data).reduce((sum, val) => sum + val, 0);
     
     return (
       <Card>
@@ -300,7 +307,7 @@ export default function SupportAnalyticsDashboard({
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {Object.entries(data).map(([category, count]: [string, any]) => {
+            {Object.entries(data).map(([category, count]) => {
               const percentage = ((count / total) * 100).toFixed(1);
               
               return (
@@ -406,7 +413,10 @@ export default function SupportAnalyticsDashboard({
         </div>
         
         <div className="flex items-center gap-3">
-          <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+          <Select
+            value={selectedDateRange}
+            onValueChange={(value) => setSelectedDateRange(value as DateRangeOption)}
+          >
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>

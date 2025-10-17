@@ -21,6 +21,7 @@ configMapGenerator:
     literals:
       - kyc-endpoint=https://dev-kyc.alphintra.internal
       - log-level=DEBUG
+      - app.security.allowed-origins=https://alphintra.com,https://api.alphintra.com,http://localhost:3000
   - name: service-gateway-config
     behavior: merge
     literals:

@@ -59,7 +59,7 @@ interface TrainingState {
   job_id: string
   workflow_id: number
   workflow_name: string
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'timeout'
+  status: 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled' | 'timeout'
   progress: number
   current_step: string
   started_at?: string

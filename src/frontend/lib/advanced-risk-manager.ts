@@ -223,7 +223,7 @@ export class AdvancedRiskManager {
     
     this.marketRegime = {
       regime_type: regimeType,
-      volatility_percentile,
+      volatility_percentile: volatilityPercentile,
       trend_strength: trendStrength,
       correlation_regime: correlationRegime,
       risk_adjustment_factor: riskAdjustment

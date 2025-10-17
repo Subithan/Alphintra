@@ -22,8 +22,8 @@ interface FormData {
 const AuthPage: React.FC = () => {
   // DEVELOPMENT: Mock login function to bypass AuthProvider requirement
   // const { login } = useAuth();
-  const login = async (credentials: any) => {
-    console.log('Mock login called:', credentials);
+  const login = async (token: string, session?: Record<string, unknown>) => {
+    console.log('Mock login called:', { token, session });
     return { success: true };
   };
   const [isLogin, setIsLogin] = useState(true);

@@ -30,7 +30,7 @@ import {
   TicketPriority,
   formatStatus,
   formatPriority,
-  getStatusColor,
+  getStatusColor as getTicketStatusColor,
   getPriorityColor
 } from '@/lib/api/customer-support-api';
 import { formatDistanceToNow } from 'date-fns';
@@ -133,7 +133,7 @@ export default function AgentDashboard({ agentId, agentName, agentLevel }: Agent
     return 'Good evening';
   };
 
-  const getStatusColor = (status: AgentStatus) => {
+  const getAgentIndicatorColor = (status: AgentStatus) => {
     switch (status) {
       case AgentStatus.AVAILABLE:
         return 'bg-green-500';
@@ -194,7 +194,7 @@ export default function AgentDashboard({ agentId, agentName, agentLevel }: Agent
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <Badge className={getStatusColor(ticket.status)}>
+          <Badge className={getTicketStatusColor(ticket.status)}>
             {formatStatus(ticket.status)}
           </Badge>
           <Badge className={getPriorityColor(ticket.priority)}>
@@ -243,7 +243,7 @@ export default function AgentDashboard({ agentId, agentName, agentLevel }: Agent
           {agent && (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${getStatusColor(agent.status)}`}></div>
+                <div className={`w-3 h-3 rounded-full ${getAgentIndicatorColor(agent.status)}`}></div>
                 <span className="text-sm font-medium">{formatAgentStatus(agent.status)}</span>
               </div>
               <Select

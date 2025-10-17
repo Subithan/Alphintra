@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # IMPORTANT: Make sure this is your correct email address
+    email: alphintrabot@gmail.com 
+    privateKeySecretRef:
+      name: letsencrypt-prod-private-key
+    solvers:
+    # This is the corrected block for Istio integration
+    - http01:
+        ingress:
+          class: istio
