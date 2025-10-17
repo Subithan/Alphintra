@@ -18,6 +18,7 @@ import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.service.marketdata.MarketDataService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -47,6 +48,12 @@ public class TradingTaskService {
     private final PositionRepository positionRepository;
     private final BinanceTimeService binanceTimeService;
 
+    @Value("${binance.api.enabled:true}")
+    private boolean binanceApiEnabled;
+
+    @Value("${binance.api.testnet.enabled:true}")
+    private boolean binanceTestnetEnabled;
+
     // Step size mapping for different trading pairs
     private static final Map<String, BigDecimal> STEP_SIZE_MAP = Map.of(
         "BTC/USDT", new BigDecimal("0.00001"),
@@ -68,26 +75,65 @@ public class TradingTaskService {
     @PostConstruct
     public void initializeExchange() {
         System.out.println("🔧 Initializing shared Binance Exchange connection (this happens only once)...");
+
+        // Check if Binance API is enabled in configuration
+        if (!binanceApiEnabled) {
+            System.out.println("⚠️ Binance API is disabled in configuration. Trading functionality will be disabled.");
+            System.out.println("   Set BINANCE_API_ENABLED=true to enable trading functionality.");
+            binanceExchange = null;
+            marketDataService = null;
+            return;
+        }
+
+        System.out.println("🌐 Binance API is enabled. Attempting to initialize exchange connection...");
         try {
             binanceExchange = ExchangeFactory.INSTANCE.createExchange(BinanceExchange.class);
-            binanceExchange.getExchangeSpecification().setExchangeSpecificParametersItem("Use_Sandbox", true);
-            binanceExchange.getExchangeSpecification().setSslUri("https://testnet.binance.vision");
-            binanceExchange.getExchangeSpecification().setHost("testnet.binance.vision");
-            
+
+            if (binanceTestnetEnabled) {
+                System.out.println("🧪 Using Binance Testnet (testnet.binance.vision)");
+                binanceExchange.getExchangeSpecification().setExchangeSpecificParametersItem("Use_Sandbox", true);
+                binanceExchange.getExchangeSpecification().setSslUri("https://testnet.binance.vision");
+                binanceExchange.getExchangeSpecification().setHost("testnet.binance.vision");
+            } else {
+                System.out.println("🚀 Using Binance Production API");
+                binanceExchange.getExchangeSpecification().setExchangeSpecificParametersItem("Use_Sandbox", false);
+                binanceExchange.getExchangeSpecification().setSslUri("https://api.binance.com");
+                binanceExchange.getExchangeSpecification().setHost("api.binance.com");
+            }
+
             // The slow call, now executed only on application startup
             binanceExchange.remoteInit();
             marketDataService = binanceExchange.getMarketDataService();
             System.out.println("✅ Shared Binance Exchange connection initialized successfully.");
-        } catch (IOException e) {
-            System.err.println("🔥 FATAL ERROR: Could not initialize Binance Exchange on startup.");
-            // In a production system, you might want to terminate the application if this fails.
-            e.printStackTrace();
+            System.out.println("   Environment: " + (binanceTestnetEnabled ? "Testnet" : "Production"));
+        } catch (Exception e) {
+            System.err.println("⚠️ WARNING: Could not initialize Binance Exchange on startup. Trading functionality will be disabled.");
+            System.err.println("   Error: " + e.getMessage());
+            if (e.getMessage().contains("HTTP status code was not OK: 451")) {
+                System.err.println("   📍 This appears to be a geographic restriction issue.");
+                System.err.println("   💡 Solutions:");
+                System.err.println("      1. Set BINANCE_API_ENABLED=false to disable trading in cloud");
+                System.err.println("      2. Deploy to a non-US region (e.g., Europe, Asia)");
+                System.err.println("      3. Use a VPN/proxy solution");
+                System.err.println("      4. Use a different exchange API");
+            }
+            System.err.println("   Application will continue without exchange integration.");
+            // Set exchange to null to indicate it's not available
+            binanceExchange = null;
+            marketDataService = null;
         }
     }
 
     @Async
     public void runTradingLoop(TradingBot bot, WalletCredentialsDTO credentials) {
         System.out.println("🚀 Starting background trading loop for bot ID: " + bot.getId());
+
+        // Check if exchange is available
+        if (binanceExchange == null || marketDataService == null) {
+            System.err.println("❌ Exchange service is not available. Trading loop cannot start for bot ID: " + bot.getId());
+            return;
+        }
+
         try {
             // --- The slow initialization is GONE from this loop ---
             TradingStrategy strategy = new SimplePriceStrategy();

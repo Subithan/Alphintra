@@ -44,12 +44,35 @@ spec:
             - secretRef:
                 name: trading-engine-secrets
           env:
-            # Override database URL to use Cloud SQL proxy
-            - name: DATABASE_URL
+            # Database connection variables (matching auth-service pattern)
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_NAME
+            - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: trading-engine-secrets
-                  key: DATABASE_URL
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trading-engine-secrets
+                  key: SPRING_DATASOURCE_PASSWORD
+            # Spring Boot datasource configuration
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
             # Database username from secret
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
@@ -68,6 +91,11 @@ spec:
                 secretKeyRef:
                   name: trading-engine-secrets
                   key: SPRING_DATA_REDIS_PASSWORD
+            # Binance API configuration - disabled in cloud due to geographic restrictions
+            - name: BINANCE_API_ENABLED
+              value: "false"
+            - name: BINANCE_TESTNET_ENABLED
+              value: "true"
           resources:
             requests:
               cpu: 200m
