@@ -49,6 +49,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
       Jws<Claims> claims = validator.parse(token);
       exchange.getAttributes().put(ATTR_CLAIMS, claims);
       exchange.getAttributes().put(ATTR_SUBJECT, claims.getBody().getSubject());
+      // Preserve the original Authorization header for downstream services
+      // but also add user info headers for gateway-level operations
       exchange
           .getRequest()
           .mutate()
