@@ -11,11 +11,12 @@ resources:
 
 namespace: alphintra
 
-commonLabels:
-  app: trading-engine
-  version: v1
-  component: backend
-  environment: dev
+labels:
+  - pairs:
+      app: trading-engine
+      version: v1
+      component: backend
+      environment: dev
 
 images:
   - name: gcr.io/alphintra-472817/trading-engine

@@ -2,7 +2,6 @@
 # is run from within the 'trading-engine' directory.
 
 # Maven build output and cache
-target/
 .mvn/
 !target/trading-engine-1.0-SNAPSHOT.jar  # Include the built JAR
 
@@ -43,7 +42,6 @@ surefire-reports/
 
 # Backup files created by our optimization
 *.backup
-Dockerfile.distroless.backup
 
 # Documentation and markdown (not needed for build)
 *.md
@@ -52,7 +50,6 @@ README.md
 
 # Source files that aren't needed for the build (Maven handles this)
 src/test/
-!src/main/resources/
 
 # Keep only essential resource files
 !src/main/resources/init_database.sql
@@ -71,9 +68,6 @@ yarn-error.log*
 
 # Build scripts (not needed in Docker context)
 build.sh
-database-init.sh
 
 # Cloud Build and Docker files (context will include them)
-cloudbuild*.yaml
-Dockerfile*
 .gcloudignore

@@ -11,9 +11,8 @@ spec:
         image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.10.1
         args:
           - "--port=5432"
-          - "--address=0.0.0.0"
+          - "--address=127.0.0.1"
           - "--private-ip"
-          - "--credentials-file=/secrets/service-account.json"
           - "alphintra-472817:us-central1:alphintra-db-instance"
         securityContext:
           runAsNonRoot: true
@@ -28,13 +27,3 @@ spec:
           limits:
             cpu: 50m
             memory: 128Mi
-        volumeMounts:
-          - name: service-account-secret
-            mountPath: /secrets/
-            readOnly: true
-
-      # Add service account secret volume
-      volumes:
-        - name: service-account-secret
-          secret:
-            secretName: trading-engine-sa-key
