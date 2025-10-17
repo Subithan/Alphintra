@@ -88,8 +88,9 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
 
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
             <div className="flex items-center gap-1 mb-2 sm:mb-0">
-              <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Type:</span>
-              <Badge className="bg-cyan-500 text-white">Strategy</Badge>
+              {/* <span className={`text-sm dark:text-gray-800 dark:bg-yellow-300 px-2 py-1 rounded-lg`}>Type:</span> */}
+               <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Type:</span> 
+              <Badge className="bg-yellow-500 text-white">Strategy</Badge>
             </div>
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
@@ -174,7 +175,7 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
             </div>
           </div>
 
-          <Button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white mb-4">
+          <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-800 hover:text-white mb-6">
             Buy {strategy.price === 'free' ? 'Free' : `$${strategy.price.toFixed(2)}`}
           </Button>
 

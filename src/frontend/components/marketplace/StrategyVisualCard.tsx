@@ -166,7 +166,7 @@ export default function StrategyVisualCard({ strategy, viewMode, onClick }: Stra
           <span className="text-sm font-medium text-gray-900 dark:text-white">
             {strategy.performance.totalReturn}% Return
           </span>
-          <span className="text-xs text-gray-600 dark:text-gray-400">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-800 bg-yellow-300 px-2 py-1 rounded-lg">
             {strategy.price === 'free' ? 'Free' : `$${strategy.price.toFixed(2)}`}
           </span>
         </div>

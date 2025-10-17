@@ -1,21 +1,20 @@
+import { useTheme as useNextTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 export const useTheme = () => {
-  const [theme, setTheme] = useState('light');
+  const { theme, resolvedTheme } = useNextTheme();
+  const [mounted, setMounted] = useState(false);
 
+  // Prevent hydration mismatch
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const handleChange = () => {
-      setTheme(mediaQuery.matches ? 'dark' : 'light');
-    };
-
-    handleChange();
-
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    setMounted(true);
   }, []);
 
-  return { theme };
-}
+  // Return light theme during SSR to prevent hydration issues
+  if (!mounted) {
+    return { theme: 'light' };
+  }
+
+  // Use resolvedTheme to get the actual theme (handles 'system' preference)
+  return { theme: resolvedTheme || 'light' };
+};
