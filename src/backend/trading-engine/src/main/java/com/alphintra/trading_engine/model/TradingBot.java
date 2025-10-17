@@ -28,6 +28,9 @@ public class TradingBot {
     @Column(nullable = false)
     private String symbol; // e.g., "BTC/USDT"
 
+    @Column(name = "capital_allocation", columnDefinition = "integer default 100")
+    private Integer capitalAllocation = 100; // Percentage of capital to use (0-100)
+
     private LocalDateTime startedAt;
 
     private LocalDateTime stoppedAt;
