@@ -4,16 +4,17 @@ kind: Kustomization
 resources:
   - trading-engine
 
-patchesStrategicMerge:
-  - patches/trading-engine-cloudsql.yaml
+patches:
+  - path: patches/trading-engine-cloudsql.yaml
 
 namespace: alphintra
 
-commonLabels:
-  app: trading-engine
-  version: v1
-  component: backend
-  environment: dev
+labels:
+  - pairs:
+      app: trading-engine
+      version: v1
+      component: backend
+      environment: dev
 
 replicas:
   - name: trading-engine

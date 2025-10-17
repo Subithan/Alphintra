@@ -2,8 +2,8 @@
 # This Dockerfile is optimized for Cloud Build with Maven caching
 # It includes database auto-initialization and follows security best practices
 
-# Use base image with PostgreSQL client for database operations
-FROM openjdk:17-jre-slim
+# Use Eclipse Temurin (AdoptOpenJDK successor) - a supported OpenJDK distribution
+FROM eclipse-temurin:17-jre-jammy
 
 # Install PostgreSQL client for database initialization
 RUN apt-get update && apt-get install -y \
@@ -53,7 +53,17 @@ ENV SERVICES_WALLET_URL=http://wallet-service:8011
 ENV SERVICES_STRATEGY_URL=http://strategy-service:8002
 
 # JVM optimization for containerized environments
-ENV JAVA_OPTS="-Xms512m -Xmx2g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+                -XX:MaxRAMPercentage=75.0 \
+                -XX:+UseG1GC \
+                -XX:+UseStringDeduplication \
+                -XX:+OptimizeStringConcat \
+                -Xss256k \
+                -XX:MetaspaceSize=96m \
+                -XX:MaxMetaspaceSize=256m \
+                -XX:+TieredCompilation \
+                -XX:TieredStopAtLevel=1 \
+                -Djava.security.egd=file:/dev/./urandom"
 
 # Application-specific settings
 ENV SPRING_JPA_HIBERNATE_DDL_AUTO=update
@@ -77,15 +87,18 @@ ENV SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
 ENV SPRING_DATA_REDIS_TIMEOUT=2000ms
 ENV SPRING_DATA_REDIS_CONNECT_TIMEOUT=2000ms
 
+# Create logs directory
+RUN mkdir -p /app/logs && chown tradingengine:tradingengine /app/logs
+
 # Switch to non-root user
 USER tradingengine
 
 # Health check configuration
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
   CMD curl -f http://localhost:8008/actuator/health/readiness || exit 1
 
 # Expose application port
 EXPOSE 8008
 
 # Start the application with database initialization
-ENTRYPOINT ["/app/database-init.sh", "java", "-jar", "app.jar"]
+ENTRYPOINT ["/bin/bash", "-c", "/app/database-init.sh && exec java $JAVA_OPTS -jar app.jar"]

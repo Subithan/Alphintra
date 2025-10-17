@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: trading-engine
-  namespace: alphintra
   labels:
     app: trading-engine
     component: backend
@@ -96,8 +95,8 @@ spec:
             httpGet:
               path: /actuator/health
               port: http
-            initialDelaySeconds: 120
-            failureThreshold: 12
+            initialDelaySeconds: 60
+            failureThreshold: 30
             periodSeconds: 10
             timeoutSeconds: 5
           volumeMounts:
@@ -106,37 +105,7 @@ spec:
             - name: tmp
               mountPath: /tmp
 
-        # Cloud SQL Proxy Container
-        - name: cloud-sql-proxy
-          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.10.1
-          args:
-            - "--port=5432"
-            - "--address=127.0.0.1"
-            - "--private-ip"
-            - "--credentials-file=/secrets/service-account.json"
-            - "alphintra-472817:us-central1:alphintra-db-instance"
-          securityContext:
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 50m
-              memory: 128Mi
-          volumeMounts:
-            - name: service-account-secret
-              mountPath: /secrets/
-              readOnly: true
-
       volumes:
-        - name: service-account-secret
-          secret:
-            secretName: trading-engine-sa-key
         - name: app-logs
           emptyDir: {}
         - name: tmp
