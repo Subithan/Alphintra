@@ -29,7 +29,7 @@ export default function MarketplacePage() {
   });
 
   const filteredStrategies = useMemo(() => {
-    return mockStrategies
+    const filtered = mockStrategies
       .filter((strategy) => {
         const matchesSearch =
           strategy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -43,22 +43,30 @@ export default function MarketplacePage() {
         const matchesVerification = filters.verificationStatus === 'all' || strategy.verificationStatus === filters.verificationStatus;
 
         return matchesSearch && matchesCategory && matchesAssetType && matchesRiskLevel && matchesRating && matchesVerification;
-      })
-      .sort((a, b) => {
-        switch (sortBy) {
-          case 'roi-desc':
-            return b.performance.totalReturn - a.performance.totalReturn;
-          case 'rating':
-            return b.rating - a.rating;
-          case 'price-asc':
-            const priceA = a.price === 'free' ? 0 : a.price;
-            const priceB = b.price === 'free' ? 0 : b.price;
-            return priceA - priceB;
-          case 'popularity':
-          default:
-            return b.subscriberCount - a.subscriberCount;
-        }
       });
+
+    // Create a copy of the array before sorting to avoid mutation
+    const sortedStrategies = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'roi-desc':
+          return b.performance.totalReturn - a.performance.totalReturn;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'price-asc':{
+          const priceA = a.price === 'free' ? 0 : a.price;
+          const priceB = b.price === 'free' ? 0 : b.price;
+          return priceA - priceB;}
+        case 'price-desc':{
+          const priceA = a.price === 'free' ? 0 : a.price;
+          const priceB = b.price === 'free' ? 0 : b.price;
+          return priceB - priceA;}
+        case 'popularity':
+        default:
+          return b.subscriberCount - a.subscriberCount;
+      }
+    });
+
+    return sortedStrategies;
   }, [searchQuery, selectedCategory, filters, sortBy]);
 
   return (
@@ -110,7 +118,7 @@ export default function MarketplacePage() {
               </TabsContent>
               <TabsContent value="trending" className="space-y-0">
                 <StrategyGrid 
-                  filteredStrategies={filteredStrategies
+                  filteredStrategies={[...filteredStrategies]
                     .sort((a, b) => b.performance.totalReturn - a.performance.totalReturn)
                     .slice(0, 6)} 
                   viewMode={viewMode}
@@ -119,7 +127,7 @@ export default function MarketplacePage() {
               </TabsContent>
               <TabsContent value="new" className="space-y-0">
                 <StrategyGrid 
-                  filteredStrategies={filteredStrategies
+                  filteredStrategies={[...filteredStrategies]
                     .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime())
                     .slice(0, 6)} 
                   viewMode={viewMode}

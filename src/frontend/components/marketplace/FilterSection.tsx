@@ -62,6 +62,7 @@ export default function FilterSection({
             <SelectItem value="roi-desc">Highest ROI</SelectItem>
             <SelectItem value="rating">Top Rated</SelectItem>
             <SelectItem value="price-asc">Price: Low to High</SelectItem>
+            <SelectItem value="price-desc">Price: High to Low </SelectItem>
           </SelectContent>
         </Select>
 
