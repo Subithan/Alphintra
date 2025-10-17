@@ -1,5 +1,5 @@
 import { Star, X, Twitter } from 'lucide-react';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button } from '@/components/ui/badge';
 import { useTheme } from './useTheme';
 import { Strategy } from './types';
 
@@ -41,12 +41,10 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
           <X className="h-5 w-5" />
         </button>
 
-        {/* Responsive thumbnail section */}
         <div className="relative w-full h-48 sm:h-56 md:h-64 lg:h-72">
           {getThumbnailContent()}
         </div>
 
-        {/* Scrollable content section */}
         <div className="p-4 sm:p-6 max-h-96 overflow-y-auto">
           <h2 className={`text-xl sm:text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             {strategy.name}
@@ -75,40 +73,58 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
 
           <div className="mb-4">
             <h3 className={`text-lg sm:text-xl font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm sm:text-base items-start">
-              <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Creator: {strategy.creatorName}</p>
-              <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Category: {strategy.category}</p>
-              <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Asset Type: {strategy.assetType}</p>
-              <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Trading Pairs: {strategy.tradingPairs.join(', ')}</p>
-              <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Verification: {strategy.verificationStatus}</p>
-              <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Last Updated: {strategy.lastUpdated}</p>
-            </div>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Creator</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.creatorName}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Category</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.category}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Asset Type</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.assetType}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Trading Pairs</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.tradingPairs.join(', ')}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Verification</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.verificationStatus}</dd>
+              </div>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Last Updated</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.lastUpdated}</dd>
+              </div>
+            </dl>
           </div>
 
           <div className="mb-4">
             <h3 className={`text-lg sm:text-xl font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Performance</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm sm:text-base items-start">
-              <div className="flex flex-col">
-                <span className={`font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Total Return</span>
-                <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{strategy.performance.totalReturn}%</span>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Total Return</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.performance.totalReturn}%</dd>
               </div>
-              <div className="flex flex-col">
-                <span className={`font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Annualized Return</span>
-                <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{strategy.performance.annualizedReturn}%</span>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Annualized Return</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.performance.annualizedReturn}%</dd>
               </div>
-              <div className="flex flex-col">
-                <span className={`font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Max Drawdown</span>
-                <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{strategy.performance.maxDrawdown}%</span>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Max Drawdown</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.performance.maxDrawdown}%</dd>
               </div>
-              <div className="flex flex-col">
-                <span className={`font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Sharpe Ratio</span>
-                <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{strategy.performance.sharpeRatio}</span>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Sharpe Ratio</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.performance.sharpeRatio}</dd>
               </div>
-              <div className="flex flex-col">
-                <span className={`font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Win Rate</span>
-                <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{strategy.performance.winRate}%</span>
+              <div className="sm:col-span-1">
+                <dt className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Win Rate</dt>
+                <dd className={`mt-1 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{strategy.performance.winRate}%</dd>
               </div>
-            </div>
+            </dl>
           </div>
 
           <div className="mb-4">
@@ -138,4 +154,4 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
       </div>
     </div>
   );
-};
+}
