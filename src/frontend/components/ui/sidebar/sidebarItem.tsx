@@ -3,6 +3,7 @@ import { SidebarItemType } from "./types";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { usePathname } from "next/navigation";
+import { useSubscriptionModal } from "@/contexts/SubscriptionModalContext";
 
 interface Props {
   item: SidebarItemType;
@@ -12,11 +13,19 @@ interface Props {
 const SidebarItem = ({ item, collapsed = false }: Props) => {
   const pathname = usePathname();
   const isActive = pathname === item.url;
+  const { openModal } = useSubscriptionModal();
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (item.isModal) {
+      e.preventDefault();
+      openModal();
+    }
+  };
 
   return (
     <li
       className={`rounded-md transition ${
-        isActive && !item.external
+        isActive && !item.external && !item.isModal
           ? "bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 text-yellow-500"
           : "hover:bg-gradient-to-r hover:from-yellow-500/10 hover:to-transparent hover:border-l-4 hover:border-yellow-500 hover:text-yellow-500"
       }`}
@@ -32,6 +41,14 @@ const SidebarItem = ({ item, collapsed = false }: Props) => {
           {!collapsed && <span className="text-[15px] font-semibold">{item.name}</span>}
           {!collapsed && <Icon icon="solar:external-link-line-duotone" width="14" className="ml-auto opacity-60" />}
         </a>
+      ) : item.isModal ? (
+        <button
+          onClick={handleClick}
+          className="flex items-center gap-3 px-4 py-2 w-full text-left"
+        >
+          <Icon icon={item.icon} width="20" />
+          {!collapsed && <span className="text-[15px] font-semibold">{item.name}</span>}
+        </button>
       ) : (
         <Link
           href={item.url}
