@@ -87,6 +87,8 @@ const AuthPage: React.FC = () => {
 
         if (typeof window !== 'undefined') {
           localStorage.setItem('alphintra_jwt_token', response.token);
+          localStorage.setItem('alphintra_auth_token', response.token);
+          localStorage.setItem('auth_token', response.token);
           localStorage.setItem('alphintra_jwt_user', JSON.stringify(response.user));
         }
 
@@ -114,6 +116,8 @@ const AuthPage: React.FC = () => {
 
         if (typeof window !== 'undefined') {
           localStorage.setItem('alphintra_jwt_token', response.token);
+          localStorage.setItem('alphintra_auth_token', response.token);
+          localStorage.setItem('auth_token', response.token);
           localStorage.setItem('alphintra_jwt_user', JSON.stringify(response.user));
         }
 
