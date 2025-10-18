@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'alphintra_auth_token';
+const LEGACY_TOKEN_KEYS = ['alphintra_jwt_token', 'auth_token'];
 const USER_KEY = 'alphintra_user';
 
 export interface User {
@@ -16,18 +17,28 @@ export interface User {
 // Token management
 export const getToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const primary = localStorage.getItem(TOKEN_KEY);
+  if (primary) return primary;
+
+  for (const key of LEGACY_TOKEN_KEYS) {
+    const value = localStorage.getItem(key);
+    if (value) return value;
+  }
+
+  return null;
 };
 
 export const setToken = (token: string): void => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TOKEN_KEY, token);
+  LEGACY_TOKEN_KEYS.forEach((key) => localStorage.setItem(key, token));
 };
 
 export const removeToken = (): void => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  LEGACY_TOKEN_KEYS.forEach((key) => localStorage.removeItem(key));
 };
 
 // User management

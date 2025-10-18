@@ -84,6 +84,14 @@ const AuthPage: React.FC = () => {
           email: formData.email,
           password: formData.password
         });
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('alphintra_jwt_token', response.token);
+          localStorage.setItem('alphintra_auth_token', response.token);
+          localStorage.setItem('auth_token', response.token);
+          localStorage.setItem('alphintra_jwt_user', JSON.stringify(response.user));
+        }
+
         login(response.token, {
           id: response.user.id.toString(),
           email: response.user.email,
@@ -105,6 +113,14 @@ const AuthPage: React.FC = () => {
           firstName: formData.firstName,
           lastName: formData.lastName
         });
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('alphintra_jwt_token', response.token);
+          localStorage.setItem('alphintra_auth_token', response.token);
+          localStorage.setItem('auth_token', response.token);
+          localStorage.setItem('alphintra_jwt_user', JSON.stringify(response.user));
+        }
+
         setMessage({ type: 'success', text: 'Account creation successful! Welcome to trading!' });
         window.location.href = '/dashboard';
       }
