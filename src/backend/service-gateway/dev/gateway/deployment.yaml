@@ -14,6 +14,8 @@ spec:
       labels:
         app: service-gateway
     spec:
+      nodeSelector:
+        pool: nat-backend
       serviceAccountName: service-gateway
       containers:
         - name: service-gateway

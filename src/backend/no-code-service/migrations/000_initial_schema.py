@@ -18,7 +18,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://alphintra_user:alphintra_
 
 def upgrade():
     """Apply initial schema migration"""
-    engine = create_engine(DATABASE_URL)
+    # Autocommit avoids aborted transaction state on handled errors
+    engine = create_engine(DATABASE_URL, isolation_level="AUTOCOMMIT")
 
     with engine.connect() as conn:
         print("Starting migration: Initial schema creation...")

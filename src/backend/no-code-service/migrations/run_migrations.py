@@ -66,12 +66,25 @@ def _record_applied(engine: Engine, filename: str):
         )
 
 
+def _is_alembic_based(path: str) -> bool:
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as f:
+            head = f.read(4096)
+            return ("from alembic import op" in head) or ("alembic" in head and "op." in head)
+    except Exception:
+        return False
+
+
 def discover_migrations() -> List[str]:
     files = []
     for fname in os.listdir(MIGRATIONS_DIR):
         if fname in {"__init__.py", os.path.basename(__file__)}:
             continue
         if MIGRATION_PATTERN.match(fname):
+            path = os.path.join(MIGRATIONS_DIR, fname)
+            if _is_alembic_based(path):
+                # Skip Alembic-style migrations; runner applies only safe, idempotent scripts
+                continue
             files.append(fname)
     return sorted(files)
 

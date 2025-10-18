@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-ml-strategy-service-pdb
+  labels:
+    app: ai-ml-strategy-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ai-ml-strategy-service

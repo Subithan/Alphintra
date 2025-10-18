@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: alphintra
+resources:
+  - ai-ml-strategy-service
+patches:
+  - path: patches/ai-ml-cloudsql.yaml
+images:
+  - name: us-central1-docker.pkg.dev/alphintra-472817/alphintra/ai-ml-strategy-service
+    newTag: latest
+configMapGenerator:
+  - name: ai-ml-strategy-service-config
+    behavior: merge
+    literals:
+      - dev-mode=true
+      - log-level=INFO
+      - cors-allow-origins=http://localhost:3000,https://dev.alphintra.internal

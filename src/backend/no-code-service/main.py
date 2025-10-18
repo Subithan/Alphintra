@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from app import create_app
 from app.api import register_routes
 from app.core.config import get_settings
-from app.core.db import get_db, SessionLocal
+from app.core.db import get_db, SessionLocal, _create_engine
 from app.core.dependencies import get_current_user
 from app.core.redis import get_redis_client
 
@@ -69,9 +69,12 @@ async def health_check():
         with SessionLocal() as db:
             db.execute(text("SELECT 1"))
 
-        # Check Redis connection if available
+        # Redis is optional for health; do not fail health if unavailable
         if redis_client:
-            redis_client.ping()
+            try:
+                redis_client.ping()
+            except Exception:
+                pass
 
         return {
             "status": "healthy",

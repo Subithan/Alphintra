@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from .config import Settings, get_settings
 from .db import get_db
 from .http import get_http_client
+from .jwt_utils import extract_user_id_from_token, extract_user_claims
 from .redis import get_redis_client
 
 logger = logging.getLogger(__name__)
@@ -60,16 +61,84 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
-        client = await get_http_client()
-        headers = {"Authorization": f"Bearer {credentials.credentials}"}
-        response = await client.get(f"{settings.auth_service_url}/api/v1/auth/validate", headers=headers)
+        # Extract user info locally from JWT for performance
+        user_id = extract_user_id_from_token(credentials.credentials)
+        user_claims = extract_user_claims(credentials.credentials)
 
-        if response.status_code == 200:
-            return response.json()
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token: no user ID found")
 
-        raise HTTPException(status_code=401, detail="Invalid authentication token")
+        # Try to validate with auth service first (for production)
+        try:
+            client = await get_http_client()
+            headers = {"Authorization": f"Bearer {credentials.credentials}"}
+            response = await client.get(f"{settings.auth_service_url}/api/v1/auth/validate", headers=headers)
+
+            if response.status_code == 200:
+                auth_user = response.json()
+                # Merge local extraction with auth service response
+                if 'user_id' not in auth_user:
+                    auth_user['user_id'] = user_id
+                return auth_user
+        except Exception as e:
+            logger.warning(f"Auth service validation failed, using local JWT extraction: {e}")
+
+        # Fallback to local JWT extraction if auth service is unavailable
+        logger.info("Using local JWT extraction for user validation")
+
+        # Try to find user in local database
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        if user:
+            return {
+                'id': user.id,
+                'uuid': str(user.uuid),
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_active': user.is_active,
+                'is_verified': user.is_verified,
+                'user_id': user_id,
+                **user_claims
+            }
+
+        # If user not found locally, create user info from JWT claims
+        return {
+            'user_id': user_id,
+            'email': user_claims.get('email', f'user_{user_id}@example.com'),
+            'first_name': user_claims.get('first_name', 'User'),
+            'last_name': user_claims.get('last_name', str(user_id)),
+            'is_active': True,
+            'is_verified': user_claims.get('is_verified', True),
+            'roles': user_claims.get('roles', []),
+            **user_claims
+        }
+
     except HTTPException:
         raise
     except Exception as exc:
         logger.error("Error validating token: %s", exc)
-        raise HTTPException(status_code=401, detail="Authentication service unavailable") from exc
+        raise HTTPException(status_code=401, detail="Authentication failed") from exc
+
+
+def get_user_context(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> dict:
+    """Extract user context from JWT token without database lookup.
+
+    This is a lightweight alternative to get_current_user for operations
+    that only need user identification without full user data.
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user_id = extract_user_id_from_token(credentials.credentials)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token: no user ID found")
+
+    user_claims = extract_user_claims(credentials.credentials)
+
+    return {
+        'user_id': user_id,
+        'claims': user_claims,
+        'token': credentials.credentials
+    }

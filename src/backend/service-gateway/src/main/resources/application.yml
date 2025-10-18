@@ -28,11 +28,6 @@ spring:
         - name: RequestSize
           args:
             maxSize: ${GATEWAY_MAX_REQUEST_SIZE:10MB}
-        - name: RequestRateLimiter
-          args:
-            redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
-            redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
-            key-resolver: "#{@principalKeyResolver}"
         - name: Retry
           args:
             retries: 2
@@ -53,42 +48,94 @@ spring:
           uri: ${TRADING_ENGINE_URI:http://trading-engine.default.svc.cluster.local:8100}
           predicates:
             - Path=/api/trading/**, /api/orders/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: marketplace-service
           uri: ${MARKETPLACE_SERVICE_URI:http://marketplace-service.default.svc.cluster.local:8200}
           predicates:
             - Path=/api/marketplace/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: graphql-service
           uri: ${GRAPHQL_SERVICE_URI:http://graphql-service.default.svc.cluster.local:8300}
           predicates:
             - Path=/graphql/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: market-data-websocket
           uri: ${MARKET_DATA_WS_URI:ws://market-data.default.svc.cluster.local:8082}
           predicates:
             - Path=/ws/market/**
           filters:
             - PreserveHostHeader
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: risk-management-service
           uri: ${RISK_MANAGEMENT_URI:http://risk-management-service.platform:8002}
           predicates:
             - Path=/api/risk-profiles/**, /api/portfolio/**, /api/positions/**, /api/trades/**, /api/stress-tests/**, /api/reports/**, /api/emergency/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: strategy-service
           uri: ${STRATEGY_SERVICE_URI:http://strategy-service.platform:8003}
           predicates:
             - Path=/api/strategies/**, /api/backtests/**, /api/live-trading/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: no-code-service
           uri: ${NO_CODE_SERVICE_URI:http://no-code-service.platform:8004}
           predicates:
             - Path=/api/workflows/**, /api/executions/**, /api/components/**, /api/templates/**, /api/workflow-versions/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: ai-ml-strategy-service
           uri: ${AI_ML_SERVICE_URI:http://ai-ml-strategy-service.platform:8002}
           predicates:
-            - Path=/api/files/**, /feature-engineering
+            - Path=/api/files/**, /api/ai/**, /feature-engineering
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
         - id: customer-support-service
           uri: ${CUSTOMER_SUPPORT_SERVICE_URI:http://customer-support-service.platform:8010}
           predicates:
             - Path=/api/customer-support/**, /ws/support/**, /ws/tickets/**
           filters:
             - PreserveHostHeader
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
 server:
   port: ${SERVER_PORT:8080}
 
@@ -106,6 +153,9 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    redis:
+      enabled: false
 
 gateway:
   security:
