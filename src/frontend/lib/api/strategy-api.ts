@@ -2,6 +2,7 @@
 // This replaces direct database access with proper API calls
 
 import { gatewayHttpBaseUrl } from '../config/gateway';
+import { getToken } from '../auth';
 
 export interface StrategyData {
   id: string;
@@ -70,11 +71,18 @@ class StrategyApiService {
     const base = this.baseUrl.replace(/\/+$/, '');
     const url = `${base}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    const token = getToken();
+    if (token && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     });
 

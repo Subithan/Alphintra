@@ -33,9 +33,7 @@ public class OrderExecutionService {
     private final PositionRepository positionRepository;
     private final TradeOrderRepository tradeOrderRepository;
     private final BinanceTimeService binanceTimeService; // <-- INJECT THE TIME SERVICE
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    private final HttpClient httpClient;
 
     @Transactional
     public void placeMarketOrder(TradingBot bot, WalletCredentialsDTO credentials, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt) {
@@ -149,4 +147,3 @@ public class OrderExecutionService {
         return totalCost.divide(totalQuantity, 8, RoundingMode.HALF_UP);
     }
 }
-

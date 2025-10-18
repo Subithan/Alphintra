@@ -3,6 +3,7 @@
 import SockJS from 'sockjs-client';
 import { Client, StompSubscription, IMessage } from '@stomp/stompjs';
 import { buildGatewayUrl } from '../config/gateway';
+import { getToken } from '../auth';
 
 interface WebSocketMessage {
   type: string;
@@ -60,6 +61,12 @@ export class SupportWebSocketClient {
           ? `${this.config.url}/ws/tickets/${ticketId}` 
           : `${this.config.url}/ws/support`;
         
+        const token = getToken();
+        const connectHeaders: Record<string, string> = {};
+        if (token) {
+          connectHeaders['Authorization'] = `Bearer ${token}`;
+        }
+
         this.stompClient = new Client({
           webSocketFactory: () => new SockJS(wsEndpoint),
           debug: (str: string) => {
@@ -68,6 +75,7 @@ export class SupportWebSocketClient {
           reconnectDelay: this.config.reconnectInterval,
           heartbeatIncoming: this.config.heartbeatInterval,
           heartbeatOutgoing: this.config.heartbeatInterval,
+          connectHeaders,
         });
 
         this.stompClient.onConnect = (frame) => {
