@@ -1,0 +1,177 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: no-code-service
+  labels:
+    app: no-code-service
+    component: backend
+    tier: service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: no-code-service
+  template:
+    metadata:
+      labels:
+        app: no-code-service
+        component: backend
+        tier: service
+    spec:
+      nodeSelector:
+        pool: nat-backend
+      serviceAccountName: no-code-service-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+      - name: no-code-service
+        image: gcr.io/alphintra-472817/no-code-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8006
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8006"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: DEV_MODE
+          value: "false"
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: no-code-service-config
+              key: log-level
+        - name: PROMETHEUS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: no-code-service-config
+              key: prometheus-enabled
+        - name: CORS_ALLOW_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: no-code-service-config
+              key: cors-allow-origins
+        - name: AUTH_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: no-code-service-config
+              key: auth-service-url
+        - name: AIML_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: no-code-service-config
+              key: aiml-service-url
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: no-code-service-config
+              key: redis-url
+        - name: CLOUD_SQL_CONNECTION_NAME
+          valueFrom:
+            secretKeyRef:
+              name: no-code-service-secrets
+              key: cloud-sql-connection-name
+        - name: SKIP_DB_INIT
+          value: "false"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8006
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: temp-storage
+          mountPath: /app/temp
+        - name: logs-storage
+          mountPath: /app/logs
+      - name: cloud-sql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.28.0
+        command:
+        - "/cloud_sql_proxy"
+        - "-instances=$(CLOUD_SQL_CONNECTION_NAME)=tcp:5432"
+        - "-credential_file=/secrets/cloudsql/service-account.json"
+        env:
+        - name: CLOUD_SQL_CONNECTION_NAME
+          valueFrom:
+            secretKeyRef:
+              name: no-code-service-secrets
+              key: cloud-sql-connection-name
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 2
+          runAsGroup: 2
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: cloudsql-sa
+          mountPath: /secrets/cloudsql
+          readOnly: true
+      volumes:
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: logs-storage
+        emptyDir:
+          sizeLimit: 100Mi
+      - name: cloudsql-sa
+        secret:
+          secretName: cloudsql-sa-secret
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - no-code-service
+              topologyKey: kubernetes.io/hostname
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "services"
+        effect: "NoSchedule"

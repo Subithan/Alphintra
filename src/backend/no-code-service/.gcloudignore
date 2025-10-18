@@ -1,0 +1,181 @@
+# .gcloudignore for no-code-service
+# This file specifies which files and directories to ignore when uploading to Google Cloud
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+*.key
+*.pem
+*.p12
+*.crt
+*.pfx
+secrets/
+secrets.json
+service-account.json
+cloudsql-sa-*.json
+
+# Logs
+*.log
+logs/
+*.out
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+*.temp
+
+# Test files and coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Documentation
+docs/_build/
+*.md
+!README.md
+!README_DEPLOYMENT.md
+
+# Node.js (if any frontend files exist)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+database.db
+*.sql
+!migrations/
+
+# Backup and migration scripts
+backups/
+*.bak
+*.backup
+
+# Local development files
+development/
+.git/
+.gitignore
+
+# Local Docker files
+docker-compose.override.yml
+Dockerfile.local
+docker-compose.yml.local
+
+# Local Kubernetes files
+*.local.yaml
+*.dev.yaml
+dev-local/
+
+# Monitoring and profiling
+*.prof
+*.trace
+
+# Build artifacts that shouldn't be uploaded
+target/
+build/
+out/
+dist/
+
+# Local scripts that shouldn't be uploaded
+test-local.sh
+run-local.sh
+debug.sh
+
+# Jupyter notebooks (development only)
+*.ipynb
+
+# Local test data
+test_data/
+test-files/
+*.test
+*.tests
+
+# Large files that shouldn't be uploaded
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.jar
+*.war
+*.ear
+
+# Cloud Build temporary files
+.cloudbuild/
+gcloud-build.log
+
+# Alembic local environment files
+alembic.ini.local
+alembic.ini.dev
+
+# Local Alembic versions directory
+versions/local/
+versions/dev/
+
+# Sample and test data
+samples/
+examples/
+demo/
+test-datasets/
+
+# Local configuration overrides
+config.local.*
+settings.local.*
+app.local.*
+
+# Database dumps and exports
+*.dump
+*.sqlc
+*.pg_dump
+*.backup.sql

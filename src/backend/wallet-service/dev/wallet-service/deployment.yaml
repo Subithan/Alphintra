@@ -23,6 +23,8 @@ spec:
         prometheus.io/port: "8011"
         prometheus.io/path: "/health"
     spec:
+      nodeSelector:
+        pool: nat-backend
       serviceAccountName: wallet-service
       securityContext:
         runAsNonRoot: true
@@ -118,7 +120,7 @@ spec:
             - "--port=5432"
             - "--address=127.0.0.1"
             - "--private-ip"
-            - "--credentials-file=/secrets/service-account.json"
+            - "--credentials-file=/secrets/cloudsql/service-account.json"
             - "alphintra-472817:us-central1:alphintra-db-instance"
           securityContext:
             runAsNonRoot: true
@@ -134,14 +136,14 @@ spec:
               cpu: 50m
               memory: 128Mi
           volumeMounts:
-            - name: service-account-secret
-              mountPath: /secrets/
+            - name: cloudsql-sa
+              mountPath: /secrets/cloudsql
               readOnly: true
 
       volumes:
-        - name: service-account-secret
+        - name: cloudsql-sa
           secret:
-            secretName: wallet-service-sa-key
+            secretName: cloudsql-sa-secret
         - name: app-logs
           emptyDir: {}
         - name: tmp

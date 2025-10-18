@@ -225,6 +225,20 @@ async def compile_workflow(
         db.commit()
         db.refresh(workflow)
 
+        # Create compilation result with user association
+        from models import CompilationResult
+        compilation_record = CompilationResult(
+            id=str(workflow.uuid),
+            workflow_id=workflow.id,
+            user_id=current_user.id,
+            python_code=workflow.generated_code or "",
+            validation_results=compilation_result.get("validation", {}),
+            status=workflow.compilation_status,
+            error_message="; ".join(compilation_result.get("errors", [])),
+        )
+        db.add(compilation_record)
+        db.commit()
+
         return CompilationResponse(
             workflow_id=str(workflow.uuid),
             generated_code=workflow.generated_code,
@@ -383,6 +397,27 @@ async def execute_strategy_background(execution_id: str, strategy_code: str, con
             },
         }
         execution.completed_at = datetime.utcnow()
+
+        # Create execution history record with user association
+        from models import ExecutionHistory
+        execution_history = ExecutionHistory(
+            workflow_id=execution.workflow_id,
+            user_id=execution.user_id,
+            execution_mode=execution.execution_type,
+            status=execution.status,
+            execution_config={
+                "initial_capital": float(config["initial_capital"]),
+                "symbols": execution.symbols,
+                "timeframe": execution.timeframe,
+            },
+            results=execution.results,
+            error_logs=execution.error_logs,
+            generated_code=strategy_code,
+            compilation_stats=execution.compilation_stats,
+            created_at=execution.started_at,
+            completed_at=execution.completed_at,
+        )
+        db.add(execution_history)
         db.commit()
     finally:
         db.close()

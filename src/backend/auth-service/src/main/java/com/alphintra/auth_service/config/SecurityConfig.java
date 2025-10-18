@@ -59,10 +59,18 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(securityProperties.resolvedAllowedOrigins());
+    var origins = securityProperties.resolvedAllowedOrigins();
+    if (origins.stream().anyMatch("*"::equals)) {
+      // When credentials are allowed, Spring forbids wildcard in allowedOrigins.
+      // Use allowedOriginPatterns instead to support wildcard origins safely.
+      config.addAllowedOriginPattern("*");
+    } else {
+      config.setAllowedOrigins(origins);
+    }
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(
         List.of("authorization", "content-type", "x-auth-token", "Authorization"));
+    config.setExposedHeaders(List.of("X-Correlation-Id"));
     config.setAllowCredentials(true);
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);

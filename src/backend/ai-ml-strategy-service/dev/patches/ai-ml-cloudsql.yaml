@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-ml-strategy-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: ai-ml-strategy-service
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ai-ml-strategy-service-secrets
+                  key: DATABASE_URL
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.10.1
+          args:
+            - "--port=5432"
+            - "--address=127.0.0.1"
+            - "--private-ip"
+            - "--credentials-file=/secrets/service-account.json"
+            - "$(CLOUD_SQL_CONNECTION_NAME)"
+          env:
+            - name: CLOUD_SQL_CONNECTION_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: ai-ml-strategy-service-secrets
+                  key: cloud-sql-connection-name
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: cloudsql-sa
+              mountPath: /secrets/
+              readOnly: true
+      volumes:
+        - name: cloudsql-sa
+          secret:
+            secretName: cloudsql-sa-secret

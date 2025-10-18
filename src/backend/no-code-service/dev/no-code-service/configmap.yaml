@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-code-service-config
+  labels:
+    app: no-code-service
+data:
+  # Application settings
+  dev-mode: "false"
+  log-level: "INFO"
+  prometheus-enabled: "true"
+
+  # CORS settings
+  cors-allow-origins: "http://localhost:3000,https://dev.alphintra.internal,https://staging.alphintra.internal"
+
+  # External service URLs
+  auth-service-url: "http://auth-service.alphintra.svc.cluster.local:8009"
+  aiml-service-url: "http://ai-ml-strategy-service.alphintra.svc.cluster.local:8002"
+
+  # Redis configuration
+  redis-url: ""
+
+  # Performance settings
+  max-workers: "1"
+  connection-pool-size: "10"
+  connection-max-overflow: "20"
+
+  # Feature flags
+  enable-graphql-subscriptions: "true"
+  enable-background-tasks: "true"
+  enable-metrics: "true"
+
+  # Timeout settings
+  http-timeout: "300"
+  database-timeout: "30"
+  redis-timeout: "5"
+
+  # Cloud SQL settings
+  cloud-sql-timeout: "30"
+  cloud-sql-connect-timeout: "10"

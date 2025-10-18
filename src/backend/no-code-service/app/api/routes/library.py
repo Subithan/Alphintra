@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api", tags=["library"])
 async def get_components(
     category: Optional[str] = None,
     is_builtin: Optional[bool] = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Return the available workflow components."""
@@ -31,6 +32,11 @@ async def get_components(
             query = query.filter(NoCodeComponent.category == category)
         if is_builtin is not None:
             query = query.filter(NoCodeComponent.is_builtin == is_builtin)
+
+        # Show public components and user's own components
+        query = query.filter(
+            (NoCodeComponent.is_public == True) | (NoCodeComponent.author_id == current_user.id)
+        )
 
         components = query.order_by(NoCodeComponent.category, NoCodeComponent.name).all()
         return [ComponentResponse.from_orm(component) for component in components]

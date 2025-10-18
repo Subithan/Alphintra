@@ -197,6 +197,7 @@ class CompilationResult(Base):
 
     id = Column(String, primary_key=True)
     workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     python_code = Column(Text, nullable=False)
     validation_results = Column(JSON, default=dict)
     status = Column(String, default="pending")
@@ -204,6 +205,7 @@ class CompilationResult(Base):
     created_at = Column(DateTime, default=func.now())
 
     workflow = relationship("NoCodeWorkflow")
+    user = relationship("User")
 
 
 class ExecutionHistory(Base):
@@ -212,6 +214,7 @@ class ExecutionHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, index=True)
     workflow_id = Column(Integer, ForeignKey("nocode_workflows.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     execution_mode = Column(String(20), nullable=False)
     status = Column(String(20), nullable=False)
     execution_config = Column(JSON, default=dict)
@@ -224,3 +227,4 @@ class ExecutionHistory(Base):
     completed_at = Column(DateTime)
 
     workflow = relationship("NoCodeWorkflow")
+    user = relationship("User")
