@@ -39,8 +39,22 @@ public class TradingController {
     }
 
     @GetMapping("/trades")
-    public ResponseEntity<List<TradeOrderDTO>> getTradeHistory(@RequestParam(name = "limit", required = false) Integer limit) {
-        List<TradeOrderDTO> trades = (limit == null) ? tradeHistoryService.getRecentTrades() : tradeHistoryService.getRecentTrades(limit);
+    public ResponseEntity<List<TradeOrderDTO>> getTradeHistory(
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        
+        // If userId is provided from gateway (authenticated request), filter by user
+        if (userId != null && !userId.isEmpty()) {
+            List<TradeOrderDTO> trades = (limit == null) 
+                ? tradeHistoryService.getTradesByUser(userId) 
+                : tradeHistoryService.getTradesByUser(userId, limit);
+            return ResponseEntity.ok(trades);
+        }
+        
+        // Fallback to all trades (for backward compatibility)
+        List<TradeOrderDTO> trades = (limit == null) 
+            ? tradeHistoryService.getRecentTrades() 
+            : tradeHistoryService.getRecentTrades(limit);
         return ResponseEntity.ok(trades);
     }
 

@@ -14,6 +14,15 @@ export { strategyApi, type StrategyData, type BacktestRequest, type BacktestResu
 export { marketDataApi, type MarketDataPoint, type DataSourceConfig, type DataQualityReport } from './market-data-api';
 export { riskManagementApi, type RiskProfile, type RiskAlert, type PositionRiskAssessment } from './risk-management-api';
 export { 
+  tradingApi, 
+  TradingApiService,
+  type TradeOrderData, 
+  type BalanceInfo, 
+  type StartBotRequest, 
+  type TradingBot, 
+  type StopBotsResponse 
+} from './trading-api';
+export { 
   noCodeApiClient, 
   NoCodeApiClient,
   type Workflow, 

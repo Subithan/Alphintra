@@ -27,18 +27,7 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import type { Position, Bot, Order, Trade } from '@/lib/api/types';
-
-interface TradeOrderData {
-  id: number;
-  botId: number;
-  symbol: string;
-  type: string;
-  side: string;
-  price: number;
-  amount: number;
-  status: string;
-  createdAt: string;
-}
+import { tradingApi, type TradeOrderData } from '@/lib/api/trading-api';
 
 const positions: Position[] = [
   {
@@ -166,23 +155,21 @@ export default function MainPanel() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('http://localhost:8008/api/trading/trades?limit=20');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: TradeOrderData[] = await response.json();
+        // Use the trading API client which automatically includes authentication
+        const data = await tradingApi.getTradeHistory(20);
         
         if (mounted) {
           setTradeHistory(data);
         }
       } catch (err) {
         if (mounted) {
-          setError("Failed to fetch trade history");
+          console.error('Failed to fetch trade history:', err);
+          setError(err instanceof Error ? err.message : "Failed to fetch trade history");
         } 
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
