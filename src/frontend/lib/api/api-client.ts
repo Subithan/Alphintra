@@ -2,6 +2,7 @@
 // This handles authentication, error handling, and common request logic
 
 import { gatewayHttpBaseUrl } from '../config/gateway';
+import { getToken } from '../auth';
 
 export interface ApiConfig {
   baseUrl: string;
@@ -60,13 +61,21 @@ class BaseApiClient {
 
     try {
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
         ...(options.headers as Record<string, string> || {}),
       };
 
-      // Add authentication if available
-      if (this.config.authToken) {
-        headers['Authorization'] = `Bearer ${this.config.authToken}`;
+      // Ensure Content-Type for JSON payloads unless explicitly provided
+      if (!('Content-Type' in headers)) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      // Resolve auth token (explicit config takes precedence over stored token)
+      const runtimeToken =
+        this.config.authToken ??
+        getToken();
+
+      if (runtimeToken && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${runtimeToken}`;
       }
 
       const response = await fetch(url, {

@@ -243,7 +243,7 @@ const SUPPORT_API_BASE = '';
 export const customerSupportApi = {
   // Ticket Management
   async createTicket(request: CreateTicketRequest): Promise<Ticket> {
-    const response = await supportApiClient.post(`${SUPPORT_API_BASE}/tickets`, request);
+    const response = await supportApiClient.post<Ticket>(`${SUPPORT_API_BASE}/tickets`, request);
     return response;
   },
 
@@ -256,28 +256,30 @@ export const customerSupportApi = {
       )
     });
     
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets?${params}`);
+    const response = await supportApiClient.get<PaginatedResponse<Ticket>>(
+      `${SUPPORT_API_BASE}/tickets?${params}`
+    );
     return response;
   },
 
   async getTicket(ticketId: string): Promise<Ticket> {
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/${ticketId}`);
+    const response = await supportApiClient.get<Ticket>(`${SUPPORT_API_BASE}/tickets/${ticketId}`);
     return response;
   },
 
   async updateTicket(ticketId: string, request: UpdateTicketRequest): Promise<Ticket> {
-    const response = await supportApiClient.put(`${SUPPORT_API_BASE}/tickets/${ticketId}`, request);
+    const response = await supportApiClient.put<Ticket>(`${SUPPORT_API_BASE}/tickets/${ticketId}`, request);
     return response;
   },
 
   async escalateTicket(ticketId: string, request: EscalationRequest): Promise<Ticket> {
-    const response = await supportApiClient.post(`${SUPPORT_API_BASE}/tickets/${ticketId}/escalate`, request);
+    const response = await supportApiClient.post<Ticket>(`${SUPPORT_API_BASE}/tickets/${ticketId}/escalate`, request);
     return response;
   },
 
   async closeTicket(ticketId: string, reason?: string): Promise<Ticket> {
     const params = reason ? `?reason=${encodeURIComponent(reason)}` : '';
-    const response = await supportApiClient.post(`${SUPPORT_API_BASE}/tickets/${ticketId}/close${params}`);
+    const response = await supportApiClient.post<Ticket>(`${SUPPORT_API_BASE}/tickets/${ticketId}/close${params}`);
     return response;
   },
 
@@ -285,7 +287,7 @@ export const customerSupportApi = {
     const params = new URLSearchParams({ rating: rating.toString() });
     if (feedback) params.append('feedback', feedback);
     
-    const response = await supportApiClient.post(`${SUPPORT_API_BASE}/tickets/${ticketId}/satisfaction?${params}`);
+    const response = await supportApiClient.post<Ticket>(`${SUPPORT_API_BASE}/tickets/${ticketId}/satisfaction?${params}`);
     return response;
   },
 
@@ -299,7 +301,9 @@ export const customerSupportApi = {
       statuses.forEach(status => params.append('statuses', status));
     }
     
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/my-tickets?${params}`);
+    const response = await supportApiClient.get<PaginatedResponse<Ticket>>(
+      `${SUPPORT_API_BASE}/tickets/my-tickets?${params}`
+    );
     return response;
   },
 
@@ -310,7 +314,9 @@ export const customerSupportApi = {
       size: size.toString()
     });
     
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/search?${params}`);
+    const response = await supportApiClient.get<PaginatedResponse<Ticket>>(
+      `${SUPPORT_API_BASE}/tickets/search?${params}`
+    );
     return response;
   },
 
@@ -319,18 +325,25 @@ export const customerSupportApi = {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/stats?${params}`);
+    const response = await supportApiClient.get<TicketStats>(
+      `${SUPPORT_API_BASE}/tickets/stats?${params}`
+    );
     return response;
   },
 
   // Communication Management
   async getTicketCommunications(ticketId: string): Promise<Communication[]> {
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/${ticketId}/communications`);
+    const response = await supportApiClient.get<Communication[]>(
+      `${SUPPORT_API_BASE}/tickets/${ticketId}/communications`
+    );
     return response;
   },
 
   async addCommunication(ticketId: string, request: CreateCommunicationRequest): Promise<Communication> {
-    const response = await supportApiClient.post(`${SUPPORT_API_BASE}/tickets/${ticketId}/communications`, request);
+    const response = await supportApiClient.post<Communication>(
+      `${SUPPORT_API_BASE}/tickets/${ticketId}/communications`,
+      request
+    );
     return response;
   },
 
@@ -345,23 +358,32 @@ export const customerSupportApi = {
   },
 
   async updateAgentStatus(agentId: string, status: AgentStatus): Promise<SupportAgent> {
-    const response = await supportApiClient.put(`${SUPPORT_API_BASE}/agents/${agentId}/status`, { status });
+    const response = await supportApiClient.put<SupportAgent>(
+      `${SUPPORT_API_BASE}/agents/${agentId}/status`,
+      { status }
+    );
     return response;
   },
 
   // Metadata
   async getTicketCategories(): Promise<TicketCategory[]> {
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/categories`);
+    const response = await supportApiClient.get<TicketCategory[]>(
+      `${SUPPORT_API_BASE}/tickets/categories`
+    );
     return response;
   },
 
   async getTicketPriorities(): Promise<TicketPriority[]> {
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/priorities`);
+    const response = await supportApiClient.get<TicketPriority[]>(
+      `${SUPPORT_API_BASE}/tickets/priorities`
+    );
     return response;
   },
 
   async getTicketStatuses(): Promise<TicketStatus[]> {
-    const response = await supportApiClient.get(`${SUPPORT_API_BASE}/tickets/statuses`);
+    const response = await supportApiClient.get<TicketStatus[]>(
+      `${SUPPORT_API_BASE}/tickets/statuses`
+    );
     return response;
   }
 };

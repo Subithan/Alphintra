@@ -21,4 +21,4 @@ spec:
         - "api.alphintra.com"
       tls:
         mode: SIMPLE
-        credentialName: prod-alphintra-gateway-tls
+        credentialName: api-alphintra-com-tls

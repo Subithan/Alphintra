@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: trading-engine
-  namespace: alphintra
   labels:
     app: trading-engine
     component: backend
@@ -45,12 +44,35 @@ spec:
             - secretRef:
                 name: trading-engine-secrets
           env:
-            # Override database URL to use Cloud SQL proxy
-            - name: DATABASE_URL
+            # Database connection variables (matching auth-service pattern)
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_NAME
+            - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: trading-engine-secrets
-                  key: DATABASE_URL
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trading-engine-secrets
+                  key: SPRING_DATASOURCE_PASSWORD
+            # Spring Boot datasource configuration
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
             # Database username from secret
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
@@ -69,6 +91,11 @@ spec:
                 secretKeyRef:
                   name: trading-engine-secrets
                   key: SPRING_DATA_REDIS_PASSWORD
+            # Binance API configuration - disabled in cloud due to geographic restrictions
+            - name: BINANCE_API_ENABLED
+              value: "false"
+            - name: BINANCE_TESTNET_ENABLED
+              value: "true"
           resources:
             requests:
               cpu: 200m
@@ -96,8 +123,8 @@ spec:
             httpGet:
               path: /actuator/health
               port: http
-            initialDelaySeconds: 120
-            failureThreshold: 12
+            initialDelaySeconds: 60
+            failureThreshold: 30
             periodSeconds: 10
             timeoutSeconds: 5
           volumeMounts:
@@ -106,36 +133,7 @@ spec:
             - name: tmp
               mountPath: /tmp
 
-        # Cloud SQL Proxy Container
-        - name: cloud-sql-proxy
-          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.10.1
-          args:
-            - "--port=5432"
-            - "--address=127.0.0.1"
-            - "--credentials-file=/secrets/service-account.json"
-            - "alphintra-472817:us-central1:alphintra-db-instance"
-          securityContext:
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 50m
-              memory: 128Mi
-          volumeMounts:
-            - name: service-account-secret
-              mountPath: /secrets/
-              readOnly: true
-
       volumes:
-        - name: service-account-secret
-          secret:
-            secretName: trading-engine-sa-key
         - name: app-logs
           emptyDir: {}
         - name: tmp

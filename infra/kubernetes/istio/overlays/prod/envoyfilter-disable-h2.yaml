@@ -1,0 +1,27 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: disable-h2-for-api-alphintra
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+    - applyTo: FILTER_CHAIN
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            # Match SNI for our public hostnames
+            sni: api.alphintra.com
+      patch:
+        operation: MERGE
+        value:
+          transportSocket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+              common_tls_context:
+                alpnProtocols:
+                  - http/1.1

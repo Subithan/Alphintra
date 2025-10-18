@@ -117,6 +117,7 @@ spec:
           args:
             - "--port=5432"
             - "--address=127.0.0.1"
+            - "--private-ip"
             - "--credentials-file=/secrets/service-account.json"
             - "alphintra-472817:us-central1:alphintra-db-instance"
           securityContext:

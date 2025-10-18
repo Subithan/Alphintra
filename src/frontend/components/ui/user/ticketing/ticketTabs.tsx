@@ -35,8 +35,8 @@ interface Ticket {
   id: string;
   title: string;
   description: string;
-  priority: string;
-  status: string;
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  status: 'open' | 'in-progress' | 'pending' | 'resolved';
   customer: string;
   assignee: string;
   created: string;
@@ -46,21 +46,26 @@ interface Ticket {
 
 interface TicketTabsProps {
   tickets: Ticket[];
-  statusColors: Record<string, string>;
-  priorityColors: Record<string, string>;
-  setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>; // Add setTickets prop
+  statusColors: Record<Ticket['status'], string>;
+  priorityColors: Record<Ticket['priority'], string>;
+  setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>;
 }
 
-const statuses = ['all', 'open', 'in-progress', 'pending', 'resolved'];
+type TicketUpdateForm = {
+  priority: Ticket['priority'] | '';
+  status: Ticket['status'] | '';
+};
+
+const statuses: Array<'all' | Ticket['status']> = ['all', 'open', 'in-progress', 'pending', 'resolved'];
 
 export default function TicketTabs({ tickets, statusColors, priorityColors, setTickets }: TicketTabsProps) {
   const [open, setOpen] = useState<boolean>(false);
   const [currentTicketId, setCurrentTicketId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<{ priority: string; status: string }>({ priority: '', status: '' });
-  const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
+  const [formData, setFormData] = useState<TicketUpdateForm>({ priority: '', status: '' });
+  const [errors, setErrors] = useState<Partial<Record<keyof TicketUpdateForm, string>>>({});
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const validateForm = (data: { priority: string; status: string }): boolean => {
+  const validateForm = (data: TicketUpdateForm): boolean => {
     const result = ticketSchema.safeParse(data);
     if (!result.success) {
       const newErrors = result.error.flatten().fieldErrors;
@@ -83,8 +88,8 @@ export default function TicketTabs({ tickets, statusColors, priorityColors, setT
         ticket.id === currentTicketId
           ? {
               ...ticket,
-              priority: formData.priority,
-              status: formData.status,
+              priority: formData.priority as Ticket['priority'],
+              status: formData.status as Ticket['status'],
               updated: new Date().toLocaleDateString('en-US', {
                 month: 'short',
                 day: '2-digit',

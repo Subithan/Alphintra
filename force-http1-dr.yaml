@@ -1,0 +1,15 @@
+# in force-http1-dr.yaml
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: service-gateway-force-http1
+  namespace: alphintra
+spec:
+  # This makes the rule visible to all namespaces, including istio-system
+  exportTo:
+  - "*"
+  host: service-gateway.alphintra.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      http:
+        h2UpgradePolicy: DO_NOT_UPGRADE

@@ -237,15 +237,15 @@ export class StrategyOrchestrationEngine {
 
   private setupEventListeners(): void {
     // Data engine events
-    this.dataEngine.addEventListener('data', (data) => {
+    this.dataEngine.addEventListener('data', (data: unknown) => {
       this.handleMarketData(data);
     });
 
-    this.dataEngine.addEventListener('connection', (event) => {
+    this.dataEngine.addEventListener('connection', (event: unknown) => {
       this.handleConnectionEvent(event);
     });
 
-    this.dataEngine.addEventListener('error', (error) => {
+    this.dataEngine.addEventListener('error', (error: unknown) => {
       this.handleDataError(error);
     });
 

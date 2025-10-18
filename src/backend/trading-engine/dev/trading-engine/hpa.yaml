@@ -2,7 +2,6 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: trading-engine-hpa
-  namespace: alphintra
   labels:
     app: trading-engine
     component: backend
@@ -12,7 +11,7 @@ spec:
     kind: Deployment
     name: trading-engine
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 1
   metrics:
   - type: Resource
     resource:

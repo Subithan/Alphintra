@@ -74,7 +74,6 @@ steps:
       - '-c'
       - |
         echo "🏗️  Building Trading Engine JAR package..."
-        cd src/backend/${_SERVICE_NAME}
 
         # Verify database initialization script exists
         if [[ ! -f "src/main/resources/init_database.sql" ]]; then
@@ -123,7 +122,6 @@ steps:
       - '-c'
       - |
         echo "🧪 Running Trading Engine test suite in parallel..."
-        cd src/backend/${_SERVICE_NAME}
 
         # Create separate test directory to avoid conflicts
         mkdir -p target/test-classes
@@ -163,7 +161,6 @@ steps:
       - '-c'
       - |
         echo "🐳 Building Trading Engine Docker image with database integration..."
-        cd src/backend/${_SERVICE_NAME}
 
         # Verify JAR and database files exist
         if [[ ! -f "target/trading-engine-1.0-SNAPSHOT.jar" ]]; then

@@ -30,6 +30,8 @@ spec:
           value: "3000"
         - name: NEXT_TELEMETRY_DISABLED
           value: "1"
+        - name: NEXT_PUBLIC_GATEWAY_URL
+          value: "https://api.alphintra.com"
         resources:
           requests:
             memory: "256Mi"

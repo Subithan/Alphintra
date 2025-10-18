@@ -123,9 +123,6 @@ export default function TicketsPage() {
         title: newErrors.title?.[0],
         description: newErrors.description?.[0],
         priority: newErrors.priority?.[0],
-        customer: newErrors.customer?.[0],
-        assignee: newErrors.assignee?.[0],
-        status: newErrors.status?.[0],
       });
       return false;
     }
@@ -244,7 +241,12 @@ export default function TicketsPage() {
                       <label className="text-sm font-medium text-muted-foreground">Priority</label>
                       <Select
                         value={formData.priority}
-                        onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            priority: value as FormData['priority'],
+                          })
+                        }
                       >
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Select priority" />
@@ -281,6 +283,7 @@ export default function TicketsPage() {
           tickets={tickets}
           priorityColors={priorityColors}
           statusColors={statusColors}
+          setTickets={setTickets}
         />
       </main>
     </div>

@@ -1,8 +1,8 @@
 // file path: "D:\Alphintra\Alphintra\src\frontend\lib\api\auth-service-api.ts"
 
 import axios from 'axios';
-import type { AxiosInstance } from 'axios';
 import { gatewayHttpBaseUrl } from '../config/gateway';
+import { getToken } from '../auth';
 
 
 // Types for Auth API
@@ -43,7 +43,7 @@ export interface AuthResponse {
 }
 
 export class AuthServiceApiClient {
-  private api: AxiosInstance;
+  private api: ReturnType<typeof axios.create>;
 
   constructor() {
     this.api = axios.create({
@@ -51,6 +51,17 @@ export class AuthServiceApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+    });
+
+    this.api.interceptors.request.use((config) => {
+      const token = getToken();
+      if (token) {
+        config.headers = config.headers ?? {};
+        if (!config.headers['Authorization']) {
+          config.headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      return config;
     });
 
     if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_DEBUG_API === 'true') {
