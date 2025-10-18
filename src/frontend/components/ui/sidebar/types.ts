@@ -6,4 +6,5 @@ export interface SidebarItemType {
   icon: string;
   url: string;
   external?: boolean; // Opens in new tab if true
+  isModal?: boolean; // Opens as modal if true
 }
