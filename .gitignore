@@ -612,3 +612,25 @@ infra/backups/
 **/.claude-flow/
 .swarm/
 **/.swarm/
+AGENTS.md
+plan.md
+research.md
+tasks.md
+
+dev-debug.log
+# Environment variables
+# Editor directories and files
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+
+.taskmaster/
+
+# Task files
+# tasks.json
+# tasks/ 
+.cursor/

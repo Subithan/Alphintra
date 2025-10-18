@@ -1,0 +1,329 @@
+# Optimized Cloud Build Configuration for Trading Engine
+# Target: <3 minute build times with 60-80% improvement
+#
+# Key optimizations:
+# 1. Maven dependency caching with GCS tarball strategy
+# 2. Parallel execution: tests + Docker build simultaneously
+# 3. Optimized Docker layer caching with database integration
+# 4. Fast Kubernetes deployment without blocking verification
+# 5. E2_HIGHCPU_8 machine for maximum performance
+# 6. Database initialization with auto-table creation
+#
+# Build strategy:
+# - Restore Maven dependencies from GCS cache (30 seconds)
+# - Run Maven build and tests in parallel (180 seconds)
+# - Build Docker image with database integration (60 seconds)
+# - Deploy to Kubernetes without waiting for rollout (30 seconds)
+# - Save Maven cache to GCS (background, 45 seconds)
+
+options:
+  machineType: 'E2_HIGHCPU_8'  # High-performance machine for faster builds
+  substitutionOption: ALLOW_LOOSE
+
+substitutions:
+  _SERVICE_NAME: trading-engine
+  _COMMIT_SHA: BUILDER_SHA
+  _DOCKERFILE: Dockerfile-optimized
+  _PROJECT_ID: alphintra-472817
+  _GCS_CACHE_BUCKET: alphintra-472817-mvn-cache
+
+steps:
+  # ====================================================================
+  # Phase 1: Maven Cache Restoration
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Restore-Maven-Cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔄 Restoring Maven cache from GCS..."
+        start_time=$(date +%s)
+
+        CACHE_FILE="${_SERVICE_NAME}_maven_cache.tar.gz"
+        # Check if a cache tarball exists in the bucket
+        if gsutil -q stat "gs://${_GCS_CACHE_BUCKET}/$${CACHE_FILE}"; then
+          echo "✅ Cache tarball found. Downloading..."
+          gsutil -q cp "gs://${_GCS_CACHE_BUCKET}/$${CACHE_FILE}" /tmp/maven_cache.tar.gz
+
+          echo "📦 Extracting cache..."
+          tar -xzf /tmp/maven_cache.tar.gz -C /
+
+          end_time=$(date +%s)
+          cache_size=$(du -sh /root/.m2 2>/dev/null | cut -f1 || echo "unknown")
+          echo "✅ Maven cache restored successfully (${cache_size}) in $((end_time - start_time))s"
+        else
+          echo "⚠️  No existing cache found in gs://${_GCS_CACHE_BUCKET}/"
+          echo "   This is normal for the first build"
+        fi
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    timeout: '120s'
+
+  # ====================================================================
+  # Phase 2: Parallel Build Execution
+  # ====================================================================
+
+  # Package JAR (Critical Path Start)
+  - name: 'gcr.io/cloud-builders/mvn'
+    id: 'Package-JAR'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🏗️  Building Trading Engine JAR package..."
+        cd src/backend/${_SERVICE_NAME}
+
+        # Verify database initialization script exists
+        if [[ ! -f "src/main/resources/init_database.sql" ]]; then
+          echo "❌ Database initialization script not found"
+          exit 1
+        fi
+
+        echo "✅ Database initialization script found"
+
+        # Use optimized Maven configuration with retry logic
+        if ! mvn -B -ntp \
+          -Dmaven.repo.local=/root/.m2/repository \
+          clean package -DskipTests; then
+
+          echo "❌ Maven build failed, possibly due to a corrupt cache. Retrying with a clean repository..."
+          rm -rf /root/.m2/repository/*
+
+          # Retry the build. If this fails, the entire build will fail.
+          # The -U flag forces a check for updated dependencies.
+          mvn -U -B -ntp \
+            -Dmaven.repo.local=/root/.m2/repository \
+            clean package -DskipTests || exit 1
+        fi
+
+        echo "✅ JAR package built successfully"
+        echo "📦 Artifact: target/trading-engine-1.0-SNAPSHOT.jar"
+
+        # Verify JAR and database script exist
+        # This check will now only run on a successful build.
+        if [[ ! -f "target/trading-engine-1.0-SNAPSHOT.jar" ]]; then
+          echo "❌ JAR file not found - checking target directory:"
+          ls -la target/
+          exit 1
+        fi
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    waitFor: ['Restore-Maven-Cache']
+    timeout: '300s'
+
+  # Run Tests in Parallel (Non-blocking)
+  - name: 'gcr.io/cloud-builders/mvn'
+    id: 'Run-Tests'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🧪 Running Trading Engine test suite in parallel..."
+        cd src/backend/${_SERVICE_NAME}
+
+        # Create separate test directory to avoid conflicts
+        mkdir -p target/test-classes
+
+        # Run tests with parallel execution
+        mvn -B -ntp \
+          -Dmaven.repo.local=/root/.m2/repository \
+          test
+
+        # Check test results - use Maven exit code instead of parsing files
+        if [[ $? -eq 0 ]]; then
+          echo "✅ All tests passed successfully"
+          # Show test summary
+          if find target/surefire-reports -name "*.txt" -exec grep -l "Tests run:" {} \; 2>/dev/null; then
+            echo "📊 Test Summary:"
+            find target/surefire-reports -name "*.txt" -exec grep "Tests run:" {} \; 2>/dev/null | head -1
+          fi
+        else
+          echo "❌ Tests failed - Maven exit code: $?"
+          find target/surefire-reports -name "*.txt" -exec echo "🔍 {}" \; -exec cat {} \;
+          exit 1
+        fi
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    waitFor: ['Package-JAR']  # Wait for package to complete first
+    timeout: '240s'
+
+  # ====================================================================
+  # Phase 3: Container Build with Database Integration
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build-Image'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🐳 Building Trading Engine Docker image with database integration..."
+        cd src/backend/${_SERVICE_NAME}
+
+        # Verify JAR and database files exist
+        if [[ ! -f "target/trading-engine-1.0-SNAPSHOT.jar" ]]; then
+          echo "❌ JAR file not found"
+          exit 1
+        fi
+
+        if [[ ! -f "src/main/resources/init_database.sql" ]]; then
+          echo "❌ Database initialization script not found"
+          exit 1
+        fi
+
+        echo "✅ JAR and database initialization files found, proceeding with Docker build"
+
+        # Build Docker image with optimized Dockerfile
+        docker build \
+          -f ${_DOCKERFILE} \
+          -t 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}' \
+          -t 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest' \
+          .
+
+        echo "✅ Docker image built successfully"
+        echo "📦 Image: gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}"
+    waitFor: ['Package-JAR']
+    timeout: '180s'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push-Image-SHA'
+    args:
+      - 'push'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+    waitFor: ['Build-Image']
+    timeout: '60s'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push-Image-Latest'
+    args:
+      - 'push'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+    waitFor: ['Build-Image']
+    timeout: '60s'
+
+  # ====================================================================
+  # Phase 4: Kubernetes Deployment
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Apply-Manifests'
+    args:
+      - 'apply'
+      - '-k'
+      - 'dev'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Push-Image-SHA', 'Push-Image-Latest']
+    timeout: '60s'
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Update-Deployment-Image'
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/trading-engine'
+      - 'trading-engine=gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+      - '-n'
+      - 'alphintra'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Apply-Manifests']
+    timeout: '30s'
+
+  # ====================================================================
+  # Phase 5: Cache Management (Background)
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Save-Maven-Cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "💾 Saving Maven cache to GCS as a tarball..."
+        start_time=$(date +%s)
+
+        CACHE_FILE="${_SERVICE_NAME}_maven_cache.tar.gz"
+        # Create a compressed tarball of the Maven repository
+        echo "📦 Compressing /root/.m2 directory..."
+        tar -czf /tmp/maven_cache.tar.gz -C /root .m2
+
+        # Upload the single tarball to GCS
+        echo "☁️  Uploading cache tarball..."
+        if gsutil -q cp /tmp/maven_cache.tar.gz "gs://${_GCS_CACHE_BUCKET}/$${CACHE_FILE}"; then
+          end_time=$(date +%s)
+          cache_size=$(du -sh /tmp/maven_cache.tar.gz | cut -f1)
+          echo "✅ Maven cache tarball (${cache_size}) saved successfully in $((end_time - start_time))s"
+        else
+          echo "❌ Failed to save Maven cache. Check IAM permissions ('storage.objectAdmin' on the bucket for the correct service account) and build logs."
+          exit 1
+        fi
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    waitFor: ['Run-Tests']
+    timeout: '180s'
+
+  # ====================================================================
+  # Phase 6: Build Verification
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Verify-Deployment-Status'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔍 Verifying Trading Engine deployment configuration..."
+
+        # Check if deployment exists
+        if kubectl get deployment trading-engine -n alphintra -o name; then
+          echo "✅ Deployment configuration verified"
+
+          # Get current image
+          current_image=$(kubectl get deployment trading-engine -n alphintra -o jsonpath='{.spec.template.spec.containers[0].image}')
+          echo "📦 Current deployment image: $current_image"
+
+          echo "🚀 Trading Engine deployment triggered successfully"
+          echo "💡 Database will be auto-initialized on first startup"
+        else
+          echo "❌ Deployment not found"
+          exit 1
+        fi
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Update-Deployment-Image']
+    timeout: '30s'
+
+# ====================================================================
+# Build Outputs
+# ====================================================================
+
+images:
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+
+# ====================================================================
+# Build Tags
+# ====================================================================
+
+tags:
+  - 'trading-engine'
+  - 'optimized-build-hybrid'
+  - 'maven-cache'
+  - 'parallel-execution'
+  - 'database-integration'
+
+# ====================================================================
+# Timeout
+# ====================================================================
+
+timeout: '600s'

@@ -6,6 +6,7 @@
  */
 
 import { BaseApiClient } from './api-client';
+import { gatewayHttpBaseUrl } from '../config/gateway';
 
 // Types matching the backend models
 export interface FileInfo {
@@ -71,7 +72,7 @@ export class FileManagementApi extends BaseApiClient {
   constructor() {
     // Configure for ai-ml-strategy-service
     super({
-      baseUrl: process.env.NEXT_PUBLIC_AI_ML_SERVICE_URL || 'http://localhost:8002',
+      baseUrl: gatewayHttpBaseUrl,
       timeout: 60000, // File operations may take longer
     });
   }

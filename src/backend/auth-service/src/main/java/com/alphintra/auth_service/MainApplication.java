@@ -1,51 +1,27 @@
 package com.alphintra.auth_service;
 
-import org.springframework.boot.CommandLineRunner;
+import com.alphintra.auth_service.config.SecurityProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.jdbc.core.JdbcTemplate;
-import javax.sql.DataSource;
-import java.sql.Timestamp;
 
 @SpringBootApplication
+@EnableConfigurationProperties(SecurityProperties.class)
 public class MainApplication {
 
-    public static void main(String[] args) {
-        try {
-            System.out.println("Initializing database...");
-            DockerNetworkDatabaseInitializer.main(args);
-            System.out.println("Database initialization completed.");
-        } catch (Exception e) {
-            System.err.println("Failed to initialize database: " + e.getMessage());
-            e.printStackTrace();
-            System.exit(1);
-        }
-        SpringApplication.run(MainApplication.class, args);
-        System.out.println("Trading Engine application started on port 8009.");
-    }
+  private static final Logger log = LoggerFactory.getLogger(MainApplication.class);
 
-    @Bean
-    public CommandLineRunner databaseInitializer() {
-        return args -> {
-            // Avoid redundant initialization if already done in main
-            System.out.println("Database initializer bean invoked.");
-        };
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(MainApplication.class, args);
+    log.info("Auth service started successfully.");
+  }
 
-    @Bean
-    public BCryptPasswordEncoder customPasswordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
-    }
-
-    // Remove CORS configuration (handled in SecurityConfig.java)
-    // public WebMvcConfigurer corsConfigurer() { ... }
-
-    
+  @Bean
+  public BCryptPasswordEncoder customPasswordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
 }

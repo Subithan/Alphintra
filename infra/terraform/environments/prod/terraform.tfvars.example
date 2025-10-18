@@ -1,0 +1,80 @@
+project_id = "alphintra-472817"
+
+region = "us-central1"
+zone   = "us-central1-a"
+
+network_name = "alphintra-prod-vpc"
+
+subnets = [
+  {
+    name          = "prod-apps-subnet"
+    region        = "us-central1"
+    ip_cidr_range = "10.30.0.0/23"
+    secondary_ip_ranges = [
+      {
+        range_name    = "prod-pods"
+        ip_cidr_range = "10.30.8.0/21"
+      },
+      {
+        range_name    = "prod-services"
+        ip_cidr_range = "10.30.16.0/21"
+      }
+    ]
+  }
+]
+
+artifact_registry_repositories = [
+  {
+    repository_id = "alphintra-prod"
+    location      = "us-central1"
+    format        = "DOCKER"
+    description   = "Production container images"
+    labels = {
+      environment = "prod"
+      service     = "platform"
+    }
+  }
+]
+
+workload_identity_project = "alphintra-472817"
+
+workload_identity_service_accounts = [
+  {
+    name         = "auth-cloudsql-prod"
+    account_id   = "auth-cloudsql-prd"
+    display_name = "Auth Service Cloud SQL (prod)"
+    roles = [
+      "roles/cloudsql.client",
+      "roles/secretmanager.secretAccessor",
+      "roles/logging.logWriter"
+    ]
+    kubernetes_service_accounts = [
+      {
+        namespace = "auth-service"
+        name      = "auth-service"
+      }
+    ]
+  },
+  {
+    name         = "gateway-runtime-prod"
+    account_id   = "gateway-runtime-prd"
+    display_name = "Gateway Runtime (prod)"
+    roles = [
+      "roles/monitoring.metricWriter",
+      "roles/cloudtrace.agent",
+      "roles/logging.logWriter"
+    ]
+    kubernetes_service_accounts = [
+      {
+        namespace = "gateway"
+        name      = "gateway"
+      }
+    ]
+  }
+]
+
+cloudsql_instance_name     = "alphintra-db-instance"
+auth_database_name         = "alphintra_auth_service"
+auth_database_user         = "alphintra"
+auth_database_password     = "CHANGE_ME_IN_SECRET_MANAGER"
+auth_database_secret_name  = "auth-service-db-password"

@@ -2,9 +2,10 @@
 'use client';
 
 import { useState } from 'react';
+import { gatewayHttpBaseUrl } from '@/lib/config/gateway';
 
 export default function TestGatewayPage() {
-  const [gatewayUrl, setGatewayUrl] = useState(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080');
+  const [gatewayUrl, setGatewayUrl] = useState(gatewayHttpBaseUrl);
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

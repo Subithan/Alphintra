@@ -1,5 +1,6 @@
 import { apolloClient } from '../graphql/apollo-client';
 import { BaseApiClient } from './api-client';
+import { gatewayHttpBaseUrl } from '../config/gateway';
 import {
   GET_WORKFLOWS,
   GET_WORKFLOW,
@@ -67,12 +68,12 @@ export class NoCodeGraphQLApiClient extends BaseApiClient {
 
   constructor() {
     super({
-      baseUrl: process.env.NEXT_PUBLIC_NOCODE_API_URL || 'http://localhost:8004',
+      baseUrl: gatewayHttpBaseUrl,
     });
     
     // Keep REST client for file operations and legacy endpoints
     this.restClient = new BaseApiClient({
-      baseUrl: process.env.NEXT_PUBLIC_NOCODE_API_URL || 'http://localhost:8004',
+      baseUrl: gatewayHttpBaseUrl,
     });
   }
 

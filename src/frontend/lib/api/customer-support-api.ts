@@ -1,8 +1,9 @@
 import { BaseApiClient } from './api-client';
+import { buildGatewayUrl } from '../config/gateway';
 
 // Create a dedicated API client for customer support service
 const supportApiClient = new BaseApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_SUPPORT_API_URL || 'http://localhost:8010/api/customer-support'
+  baseUrl: buildGatewayUrl('/api/customer-support')
 });
 
 // API Types
