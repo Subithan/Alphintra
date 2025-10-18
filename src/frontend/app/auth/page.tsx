@@ -7,6 +7,13 @@ import PasswordInput from '../../components/auth/PasswordInput';
 // DEVELOPMENT: Commented out to bypass AuthProvider requirement during build
 // import { useAuth } from '../../components/auth/auth-provider';
 import { authServiceApiClient } from '../../lib/api/auth-service-api';
+import {
+  EMAIL_VERIFICATION_EXPIRY_MS,
+  generateVerificationCode,
+  sendVerificationEmail,
+  SignupFormPayload,
+  storePendingSignup,
+} from '@/lib/email/verification';
 
 // Disable static generation for this page as it requires authentication context
 export const dynamic = 'force-dynamic';
@@ -106,28 +113,54 @@ const AuthPage: React.FC = () => {
         setMessage({ type: 'success', text: 'Login successful! Welcome to trading!' });
         window.location.href = '/dashboard';
       } else {
-        const response = await authServiceApiClient.register({
+        console.log('[Signup] Initiating signup flow for', formData.email);
+
+        const signupPayload: SignupFormPayload = {
           username: formData.username!,
           email: formData.email,
           password: formData.password,
           firstName: formData.firstName,
-          lastName: formData.lastName
-        });
+          lastName: formData.lastName,
+        };
 
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('alphintra_jwt_token', response.token);
-          localStorage.setItem('alphintra_auth_token', response.token);
-          localStorage.setItem('auth_token', response.token);
-          localStorage.setItem('alphintra_jwt_user', JSON.stringify(response.user));
+        try {
+          const code = generateVerificationCode();
+          console.log('[Signup] Generated verification code', code);
+          await sendVerificationEmail(
+            signupPayload.email,
+            code,
+            signupPayload.firstName || signupPayload.email
+          );
+
+          storePendingSignup({
+            formData: signupPayload,
+            email: signupPayload.email,
+            code,
+            expiresAt: Date.now() + EMAIL_VERIFICATION_EXPIRY_MS,
+            name: signupPayload.firstName || signupPayload.email,
+          });
+
+          console.log('[Signup] Pending signup stored, redirecting to verify page');
+          setMessage({
+            type: 'success',
+            text: 'We sent you a verification code. Please check your email.',
+          });
+          window.location.href = '/auth/verify';
+        } catch (emailError) {
+          console.error('[Signup] Failed to send verification email', emailError);
+          setMessage({
+            type: 'error',
+            text: 'We could not send the verification email. Please try again.',
+          });
         }
-
-        setMessage({ type: 'success', text: 'Account creation successful! Welcome to trading!' });
-        window.location.href = '/dashboard';
       }
     } catch (error) {
+      console.error('[Auth] handleSubmit error', error);
       setMessage({
         type: 'error',
-        text: isLogin ? 'Login failed. Please check your credentials.' : 'register failed. Please try again.'
+        text: isLogin
+          ? 'Login failed. Please check your credentials.'
+          : 'Sign up failed. Please try again.',
       });
     } finally {
       setIsLoading(false);
