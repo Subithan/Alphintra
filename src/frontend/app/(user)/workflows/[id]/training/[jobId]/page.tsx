@@ -12,13 +12,13 @@ import { TrainingDashboard } from '@/components/no-code/TrainingDashboard'
 import { useExecutionStore, useTrainingJob } from '@/lib/stores/execution-store'
 import { ArrowLeft, ExternalLink, Settings, AlertCircle } from 'lucide-react'
 
-interface TrainingPageParams {
+interface TrainingPageParams extends Record<string, string> {
   id: string // workflow id
   jobId: string // training job id
 }
 
 export default function TrainingJobPage() {
-  const params = useParams() as TrainingPageParams
+  const params = useParams<TrainingPageParams>()
   const router = useRouter()
   const searchParams = useSearchParams()
   

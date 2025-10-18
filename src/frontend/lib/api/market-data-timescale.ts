@@ -2,6 +2,7 @@
 // Handles real-time and historical market data from TimescaleDB
 
 import { BaseApiClient } from './api-client';
+import { gatewayHttpBaseUrl } from '../config/gateway';
 
 export interface TimescaleCandle {
   timestamp: string;
@@ -51,7 +52,7 @@ export interface TimeseriesData {
 class TimescaleMarketDataClient extends BaseApiClient {
   constructor() {
     super({
-      baseUrl: process.env.NEXT_PUBLIC_TIMESCALE_API_URL || 'http://localhost:8001'
+      baseUrl: gatewayHttpBaseUrl,
     });
   }
 

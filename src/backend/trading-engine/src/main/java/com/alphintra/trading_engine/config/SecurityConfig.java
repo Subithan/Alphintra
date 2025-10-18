@@ -39,7 +39,8 @@ public class SecurityConfig {
                 return config;
             }))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/api/public/**").permitAll() // Public endpoints
+                // .requestMatchers("/actuator/health", "/api/public/**").permitAll() // Public endpoints
+                .requestMatchers("/actuator/health", "/api/public/**", "/api/trading/**").permitAll() // Public endpoints
                 .requestMatchers("/api/**").authenticated() // Protect API paths
                 .anyRequest().permitAll() // Or .denyAll() for stricter
             )

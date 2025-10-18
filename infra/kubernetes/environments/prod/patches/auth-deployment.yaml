@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 3
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: auth-service
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: cloud
+            - name: KYC_ENDPOINT
+              value: https://kyc.alphintra.com
+            - name: LOG_LEVEL
+              value: WARN
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi

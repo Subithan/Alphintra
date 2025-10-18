@@ -1,0 +1,34 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: gateway-external
+  namespace: istio-system
+spec:
+  hosts:
+    - "alphintra.local"
+    - "*.alphintra.dev"
+    - "alphintra.com"
+    - "api.alphintra.com"
+  gateways:
+    - alphintra-ingress-gateway
+  http:
+    - name: main-gateway-route
+      corsPolicy:
+        allowOrigins:
+          - regex: ".*"
+        allowMethods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"]
+        allowHeaders: ["*"]
+        exposeHeaders: ["x-correlation-id","x-ratelimit-remaining","x-ratelimit-replenish-rate","x-ratelimit-burst-capacity"]
+        allowCredentials: true
+      match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: service-gateway.alphintra.svc.cluster.local
+            port:
+              number: 80
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+      timeout: 30s

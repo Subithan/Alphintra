@@ -38,7 +38,12 @@ import {
 } from "@/lib/workflow-optimizer";
 import { noCodeApiClient } from "@/lib/api/no-code-api";
 import { ConfigurationPanel } from "./ConfigurationPanel";
-import { ExecutionModeSelector } from "./ExecutionModeSelector";
+import {
+  ExecutionModeSelector,
+  type ExecutionMode,
+  type ExecutionModeConfig,
+  type ExecutionModeSelectorProps,
+} from "./ExecutionModeSelector";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -67,6 +72,56 @@ const edgeTypes = {
 
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
+
+type EstimatedDuration = NonNullable<
+  ExecutionModeSelectorProps["estimatedDuration"]
+>;
+
+const DURATION_PRESETS: Record<
+  "simple" | "medium" | "complex",
+  EstimatedDuration
+> = {
+  simple: {
+    strategy: "< 30 seconds",
+    model: "1-2 hours",
+    hybrid: "15-45 minutes",
+    backtesting: "10-20 minutes",
+    paper_trading: "Live (setup < 5 minutes)",
+    research: "Instant",
+  },
+  medium: {
+    strategy: "< 1 minute",
+    model: "2-6 hours",
+    hybrid: "30-90 minutes",
+    backtesting: "20-45 minutes",
+    paper_trading: "Live (setup < 10 minutes)",
+    research: "Instant",
+  },
+  complex: {
+    strategy: "< 2 minutes",
+    model: "6-12 hours",
+    hybrid: "1-3 hours",
+    backtesting: "45-120 minutes",
+    paper_trading: "Live (setup < 15 minutes)",
+    research: "Instant",
+  },
+};
+
+const getComplexityLevel = (score?: number): "simple" | "medium" | "complex" => {
+  if (typeof score !== "number") {
+    return "simple";
+  }
+
+  if (score >= 70) {
+    return "complex";
+  }
+
+  if (score >= 35) {
+    return "medium";
+  }
+
+  return "simple";
+};
 
 interface NoCodeWorkflowEditorProps {
   selectedNode: string | null;
@@ -554,43 +609,45 @@ function NoCodeWorkflowEditorInner({
   }, [validationResult, handleSaveWorkflow]);
 
   const handleModeSelect = useCallback(
-    async (mode: "strategy" | "model", config: any) => {
+    async (mode: ExecutionMode, config: ExecutionModeConfig) => {
+      if (mode !== "strategy" && mode !== "model") {
+        console.warn(
+          `Execution mode "${mode}" is not yet supported from the editor.`,
+        );
+        setExecutionStatus("idle");
+        setShowExecutionModal(false);
+        return;
+      }
+
       try {
         setExecutionStatus("executing");
 
-        const workflowId =
-          currentWorkflow?.id || currentWorkflow?.uuid || Date.now().toString();
+        const workflowId = currentWorkflow?.id ?? Date.now().toString();
 
         const result = await noCodeApiClient.setExecutionMode(workflowId, {
           mode,
           config,
         });
 
-        // Handle different execution modes with proper navigation
         if (mode === "strategy") {
-          // Navigate to strategy results page
           setExecutionStatus("completed");
           setShowExecutionModal(false);
-          // In a real implementation, use Next.js router
           console.log("Strategy execution result:", result);
           window.location.href = `/workflows/${workflowId}/results/strategy?executionId=${Date.now()}`;
         } else {
-          // Navigate to training dashboard
           setExecutionStatus("monitoring");
           setShowExecutionModal(false);
           const trainingJobId = result.training_job_id;
           console.log("Training job created:", result);
-          // In a real implementation, use Next.js router
           window.location.href = `/workflows/${workflowId}/training/${trainingJobId}?from=execute`;
         }
       } catch (error) {
         console.error("Execution failed:", error);
         setExecutionStatus("failed");
-        // Keep modal open on error so user can try again
         alert("Failed to execute workflow. Please try again.");
       }
     },
-    [currentWorkflow, setExecutionStatus],
+    [currentWorkflow?.id, setExecutionStatus],
   );
 
   const isWorkflowExecutable = () => {
@@ -600,6 +657,11 @@ function NoCodeWorkflowEditorInner({
       validationResult.errors.length === 0
     );
   };
+
+  const complexityLevel = getComplexityLevel(
+    validationResult?.performance?.estimatedComplexity,
+  );
+  const estimatedDuration = DURATION_PRESETS[complexityLevel];
 
   const handleApplyOptimization = (action: any) => {
     if (action.type === "CONSOLIDATE_NODES") {
@@ -1041,29 +1103,12 @@ function NoCodeWorkflowEditorInner({
             {/* Modal Body */}
             <div className="overflow-y-auto max-h-[calc(95vh-120px)] p-6">
               <ExecutionModeSelector
-                workflowId={currentWorkflow?.id || Date.now()}
+                workflowId={currentWorkflow?.id ?? Date.now().toString()}
                 workflowName={currentWorkflow?.name || "Untitled Workflow"}
-                workflowComplexity={
-                  validationResult?.performance?.estimatedComplexity === "high"
-                    ? "complex"
-                    : validationResult?.performance?.estimatedComplexity ===
-                        "medium"
-                      ? "medium"
-                      : "simple"
-                }
+                workflowComplexity={complexityLevel}
                 onModeSelect={handleModeSelect}
                 onCancel={() => setShowExecutionModal(false)}
-                estimatedDuration={{
-                  strategy: "< 1 minute",
-                  model:
-                    validationResult?.performance?.estimatedComplexity ===
-                    "complex"
-                      ? "8-24 hours"
-                      : validationResult?.performance?.estimatedComplexity ===
-                          "medium"
-                        ? "2-8 hours"
-                        : "1-4 hours",
-                }}
+                estimatedDuration={estimatedDuration}
               />
             </div>
           </div>

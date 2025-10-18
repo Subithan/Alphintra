@@ -1,0 +1,104 @@
+# Optimized Single-Stage Dockerfile for Trading Engine
+# This Dockerfile is optimized for Cloud Build with Maven caching
+# It includes database auto-initialization and follows security best practices
+
+# Use Eclipse Temurin (AdoptOpenJDK successor) - a supported OpenJDK distribution
+FROM eclipse-temurin:17-jre-jammy
+
+# Install PostgreSQL client for database initialization
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r tradingengine && useradd -r -g tradingengine tradingengine
+
+# Metadata
+LABEL maintainer="Alphintra Team"
+LABEL version="1.0.0"
+LABEL description="Trading Engine microservice with auto-database initialization"
+
+# Set working directory
+WORKDIR /app
+
+# Copy application files
+COPY target/trading-engine-1.0-SNAPSHOT.jar app.jar
+COPY src/main/resources/init_database.sql init_database.sql
+COPY database-init.sh /app/database-init.sh
+
+# Make database initialization script executable
+RUN chmod +x /app/database-init.sh
+
+# Change ownership to non-root user
+RUN chown -R tradingengine:tradingengine /app
+
+# Set environment variables with defaults
+ENV SPRING_PROFILES_ACTIVE=cloud
+ENV DATABASE_URL=postgresql://trading_engine:alphintra@123@localhost:5432/alphintra_trading_engine
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
+ENV REDIS_PASSWORD=redis123
+ENV KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+ENV ORDER_TOPIC_NAME=new-orders
+ENV SERVER_PORT=8008
+ENV MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health
+ENV MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
+ENV MANAGEMENT_HEALTH_READINESSSTATE_ENABLED=true
+ENV MANAGEMENT_HEALTH_LIVENESSSTATE_ENABLED=true
+ENV SKIP_DB_INIT=false
+
+# External service URLs
+ENV SERVICES_WALLET_URL=http://wallet-service:8011
+ENV SERVICES_STRATEGY_URL=http://strategy-service:8002
+
+# JVM optimization for containerized environments
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+                -XX:MaxRAMPercentage=75.0 \
+                -XX:+UseG1GC \
+                -XX:+UseStringDeduplication \
+                -XX:+OptimizeStringConcat \
+                -Xss256k \
+                -XX:MetaspaceSize=96m \
+                -XX:MaxMetaspaceSize=256m \
+                -XX:+TieredCompilation \
+                -XX:TieredStopAtLevel=1 \
+                -Djava.security.egd=file:/dev/./urandom"
+
+# Application-specific settings
+ENV SPRING_JPA_HIBERNATE_DDL_AUTO=update
+ENV SPRING_JPA_SHOW_SQL=false
+ENV SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+
+# Database connection settings
+ENV SPRING_DATASOURCE_URL=${DATABASE_URL}
+ENV SPRING_DATASOURCE_USERNAME=trading_engine
+ENV SPRING_DATASOURCE_PASSWORD=alphintra@123
+ENV SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=20
+ENV SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=5
+ENV SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=30000
+ENV SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT=600000
+ENV SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=1800000
+
+# Redis connection settings
+ENV SPRING_DATA_REDIS_HOST=${REDIS_HOST}
+ENV SPRING_DATA_REDIS_PORT=${REDIS_PORT}
+ENV SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+ENV SPRING_DATA_REDIS_TIMEOUT=2000ms
+ENV SPRING_DATA_REDIS_CONNECT_TIMEOUT=2000ms
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown tradingengine:tradingengine /app/logs
+
+# Switch to non-root user
+USER tradingengine
+
+# Health check configuration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
+  CMD curl -f http://localhost:8008/actuator/health/readiness || exit 1
+
+# Expose application port
+EXPOSE 8008
+
+# Start the application with database initialization
+ENTRYPOINT ["/bin/bash", "-c", "/app/database-init.sh && exec java $JAVA_OPTS -jar app.jar"]

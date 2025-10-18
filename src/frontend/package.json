@@ -8,6 +8,8 @@
     "build-original": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:ci": "next lint --max-warnings=0",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "type-check": "tsc --project tsconfig.build.json",
     "type-check-strict": "tsc --noEmit"
   },

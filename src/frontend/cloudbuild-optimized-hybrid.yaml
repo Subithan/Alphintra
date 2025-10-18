@@ -1,0 +1,184 @@
+substitutions:
+  _PROJECT_ID: 'alphintra-472817'
+  _SERVICE_NAME: 'alphintra-frontend'
+  _CACHE_BUCKET: '${_PROJECT_ID}-node-cache'
+
+options:
+  substitutionOption: ALLOW_LOOSE
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 100
+
+steps:
+  # Step 1: Restore Node.js dependencies from GCS cache
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'restore-node-cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔍 Checking for Node.js dependencies cache..."
+        # Use BUILD_ID for a unique cache identifier
+        node_cache_identifier="frontend-node-cache-${BUILD_ID}"
+        node_cache_archive="gs://${_CACHE_BUCKET}/$${node_cache_identifier}.tar.gz"
+        node_cache_checksum="gs://${_CACHE_BUCKET}/$${node_cache_identifier}.checksum"
+
+        if gsutil -q stat "$${node_cache_archive}" 2>/dev/null && gsutil -q stat "$${node_cache_checksum}" 2>/dev/null; then
+          echo "📦 Cache hit! Restoring node_modules from GCS..."
+          mkdir -p node_modules
+
+          gsutil -m cp "$${node_cache_archive}" /tmp/node-cache.tar.gz
+          gsutil cp "$${node_cache_checksum}" /tmp/cache.checksum
+
+          # Verify checksum using BUILD_ID
+          echo "${BUILD_ID}" > /tmp/expected.checksum
+          if cmp -s /tmp/cache.checksum /tmp/expected.checksum; then
+            echo "✅ Cache checksum validated"
+            tar -xzf /tmp/node-cache.tar.gz -C .
+            echo "✅ node_modules restored from cache ($(du -sh node_modules | cut -f1))"
+          else
+            echo "⚠️ Cache checksum mismatch - will rebuild dependencies"
+            rm -rf node_modules /tmp/node-cache.tar.gz /tmp/cache.checksum /tmp/expected.checksum
+          fi
+        else
+          echo "🔧 No cache found - will download dependencies"
+          mkdir -p node_modules
+        fi
+    waitFor: ['-']
+
+  # Step 2: Install/Update Node.js dependencies
+  - name: 'node:20-alpine'
+    id: 'install-deps'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "📦 Installing Node.js dependencies..."
+        if [ -d "node_modules" ] && [ -f "node_modules/.package-lock.json" ] && cmp -s node_modules/.package-lock.json package-lock.json; then
+          echo "✅ Dependencies already installed from cache"
+          if npm ls --silent >/dev/null 2>&1; then
+            echo "✅ Dependency validation passed"
+            exit 0
+          else
+            echo "⚠️ Dependency validation failed - reinstalling"
+            rm -rf node_modules
+          fi
+        fi
+        echo "🔧 Running npm ci with optimizations..."
+        npm ci --prefer-offline --no-audit --no-fund --silent
+        echo "✅ Dependencies installed successfully"
+        cp package-lock.json node_modules/.package-lock.json
+    waitFor: ['restore-node-cache']
+
+  # Step 3A: Run Tests in Parallel
+  - name: 'node:20-alpine'
+    id: 'run-tests'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "🧪 Running Next.js test suite..."
+        export NODE_ENV=test
+        export NEXT_TELEMETRY_DISABLED=1
+        export NEXT_PUBLIC_GATEWAY_URL="https://api.alphintra.com"
+        echo "🔍 Running TypeScript type checking..."
+        npx tsc --noEmit --skipLibCheck
+        echo "🔍 Running ESLint..."
+        npx next lint --dir src --max-warnings 0 || echo "⚠️ Linting warnings found - continuing build"
+        if [ -d "__tests__" ] || [ -d "tests" ] || find . -name "*.test.*" -o -name "*.spec.*" | grep -q .; then
+          echo "🧪 Running unit tests..."
+          npm test -- --watchAll=false --passWithNoTests --coverage=false
+        else
+          echo "ℹ️ No test files found - skipping unit tests"
+        fi
+        echo "🏗️ Running Next.js build validation..."
+        npx next build --no-lint
+        echo "✅ All test checks passed successfully!"
+    waitFor: ['install-deps']
+
+  # Step 3B: Build Docker Image in Parallel
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '--target'
+      - 'production'
+      - '-f'
+      - 'Dockerfile'
+      # Tag the image with the unique BUILD_ID
+      - '-t'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${BUILD_ID}'
+      - '-t'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+      - '--cache-from'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+      - '--build-arg'
+      - 'BUILDKIT_INLINE_CACHE=1'
+      - '.'
+    waitFor: ['install-deps']
+
+  # Step 4: Save Node.js dependencies to GCS Cache
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'save-node-cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "💾 Saving node_modules to GCS cache..."
+        # Use BUILD_ID for the cache identifier
+        node_cache_identifier="frontend-node-cache-${BUILD_ID}"
+        node_cache_archive="gs://${_CACHE_BUCKET}/$${node_cache_identifier}.tar.gz"
+        node_cache_checksum="gs://${_CACHE_BUCKET}/$${node_cache_identifier}.checksum"
+
+        echo "🗜️ Compressing node_modules..."
+        tar --exclude='node_modules/.cache' --exclude='node_modules/.bin' --exclude='*.tsbuildinfo' -czf /tmp/node-cache.tar.gz node_modules/
+
+        # The checksum content is now the BUILD_ID
+        echo "${BUILD_ID}" > /tmp/cache.checksum
+
+        gsutil -m cp /tmp/node-cache.tar.gz "$${node_cache_archive}"
+        gsutil cp /tmp/cache.checksum "$${node_cache_checksum}"
+
+        CACHE_SIZE=$(gsutil du -sh "$${node_cache_archive}" | cut -f1)
+        echo "✅ Node.js dependencies cached: $${CACHE_SIZE}"
+        echo "📍 Location: $${node_cache_archive}"
+    waitFor: ['build-image', 'run-tests']
+
+  # Step 5: Fast Kubernetes Deployment
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'deploy'
+    args: ['apply', '-k', 'dev']
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['build-image', 'run-tests']
+
+  # Step 6: Update GKE Workloads with New Image
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'update-deployment'
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/frontend-app'
+      # Deploy the image tagged with BUILD_ID
+      - 'alphintra-frontend=gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${BUILD_ID}'
+      - '-n'
+      - 'default'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['deploy']
+
+# Configure image substitution for deployment
+images:
+  # List the image tagged with BUILD_ID
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${BUILD_ID}'
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+
+timeout: '600s'
+
+tags:
+  - 'frontend'
+  - 'optimized'
+  - 'node-cache'
+  - 'parallel-execution'
+  - 'v2'

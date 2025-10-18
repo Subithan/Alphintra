@@ -3,15 +3,16 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
 import { setContext } from '@apollo/client/link/context';
+import { buildGatewayUrl, buildGatewayWsUrl } from '../config/gateway';
 
 // HTTP Link for queries and mutations
 const httpLink = createHttpLink({
-  uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8004/graphql',
+  uri: buildGatewayUrl('/graphql'),
 });
 
 // WebSocket Link for subscriptions
 const wsLink = typeof window !== 'undefined' ? new GraphQLWsLink(createClient({
-  url: process.env.NEXT_PUBLIC_GRAPHQL_WS_URL || 'ws://localhost:8004/graphql',
+  url: buildGatewayWsUrl('/graphql'),
   connectionParams: () => {
     const token = localStorage.getItem('auth_token');
     return {

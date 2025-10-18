@@ -1,0 +1,33 @@
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: cloudsql-entry
+  namespace: alphintra
+spec:
+  hosts:
+    - alphintra-db-instance.alphintra.internal # logical DNS alias to satisfy Istio validation
+  addresses:
+    - 10.6.124.3
+  ports:
+    - number: 5432
+      name: tcp-postgres
+      protocol: TCP
+  location: MESH_EXTERNAL
+  resolution: STATIC
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: memorystore-entry
+  namespace: alphintra
+spec:
+  hosts:
+    - redis.alphintra.internal
+  addresses:
+    - 10.0.50.4
+  ports:
+    - number: 6379
+      name: tcp-redis
+      protocol: TCP
+  location: MESH_EXTERNAL
+  resolution: STATIC

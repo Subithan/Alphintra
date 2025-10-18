@@ -1,0 +1,24 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: alphintra-ingress-gateway
+  namespace: istio-system
+spec:
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "dev.alphintra.local"
+        - "dev.alphintra.dev"
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "dev.alphintra.local"
+        - "dev.alphintra.dev"
+      tls:
+        mode: SIMPLE
+        credentialName: dev-alphintra-gateway-tls

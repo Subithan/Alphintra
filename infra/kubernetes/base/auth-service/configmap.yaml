@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  labels:
+    app: auth-service
+data:
+  kyc-endpoint: https://kyc-placeholder.example.com
+  log-level: INFO

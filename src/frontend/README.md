@@ -1,3 +1,20 @@
+## Gateway Environment Variables
+
+The frontend now proxies all backend access through the service gateway. Configure the endpoint before running local commands:
+
+```bash
+cp .env.example .env.local
+echo "NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080" >> .env.local
+npm run dev
+```
+
+Mobile builds expect the equivalent Expo variable:
+
+```bash
+cp ../mobile/.env.example ../mobile/.env
+echo "EXPO_PUBLIC_GATEWAY_URL=https://api.alphintra.dev" >> ../mobile/.env
+```
+
 Architecting "Alphintra": A Comprehensive Guide to Immersive Web Experiences with Three.js and GSAPPart I: Foundational Architecture - Setting the StageThe creation of a sophisticated, interactive web platform like Alphintra demands an architectural foundation that is both robust and scalable. The choice of technologies and the structure of the project are not merely preliminary steps; they are critical decisions that dictate the application's performance, maintainability, and capacity for future expansion. This section outlines the establishment of a modern development environment, prioritizing a component-based architecture with React and React Three Fiber, which represents the industry standard for building complex and manageable Three.js projects.Section 1.1: Project Scaffolding and Environment SetupA modern development workflow begins with a fast and efficient build tool. Vite stands out for its near-instantaneous hot module replacement (HMR) and optimized build process, making it an ideal choice for a project that will involve rapid iteration on both 2D UI and 3D scenes.Core Concept: Establishing a Modern Development EnvironmentThe initial setup involves scaffolding a new project and carefully integrating the core libraries. A centralized configuration for animation plugins is a key practice to ensure consistency and avoid redundant code.Implementation DetailsThe project begins by scaffolding a new React application with TypeScript support using Vite. This provides a solid, type-safe foundation.Bashnpm create vite@latest alphintra-landing -- --template react-ts
 cd alphintra-landing
 With the project created, the next step is to install the essential dependencies for building the 3D experience. React Three Fiber (R3F) and its companion library, Drei, are indispensable. R3F provides a declarative, component-based syntax for Three.js, which dramatically simplifies scene management and aligns with modern web development practices by allowing developers to treat 3D objects as reusable React components. Drei offers a vast collection of helpers, abstractions, and ready-made components that accelerate development.3Bashnpm install three @react-three/fiber @react-three/drei

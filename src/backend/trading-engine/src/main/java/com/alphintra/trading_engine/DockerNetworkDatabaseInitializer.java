@@ -84,12 +84,12 @@ public class DockerNetworkDatabaseInitializer {
 
         // Fallback to common configurations
         String[][] fallbackConfigs = {
-            {"postgres", "5432", "alphintra", "alphintra123"},
+            {"postgres", "5432", "trading_engine", "alphintra@123"},
             {"postgres", "5432", "postgres", "postgres"},
             {"postgres", "5432", "postgres", ""},
-            {"postgresql", "5432", "alphintra", "alphintra123"},
-            {"db", "5432", "alphintra", "alphintra123"},
-            {"localhost", "5432", "alphintra", "alphintra123"}
+            {"postgresql", "5432", "trading_engine", "alphintra@123"},
+            {"db", "5432", "trading_engine", "alphintra@123"},
+            {"localhost", "5432", "trading_engine", "alphintra@123"}
         };
 
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {

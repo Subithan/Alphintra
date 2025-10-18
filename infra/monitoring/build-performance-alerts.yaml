@@ -1,0 +1,73 @@
+# Cloud Monitoring Alert Policies for Build Performance
+# Monitors the optimized Cloud Build pipeline for performance regressions
+
+displayName: "Service Gateway Build Performance Alerts"
+combiner: OR
+conditions:
+  # Alert on build duration exceeding 90 seconds
+  - displayName: "Build Duration Too High"
+    conditionThreshold:
+      filter: >-
+        resource.type="build"
+        resource.label."build_id"="build_id"
+        metric.type="cloudbuild.googleapis.com/build/duration"
+        thresholdValue: 90
+      comparison: COMPARISON_GT
+      duration: "300s"
+      trigger:
+        count: 1
+      aggregations:
+        - alignmentPeriod: "300s"
+          perSeriesAligner: ALIGN_PERCENTILE_99
+
+  # Alert on Maven cache miss rate exceeding 20%
+  - displayName: "Maven Cache Miss Rate High"
+    conditionThreshold:
+      filter: >-
+        resource.type="build"
+        resource.label."build_id"="build_id"
+        metric.type="custom.googleapis.com/cloudbuild/maven_cache_miss_rate"
+      thresholdValue: 0.2
+      comparison: COMPARISON_GT
+      duration: "600s"
+      trigger:
+        count: 2
+      aggregations:
+        - alignmentPeriod: "300s"
+          perSeriesAligner: ALIGN_MEAN
+
+  # Alert on build failures
+  - displayName: "Build Failure Rate High"
+    conditionThreshold:
+      filter: >-
+        resource.type="build"
+        resource.label."build_id"="build_id"
+        metric.type="cloudbuild.googleapis.com/build/success"
+      thresholdValue: 0.95
+      comparison: COMPARISON_LT
+      duration: "1800s"
+      trigger:
+        count: 2
+      aggregations:
+        - alignmentPeriod: "900s"
+          perSeriesAligner: ALIGN_FRACTION_TRUE
+
+  # Alert on Kaniko build failures
+  - displayName: "Kaniko Build Failures"
+    conditionThreshold:
+      filter: >-
+        resource.type="build"
+        resource.label."build_id"="build_id"
+        metric.type="custom.googleapis.com/cloudbuild/kaniko_build_failures"
+      thresholdValue: 0
+      comparison: COMPARISON_GT
+      duration: "300s"
+      trigger:
+        count: 1
+
+notificationChannels:
+  # Replace with actual notification channel IDs
+  - "projects/alphintra-472817/notificationChannels/1234567890"  # Email alert
+  - "projects/alphintra-472817/notificationChannels/0987654321"  # Slack notification
+
+enabled: true

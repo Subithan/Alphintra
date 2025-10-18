@@ -17,8 +17,13 @@ public class Position {
     private Long botId;
     private String asset;
     private String symbol;
+    
+    @Column(precision = 38, scale = 8)
     private BigDecimal entryPrice;
+    
+    @Column(precision = 38, scale = 8)
     private BigDecimal quantity;
+    
     private LocalDateTime openedAt;
     private LocalDateTime closedAt;
 

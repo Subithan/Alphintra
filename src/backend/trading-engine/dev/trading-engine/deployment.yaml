@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-engine
+  labels:
+    app: trading-engine
+    component: backend
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trading-engine
+  template:
+    metadata:
+      labels:
+        app: trading-engine
+        version: v1
+        component: backend
+        environment: dev
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8008"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: trading-engine
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        # Trading Engine Application Container
+        - name: trading-engine
+          image: gcr.io/alphintra-472817/trading-engine:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8008
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: trading-engine-config
+            - secretRef:
+                name: trading-engine-secrets
+          env:
+            # Database connection variables (matching auth-service pattern)
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-engine-config
+                  key: DATABASE_NAME
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: trading-engine-secrets
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trading-engine-secrets
+                  key: SPRING_DATASOURCE_PASSWORD
+            # Spring Boot datasource configuration
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+            # Database username from secret
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: trading-engine-secrets
+                  key: SPRING_DATASOURCE_USERNAME
+            # Database password from secret
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trading-engine-secrets
+                  key: SPRING_DATASOURCE_PASSWORD
+            # Redis password from secret
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trading-engine-secrets
+                  key: SPRING_DATA_REDIS_PASSWORD
+            # Binance API configuration - disabled in cloud due to geographic restrictions
+            - name: BINANCE_API_ENABLED
+              value: "false"
+            - name: BINANCE_TESTNET_ENABLED
+              value: "true"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 60
+            failureThreshold: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: app-logs
+              mountPath: /app/logs
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: app-logs
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

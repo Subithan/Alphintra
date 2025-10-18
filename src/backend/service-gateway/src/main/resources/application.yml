@@ -1,0 +1,120 @@
+spring:
+  application:
+    name: service-gateway
+  main:
+    web-application-type: reactive
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+  cloud:
+    gateway:
+      # Global CORS for browser clients
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: ${GATEWAY_CORS_ALLOWED_ORIGINS:*}
+            allowedMethods: "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+            allowedHeaders: "*"
+            exposedHeaders: "X-Correlation-Id,X-RateLimit-Remaining,X-RateLimit-Replenish-Rate,X-RateLimit-Burst-Capacity"
+            allowCredentials: false
+      httpclient:
+        connect-timeout: 4000
+        response-timeout: 60000
+      default-filters:
+        - name: RequestSize
+          args:
+            maxSize: ${GATEWAY_MAX_REQUEST_SIZE:10MB}
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+            redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+            key-resolver: "#{@principalKeyResolver}"
+        - name: Retry
+          args:
+            retries: 2
+            statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+        - name: CircuitBreaker
+          args:
+            name: globalCircuitBreaker
+            fallbackUri: forward:/_fallback/unavailable
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URI:http://auth-service.default.svc.cluster.local:8009}
+          predicates:
+            - Path=/api/auth/**, /api/users/**, /api/kyc/**
+          filters:
+            - PreserveHostHeader
+            - RemoveRequestHeader=Cookie
+        - id: trading-engine
+          uri: ${TRADING_ENGINE_URI:http://trading-engine.default.svc.cluster.local:8100}
+          predicates:
+            - Path=/api/trading/**, /api/orders/**
+        - id: marketplace-service
+          uri: ${MARKETPLACE_SERVICE_URI:http://marketplace-service.default.svc.cluster.local:8200}
+          predicates:
+            - Path=/api/marketplace/**
+        - id: graphql-service
+          uri: ${GRAPHQL_SERVICE_URI:http://graphql-service.default.svc.cluster.local:8300}
+          predicates:
+            - Path=/graphql/**
+        - id: market-data-websocket
+          uri: ${MARKET_DATA_WS_URI:ws://market-data.default.svc.cluster.local:8082}
+          predicates:
+            - Path=/ws/market/**
+          filters:
+            - PreserveHostHeader
+        - id: risk-management-service
+          uri: ${RISK_MANAGEMENT_URI:http://risk-management-service.platform:8002}
+          predicates:
+            - Path=/api/risk-profiles/**, /api/portfolio/**, /api/positions/**, /api/trades/**, /api/stress-tests/**, /api/reports/**, /api/emergency/**
+        - id: strategy-service
+          uri: ${STRATEGY_SERVICE_URI:http://strategy-service.platform:8003}
+          predicates:
+            - Path=/api/strategies/**, /api/backtests/**, /api/live-trading/**
+        - id: no-code-service
+          uri: ${NO_CODE_SERVICE_URI:http://no-code-service.platform:8004}
+          predicates:
+            - Path=/api/workflows/**, /api/executions/**, /api/components/**, /api/templates/**, /api/workflow-versions/**
+        - id: ai-ml-strategy-service
+          uri: ${AI_ML_SERVICE_URI:http://ai-ml-strategy-service.platform:8002}
+          predicates:
+            - Path=/api/files/**, /feature-engineering
+        - id: customer-support-service
+          uri: ${CUSTOMER_SUPPORT_SERVICE_URI:http://customer-support-service.platform:8010}
+          predicates:
+            - Path=/api/customer-support/**, /ws/support/**, /ws/tickets/**
+          filters:
+            - PreserveHostHeader
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+gateway:
+  security:
+    jwt:
+      secret: ${GATEWAY_JWT_SECRET:ZGV2LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLXdoaWNoLWlzLXZlcnktbG9uZy0xMjM0NTY3ODkwMTIzNDU2Nzg5MA==}
+      clock-skew-seconds: ${GATEWAY_JWT_CLOCK_SKEW:60}
+    public-paths:
+      - /api/auth/login
+      - /api/auth/register
+      - /api/auth/validate
+      - /actuator/**
+      - /_fallback/**

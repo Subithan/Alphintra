@@ -1,0 +1,293 @@
+# Optimized Cloud Build Configuration for Sub-1-Minute Builds (Hybrid Version)
+# Uses traditional Docker instead of Kaniko for compatibility
+# Target: <60 seconds total build and deployment time
+# Strategy: Maven caching + Parallel execution + Deployment optimization
+
+options:
+  machineType: 'E2_HIGHCPU_8'  # High-performance machine for faster builds
+  substitutionOption: ALLOW_LOOSE
+
+substitutions:
+  _SERVICE_NAME: service-gateway
+  _COMMIT_SHA: BUILDER_SHA
+  _DOCKERFILE: Dockerfile
+  _PROJECT_ID: alphintra-472817
+  _GCS_CACHE_BUCKET: alphintra-472817-mvn-cache
+
+steps:
+  # ====================================================================
+  # Phase 1: Cache Restoration
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Restore-Maven-Cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔄 Restoring Maven cache from GCS..."
+        start_time=$(date +%s)
+
+        # Check if a cache tarball exists in the bucket
+        if gsutil -q stat "gs://${_GCS_CACHE_BUCKET}/maven_cache.tar.gz"; then
+          echo "✅ Cache tarball found. Downloading..."
+          gsutil -q cp "gs://${_GCS_CACHE_BUCKET}/maven_cache.tar.gz" /tmp/maven_cache.tar.gz
+          
+          echo "📦 Extracting cache..."
+          tar -xzf /tmp/maven_cache.tar.gz -C /
+          
+          end_time=$(date +%s)
+          cache_size=$(du -sh /root/.m2 2>/dev/null | cut -f1 || echo "unknown")
+          echo "✅ Maven cache restored successfully (${cache_size}) in $((end_time - start_time))s"
+        else
+          echo "⚠️  No existing cache found in gs://${_GCS_CACHE_BUCKET}/"
+          echo "   This is normal for the first build"
+        fi
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    timeout: '120s'
+
+  # ====================================================================
+  # Phase 2: Parallel Build Execution
+  # ====================================================================
+
+  # Package JAR (Critical Path Start)
+  - name: 'gcr.io/cloud-builders/mvn'
+    id: 'Package-JAR'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🏗️  Building JAR package..."
+        cd src/backend/${_SERVICE_NAME}
+
+        # Use optimized Maven configuration.
+        # We will retry once if the build fails, which can happen if the cache is partially corrupt.
+        if ! mvn -B -ntp \
+          -Dmaven.repo.local=/root/.m2/repository \
+          clean package -DskipTests; then
+          
+          echo "❌ Maven build failed, possibly due to a corrupt cache. Retrying with a clean repository..."
+          rm -rf /root/.m2/repository/*
+          
+          # Retry the build. If this fails, the entire build will fail.
+          # The -U flag forces a check for updated dependencies.
+          mvn -U -B -ntp \
+            -Dmaven.repo.local=/root/.m2/repository \
+            clean package -DskipTests
+        fi
+        
+        echo "✅ JAR package built successfully"
+        echo "📦 Artifact: target/service-gateway-0.0.1-SNAPSHOT.jar"
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    waitFor: ['Restore-Maven-Cache']
+    timeout: '300s'
+
+  # Run Tests in Parallel (Non-blocking)
+  - name: 'gcr.io/cloud-builders/mvn'
+    id: 'Run-Tests'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🧪 Running test suite in parallel..."
+        cd src/backend/${_SERVICE_NAME}
+
+        # Create separate test directory to avoid conflicts
+        mkdir -p target/test-classes
+
+        # Run tests with parallel execution
+        mvn -B -ntp \
+          -Dmaven.repo.local=/root/.m2/repository \
+          test
+
+        # Check test results - use Maven exit code instead of parsing files
+        if [[ $? -eq 0 ]]; then
+          echo "✅ All tests passed successfully"
+          # Show test summary
+          if find target/surefire-reports -name "*.txt" -exec grep -l "Tests run:" {} \; 2>/dev/null; then
+            echo "📊 Test Summary:"
+            find target/surefire-reports -name "*.txt" -exec grep "Tests run:" {} \; 2>/dev/null | head -1
+          fi
+        else
+          echo "❌ Tests failed - Maven exit code: $?"
+          find target/surefire-reports -name "*.txt" -exec echo "🔍 {}" \; -exec cat {} \;
+          exit 1
+        fi
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    waitFor: ['Package-JAR']  # Wait for package to complete first
+    timeout: '240s'
+
+  # ====================================================================
+  # Phase 3: Container Build with Traditional Docker
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build-Image'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🐳 Building Docker image..."
+        cd src/backend/${_SERVICE_NAME}
+
+        # Verify JAR exists
+        if [[ ! -f "target/service-gateway-0.0.1-SNAPSHOT.jar" ]]; then
+          echo "❌ JAR file not found - checking target directory:"
+          ls -la target/
+          exit 1
+        fi
+
+        echo "✅ JAR file found, proceeding with Docker build"
+
+        # Build Docker image
+        docker build \
+          -f ${_DOCKERFILE} \
+          -t 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}' \
+          -t 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest' \
+          .
+
+        echo "✅ Docker image built successfully"
+        echo "📦 Image: gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}"
+    waitFor: ['Package-JAR']
+    timeout: '180s'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push-Image-SHA'
+    args:
+      - 'push'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+    waitFor: ['Build-Image']
+    timeout: '60s'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push-Image-Latest'
+    args:
+      - 'push'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+    waitFor: ['Build-Image']
+    timeout: '60s'
+
+  # ====================================================================
+  # Phase 4: Kubernetes Deployment
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Apply-Manifests'
+    args:
+      - 'apply'
+      - '-k'
+      - 'dev'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Push-Image-SHA', 'Push-Image-Latest']
+    timeout: '60s'
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Update-Deployment-Image'
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/service-gateway'
+      - 'service-gateway=gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+      - '-n'
+      - 'alphintra'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Apply-Manifests']
+    timeout: '30s'
+
+  # ====================================================================
+  # Phase 5: Cache Management (Background)
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Save-Maven-Cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "💾 Saving Maven cache to GCS as a tarball..."
+        start_time=$(date +%s)
+
+        # Create a compressed tarball of the Maven repository
+        echo "📦 Compressing /root/.m2 directory..."
+        tar -czf /tmp/maven_cache.tar.gz -C /root .m2
+        
+        # Upload the single tarball to GCS
+        echo "☁️  Uploading cache tarball..."
+        if gsutil -q cp /tmp/maven_cache.tar.gz "gs://${_GCS_CACHE_BUCKET}/maven_cache.tar.gz"; then
+          end_time=$(date +%s)
+          cache_size=$(du -sh /tmp/maven_cache.tar.gz | cut -f1)
+          echo "✅ Maven cache tarball (${cache_size}) saved successfully in $((end_time - start_time))s"
+        else
+          echo "❌ Failed to save Maven cache. Check IAM permissions ('storage.objectAdmin' on the bucket for the correct service account) and build logs."
+          exit 1
+        fi
+    volumes:
+      - name: 'm2'
+        path: '/root/.m2'
+    waitFor: ['Run-Tests']
+    timeout: '180s'
+
+  # ====================================================================
+  # Phase 6: Build Verification
+  # ====================================================================
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Verify-Deployment-Status'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔍 Verifying deployment configuration..."
+
+        # Check if deployment exists
+        if kubectl get deployment service-gateway -n alphintra -o name; then
+          echo "✅ Deployment configuration verified"
+
+          # Get current image
+          current_image=$(kubectl get deployment service-gateway -n alphintra -o jsonpath='{.spec.template.spec.containers[0].image}')
+          echo "📦 Current deployment image: $current_image"
+
+          echo "🚀 Deployment triggered successfully"
+        else
+          echo "❌ Deployment not found"
+          exit 1
+        fi
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Update-Deployment-Image']
+    timeout: '30s'
+
+# ====================================================================
+# Build Outputs
+# ====================================================================
+
+images:
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+
+# ====================================================================
+# Build Tags
+# ====================================================================
+
+tags:
+  - 'service-gateway'
+  - 'optimized-build-hybrid'
+  - 'maven-cache'
+  - 'parallel-execution'
+
+# ====================================================================
+# Timeout
+# ====================================================================
+
+timeout: '600s'

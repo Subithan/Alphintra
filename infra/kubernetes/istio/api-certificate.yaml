@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-alphintra-com-tls
+  # The secret must be in the same namespace as the Istio gateway
+  namespace: istio-system
+spec:
+  # This is the name of the Kubernetes secret where the cert will be stored
+  secretName: api-alphintra-com-tls
+  # Reference the ClusterIssuer you created in Step 2
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  # The domain name you want the certificate for
+  dnsNames:
+  - api.alphintra.com

@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trading-engine-config
+  labels:
+    app: trading-engine
+    component: backend
+data:
+  # Spring Boot Configuration
+  SPRING_PROFILES_ACTIVE: "cloud"
+  SERVER_PORT: "8008"
+
+  # Database Configuration
+  DATABASE_HOST: "127.0.0.1"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "alphintra_trading_engine"
+
+  # Redis Configuration
+  REDIS_HOST: "redis-service.alphintra.svc.cluster.local"
+  REDIS_PORT: "6379"
+
+  # Kafka Configuration
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service.alphintra.svc.cluster.local:29092"
+  ORDER_TOPIC_NAME: "new-orders"
+
+  # External Service URLs
+  SERVICES_WALLET_URL: "http://wallet-service.alphintra.svc.cluster.local:8011"
+  SERVICES_STRATEGY_URL: "http://strategy-service.alphintra.svc.cluster.local:8002"
+
+  # Health and Monitoring
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,metrics"
+  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+  MANAGEMENT_HEALTH_READINESSSTATE_ENABLED: "true"
+  MANAGEMENT_HEALTH_LIVENESSSTATE_ENABLED: "true"
+
+  # JVM and Application Settings
+  JAVA_OPTS: "-Xms512m -Xmx2g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+  # Database Connection Settings
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_SHOW_SQL: "false"
+  SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.PostgreSQLDialect"
+
+  # Database Pool Settings
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "20"
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: "5"
+  SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: "30000"
+  SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: "600000"
+  SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: "1800000"
+
+  # Redis Settings
+  SPRING_DATA_REDIS_TIMEOUT: "2000ms"
+  SPRING_DATA_REDIS_CONNECT_TIMEOUT: "2000ms"
+
+  # Application Settings
+  SKIP_DB_INIT: "true"

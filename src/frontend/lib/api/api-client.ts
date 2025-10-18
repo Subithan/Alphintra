@@ -1,6 +1,9 @@
 // Central API client configuration
 // This handles authentication, error handling, and common request logic
 
+import { gatewayHttpBaseUrl } from '../config/gateway';
+import { getToken } from '../auth';
+
 export interface ApiConfig {
   baseUrl: string;
   timeout: number;
@@ -37,7 +40,7 @@ class BaseApiClient {
 
   constructor(config: Partial<ApiConfig> = {}) {
     this.config = {
-      baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+      baseUrl: gatewayHttpBaseUrl,
       timeout: 30000, // 30 seconds
       retries: 3,
       ...config,
@@ -48,7 +51,9 @@ class BaseApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.config.baseUrl}${endpoint}`;
+    const base = this.config.baseUrl.replace(/\/+$/, '');
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${base}${path}`;
     const controller = new AbortController();
     
     // Set timeout
@@ -56,13 +61,21 @@ class BaseApiClient {
 
     try {
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
         ...(options.headers as Record<string, string> || {}),
       };
 
-      // Add authentication if available
-      if (this.config.authToken) {
-        headers['Authorization'] = `Bearer ${this.config.authToken}`;
+      // Ensure Content-Type for JSON payloads unless explicitly provided
+      if (!('Content-Type' in headers)) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      // Resolve auth token (explicit config takes precedence over stored token)
+      const runtimeToken =
+        this.config.authToken ??
+        getToken();
+
+      if (runtimeToken && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${runtimeToken}`;
       }
 
       const response = await fetch(url, {

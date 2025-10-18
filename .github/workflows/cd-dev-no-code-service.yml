@@ -1,13 +1,16 @@
 name: Deploy no-code-service to GKE using Cloud Build
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'src/backend/no-code-service/**'
-      - 'infra/kubernetes/overlays/dev/**'
-      - '.github/workflows/cd-dev-no-code-service.yml'
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'alphintra-472817' }}
