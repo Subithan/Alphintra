@@ -49,16 +49,7 @@ export default function BalanceCard({ className }: Props) {
         </div>
         <div className="text-xs text-muted-foreground mt-1">≈ ${usdValue.toFixed(2)}</div>
       </div>
-
-      {/* Buttons */}
-      <div className="flex sm:-mt-10 gap-2.5">
-        <button className="w-full sm:w-auto bg-gray-200 dark:bg-secondary text-gray-600 dark:text-gray-400 border-none px-4 py-2 rounded cursor-pointer hover:scale-105 transition-transform">
-          Deposit
-        </button>
-        <button className="w-full sm:w-auto bg-gray-200 dark:bg-secondary text-gray-600 dark:text-gray-400 border-none px-4 py-2 rounded cursor-pointer hover:scale-105 transition-transform">
-          Withdraw
-        </button>
-      </div>
+  
     </div>
   );
 }

@@ -7,9 +7,14 @@ import com.alphintra.auth_service.exception.ResourceNotFoundException;
 import com.alphintra.auth_service.mapper.UserMapper;
 import com.alphintra.auth_service.repository.UserRepository;
 import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
+  private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
   private final UserRepository userRepository;
 
@@ -54,6 +61,22 @@ public class UserController {
     }
     User saved = userRepository.save(user);
     return ResponseEntity.ok(UserMapper.toProfile(saved));
+  }
+
+  @DeleteMapping("/account")
+  public ResponseEntity<Map<String, String>> deleteAccount(
+      @AuthenticationPrincipal UserDetails principal) {
+    User user = loadUser(principal);
+
+    // Delete the user account (no password verification needed since user is authenticated)
+    userRepository.delete(user);
+    log.info("User account deleted successfully for username: {}", principal.getUsername());
+
+    Map<String, String> response = new HashMap<>();
+    response.put("message", "Account deleted successfully");
+    response.put("username", principal.getUsername());
+
+    return ResponseEntity.ok(response);
   }
 
   private User loadUser(UserDetails principal) {

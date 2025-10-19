@@ -42,6 +42,23 @@ export interface AuthResponse {
   token: string;
 }
 
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  address?: string;
+}
+
+export interface DeleteAccountRequest {
+  password: string;
+  confirmationText?: string;
+}
+
+export interface DeleteAccountResponse {
+  message: string;
+  username: string;
+}
+
 export class AuthServiceApiClient {
   private api: ReturnType<typeof axios.create>;
 
@@ -92,6 +109,21 @@ export class AuthServiceApiClient {
 
   async googleLogin(credentials: GoogleLoginCredentials): Promise<AuthResponse> {
     const response = await this.api.post<AuthResponse>('/api/auth/google', credentials);
+    return response.data;
+  }
+
+  async getProfile(): Promise<User> {
+    const response = await this.api.get<User>('/api/users/me');
+    return response.data;
+  }
+
+  async updateProfile(data: UpdateProfileRequest): Promise<User> {
+    const response = await this.api.put<User>('/api/users/me', data);
+    return response.data;
+  }
+
+  async deleteAccount(): Promise<DeleteAccountResponse> {
+    const response = await this.api.delete<DeleteAccountResponse>('/api/users/account');
     return response.data;
   }
 }

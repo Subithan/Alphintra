@@ -2,6 +2,7 @@
 // This service handles bot operations, trade history, and balance information
 
 import { BaseApiClient } from './api-client';
+import { getToken } from '../auth';
 
 export interface TradeOrderData {
   id: number;
@@ -48,14 +49,6 @@ export interface StopBotsResponse {
 class TradingApiService extends BaseApiClient {
   constructor() {
     super();
-    
-    // Set auth token from localStorage if available
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        this.setAuthToken(token);
-      }
-    }
   }
 
   /**
@@ -64,13 +57,13 @@ class TradingApiService extends BaseApiClient {
    * @param limit - Maximum number of trades to return (default: 20)
    */
   async getTradeHistory(limit: number = 20): Promise<TradeOrderData[]> {
-    // Update token from localStorage before each request
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        this.setAuthToken(token);
-      }
-    }
+    // Debug: Check token availability
+    const token = getToken();
+    console.log('[Trading API] getTradeHistory called', {
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'null',
+      isClient: typeof window !== 'undefined',
+    });
 
     const queryString = this.buildQueryString({ limit });
     return this.get<TradeOrderData[]>(`/api/trading/trades?${queryString}`);
@@ -80,13 +73,6 @@ class TradingApiService extends BaseApiClient {
    * Get balance information from the exchange
    */
   async getBalance(): Promise<BalanceInfo> {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        this.setAuthToken(token);
-      }
-    }
-
     return this.get<BalanceInfo>('/api/trading/balance');
   }
 
@@ -95,13 +81,6 @@ class TradingApiService extends BaseApiClient {
    * @param request - Bot configuration including userId, strategyId, capitalAllocation, and symbol
    */
   async startBot(request: StartBotRequest): Promise<TradingBot> {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        this.setAuthToken(token);
-      }
-    }
-
     return this.post<TradingBot>('/api/trading/bot/start', request);
   }
 
@@ -109,13 +88,6 @@ class TradingApiService extends BaseApiClient {
    * Stop all active trading bots
    */
   async stopAllBots(): Promise<StopBotsResponse> {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        this.setAuthToken(token);
-      }
-    }
-
     return this.post<StopBotsResponse>('/api/trading/bots/stop');
   }
 }

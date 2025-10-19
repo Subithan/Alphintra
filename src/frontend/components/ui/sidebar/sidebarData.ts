@@ -59,7 +59,7 @@ export const footerSidebarItems: SidebarItemType[] = [
     id: "settings",
     name: "Settings",
     icon: "solar:settings-line-duotone",
-    url: "/settings",
+    url: "/profile",
   },
   {
     id: "logout",
