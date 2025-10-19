@@ -9,3 +9,5 @@ resources:
 patches:
   - path: patches/gateway-deployment.yaml
   - path: patches/gateway-hpa.yaml
+
+namespace: alphintra
