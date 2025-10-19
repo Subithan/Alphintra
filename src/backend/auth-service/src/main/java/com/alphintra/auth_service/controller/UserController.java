@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -64,19 +65,32 @@ public class UserController {
   }
 
   @DeleteMapping("/account")
+  @Transactional
   public ResponseEntity<Map<String, String>> deleteAccount(
       @AuthenticationPrincipal UserDetails principal) {
-    User user = loadUser(principal);
+    try {
+      User user = loadUser(principal);
+      String username = principal.getUsername();
 
-    // Delete the user account (no password verification needed since user is authenticated)
-    userRepository.delete(user);
-    log.info("User account deleted successfully for username: {}", principal.getUsername());
+      // Clear the roles relationship before deleting
+      user.getRoles().clear();
+      userRepository.save(user);
 
-    Map<String, String> response = new HashMap<>();
-    response.put("message", "Account deleted successfully");
-    response.put("username", principal.getUsername());
+      // Delete the user account
+      userRepository.delete(user);
+      userRepository.flush();
 
-    return ResponseEntity.ok(response);
+      log.info("User account deleted successfully for username: {}", username);
+
+      Map<String, String> response = new HashMap<>();
+      response.put("message", "Account deleted successfully");
+      response.put("username", username);
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      log.error("Error deleting user account: {}", e.getMessage(), e);
+      throw new RuntimeException("Failed to delete account: " + e.getMessage());
+    }
   }
 
   private User loadUser(UserDetails principal) {
