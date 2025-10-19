@@ -81,15 +81,16 @@ def read_strategies(db: SessionDep):
     return strategies
 
 
-@app.post("/strategies/{strategy_id}/purchase", status_code=status.HTTP_303_SEE_OTHER)
+@app.post("/strategies/{strategy_id}/purchase")
 def purchase_strategy(strategy_id: int, user_email: str, db: SessionDep):
     """
-    Creates a Stripe Checkout Session and redirects the user to the Stripe page.
+    Creates a Stripe Checkout Session and returns the checkout URL as JSON.
+    The frontend will handle the redirect to Stripe.
     """
     checkout_session = create_checkout_session_for_strategy(db, strategy_id, user_email)
     
-    # Return a 303 Redirect to the Stripe Checkout page
-    return RedirectResponse(url=checkout_session.url, status_code=status.HTTP_303_SEE_OTHER)
+    # Return the Stripe Checkout URL as JSON for the frontend to handle
+    return {"checkout_url": checkout_session.url, "session_id": checkout_session.id}
 
 
 # --- Frontend Feedback Routes (Simplified) ---
