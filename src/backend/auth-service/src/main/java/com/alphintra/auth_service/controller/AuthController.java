@@ -17,6 +17,7 @@ import java.util.Collections;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -65,6 +66,22 @@ public class AuthController {
     }
     try {
       TokenIntrospectionResponse resp = authService.introspect(token);
+      return ResponseEntity.ok(resp);
+    } catch (JwtException | IllegalArgumentException ex) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .body(TokenIntrospectionResponse.inactive());
+    }
+  }
+
+  @GetMapping("/introspect")
+  public ResponseEntity<TokenIntrospectionResponse> introspectGet(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+    if (authorization == null || !authorization.startsWith("Bearer ")) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(TokenIntrospectionResponse.inactive());
+    }
+    try {
+      TokenIntrospectionResponse resp = authService.introspect(authorization.substring(7));
       return ResponseEntity.ok(resp);
     } catch (JwtException | IllegalArgumentException ex) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
