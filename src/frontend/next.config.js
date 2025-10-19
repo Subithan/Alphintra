@@ -9,6 +9,19 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
     NEXT_PUBLIC_GATEWAY_URL: process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://api.alphintra.com',
   },
+  
+  // CRITICAL FIX: Add Rewrites/Proxy configuration
+  async rewrites() {
+    return [
+      {
+        // Source path: This is what your frontend code must now call.
+        source: '/api/v1/:path*',
+        // Destination: Next.js forwards the request to your Dockerized backend on port 8012.
+        destination: 'http://localhost:8012/:path*',
+      },
+    ];
+  },
+  
   webpack: (config, { isServer }) => {
     // Add custom webpack config if needed
     if (!isServer) {
