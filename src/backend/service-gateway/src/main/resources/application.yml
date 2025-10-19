@@ -161,12 +161,19 @@ management:
 
 gateway:
   security:
+    enabled: ${GATEWAY_SECURITY_ENABLED:false}
     jwt:
       secret: ${GATEWAY_JWT_SECRET:U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=}
       clock-skew-seconds: ${GATEWAY_JWT_CLOCK_SKEW:60}
+    auth-service:
+      delegation-enabled: ${GATEWAY_DELEGATION_ENABLED:true}
+      fallback-local: ${GATEWAY_DELEGATION_FALLBACK:false}
+      base-url: ${AUTH_SERVICE_BASE_URL:${AUTH_SERVICE_URI:http://auth-service.default.svc.cluster.local:8009}}
+      timeout-ms: ${AUTH_SERVICE_TIMEOUT_MS:1500}
     public-paths:
       - /api/auth/login
       - /api/auth/register
       - /api/auth/validate
+      - /api/auth/introspect
       - /actuator/**
       - /_fallback/**
