@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from 'react'
+import { getToken } from '@/lib/auth'
+import { buildGatewayWsUrl } from '@/lib/config/gateway'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -114,7 +116,8 @@ export function TrainingDashboard({
     const initializeConnection = async () => {
       try {
         // Try WebSocket first for real-time updates
-        const wsUrl = `ws://localhost:8002/training/jobs/${jobId}/updates`
+        const token = getToken();
+        const wsUrl = buildGatewayWsUrl(`/ws/training/jobs/${jobId}/updates${token ? `?token=${encodeURIComponent(token)}` : ''}`)
         const ws = new WebSocket(wsUrl)
         
         ws.onopen = () => {
@@ -167,7 +170,10 @@ export function TrainingDashboard({
       // Start polling
       const poll = async () => {
         try {
-          const response = await fetch(`/api/training/jobs/${jobId}`)
+          const token = getToken();
+          const response = await fetch(`/api/training/jobs/${jobId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          })
           if (response.ok) {
             const data = await response.json()
             updateTrainingState(data)
@@ -226,8 +232,10 @@ export function TrainingDashboard({
 
   const handleAction = async (action: 'pause' | 'resume' | 'cancel') => {
     try {
+      const token = getToken();
       const response = await fetch(`/api/training/jobs/${jobId}/${action}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
       
       if (!response.ok) {

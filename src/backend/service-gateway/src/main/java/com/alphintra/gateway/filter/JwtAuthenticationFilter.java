@@ -59,6 +59,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
           .build();
       return chain.filter(exchange);
     } catch (Exception ex) {
+      // Log the actual exception for debugging
+      System.err.println("JWT Validation Error: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+      ex.printStackTrace();
       return unauthorized(exchange.getResponse(), "Invalid token");
     }
   }

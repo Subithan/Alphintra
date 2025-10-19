@@ -143,6 +143,8 @@ logging:
   level:
     root: INFO
     org.springframework.cloud.gateway: INFO
+    com.alphintra.gateway: DEBUG
+    io.jsonwebtoken: DEBUG
 
 management:
   endpoints:
@@ -160,7 +162,7 @@ management:
 gateway:
   security:
     jwt:
-      secret: ${GATEWAY_JWT_SECRET:ZGV2LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLXdoaWNoLWlzLXZlcnktbG9uZy0xMjM0NTY3ODkwMTIzNDU2Nzg5MA==}
+      secret: ${GATEWAY_JWT_SECRET:U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=}
       clock-skew-seconds: ${GATEWAY_JWT_CLOCK_SKEW:60}
     public-paths:
       - /api/auth/login

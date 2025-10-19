@@ -33,7 +33,7 @@ logging:
     org.hibernate.SQL: ERROR
 
 jwt:
-  secret: ${JWT_SECRET:ZGV2LXNlY3JldC1jaGFuZ2UtbWUtcGxlYXNlLXdoaWNoLWlzLXZlcnktbG9uZy0xMjM0NTY3ODkwMTIzNDU2Nzg5MA==}
+  secret: ${JWT_SECRET:U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=}
   expiration: ${JWT_EXPIRATION:86400000}
 
 kyc:

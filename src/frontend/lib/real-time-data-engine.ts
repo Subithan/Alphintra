@@ -1,4 +1,6 @@
 import { MarketData } from './execution-engine';
+import { buildGatewayWsUrl } from './config/gateway';
+import { getToken } from './auth';
 
 export interface DataProviderConfig {
   provider_type: 'polygon' | 'alpaca' | 'yahoo' | 'iex' | 'websocket' | 'mock';
@@ -213,7 +215,10 @@ export class RealTimeDataEngine {
 
   private async connectWebSocket(providerId: string, config: DataProviderConfig): Promise<void> {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(config.websocket_url || 'ws://localhost:8080/ws');
+      const token = getToken();
+      const defaultWs = buildGatewayWsUrl(`/ws/market${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+      const wsUrl = config.websocket_url ? `${config.websocket_url}${token ? (config.websocket_url.includes('?') ? `&token=${encodeURIComponent(token)}` : `?token=${encodeURIComponent(token)}`) : ''}` : defaultWs;
+      const ws = new WebSocket(wsUrl);
       
       const timeout = setTimeout(() => {
         ws.close();

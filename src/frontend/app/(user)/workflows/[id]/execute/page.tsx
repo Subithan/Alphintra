@@ -13,6 +13,7 @@ import { ExecutionModeSelector } from '@/components/no-code/ExecutionModeSelecto
 import { useExecutionStore, useCurrentExecution } from '@/lib/stores/execution-store'
 import { useNoCodeStore } from '@/lib/stores/no-code-store'
 import { ArrowLeft, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { getToken } from '@/lib/auth'
 
 interface WorkflowData {
   id: number
@@ -86,7 +87,10 @@ function ExecuteWorkflowContent() {
       }
       
       // Otherwise fetch from API
-      const response = await fetch(`/api/workflows/${workflowId}`)
+      const token = getToken();
+      const response = await fetch(`/api/workflows/${workflowId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
       if (!response.ok) {
         throw new Error('Failed to load workflow')
       }
