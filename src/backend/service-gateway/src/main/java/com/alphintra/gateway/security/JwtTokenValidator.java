@@ -9,6 +9,8 @@ import io.jsonwebtoken.security.Keys;
 import java.time.Duration;
 import java.util.Set;
 import javax.crypto.SecretKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,30 +18,25 @@ public class JwtTokenValidator {
 
   private final SecretKey signingKey;
   private final Duration clockSkew;
+  private static final Logger log = LoggerFactory.getLogger(JwtTokenValidator.class);
 
   public JwtTokenValidator(GatewaySecurityProperties properties) {
-    System.err.println("JWT Token Validator Initializing...");
-    System.err.println("JWT Secret from config: " + properties.getJwt().getSecret());
+    log.debug("JWT Token Validator Initializing...");
     if (properties.getJwt().getSecret() == null) {
-      System.err.println("JWT SECRET IS NULL!");
       throw new IllegalStateException("gateway.security.jwt.secret must be configured");
     }
-    System.err.println("JWT Secret length: " + properties.getJwt().getSecret().length());
-    System.err.println("JWT Clock Skew: " + properties.getJwt().getClockSkewSeconds() + " seconds");
     try {
       this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(properties.getJwt().getSecret()));
-      System.err.println("JWT Signing key created successfully");
+      log.debug("JWT Signing key created successfully, clockSkew={}s", properties.getJwt().getClockSkewSeconds());
     } catch (Exception e) {
-      System.err.println("Failed to create signing key: " + e.getMessage());
-      e.printStackTrace();
+      log.warn("Failed to create signing key: {}", e.getMessage(), e);
       throw e;
     }
     this.clockSkew = Duration.ofSeconds(properties.getJwt().getClockSkewSeconds());
-    System.err.println("JWT Token Validator initialized successfully");
+    log.debug("JWT Token Validator initialized successfully");
   }
 
   public Jws<Claims> parse(String token) {
-    System.err.println("Attempting to parse JWT token...");
     try {
       return Jwts.parserBuilder()
           .setAllowedClockSkewSeconds(clockSkew.getSeconds())
@@ -47,8 +44,7 @@ public class JwtTokenValidator {
           .build()
           .parseClaimsJws(token);
     } catch (Exception e) {
-      System.err.println("JWT Parsing failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-      e.printStackTrace();
+      log.debug("JWT Parsing failed: {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
       throw e;
     }
   }

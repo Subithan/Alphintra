@@ -7,6 +7,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -26,6 +28,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
   public static final String ATTR_CLAIMS = "gateway.jwt.claims";
   public static final String ATTR_SUBJECT = "gateway.jwt.subject";
+
+  private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
   private final JwtTokenValidator validator;
   private final AuthClient authClient;
@@ -48,21 +52,32 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
   @Override
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
     if (!authEnabled || isPublic(exchange)) {
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "Auth disabled or path public; skipping auth for path={} enabled={}",
+            exchange.getRequest().getPath().pathWithinApplication().value(),
+            authEnabled);
+      }
       return chain.filter(exchange);
     }
 
     String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
     if (authorization == null || !authorization.startsWith("Bearer ")) {
+      log.debug("Missing or invalid Authorization header");
       return unauthorized(exchange.getResponse(), "Missing or invalid Authorization header");
     }
     String token = authorization.substring(7);
 
     if (delegationEnabled) {
+      if (log.isDebugEnabled()) {
+        log.debug("Delegating token validation to auth-service");
+      }
       return authClient
           .introspect(token)
           .flatMap(
               resp -> {
                 if (resp == null || !resp.isActive()) {
+                  log.debug("Auth-service returned inactive token");
                   return unauthorized(exchange.getResponse(), "Invalid token");
                 }
                 String subject = resp.getSub();
@@ -76,12 +91,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                         .header("X-User-Id", subject)
                         .header("X-User-Roles", roles)
                         .build();
+                log.debug("Authenticated request for subject={} roles={}", subject, roles);
                 return chain.filter(exchange.mutate().request(mutated).build());
               })
           .onErrorResume(
               ex -> {
-                System.err.println("Auth delegation error: " + ex.getMessage());
+                log.warn("Auth delegation error: {}", ex.getMessage());
                 if (fallbackLocal) {
+                  log.debug("Falling back to local JWT validation");
                   try {
                     Jws<Claims> claims = validator.parse(token);
                     String subject = claims.getBody().getSubject();
@@ -96,12 +113,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                             .build();
                     return chain.filter(exchange.mutate().request(mutated).build());
                   } catch (Exception e) {
+                    log.debug("Local JWT validation failed: {}", e.getMessage());
                     return unauthorized(exchange.getResponse(), "Invalid token");
                   }
                 }
                 return unauthorized(exchange.getResponse(), "Invalid token");
               });
     } else {
+      log.debug("Local JWT validation enabled");
       try {
         Jws<Claims> claims = validator.parse(token);
         String subject = claims.getBody().getSubject();
@@ -116,8 +135,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .build();
         return chain.filter(exchange.mutate().request(mutated).build());
       } catch (Exception ex) {
-        System.err.println(
-            "JWT Validation Error (local): " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+        log.debug(
+            "JWT Validation Error (local): {}: {}",
+            ex.getClass().getSimpleName(),
+            ex.getMessage());
         return unauthorized(exchange.getResponse(), "Invalid token");
       }
     }
