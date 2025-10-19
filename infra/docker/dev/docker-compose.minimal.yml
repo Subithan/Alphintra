@@ -260,7 +260,7 @@ services:
     image: adminer:latest
     container_name: alphintra-adminer
     ports:
-      - "8088:8088"
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
