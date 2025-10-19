@@ -11,6 +11,10 @@ import java.time.LocalDate;
 
 public class UserUpdateRequest {
 
+  // User identifier (one of these is required)
+  private String email;
+  private String username;
+
   @Size(max = 50, message = "First name must be at most 50 characters")
   private String firstName;
 
@@ -66,5 +70,21 @@ public class UserUpdateRequest {
 
   public void setAddress(String address) {
     this.address = address;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
+  }
+
+  public String getUsername() {
+    return username;
+  }
+
+  public void setUsername(String username) {
+    this.username = username;
   }
 }

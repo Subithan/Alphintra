@@ -118,12 +118,51 @@ export class AuthServiceApiClient {
   }
 
   async updateProfile(data: UpdateProfileRequest): Promise<User> {
-    const response = await this.api.put<User>('/api/users/me', data);
+    // Get user email from localStorage to identify the user
+    // Try both possible storage keys
+    const userStr = localStorage.getItem('alphintra_jwt_user') || localStorage.getItem('alphintra_user');
+    if (!userStr) {
+      throw new Error('User email not found. Please log in again.');
+    }
+    
+    const user = JSON.parse(userStr);
+    const email = user.email;
+    
+    if (!email) {
+      throw new Error('User email not found. Please log in again.');
+    }
+
+    // Include email in the request body
+    const payload = {
+      email: email,
+      ...data
+    };
+
+    const response = await this.api.put<User>('/api/users/me', payload);
     return response.data;
   }
 
   async deleteAccount(): Promise<DeleteAccountResponse> {
-    const response = await this.api.delete<DeleteAccountResponse>('/api/users/account');
+    // Get user email from localStorage to identify the user
+    // Try both possible storage keys
+    const userStr = localStorage.getItem('alphintra_jwt_user') || localStorage.getItem('alphintra_user');
+    if (!userStr) {
+      throw new Error('User email not found. Please log in again.');
+    }
+    
+    const user = JSON.parse(userStr);
+    const email = user.email;
+    
+    if (!email) {
+      throw new Error('User email not found. Please log in again.');
+    }
+
+    // Send email in request body using axios.request (DELETE with body)
+    const response = await this.api.request<DeleteAccountResponse>({
+      method: 'DELETE',
+      url: '/api/users/account',
+      data: { email } as any
+    });
     return response.data;
   }
 }
