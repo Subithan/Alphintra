@@ -10,6 +10,8 @@ import {
   Wallet as WalletIcon,
   AlertCircle,
 } from "lucide-react";
+import { getToken } from "@/lib/auth";
+import { buildGatewayUrl } from "@/lib/config/gateway";
 
 interface Balance {
   asset: string;
@@ -36,8 +38,10 @@ export default function Wallet() {
 
   const checkConnection = async () => {
   try {
+    const token = getToken();
     const res = await fetch(
-      "http://localhost:8011/binance/connection-status"
+      buildGatewayUrl('/binance/connection-status'),
+      { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
     );
     const text = await res.text();
     let data: any = {};
@@ -81,9 +85,13 @@ export default function Wallet() {
     console.log("DEBUG: connectToBinance started");
 
     try {
-      const response = await fetch("http://localhost:8011/binance/connect", {
+      const token = getToken();
+      const response = await fetch(buildGatewayUrl('/binance/connect'), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ apiKey, secretKey }),
       });
 
@@ -125,7 +133,10 @@ export default function Wallet() {
   const fetchBalances = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8011/binance/balances");
+      const token = getToken();
+      const response = await fetch(buildGatewayUrl('/binance/balances'), {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       const text = await response.text();
       let data: any = {};
       try {
@@ -159,8 +170,10 @@ export default function Wallet() {
 
   const disconnect = async () => {
     try {
-      await fetch("http://localhost:8011/binance/disconnect", {
+      const token = getToken();
+      await fetch(buildGatewayUrl('/binance/disconnect'), {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       setIsConnected(false);
       setBalances([]);

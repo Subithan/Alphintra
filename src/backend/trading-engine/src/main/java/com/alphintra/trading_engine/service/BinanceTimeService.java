@@ -2,6 +2,7 @@ package com.alphintra.trading_engine.service;
 
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -10,11 +11,10 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 @Service
+@RequiredArgsConstructor
 public class BinanceTimeService {
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    private final HttpClient httpClient;
 
     /**
      * Fetches the official server time from the Binance API.
@@ -39,4 +39,3 @@ public class BinanceTimeService {
         return System.currentTimeMillis();
     }
 }
-

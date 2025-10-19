@@ -7,6 +7,7 @@ import { marketDataApi } from './market-data-api';
 import { riskManagementApi } from './risk-management-api';
 import { noCodeApiClient } from './no-code-api';
 import { gatewayHttpBaseUrl } from '../config/gateway';
+import { getToken } from '../auth';
 
 // Re-export for external use
 export { BaseApiClient, ApiError, type ApiConfig, type ApiResponse } from './api-client';
@@ -71,11 +72,18 @@ class AuthApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl.replace(/\/+$/, '')}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    const token = getToken();
+    if (token && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     });
 

@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { TrainingDashboard } from '@/components/no-code/TrainingDashboard'
 import { useExecutionStore, useTrainingJob } from '@/lib/stores/execution-store'
 import { ArrowLeft, ExternalLink, Settings, AlertCircle } from 'lucide-react'
+import { getToken } from '@/lib/auth'
 
 interface TrainingPageParams extends Record<string, string> {
   id: string // workflow id
@@ -67,7 +68,10 @@ export default function TrainingJobPage() {
       }
       
       // Otherwise fetch job info from API
-      const response = await fetch(`/api/training/jobs/${jobId}`)
+      const token = getToken();
+      const response = await fetch(`/api/training/jobs/${jobId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
       if (!response.ok) {
         throw new Error('Failed to load training job')
       }
@@ -99,8 +103,10 @@ export default function TrainingJobPage() {
   
   const handleCancel = async () => {
     try {
+      const token = getToken();
       const response = await fetch(`/api/training/jobs/${jobId}/cancel`, {
-        method: 'POST'
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
       
       if (!response.ok) {
@@ -116,7 +122,11 @@ export default function TrainingJobPage() {
   
   const handlePause = async () => {
     try {
-      await fetch(`/api/training/jobs/${jobId}/pause`, { method: 'POST' })
+      const token = getToken();
+      await fetch(`/api/training/jobs/${jobId}/pause`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
     } catch (err) {
       console.error('Failed to pause training:', err)
     }
@@ -124,7 +134,11 @@ export default function TrainingJobPage() {
   
   const handleResume = async () => {
     try {
-      await fetch(`/api/training/jobs/${jobId}/resume`, { method: 'POST' })
+      const token = getToken();
+      await fetch(`/api/training/jobs/${jobId}/resume`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
     } catch (err) {
       console.error('Failed to resume training:', err)
     }

@@ -27,6 +27,8 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import type { Position, Bot, Order, Trade } from '@/lib/api/types';
+import { getToken } from '@/lib/auth';
+import { buildGatewayUrl } from '@/lib/config/gateway';
 
 interface TradeOrderData {
   id: number;
@@ -166,7 +168,10 @@ export default function MainPanel() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('http://localhost:8008/api/trading/trades?limit=20');
+        const token = getToken();
+        const response = await fetch(buildGatewayUrl('/api/trading/trades?limit=20'), {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

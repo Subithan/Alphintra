@@ -78,6 +78,23 @@ class BaseApiClient {
         headers['Authorization'] = `Bearer ${runtimeToken}`;
       }
 
+      const debug = process.env.NEXT_PUBLIC_DEBUG_API === 'true';
+
+      // Debug logging (without leaking full token)
+      if (debug) {
+        const authHeader = headers['Authorization'] || headers['authorization'];
+        const masked = authHeader && authHeader.startsWith('Bearer ')
+          ? `Bearer ${authHeader.slice(7, 11)}...`
+          : authHeader ? '<custom auth header>' : '<none>';
+        // eslint-disable-next-line no-console
+        console.log('[ApiClient] Request', {
+          url,
+          method: options.method || 'GET',
+          hasAuth: Boolean(authHeader),
+          authPreview: masked,
+        });
+      }
+
       const response = await fetch(url, {
         ...options,
         headers,
@@ -85,6 +102,11 @@ class BaseApiClient {
       });
 
       clearTimeout(timeoutId);
+
+      if (debug) {
+        // eslint-disable-next-line no-console
+        console.log('[ApiClient] Response', { url, status: response.status });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

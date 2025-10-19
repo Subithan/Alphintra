@@ -256,7 +256,9 @@ export const useAICodeStore = create<AICodeStore>()(
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              ...(typeof window !== 'undefined' && localStorage.getItem('alphintra_auth_token')
+                ? { 'Authorization': `Bearer ${localStorage.getItem('alphintra_auth_token')}` }
+                : {}),
             },
             body: JSON.stringify({
               ...request,
@@ -317,7 +319,9 @@ export const useAICodeStore = create<AICodeStore>()(
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              ...(typeof window !== 'undefined' && localStorage.getItem('alphintra_auth_token')
+                ? { 'Authorization': `Bearer ${localStorage.getItem('alphintra_auth_token')}` }
+                : {}),
             },
             body: JSON.stringify({
               ...request,
@@ -375,7 +379,9 @@ export const useAICodeStore = create<AICodeStore>()(
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              ...(typeof window !== 'undefined' && localStorage.getItem('alphintra_auth_token')
+                ? { 'Authorization': `Bearer ${localStorage.getItem('alphintra_auth_token')}` }
+                : {}),
             },
             body: JSON.stringify({
               ...request,
@@ -433,7 +439,9 @@ export const useAICodeStore = create<AICodeStore>()(
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              ...(typeof window !== 'undefined' && localStorage.getItem('alphintra_auth_token')
+                ? { 'Authorization': `Bearer ${localStorage.getItem('alphintra_auth_token')}` }
+                : {}),
             },
             body: JSON.stringify({
               ...request,
@@ -491,7 +499,9 @@ export const useAICodeStore = create<AICodeStore>()(
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              ...(typeof window !== 'undefined' && localStorage.getItem('alphintra_auth_token')
+                ? { 'Authorization': `Bearer ${localStorage.getItem('alphintra_auth_token')}` }
+                : {}),
             },
             body: JSON.stringify({
               ...request,

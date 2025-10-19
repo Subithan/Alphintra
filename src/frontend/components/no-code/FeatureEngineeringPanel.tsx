@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Zap, AlertCircle, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { buildGatewayUrl } from '@/lib/config/gateway';
+import { getToken } from '@/lib/auth';
 
 interface FeatureEngineeringPanelProps {
   workflowDefinition: object;
@@ -40,11 +41,12 @@ export function FeatureEngineeringPanel({
 
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add authorization headers if needed
-          // 'Authorization': `Bearer ${token}`
-        },
+        headers: (() => {
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          const token = getToken();
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          return headers;
+        })(),
         body: JSON.stringify({
           workflow_definition: workflowDefinition,
           dataset_id: datasetId,

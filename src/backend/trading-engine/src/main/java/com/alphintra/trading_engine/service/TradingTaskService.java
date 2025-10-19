@@ -23,6 +23,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import com.alphintra.trading_engine.config.ProxySettings;
+import org.knowm.xchange.ExchangeSpecification;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -47,6 +49,8 @@ public class TradingTaskService {
     private final OrderExecutionService orderExecutionService;
     private final PositionRepository positionRepository;
     private final BinanceTimeService binanceTimeService;
+    private final HttpClient httpClient;
+    private final ProxySettings proxySettings;
 
     @Value("${binance.api.enabled:true}")
     private boolean binanceApiEnabled;
@@ -88,6 +92,16 @@ public class TradingTaskService {
         System.out.println("🌐 Binance API is enabled. Attempting to initialize exchange connection...");
         try {
             binanceExchange = ExchangeFactory.INSTANCE.createExchange(BinanceExchange.class);
+
+            // Apply proxy settings to the XChange client if provided
+            if (proxySettings.isEnabled()) {
+                ExchangeSpecification spec = binanceExchange.getExchangeSpecification();
+                spec.setProxyHost(proxySettings.getHost());
+                spec.setProxyPort(proxySettings.getPort());
+                // Some XChange versions don't support proxy auth setters; rely on env/JVM properties
+                binanceExchange.applySpecification(spec);
+                System.out.println("🔌 Applied HTTP proxy to XChange: " + proxySettings.getHost() + ":" + proxySettings.getPort());
+            }
 
             if (binanceTestnetEnabled) {
                 System.out.println("🧪 Using Binance Testnet (testnet.binance.vision)");
@@ -247,9 +261,8 @@ public class TradingTaskService {
                 signature.append(String.format("%02x", b));
             }
             String url = "https://testnet.binance.vision/api/v3/account?" + queryString + "&signature=" + signature.toString();
-            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(30)).header("X-MBX-APIKEY", apiKey).GET().build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 String responseBody = response.body();
@@ -280,5 +293,3 @@ public class TradingTaskService {
     
     private BigDecimal adjustQuantityToStepSize(BigDecimal quantity, BigDecimal stepSize) { BigDecimal steps = quantity.divide(stepSize, 0, RoundingMode.DOWN); BigDecimal adjustedQuantity = steps.multiply(stepSize); int scale = stepSize.stripTrailingZeros().scale(); return adjustedQuantity.setScale(scale, RoundingMode.DOWN); }
 }
-
-

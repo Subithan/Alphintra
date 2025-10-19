@@ -4,6 +4,7 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
 import { setContext } from '@apollo/client/link/context';
 import { buildGatewayUrl, buildGatewayWsUrl } from '../config/gateway';
+import { getToken } from '../auth';
 
 // HTTP Link for queries and mutations
 const httpLink = createHttpLink({
@@ -14,7 +15,7 @@ const httpLink = createHttpLink({
 const wsLink = typeof window !== 'undefined' ? new GraphQLWsLink(createClient({
   url: buildGatewayWsUrl('/graphql'),
   connectionParams: () => {
-    const token = localStorage.getItem('auth_token');
+    const token = getToken();
     return {
       authorization: token ? `Bearer ${token}` : '',
     };
@@ -23,11 +24,11 @@ const wsLink = typeof window !== 'undefined' ? new GraphQLWsLink(createClient({
 
 // Authentication Link
 const authLink = setContext((_, { headers }) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const token = getToken();
   return {
     headers: {
       ...headers,
-      authorization: token ? `Bearer ${token}` : '',
+      Authorization: token ? `Bearer ${token}` : '',
     }
   };
 });
