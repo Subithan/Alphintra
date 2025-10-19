@@ -136,6 +136,16 @@ spring:
                 redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
                 redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
                 key-resolver: "#{@principalKeyResolver}"
+        - id: wallet-service
+          uri: ${WALLET_SERVICE_URI:http://wallet-service.alphintra.svc.cluster.local:8011}
+          predicates:
+            - Path=/binance/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:40}
+                redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
+                key-resolver: "#{@principalKeyResolver}"
 server:
   port: ${SERVER_PORT:8080}
 
