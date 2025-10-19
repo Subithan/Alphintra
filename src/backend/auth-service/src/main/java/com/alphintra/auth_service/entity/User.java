@@ -40,6 +40,24 @@ public class User {
 
   @Column private String kycStatus = "NOT_STARTED";
 
+  @Column(name = "stripe_customer_id")
+  private String stripeCustomerId;
+
+  @Column(name = "subscription_id")
+  private String subscriptionId;
+
+  @Column(name = "subscription_status")
+  private String subscriptionStatus;
+
+  @Column(name = "subscription_plan")
+  private String subscriptionPlan;
+
+  @Column(name = "subscription_start_date")
+  private LocalDateTime subscriptionStartDate;
+
+  @Column(name = "subscription_end_date")
+  private LocalDateTime subscriptionEndDate;
+
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
@@ -168,5 +186,53 @@ public class User {
 
   public void setRoles(Set<Role> roles) {
     this.roles = roles;
+  }
+
+  public String getStripeCustomerId() {
+    return stripeCustomerId;
+  }
+
+  public void setStripeCustomerId(String stripeCustomerId) {
+    this.stripeCustomerId = stripeCustomerId;
+  }
+
+  public String getSubscriptionId() {
+    return subscriptionId;
+  }
+
+  public void setSubscriptionId(String subscriptionId) {
+    this.subscriptionId = subscriptionId;
+  }
+
+  public String getSubscriptionStatus() {
+    return subscriptionStatus;
+  }
+
+  public void setSubscriptionStatus(String subscriptionStatus) {
+    this.subscriptionStatus = subscriptionStatus;
+  }
+
+  public String getSubscriptionPlan() {
+    return subscriptionPlan;
+  }
+
+  public void setSubscriptionPlan(String subscriptionPlan) {
+    this.subscriptionPlan = subscriptionPlan;
+  }
+
+  public LocalDateTime getSubscriptionStartDate() {
+    return subscriptionStartDate;
+  }
+
+  public void setSubscriptionStartDate(LocalDateTime subscriptionStartDate) {
+    this.subscriptionStartDate = subscriptionStartDate;
+  }
+
+  public LocalDateTime getSubscriptionEndDate() {
+    return subscriptionEndDate;
+  }
+
+  public void setSubscriptionEndDate(LocalDateTime subscriptionEndDate) {
+    this.subscriptionEndDate = subscriptionEndDate;
   }
 }

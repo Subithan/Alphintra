@@ -43,6 +43,16 @@ kyc:
     endpoint: ${KYC_ENDPOINT:}
     enabled: false
 
+stripe:
+  api-key: ${STRIPE_API_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  price-ids:
+    basic: ${STRIPE_PRICE_ID_BASIC:price_basic}
+    pro: ${STRIPE_PRICE_ID_PRO:price_pro}
+    enterprise: ${STRIPE_PRICE_ID_ENTERPRISE:price_enterprise}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/subscription/success}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/subscription/cancel}
+
 server:
   port: ${SERVER_PORT:8009}
 

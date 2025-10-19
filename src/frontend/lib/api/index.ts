@@ -6,6 +6,7 @@ import { strategyApi } from './strategy-api';
 import { marketDataApi } from './market-data-api';
 import { riskManagementApi } from './risk-management-api';
 import { noCodeApiClient } from './no-code-api';
+import { subscriptionApiClient } from './subscription-api';
 import { gatewayHttpBaseUrl } from '../config/gateway';
 
 // Re-export for external use
@@ -154,6 +155,17 @@ class AuthApiService {
 
 export const authApi = new AuthApiService();
 
+// Export subscription API
+export { 
+  subscriptionApiClient,
+  type CheckoutSessionRequest,
+  type CheckoutSessionResponse,
+  type SubscriptionDto,
+  type SubscriptionStatus,
+  STRIPE_PRICE_IDS,
+  SUBSCRIPTION_PLANS
+} from './subscription-api';
+
 // Consolidated API object for easy access
 export const api = {
   auth: authApi,
@@ -161,4 +173,5 @@ export const api = {
   marketData: marketDataApi,
   riskManagement: riskManagementApi,
   noCode: noCodeApiClient,
+  subscription: subscriptionApiClient,
 } as const;
