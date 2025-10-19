@@ -6,7 +6,7 @@ metadata:
     app: service-gateway
 data:
   AUTH_SERVICE_URI: http://auth-service.auth-service:8009
-  TRADING_ENGINE_URI: http://trading-engine.platform:8100
+  TRADING_ENGINE_URI: http://trading-engine.platform:8008
   MARKETPLACE_SERVICE_URI: http://marketplace-service.platform:8200
   GRAPHQL_SERVICE_URI: http://graphql-service.platform:8300
   MARKET_DATA_WS_URI: ws://market-data.platform:8082

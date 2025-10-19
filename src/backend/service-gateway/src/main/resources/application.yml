@@ -45,7 +45,7 @@ spring:
             - PreserveHostHeader
             - RemoveRequestHeader=Cookie
         - id: trading-engine
-          uri: ${TRADING_ENGINE_URI:http://trading-engine.default.svc.cluster.local:8100}
+          uri: ${TRADING_ENGINE_URI:http://trading-engine.default.svc.cluster.local:8008}
           predicates:
             - Path=/api/trading/**, /api/orders/**
           filters:
