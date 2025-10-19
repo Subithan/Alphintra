@@ -1,12 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
 import { Strategy } from './types'; // Assumes this is where your provided interface lives
-import { initiateStripeCheckout } from '@/app/api/paymentApi'; 
+import { initiateStripeCheckout, getStripePublishableKey } from '@/app/api/paymentApi'; 
 import { X, ArrowUpRight, TrendingUp, Users, Shield, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+
+// Initialize Stripe.js with your publishable key
+const stripePromise = loadStripe(getStripePublishableKey());
 
 // Define the component props
 interface StrategyModalProps {
@@ -32,7 +36,7 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
         }
     };
     
-    // CRITICAL CHECKOUT LOGIC
+    // CRITICAL CHECKOUT LOGIC using Stripe.js
     const handleCheckout = async () => {
         if (strategy.price === 'free' || isProcessing) return; 
 
@@ -41,14 +45,26 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
         setError(null);
 
         try {
+            // Get Stripe.js instance
+            const stripe = await stripePromise;
+            if (!stripe) {
+                throw new Error('Stripe.js failed to load');
+            }
+
             console.log('[StrategyModal] Calling initiateStripeCheckout...');
-            const stripeUrl = await initiateStripeCheckout(strategy.id);
-            console.log('[StrategyModal] Received Stripe URL:', stripeUrl);
-            console.log('[StrategyModal] Redirecting to Stripe...');
+            // Get the session ID from your backend
+            const sessionId = await initiateStripeCheckout(strategy.id);
+            console.log('[StrategyModal] Received session ID:', sessionId);
+
+            console.log('[StrategyModal] Redirecting to Stripe Checkout...');
+            // Use Stripe.js to redirect to checkout
+            // @ts-ignore - redirectToCheckout exists but types may not be updated
+            const result = await stripe.redirectToCheckout({ sessionId });
             
-            // Use window.location.replace for more reliable redirect
-            // This replaces the current page in history instead of adding a new entry
-            window.location.replace(stripeUrl);
+            // If we reach here without redirecting, there was an error
+            if (result?.error) {
+                throw new Error(result.error.message);
+            }
         } catch (err) {
             console.error("[StrategyModal] Stripe Checkout Failed:", err);
             setError((err as Error).message || "Payment processing failed. Please try again.");
