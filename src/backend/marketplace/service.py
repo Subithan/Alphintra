@@ -77,6 +77,11 @@ def create_checkout_session_for_strategy(db: Session, strategy_id: int, user_ema
             customer_email=user_email,
         )
 
+        print(f"DEBUG: Created Stripe Checkout Session: {checkout_session.id}")
+        print(f"DEBUG: Session URL: {checkout_session.url}")
+        print(f"DEBUG: Session status: {checkout_session.status}")
+        print(f"DEBUG: Session payment_status: {checkout_session.payment_status}")
+
         # 3. Update the subscription record with the actual session ID
         new_subscription.stripe_session_id = checkout_session.id
         db.add(new_subscription)
