@@ -41,7 +41,11 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/api/auth/**")
                     .permitAll()
-                    .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/validate")
+                    .requestMatchers(
+                        "/api/auth/register",
+                        "/api/auth/login",
+                        "/api/auth/validate",
+                        "/api/auth/introspect")
                     .permitAll()
                     .requestMatchers("/api/users/**", "/api/kyc/**")
                     .authenticated()

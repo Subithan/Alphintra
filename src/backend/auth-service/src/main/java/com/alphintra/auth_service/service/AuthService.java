@@ -3,6 +3,7 @@ package com.alphintra.auth_service.service;
 import com.alphintra.auth_service.dto.AuthRequest;
 import com.alphintra.auth_service.dto.AuthResponse;
 import com.alphintra.auth_service.dto.RegisterRequest;
+import com.alphintra.auth_service.dto.TokenIntrospectionResponse;
 import com.alphintra.auth_service.entity.Role;
 import com.alphintra.auth_service.entity.User;
 import com.alphintra.auth_service.exception.InvalidCredentialsException;
@@ -103,6 +104,22 @@ public class AuthService {
       log.warn("Token validation failed: {}", e.getMessage());
       return false;
     }
+  }
+
+  public TokenIntrospectionResponse introspect(String token) {
+    var jws = Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token);
+    var claims = jws.getBody();
+
+    String subject = claims.getSubject();
+    Object rolesClaim = claims.get("roles");
+    java.util.List<String> roles = java.util.Collections.emptyList();
+    if (rolesClaim instanceof java.util.Collection<?> col) {
+      roles = col.stream().map(Object::toString).toList();
+    }
+    Long iat = claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant().getEpochSecond() : null;
+    Long exp = claims.getExpiration() != null ? claims.getExpiration().toInstant().getEpochSecond() : null;
+
+    return new TokenIntrospectionResponse(true, subject, roles, iat, exp);
   }
 
   private String buildToken(String subject, Set<Role> roles) {

@@ -1,5 +1,6 @@
 package com.alphintra.gateway.filter;
 
+import com.alphintra.gateway.client.AuthClient;
 import com.alphintra.gateway.config.GatewaySecurityProperties;
 import com.alphintra.gateway.security.JwtTokenValidator;
 import io.jsonwebtoken.Claims;
@@ -12,6 +13,7 @@ import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -26,43 +28,98 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
   public static final String ATTR_SUBJECT = "gateway.jwt.subject";
 
   private final JwtTokenValidator validator;
+  private final AuthClient authClient;
   private final List<PathPattern> publicPatterns;
+  private final boolean authEnabled;
+  private final boolean delegationEnabled;
+  private final boolean fallbackLocal;
   private final PathPatternParser parser = new PathPatternParser();
 
   public JwtAuthenticationFilter(
-      JwtTokenValidator validator, GatewaySecurityProperties properties) {
+      JwtTokenValidator validator, AuthClient authClient, GatewaySecurityProperties properties) {
     this.validator = validator;
+    this.authClient = authClient;
     this.publicPatterns = properties.getPublicPaths().stream().map(parser::parse).toList();
+    this.authEnabled = properties.isEnabled();
+    this.delegationEnabled = properties.getAuthService().isDelegationEnabled();
+    this.fallbackLocal = properties.getAuthService().isFallbackLocal();
   }
 
   @Override
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-    if (isPublic(exchange)) {
+    if (!authEnabled || isPublic(exchange)) {
       return chain.filter(exchange);
     }
+
     String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
     if (authorization == null || !authorization.startsWith("Bearer ")) {
       return unauthorized(exchange.getResponse(), "Missing or invalid Authorization header");
     }
     String token = authorization.substring(7);
-    try {
-      Jws<Claims> claims = validator.parse(token);
-      exchange.getAttributes().put(ATTR_CLAIMS, claims);
-      exchange.getAttributes().put(ATTR_SUBJECT, claims.getBody().getSubject());
-      // Preserve the original Authorization header for downstream services
-      // but also add user info headers for gateway-level operations
-      exchange
-          .getRequest()
-          .mutate()
-          .header("X-User-Id", claims.getBody().getSubject())
-          .header("X-User-Roles", String.join(",", validator.extractRoles(claims)))
-          .build();
-      return chain.filter(exchange);
-    } catch (Exception ex) {
-      // Log the actual exception for debugging
-      System.err.println("JWT Validation Error: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
-      ex.printStackTrace();
-      return unauthorized(exchange.getResponse(), "Invalid token");
+
+    if (delegationEnabled) {
+      return authClient
+          .introspect(token)
+          .flatMap(
+              resp -> {
+                if (resp == null || !resp.isActive()) {
+                  return unauthorized(exchange.getResponse(), "Invalid token");
+                }
+                String subject = resp.getSub();
+                String roles = resp.getRoles() == null ? "" : String.join(",", resp.getRoles());
+
+                exchange.getAttributes().put(ATTR_SUBJECT, subject);
+                ServerHttpRequest mutated =
+                    exchange
+                        .getRequest()
+                        .mutate()
+                        .header("X-User-Id", subject)
+                        .header("X-User-Roles", roles)
+                        .build();
+                return chain.filter(exchange.mutate().request(mutated).build());
+              })
+          .onErrorResume(
+              ex -> {
+                System.err.println("Auth delegation error: " + ex.getMessage());
+                if (fallbackLocal) {
+                  try {
+                    Jws<Claims> claims = validator.parse(token);
+                    String subject = claims.getBody().getSubject();
+                    String roles = String.join(",", validator.extractRoles(claims));
+                    exchange.getAttributes().put(ATTR_SUBJECT, subject);
+                    ServerHttpRequest mutated =
+                        exchange
+                            .getRequest()
+                            .mutate()
+                            .header("X-User-Id", subject)
+                            .header("X-User-Roles", roles)
+                            .build();
+                    return chain.filter(exchange.mutate().request(mutated).build());
+                  } catch (Exception e) {
+                    return unauthorized(exchange.getResponse(), "Invalid token");
+                  }
+                }
+                return unauthorized(exchange.getResponse(), "Invalid token");
+              });
+    } else {
+      try {
+        Jws<Claims> claims = validator.parse(token);
+        String subject = claims.getBody().getSubject();
+        String roles = String.join(",", validator.extractRoles(claims));
+        exchange.getAttributes().put(ATTR_SUBJECT, subject);
+        ServerHttpRequest mutated =
+            exchange
+                .getRequest()
+                .mutate()
+                .header("X-User-Id", subject)
+                .header("X-User-Roles", roles)
+                .build();
+        return chain.filter(exchange.mutate().request(mutated).build());
+      } catch (Exception ex) {
+        System.err.println(
+            "JWT Validation Error (local): " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+        return unauthorized(exchange.getResponse(), "Invalid token");
+      }
     }
   }
 
