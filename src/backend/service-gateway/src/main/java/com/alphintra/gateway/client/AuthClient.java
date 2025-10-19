@@ -1,6 +1,8 @@
 package com.alphintra.gateway.client;
 
 import com.alphintra.gateway.config.GatewaySecurityProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -13,10 +15,13 @@ public class AuthClient {
 
   private final WebClient webClient;
   private final long timeoutMs;
+  private static final Logger log = LoggerFactory.getLogger(AuthClient.class);
 
   public AuthClient(WebClient.Builder builder, GatewaySecurityProperties props) {
-    this.webClient = builder.baseUrl(props.getAuthService().getBaseUrl()).build();
+    String baseUrl = props.getAuthService().getBaseUrl();
+    this.webClient = builder.baseUrl(baseUrl).build();
     this.timeoutMs = props.getAuthService().getTimeoutMs();
+    log.info("AuthClient configured baseUrl={} timeoutMs={}", baseUrl, timeoutMs);
   }
 
   public Mono<IntrospectionResponse> introspect(String token) {
@@ -41,7 +46,8 @@ public class AuthClient {
                                     null,
                                     null))))
         .bodyToMono(IntrospectionResponse.class)
-        .timeout(java.time.Duration.ofMillis(timeoutMs));
+        .timeout(java.time.Duration.ofMillis(timeoutMs))
+        .doOnError(e -> log.warn("Introspection call error: {}", e.toString()));
   }
 
   public static class IntrospectionResponse {
@@ -92,4 +98,3 @@ public class AuthClient {
     }
   }
 }
-

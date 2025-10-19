@@ -31,6 +31,7 @@ logging:
     root: INFO
     org.springframework.security: INFO
     org.hibernate.SQL: ERROR
+    com.alphintra.auth_service: DEBUG
 
 jwt:
   secret: ${JWT_SECRET:U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=}

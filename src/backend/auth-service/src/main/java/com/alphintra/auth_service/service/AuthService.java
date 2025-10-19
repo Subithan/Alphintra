@@ -79,7 +79,7 @@ public class AuthService {
     user.getRoles().add(defaultRole);
 
     User saved = userRepository.save(user);
-    String token = buildToken(saved.getUsername(), saved.getRoles());
+    String token = buildToken(saved.getUsername(), saved.getRoles(), saved.getId());
     log.info("Registered new user with username={}", saved.getUsername());
     return new AuthResponse(token, UserMapper.toProfile(saved));
   }
@@ -92,7 +92,7 @@ public class AuthService {
     if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
       throw new InvalidCredentialsException("Invalid email or password");
     }
-    String token = buildToken(user.getUsername(), user.getRoles());
+    String token = buildToken(user.getUsername(), user.getRoles(), user.getId());
     return new AuthResponse(token, UserMapper.toProfile(user));
   }
 
@@ -116,15 +116,33 @@ public class AuthService {
     if (rolesClaim instanceof java.util.Collection<?> col) {
       roles = col.stream().map(Object::toString).toList();
     }
-    Long iat = claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant().getEpochSecond() : null;
-    Long exp = claims.getExpiration() != null ? claims.getExpiration().toInstant().getEpochSecond() : null;
 
-    return new TokenIntrospectionResponse(true, subject, roles, iat, exp);
+    // Extract user ID from claims
+    Object userIdClaim = claims.get("user_id");
+    Long userId = null;
+    if (userIdClaim instanceof Number) {
+      userId = ((Number) userIdClaim).longValue();
+    } else if (userIdClaim instanceof String) {
+      try {
+        userId = Long.parseLong((String) userIdClaim);
+      } catch (NumberFormatException e) {
+        // Log warning but continue
+        log.warn("Failed to parse user_id claim as number: {}", userIdClaim);
+      }
+    }
+
+    Long iat =
+        claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant().getEpochSecond() : null;
+    Long exp =
+        claims.getExpiration() != null ? claims.getExpiration().toInstant().getEpochSecond() : null;
+
+    return new TokenIntrospectionResponse(true, subject, roles, userId, iat, exp);
   }
 
-  private String buildToken(String subject, Set<Role> roles) {
+  private String buildToken(String subject, Set<Role> roles, Long userId) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("roles", roles.stream().map(Role::getName).toList());
+    claims.put("user_id", userId); // Add user ID as a claim
 
     Instant now = Instant.now();
     return Jwts.builder()

@@ -7,6 +7,7 @@ public class TokenIntrospectionResponse {
 
   private boolean active;
   private String sub;
+  private Long userId;
   private List<String> roles;
   private Long iat;
   private Long exp;
@@ -16,6 +17,15 @@ public class TokenIntrospectionResponse {
   public TokenIntrospectionResponse(boolean active, String sub, List<String> roles, Long iat, Long exp) {
     this.active = active;
     this.sub = sub;
+    this.roles = roles;
+    this.iat = iat;
+    this.exp = exp;
+  }
+
+  public TokenIntrospectionResponse(boolean active, String sub, List<String> roles, Long userId, Long iat, Long exp) {
+    this.active = active;
+    this.sub = sub;
+    this.userId = userId;
     this.roles = roles;
     this.iat = iat;
     this.exp = exp;
@@ -39,6 +49,14 @@ public class TokenIntrospectionResponse {
 
   public void setSub(String sub) {
     this.sub = sub;
+  }
+
+  public Long getUserId() {
+    return userId;
+  }
+
+  public void setUserId(Long userId) {
+    this.userId = userId;
   }
 
   public List<String> getRoles() {
