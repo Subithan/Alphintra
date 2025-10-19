@@ -260,7 +260,7 @@ services:
     image: adminer:latest
     container_name: alphintra-adminer
     ports:
-      - "8080:8080"
+      - "8088:8088"
     depends_on:
       postgres:
         condition: service_healthy
@@ -444,6 +444,37 @@ services:
       - alphintra-minimal-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8010/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Marketplace Service - Stripe marketplace API for trading strategies
+  marketplace:
+    build:
+      context: ../../../src/backend/marketplace
+      dockerfile: Dockerfile
+    container_name: alphintra-marketplace
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8012"]
+    environment:
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-marketplace
+      REDIS_URL: redis://:redis123@redis:6379
+      STRIPE_SECRET_KEY: sk_test_placeholder_stripe_secret_key
+      STRIPE_PUBLISHABLE_KEY: pk_test_placeholder_stripe_publishable_key
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder_webhook_secret
+      DOMAIN_URL: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8012:8012"
+    networks:
+      - alphintra-minimal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
       interval: 30s
       timeout: 10s
       retries: 3
