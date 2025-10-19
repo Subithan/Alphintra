@@ -3,7 +3,6 @@ package com.alphintra.auth_service.service;
 import com.alphintra.auth_service.dto.AuthRequest;
 import com.alphintra.auth_service.dto.AuthResponse;
 import com.alphintra.auth_service.dto.RegisterRequest;
-import com.alphintra.auth_service.dto.TokenIntrospectionResponse;
 import com.alphintra.auth_service.entity.Role;
 import com.alphintra.auth_service.entity.User;
 import com.alphintra.auth_service.exception.InvalidCredentialsException;
@@ -12,7 +11,6 @@ import com.alphintra.auth_service.exception.UserAlreadyExistsException;
 import com.alphintra.auth_service.mapper.UserMapper;
 import com.alphintra.auth_service.repository.RoleRepository;
 import com.alphintra.auth_service.repository.UserRepository;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -96,48 +94,7 @@ public class AuthService {
     return new AuthResponse(token, UserMapper.toProfile(user));
   }
 
-  public boolean validateToken(String token) {
-    try {
-      Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token);
-      return true;
-    } catch (JwtException e) {
-      log.warn("Token validation failed: {}", e.getMessage());
-      return false;
-    }
-  }
-
-  public TokenIntrospectionResponse introspect(String token) {
-    var jws = Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token);
-    var claims = jws.getBody();
-
-    String subject = claims.getSubject();
-    Object rolesClaim = claims.get("roles");
-    java.util.List<String> roles = java.util.Collections.emptyList();
-    if (rolesClaim instanceof java.util.Collection<?> col) {
-      roles = col.stream().map(Object::toString).toList();
-    }
-
-    // Extract user ID from claims
-    Object userIdClaim = claims.get("user_id");
-    Long userId = null;
-    if (userIdClaim instanceof Number) {
-      userId = ((Number) userIdClaim).longValue();
-    } else if (userIdClaim instanceof String) {
-      try {
-        userId = Long.parseLong((String) userIdClaim);
-      } catch (NumberFormatException e) {
-        // Log warning but continue
-        log.warn("Failed to parse user_id claim as number: {}", userIdClaim);
-      }
-    }
-
-    Long iat =
-        claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant().getEpochSecond() : null;
-    Long exp =
-        claims.getExpiration() != null ? claims.getExpiration().toInstant().getEpochSecond() : null;
-
-    return new TokenIntrospectionResponse(true, subject, roles, userId, iat, exp);
-  }
+  // All JWT validation (validate/introspect) removed; only issuing tokens remains.
 
   private String buildToken(String subject, Set<Role> roles, Long userId) {
     Map<String, Object> claims = new HashMap<>();
