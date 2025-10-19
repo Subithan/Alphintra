@@ -1,7 +1,4 @@
 package com.alphintra.trading_engine.config;
-import com.alphintra.trading_engine.service.JwtValidationFilter;
-
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -9,7 +6,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Arrays;
@@ -17,15 +13,6 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
-
-    private final JwtValidationFilter jwtValidationFilter;
-
-    @Value("${jwt.secret:OTc0MjZhMWMtM2NmOS00OGZlLTk1MjEtNzYwNWRlZTg=}") // Shared with auth-service
-    private String jwtSecret;
-
-    public SecurityConfig(JwtValidationFilter jwtValidationFilter) {
-        this.jwtValidationFilter = jwtValidationFilter;
-    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -38,14 +25,8 @@ public class SecurityConfig {
                 config.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token", "Authorization"));
                 return config;
             }))
-            .authorizeHttpRequests(auth -> auth
-                // .requestMatchers("/actuator/health", "/api/public/**").permitAll() // Public endpoints
-                .requestMatchers("/actuator/health", "/api/public/**", "/api/trading/**").permitAll() // Public endpoints
-                .requestMatchers("/api/**").authenticated() // Protect API paths
-                .anyRequest().permitAll() // Or .denyAll() for stricter
-            )
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtValidationFilter, UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
 
         return http.build();

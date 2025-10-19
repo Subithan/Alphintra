@@ -8,7 +8,6 @@ package com.alphintra.auth_service.controller;
 import com.alphintra.auth_service.dto.AuthRequest;
 import com.alphintra.auth_service.dto.AuthResponse;
 import com.alphintra.auth_service.dto.RegisterRequest;
-import com.alphintra.auth_service.dto.TokenValidationRequest;
 import com.alphintra.auth_service.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -39,8 +38,5 @@ public class AuthController {
     return ResponseEntity.ok(response);
   }
 
-  @PostMapping("/validate")
-  public ResponseEntity<Boolean> validate(@Valid @RequestBody TokenValidationRequest request) {
-    return ResponseEntity.ok(authService.validateToken(request.getToken()));
-  }
+  // JWT validation endpoints removed
 }

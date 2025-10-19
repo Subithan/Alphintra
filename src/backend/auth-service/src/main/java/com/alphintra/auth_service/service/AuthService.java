@@ -11,7 +11,6 @@ import com.alphintra.auth_service.exception.UserAlreadyExistsException;
 import com.alphintra.auth_service.mapper.UserMapper;
 import com.alphintra.auth_service.repository.RoleRepository;
 import com.alphintra.auth_service.repository.UserRepository;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -78,7 +77,7 @@ public class AuthService {
     user.getRoles().add(defaultRole);
 
     User saved = userRepository.save(user);
-    String token = buildToken(saved.getUsername(), saved.getRoles());
+    String token = buildToken(saved.getUsername(), saved.getRoles(), saved.getId());
     log.info("Registered new user with username={}", saved.getUsername());
     return new AuthResponse(token, UserMapper.toProfile(saved));
   }
@@ -91,23 +90,16 @@ public class AuthService {
     if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
       throw new InvalidCredentialsException("Invalid email or password");
     }
-    String token = buildToken(user.getUsername(), user.getRoles());
+    String token = buildToken(user.getUsername(), user.getRoles(), user.getId());
     return new AuthResponse(token, UserMapper.toProfile(user));
   }
 
-  public boolean validateToken(String token) {
-    try {
-      Jwts.parserBuilder().setSigningKey(signingKey).build().parseClaimsJws(token);
-      return true;
-    } catch (JwtException e) {
-      log.warn("Token validation failed: {}", e.getMessage());
-      return false;
-    }
-  }
+  // All JWT validation (validate/introspect) removed; only issuing tokens remains.
 
-  private String buildToken(String subject, Set<Role> roles) {
+  private String buildToken(String subject, Set<Role> roles, Long userId) {
     Map<String, Object> claims = new HashMap<>();
     claims.put("roles", roles.stream().map(Role::getName).toList());
+    claims.put("user_id", userId); // Add user ID as a claim
 
     Instant now = Instant.now();
     return Jwts.builder()

@@ -45,7 +45,7 @@ spring:
             - PreserveHostHeader
             - RemoveRequestHeader=Cookie
         - id: trading-engine
-          uri: ${TRADING_ENGINE_URI:http://trading-engine.default.svc.cluster.local:8100}
+          uri: ${TRADING_ENGINE_URI:http://trading-engine.default.svc.cluster.local:8008}
           predicates:
             - Path=/api/trading/**, /api/orders/**
           filters:
@@ -143,8 +143,7 @@ logging:
   level:
     root: INFO
     org.springframework.cloud.gateway: INFO
-    com.alphintra.gateway: DEBUG
-    io.jsonwebtoken: DEBUG
+    com.alphintra.gateway: INFO
 
 management:
   endpoints:
@@ -159,14 +158,4 @@ management:
     redis:
       enabled: false
 
-gateway:
-  security:
-    jwt:
-      secret: ${GATEWAY_JWT_SECRET:U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=}
-      clock-skew-seconds: ${GATEWAY_JWT_CLOCK_SKEW:60}
-    public-paths:
-      - /api/auth/login
-      - /api/auth/register
-      - /api/auth/validate
-      - /actuator/**
-      - /_fallback/**
+# JWT validation is removed; no gateway.security config is used.

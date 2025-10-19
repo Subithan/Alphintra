@@ -31,6 +31,7 @@ logging:
     root: INFO
     org.springframework.security: INFO
     org.hibernate.SQL: ERROR
+    com.alphintra.auth_service: INFO
 
 jwt:
   secret: ${JWT_SECRET:U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=}
@@ -42,6 +43,16 @@ kyc:
     api-key: ${KYC_API_KEY:}
     endpoint: ${KYC_ENDPOINT:}
     enabled: false
+
+stripe:
+  api-key: ${STRIPE_API_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  price-ids:
+    basic: ${STRIPE_PRICE_ID_BASIC:price_basic}
+    pro: ${STRIPE_PRICE_ID_PRO:price_pro}
+    enterprise: ${STRIPE_PRICE_ID_ENTERPRISE:price_enterprise}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/subscription/success}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/subscription/cancel}
 
 server:
   port: ${SERVER_PORT:8009}
