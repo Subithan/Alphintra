@@ -17,8 +17,8 @@ export const mainSidebarItems: SidebarItemType[] = [
   },
   {
     id: "strategy",
-    name: "Strategy",
-    icon: "solar:graph-new-up-line-duotone",
+    name: "Library",
+    icon: "solar:library-line-duotone",
     url: "/strategy",
   },
   {
@@ -44,7 +44,7 @@ export const mainSidebarItems: SidebarItemType[] = [
     id: "ticketing",
     name: "Ticketing",
     icon:  "solar:ticket-line-duotone",
-    url: "/userTicketing",
+    url: "/support",
   },
   {
     id: "no-code-console",
