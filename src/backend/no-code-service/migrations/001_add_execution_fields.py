@@ -21,7 +21,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://alphintra_user:alphintra_
 
 def upgrade():
     """Apply migration"""
-    engine = create_engine(DATABASE_URL)
+    # Use autocommit so a handled error doesn't poison the whole transaction
+    engine = create_engine(DATABASE_URL, isolation_level="AUTOCOMMIT")
     
     with engine.connect() as conn:
         print("Starting migration: Add execution mode fields...")
@@ -31,9 +32,9 @@ def upgrade():
         try:
             conn.execute(text("""
                 ALTER TABLE nocode_workflows 
-                ADD COLUMN execution_metadata JSON DEFAULT '{}'::json
+                ADD COLUMN IF NOT EXISTS execution_metadata JSON DEFAULT '{}'::json
             """))
-            print("   ✅ execution_metadata column added")
+            print("   ✅ execution_metadata column ensured")
         except Exception as e:
             if "already exists" in str(e):
                 print("   ⚠️ execution_metadata column already exists, skipping")
@@ -44,9 +45,9 @@ def upgrade():
         try:
             conn.execute(text("""
                 ALTER TABLE nocode_workflows 
-                ADD COLUMN aiml_training_job_id VARCHAR
+                ADD COLUMN IF NOT EXISTS aiml_training_job_id VARCHAR
             """))
-            print("   ✅ aiml_training_job_id column added")
+            print("   ✅ aiml_training_job_id column ensured")
         except Exception as e:
             if "already exists" in str(e):
                 print("   ⚠️ aiml_training_job_id column already exists, skipping")
@@ -57,7 +58,7 @@ def upgrade():
         print("3. Creating execution_history table...")
         try:
             conn.execute(text("""
-                CREATE TABLE execution_history (
+                CREATE TABLE IF NOT EXISTS execution_history (
                     id SERIAL PRIMARY KEY,
                     uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
                     workflow_id INTEGER NOT NULL REFERENCES nocode_workflows(id),
@@ -80,10 +81,10 @@ def upgrade():
         # Create indexes for performance
         print("4. Creating indexes...")
         try:
-            conn.execute(text("CREATE INDEX idx_execution_history_workflow_id ON execution_history(workflow_id)"))
-            conn.execute(text("CREATE INDEX idx_execution_history_uuid ON execution_history(uuid)"))
-            conn.execute(text("CREATE INDEX idx_execution_history_status ON execution_history(status)"))
-            print("   ✅ Indexes created")
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_execution_history_workflow_id ON execution_history(workflow_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_execution_history_uuid ON execution_history(uuid)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_execution_history_status ON execution_history(status)"))
+            print("   ✅ Indexes ensured")
         except Exception as e:
             if "already exists" in str(e):
                 print("   ⚠️ Some indexes already exist, continuing")

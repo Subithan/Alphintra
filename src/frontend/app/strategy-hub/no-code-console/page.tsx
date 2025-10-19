@@ -996,9 +996,13 @@ if __name__ == "__main__":
             };
 
             // Save trainer file via fetch since request is protected
+            const token = typeof window !== 'undefined' ? localStorage.getItem('alphintra_auth_token') : null;
             await fetch('/api/code-files', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
               body: JSON.stringify(trainerData)
             });
 

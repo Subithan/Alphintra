@@ -30,6 +30,8 @@ import {
 } from '@/lib/api/customer-support-api';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { getToken } from '@/lib/auth';
+import { buildGatewayWsUrl } from '@/lib/config/gateway';
 
 interface RealTimeChatWidgetProps {
   ticketId: string;
@@ -112,7 +114,9 @@ export default function RealTimeChatWidget({
     try {
       // WebSocket connection would be implemented here
       // For now, we'll simulate the connection
-      const ws = new WebSocket(`ws://localhost:8085/ws/tickets/${ticketId}/chat`);
+      const token = getToken();
+      const wsUrl = buildGatewayWsUrl(`/api/customer-support/ws/tickets/${ticketId}/chat${token ? `?token=${encodeURIComponent(token)}` : ''}`);
+      const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
         setIsConnected(true);

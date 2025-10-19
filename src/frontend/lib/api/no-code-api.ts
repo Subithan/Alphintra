@@ -3,6 +3,7 @@
 
 import { BaseApiClient } from "./api-client";
 import { gatewayHttpBaseUrl } from "../config/gateway";
+import { getToken } from "../auth";
 
 // Types for No-Code API
 export interface WorkflowNode {
@@ -224,6 +225,24 @@ export class NoCodeApiClient extends BaseApiClient {
         baseUrl: this.config.baseUrl,
       });
     }
+  }
+
+  // Ensure all requests explicitly include Authorization from the current token
+  // in addition to BaseApiClient's default behavior. This guards against any
+  // edge cases where headers might be overridden upstream.
+  protected async requestWithRetry<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    retryCount = 0
+  ): Promise<T> {
+    const token = getToken();
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> | undefined),
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return super.requestWithRetry<T>(endpoint, { ...options, headers }, retryCount);
   }
 
   // Workflow Management

@@ -23,6 +23,8 @@ spec:
         prometheus.io/port: "8008"
         prometheus.io/path: "/actuator/prometheus"
     spec:
+      nodeSelector:
+        pool: nat-backend
       serviceAccountName: trading-engine
       securityContext:
         runAsNonRoot: true
@@ -93,9 +95,31 @@ spec:
                   key: SPRING_DATA_REDIS_PASSWORD
             # Binance API configuration - disabled in cloud due to geographic restrictions
             - name: BINANCE_API_ENABLED
-              value: "false"
+              value: "true"
             - name: BINANCE_TESTNET_ENABLED
               value: "true"
+            # Optional outbound proxy to route Binance traffic via EU
+            # Populate a Secret named `binance-proxy` with key `HTTPS_PROXY`
+            # e.g., value: http://user:pass@EU_PROXY_IP:3128
+            - name: HTTPS_PROXY
+              valueFrom:
+                secretKeyRef:
+                  name: binance-proxy
+                  key: HTTPS_PROXY
+            - name: NO_PROXY
+              valueFrom:
+                secretKeyRef:
+                  name: binance-proxy
+                  key: NO_PROXY
+                  optional: true
+            # For older images that rely on JVM system properties for proxies,
+            # pass JAVA_TOOL_OPTIONS with -Dhttp/https.proxyHost/Port.
+            - name: JAVA_TOOL_OPTIONS
+              valueFrom:
+                secretKeyRef:
+                  name: binance-proxy
+                  key: JAVA_TOOL_OPTIONS
+                  optional: true
           resources:
             requests:
               cpu: 200m

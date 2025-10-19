@@ -1,0 +1,66 @@
+options:
+  substitutionOption: ALLOW_LOOSE
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build image'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/alphintra/ai-ml-strategy-service:${_COMMIT_SHA}', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push image'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/alphintra/ai-ml-strategy-service:${_COMMIT_SHA}']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Tag latest'
+    args: ['tag', 'us-central1-docker.pkg.dev/$PROJECT_ID/alphintra/ai-ml-strategy-service:${_COMMIT_SHA}', 'us-central1-docker.pkg.dev/$PROJECT_ID/alphintra/ai-ml-strategy-service:latest']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push latest'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/alphintra/ai-ml-strategy-service:latest']
+
+  # Deploy manifests to GKE (dev overlay) and update image tag
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Apply-Manifests'
+    args:
+      - 'apply'
+      - '-k'
+      - 'dev'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Push image', 'Push latest']
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Update-Deployment-Image'
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/ai-ml-strategy-service'
+      - 'ai-ml-strategy-service=us-central1-docker.pkg.dev/${PROJECT_ID}/alphintra/ai-ml-strategy-service:${_COMMIT_SHA}'
+      - '-n'
+      - 'alphintra'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Apply-Manifests']
+
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Rollout-Status'
+    args:
+      - 'rollout'
+      - 'status'
+      - 'deployment/ai-ml-strategy-service'
+      - '-n'
+      - 'alphintra'
+      - '--timeout=180s'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Update-Deployment-Image']
+
+substitutions:
+  _COMMIT_SHA: 'manual'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/alphintra/ai-ml-strategy-service:${_COMMIT_SHA}'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/alphintra/ai-ml-strategy-service:latest'

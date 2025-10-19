@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: no-code-service
+  labels:
+    app: no-code-service
+    component: backend
+    tier: service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8006"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8006
+    targetPort: 8006
+    protocol: TCP
+    name: http
+  selector:
+    app: no-code-service
+  sessionAffinity: None

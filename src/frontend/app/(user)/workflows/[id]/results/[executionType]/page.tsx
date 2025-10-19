@@ -22,6 +22,7 @@ import {
   useTrainingJob,
 } from "@/lib/stores/execution-store";
 import { noCodeApiClient } from "@/lib/api/no-code-api";
+import { getToken } from "@/lib/auth";
 import {
   ArrowLeft,
   Download,
@@ -166,7 +167,10 @@ export default function ExecutionResultsPage() {
     // Check if we have results in training job store
     if (trainingJob?.status === "completed") {
       // Fetch detailed results
-      const response = await fetch(`/api/training/jobs/${jobId}/results`);
+      const token = getToken();
+      const response = await fetch(`/api/training/jobs/${jobId}/results`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (!response.ok) {
         throw new Error("Failed to load training results");
       }

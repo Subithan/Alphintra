@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -60,8 +61,23 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(Exception.class)
   ResponseEntity<ProblemDetail> handleGeneric(Exception ex) {
     log.error("Unhandled exception", ex);
+    if (ex instanceof HttpMessageNotReadableException) {
+      ProblemDetail detail =
+          ProblemDetail.forStatusAndDetail(
+              HttpStatus.BAD_REQUEST,
+              "Malformed JSON request. Ensure valid JSON body and Content-Type: application/json.");
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(detail);
+    }
     ProblemDetail detail =
         ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(detail);
+  }
+
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  ResponseEntity<ProblemDetail> handleUnreadableJson(HttpMessageNotReadableException ex) {
+    ProblemDetail detail =
+        ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST, "Malformed JSON request. Ensure valid JSON body and Content-Type: application/json.");
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(detail);
   }
 }

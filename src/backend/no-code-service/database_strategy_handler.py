@@ -24,9 +24,10 @@ class DatabaseStrategyHandler:
         self.compiler = EnhancedCodeGenerator()
         self.backtest_client = BacktestClient()
         
-    def execute_strategy_mode(self, 
-                             workflow: NoCodeWorkflow, 
+    def execute_strategy_mode(self,
+                             workflow: NoCodeWorkflow,
                              execution_config: Dict[str, Any],
+                             user_id: int,
                              db: Session) -> Dict[str, Any]:
         """
         Execute workflow in strategy mode using Enhanced Compiler
@@ -35,6 +36,7 @@ class DatabaseStrategyHandler:
         Args:
             workflow: NoCodeWorkflow database object
             execution_config: Configuration from frontend
+            user_id: ID of the user executing the strategy
             db: Database session
             
         Returns:
@@ -86,6 +88,7 @@ class DatabaseStrategyHandler:
                     compilation_result,
                     code_lines,
                     code_size,
+                    user_id,
                     db
                 )
             except Exception as e:
@@ -279,6 +282,7 @@ class DatabaseStrategyHandler:
                                compilation_result: Dict[str, Any],
                                code_lines: int,
                                code_size: int,
+                               user_id: int,
                                db: Session) -> Optional[ExecutionHistory]:
         """Create execution record in database"""
         
@@ -286,6 +290,7 @@ class DatabaseStrategyHandler:
             execution_record = ExecutionHistory(
                 uuid=execution_id,  # Using uuid field
                 workflow_id=workflow.id,
+                user_id=user_id,
                 execution_mode='strategy',
                 status='completed' if compilation_result['success'] else 'failed',
                 execution_config=execution_config,

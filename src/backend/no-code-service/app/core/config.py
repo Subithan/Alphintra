@@ -33,7 +33,13 @@ class Settings:
     database_url: str = field(
         default_factory=lambda: os.getenv(
             "DATABASE_URL",
-            "postgresql://nocode_service_user:nocode_service_pass@postgresql-primary.alphintra.svc.cluster.local:5432/alphintra_nocode",
+            "postgresql+pg8000://nocode_service_user:alphintra@123@localhost:5432/alphintra_nocode_service",
+        )
+    )
+    cloud_sql_connection_name: str = field(
+        default_factory=lambda: os.getenv(
+            "CLOUD_SQL_CONNECTION_NAME",
+            ""
         )
     )
     redis_url: str = field(
@@ -45,13 +51,13 @@ class Settings:
     auth_service_url: str = field(
         default_factory=lambda: os.getenv(
             "AUTH_SERVICE_URL",
-            "http://auth-service.alphintra.svc.cluster.local:8080",
+            "http://auth-service.alphintra.svc.cluster.local:8009",
         )
     )
     aiml_service_url: str = field(
         default_factory=lambda: os.getenv(
             "AIML_SERVICE_URL",
-            "http://ai-ml-strategy-service.alphintra.svc.cluster.local:8000",
+            "http://ai-ml-strategy-service.alphintra.svc.cluster.local:8002",
         )
     )
 

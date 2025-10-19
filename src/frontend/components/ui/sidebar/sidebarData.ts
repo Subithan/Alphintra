@@ -34,6 +34,13 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/wallet",
   },
   {
+    id: "subscriptions",
+    name: "Subscriptions",
+    icon: "solar:card-line-duotone",
+    url: "#",
+    isModal: true,
+  },
+  {
     id: "ticketing",
     name: "Ticketing",
     icon:  "solar:ticket-line-duotone",

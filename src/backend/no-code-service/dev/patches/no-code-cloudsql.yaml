@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: no-code-service
+spec:
+  template:
+    spec:
+      containers:
+      - name: no-code-service
+        env:
+        # Cloud SQL Proxy connection (preferred method)
+        - name: DATABASE_URL
+          value: "postgresql+pg8000://nocode_service_user:alphintra%40123@127.0.0.1:5432/alphintra_nocode_service"
+        # Cloud SQL configuration
+        - name: CLOUD_SQL_CONNECTION_NAME
+          valueFrom:
+            secretKeyRef:
+              name: no-code-service-secrets
+              key: cloud-sql-connection-name
+        # Database connection settings
+        - name: DB_POOL_SIZE
+          value: "10"
+        - name: DB_MAX_OVERFLOW
+          value: "20"
+        - name: DB_POOL_TIMEOUT
+          value: "30"
+        - name: DB_POOL_RECYCLE
+          value: "3600"
+      - name: cloud-sql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.28.0
+        command:
+        - "/cloud_sql_proxy"
+        - "-instances=$(CLOUD_SQL_CONNECTION_NAME)=tcp:5432"
+        - "-credential_file=/secrets/cloudsql/service-account.json"
+        - "-verbose"
+        env:
+        - name: CLOUD_SQL_CONNECTION_NAME
+          valueFrom:
+            secretKeyRef:
+              name: no-code-service-secrets
+              key: cloud-sql-connection-name
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 2
+          runAsGroup: 2
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: cloudsql-sa
+          mountPath: /secrets/cloudsql
+          readOnly: true
+      volumes:
+      - name: cloudsql-sa
+        secret:
+          secretName: cloudsql-sa-secret

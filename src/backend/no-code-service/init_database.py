@@ -747,10 +747,10 @@ def generate_sell_signal(condition, quantity={quantity}, order_type='{order_type
         db.close()
 
 # --- Database bootstrap logic ---
-DB_NAME = "alphintra-no-code-service"
-DB_USER = "alphintra"
-DB_PASSWORD = "alphintra123"
-DB_HOST = "postgres"
+DB_NAME = "alphintra_nocode_service"
+DB_USER = "nocode_service_user"
+DB_PASSWORD = "alphintra@123"
+DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DATABASE_PORT", "5432")
 
 # Connect to default 'postgres' DB to create the target DB if needed

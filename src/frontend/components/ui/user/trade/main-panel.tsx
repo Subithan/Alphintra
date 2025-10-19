@@ -27,7 +27,20 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import type { Position, Bot, Order, Trade } from '@/lib/api/types';
-import { tradingApi, type TradeOrderData } from '@/lib/api/trading-api';
+import { getToken } from '@/lib/auth';
+import { buildGatewayUrl } from '@/lib/config/gateway';
+
+interface TradeOrderData {
+  id: number;
+  botId: number;
+  symbol: string;
+  type: string;
+  side: string;
+  price: number;
+  amount: number;
+  status: string;
+  createdAt: string;
+}
 
 const positions: Position[] = [
   {
@@ -155,21 +168,26 @@ export default function MainPanel() {
         setLoading(true);
         setError(null);
 
-        // Use the trading API client which automatically includes authentication
-        const data = await tradingApi.getTradeHistory(20);
+        const token = getToken();
+        const response = await fetch(buildGatewayUrl('/api/trading/trades?limit=20'), {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data: TradeOrderData[] = await response.json();
         
         if (mounted) {
           setTradeHistory(data);
         }
       } catch (err) {
         if (mounted) {
-          console.error('Failed to fetch trade history:', err);
-          setError(err instanceof Error ? err.message : "Failed to fetch trade history");
+          setError("Failed to fetch trade history");
         } 
       } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 

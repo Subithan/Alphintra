@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-ml-strategy-service-config
+  labels:
+    app: ai-ml-strategy-service
+data:
+  dev-mode: "true"
+  log-level: "INFO"
+  cors-allow-origins: "http://localhost:3000,https://dev.alphintra.internal,https://api.alphintra.com"
