@@ -1,0 +1,8 @@
+# requirements.txt
+
+fastapi
+uvicorn
+python-dotenv
+sqlmodel          # Includes SQLAlchemy and Pydantic for models
+pydantic-settings  # For BaseSettings and settings management
+stripe            # Stripe's official Python library

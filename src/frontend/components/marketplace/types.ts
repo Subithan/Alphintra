@@ -15,7 +15,7 @@ export interface Strategy {
     annualizedReturn: number;
     maxDrawdown: number;
     sharpeRatio: number;
-    winRate: number;
+    winRate: number; // This is correctly nested here!
   };
   rating: number;
   reviewCount: number;

@@ -9,4 +9,5 @@ resources:
   - peerauthentication-default.yaml
   - requestauthentication-jwt.yaml
   - authorizationpolicy-gateway.yaml
+  - authorizationpolicy-trading-public.yaml
   - serviceentry-managed-services.yaml

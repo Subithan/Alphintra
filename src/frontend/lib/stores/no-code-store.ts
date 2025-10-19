@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { createWithEqualityFn } from 'zustand/traditional';
 import { Node, Edge } from 'reactflow';
 import { noCodeGraphQLApiClient, type Workflow as ApiWorkflow, type WorkflowData } from '../api/no-code-graphql-api';
 
@@ -39,7 +39,7 @@ export interface NoCodeState {
   duplicateNode: (nodeId: string) => void;
 }
 
-export const useNoCodeStore = create<NoCodeState>((set, get) => ({
+export const useNoCodeStore = createWithEqualityFn<NoCodeState>((set, get) => ({
   currentWorkflow: {
     id: 'default',
     name: 'Untitled Model',
@@ -123,19 +123,29 @@ export const useNoCodeStore = create<NoCodeState>((set, get) => ({
       // Load existing workflow by ID
       const workflow = get().workflows.find(w => w.id === workflowOrId);
       if (workflow) {
+        console.log('🔍 [DEBUG] Loading workflow from store:', workflow.name);
         set({ currentWorkflow: workflow });
       }
     } else {
       // Load workflow object (e.g., from template)
+      console.log('🔍 [DEBUG] Loading workflow into store:', workflowOrId.name);
+
       const workflow: NoCodeWorkflow = {
         ...workflowOrId,
         updatedAt: new Date(),
         createdAt: workflowOrId.createdAt instanceof Date ? workflowOrId.createdAt : new Date(workflowOrId.createdAt),
-        lastModified: workflowOrId.lastModified ? 
-          (workflowOrId.lastModified instanceof Date ? workflowOrId.lastModified : new Date(workflowOrId.lastModified)) 
+        lastModified: workflowOrId.lastModified ?
+          (workflowOrId.lastModified instanceof Date ? workflowOrId.lastModified : new Date(workflowOrId.lastModified))
           : new Date()
       };
+
       set({ currentWorkflow: workflow });
+      console.log('🔍 [DEBUG] Workflow loaded in store:', {
+        id: workflow.id,
+        name: workflow.name,
+        nodesCount: workflow.nodes.length,
+        edgesCount: workflow.edges.length
+      });
     }
   },
 
@@ -466,6 +476,6 @@ function generateActionCode(node: Node): string {
   return `        # Action: ${parameters?.action || 'Generic action'}
         if condition_${node.id}:
             signals['signal'] = ${parameters?.signal || '1'}
-        
+
 `;
 }

@@ -18,6 +18,21 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Alphintra Wallet Service", version="1.0.0")
 
+#
+# Lightweight diagnostic helpers used as dummy placeholders to keep room for future flags.
+#
+DUMMY_FEATURE_FLAGS: Dict[str, bool] = {
+    "wallet_service_experimental_mode": False,
+    "wallet_service_metrics_probe": False,
+}
+
+
+def noop_feature_probe(feature_name: str) -> bool:
+    """Return the state of a dummy feature flag for future experiments."""
+    logger.debug("noop_feature_probe called for feature=%s", feature_name)
+    return DUMMY_FEATURE_FLAGS.get(feature_name, False)
+
+
 # Enable CORS for frontend connection
 app.add_middleware(
     CORSMiddleware,
