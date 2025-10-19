@@ -467,8 +467,16 @@ function NoCodeConsoleContent() {
   }, []);
 
   const loadWorkflowById = useCallback(async (workflowId: string) => {
+    console.log('🔍 [DEBUG] Loading workflow:', workflowId);
     try {
       const workflow = await noCodeApiClient.getWorkflow(workflowId);
+      console.log('🔍 [DEBUG] API Response:', {
+        uuid: workflow.uuid,
+        name: workflow.name,
+        nodesCount: workflow.workflow_data?.nodes?.length || 0,
+        edgesCount: workflow.workflow_data?.edges?.length || 0
+      });
+
       // Convert API workflow to NoCodeWorkflow format
       const noCodeWorkflow = {
         id: workflow.uuid,
@@ -481,18 +489,47 @@ function NoCodeConsoleContent() {
         lastModified: workflow.updated_at,
         updatedAt: new Date(workflow.updated_at)
       };
+
+      console.log('🔍 [DEBUG] Loading workflow into store:', {
+        id: noCodeWorkflow.id,
+        name: noCodeWorkflow.name,
+        nodesCount: noCodeWorkflow.nodes.length,
+        edgesCount: noCodeWorkflow.edges.length,
+        nodesSample: noCodeWorkflow.nodes.slice(0, 2),
+        edgesSample: noCodeWorkflow.edges.slice(0, 2)
+      });
+
       loadWorkflow(noCodeWorkflow);
-      toast({
-        title: "Workflow Loaded",
-        description: `Successfully loaded "${workflow.name}"`,
-      });
+
+      // Show appropriate message based on workflow content
+      if (noCodeWorkflow.nodes.length === 0 && noCodeWorkflow.edges.length === 0) {
+        toast({
+          title: "Workflow Loaded",
+          description: `Loaded "${workflow.name}" (empty workflow - add some nodes to get started)`,
+        });
+      } else {
+        toast({
+          title: "Workflow Loaded",
+          description: `Successfully loaded "${workflow.name}" with ${noCodeWorkflow.nodes.length} nodes and ${noCodeWorkflow.edges.length} connections`,
+        });
+      }
     } catch (error) {
-      console.error('Error loading workflow:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load workflow. Please try again.",
-        variant: "destructive",
-      });
+      console.error('🔍 [DEBUG] Error loading workflow:', error);
+
+      // More specific error messages
+      if (error.message?.includes('503')) {
+        toast({
+          title: "Server Busy",
+          description: "Backend service is temporarily unavailable. Please try again in a moment.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load workflow. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   }, [loadWorkflow, toast]);
 
@@ -503,6 +540,17 @@ function NoCodeConsoleContent() {
       loadWorkflowById(workflowId);
     }
   }, [searchParams, user, loadWorkflowById]);
+
+  // Debug: Log current workflow state whenever it changes
+  useEffect(() => {
+    console.log('🔍 [DEBUG] currentWorkflow changed:', {
+      id: currentWorkflow?.id,
+      name: currentWorkflow?.name,
+      nodesCount: currentWorkflow?.nodes?.length || 0,
+      edgesCount: currentWorkflow?.edges?.length || 0,
+      hasUnsavedChanges: currentWorkflow?.hasUnsavedChanges
+    });
+  }, [currentWorkflow]);
 
   const handleRunExecution = useCallback(async () => {
     if (!currentWorkflow) {

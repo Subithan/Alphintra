@@ -1,0 +1,16 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: gateway-authz-trading-public
+  namespace: alphintra
+spec:
+  selector:
+    matchLabels:
+      app: service-gateway
+  rules:
+    - to:
+        - operation:
+            paths:
+              - /api/trading/*
+              - /api/orders/*
+
