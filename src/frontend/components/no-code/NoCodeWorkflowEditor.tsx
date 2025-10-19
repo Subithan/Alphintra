@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import {
   ReactFlow,
   MiniMap,
@@ -54,21 +54,9 @@ import {
 import { X, AlertTriangle, CheckCircle, Info, Play, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 
-const nodeTypes = {
-  technicalIndicator: TechnicalIndicatorNode,
-  condition: ConditionNode,
-  action: ActionNode,
-  dataSource: DataSourceNode,
-  customDataset: CustomDatasetNode,
-  output: OutputNode,
-  logic: LogicNode,
-  risk: RiskManagementNode,
-};
-
-const edgeTypes = {
-  smart: SmartEdge,
-};
+// Define nodeTypes and edgeTypes components that will be memoized inside the component
 
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
@@ -146,6 +134,7 @@ function NoCodeWorkflowEditorInner({
   const [showValidationPanel, setShowValidationPanel] = useState(false);
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [isWorkflowSaved, setIsWorkflowSaved] = useState(false);
+  const { toast } = useToast();
   const { currentWorkflow, updateWorkflow, addNode, removeNode } =
     useNoCodeStore();
   const {
@@ -158,26 +147,105 @@ function NoCodeWorkflowEditorInner({
   } = useExecutionStore();
   const { screenToFlowPosition } = useReactFlow();
 
+  // Memoize nodeTypes and edgeTypes to prevent re-renders
+  const nodeTypes = useMemo(() => ({
+    technicalIndicator: TechnicalIndicatorNode,
+    condition: ConditionNode,
+    action: ActionNode,
+    dataSource: DataSourceNode,
+    customDataset: CustomDatasetNode,
+    output: OutputNode,
+    logic: LogicNode,
+    risk: RiskManagementNode,
+  }), []);
+
+  const edgeTypes = useMemo(() => ({
+    smart: SmartEdge,
+  }), []);
+
   // Use ReactFlow state as primary, sync to store when needed
-  const [nodes, setNodes, onNodesChange] = useNodesState(
-    currentWorkflow?.nodes || [],
-  );
-  const [edges, setEdges, onEdgesChange] = useEdgesState(
-    currentWorkflow?.edges || [],
-  );
+  // Ensure we have valid arrays even if the workflow data is malformed
+  const initialNodes = Array.isArray(currentWorkflow?.nodes) ? currentWorkflow.nodes : [];
+  const initialEdges = Array.isArray(currentWorkflow?.edges) ? currentWorkflow.edges : [];
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Sync store changes to ReactFlow when store is updated externally
   useEffect(() => {
-    if (currentWorkflow) {
-      setNodes(currentWorkflow.nodes);
-      setEdges(currentWorkflow.edges);
+    console.log('🔍 [DEBUG] Sync useEffect triggered:', {
+      currentWorkflowId: currentWorkflow?.id,
+      currentWorkflowName: currentWorkflow?.name,
+      currentNodesCount: nodes.length,
+      currentEdgesCount: edges.length,
+      workflowNodesCount: currentWorkflow?.nodes?.length || 0,
+      workflowEdgesCount: currentWorkflow?.edges?.length || 0,
+      workflowUpdatedAt: currentWorkflow?.updatedAt
+    });
+
+    // Only sync when workflow is loaded from backend (has updatedAt) AND it's different from ReactFlow state
+    if (currentWorkflow && currentWorkflow.updatedAt) {
+      const currentNodesCount = nodes.length;
+      const currentEdgesCount = edges.length;
+      const newNodesCount = currentWorkflow.nodes.length;
+      const newEdgesCount = currentWorkflow.edges.length;
+
+      // Only sync if the workflow in store has more nodes than ReactFlow (indicating fresh load from backend)
+      // OR if ReactFlow is empty but store has data
+      if ((newNodesCount > currentNodesCount) || (currentNodesCount === 0 && newNodesCount > 0)) {
+        console.log('🔍 [DEBUG] Syncing saved workflow to ReactFlow:', {
+          workflowId: currentWorkflow.id,
+          workflowName: currentWorkflow.name,
+          nodesCount: newNodesCount,
+          edgesCount: newEdgesCount,
+          hasNodes: newNodesCount > 0,
+          hasEdges: newEdgesCount > 0,
+          reason: 'Fresh load from backend'
+        });
+
+        setNodes(currentWorkflow.nodes);
+        setEdges(currentWorkflow.edges);
+      } else {
+        console.log('🔍 [DEBUG] No sync needed - ReactFlow has more recent changes');
+      }
+    } else {
+      console.log('🔍 [DEBUG] Not syncing - default workflow or no updatedAt timestamp');
     }
   }, [
-    currentWorkflow?.nodes?.length,
-    currentWorkflow?.edges?.length,
+    currentWorkflow?.id, // Watch for workflow ID changes (most reliable)
+    currentWorkflow?.updatedAt, // Watch for workflow updates (critical for fresh loads)
     setNodes,
     setEdges,
+    // Only include nodes/edges length to prevent infinite loops, not to trigger syncs
   ]);
+
+  // Track ReactFlow state changes and update store for all workflows
+  useEffect(() => {
+    console.log('🔍 [DEBUG] ReactFlow nodes/edges changed:', {
+      nodesCount: nodes.length,
+      edgesCount: edges.length,
+      nodes: nodes.slice(0, 2),
+      edges: edges.slice(0, 2),
+      workflowId: currentWorkflow?.id
+    });
+
+    // Update store with ReactFlow changes for all workflows
+    if (currentWorkflow) {
+      console.log('🔍 [DEBUG] Updating store with ReactFlow changes for workflow:', currentWorkflow.id);
+      const { updateWorkflow } = useNoCodeStore.getState();
+
+      // Update the current workflow in the store with ReactFlow state
+      const { loadWorkflow } = useNoCodeStore.getState();
+      const updatedWorkflow = {
+        ...currentWorkflow,
+        nodes: nodes,
+        edges: edges,
+        updatedAt: new Date(),
+        hasUnsavedChanges: true
+      };
+      loadWorkflow(updatedWorkflow);
+    }
+  }, [nodes, edges, currentWorkflow?.id]);
 
   // Run validation when workflow changes
   useEffect(() => {
@@ -561,38 +629,87 @@ function NoCodeWorkflowEditorInner({
 
   const handleSaveWorkflow = useCallback(async () => {
     try {
-      // Prepare workflow data for saving
-      const workflowData = {
-        nodes,
-        edges,
-        name: currentWorkflow?.name || "Untitled Workflow",
-        id: currentWorkflow?.id || Date.now(),
-        description: currentWorkflow?.description,
-        updatedAt: new Date().toISOString(),
+      if (!currentWorkflow) {
+        toast({
+          title: "Error",
+          description: "No workflow to save",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("🔍 [DEBUG] Saving workflow to backend:", {
+        workflowId: currentWorkflow.id,
+        workflowName: currentWorkflow.name,
+        nodesCount: nodes.length,
+        edgesCount: edges.length
+      });
+
+      // Prepare workflow data for backend
+      const workflowDataForAPI = {
+        name: currentWorkflow.name,
+        description: currentWorkflow.description || "",
+        workflow_data: {
+          nodes: nodes,
+          edges: edges
+        },
+        category: "custom",
+        execution_mode: "backtest",
       };
 
-      // Update local store
-      updateWorkflow(workflowData);
+      let savedWorkflow;
 
-      // Save to backend (mock implementation for now)
-      console.log("Saving workflow to backend...", workflowData);
+      if (currentWorkflow.id === 'default') {
+        // Create new workflow
+        console.log("🔍 [DEBUG] Creating new workflow...");
+        savedWorkflow = await noCodeApiClient.createWorkflow(workflowDataForAPI);
+        console.log("🔍 [DEBUG] Workflow created:", savedWorkflow);
+      } else {
+        // Update existing workflow
+        console.log("🔍 [DEBUG] Updating existing workflow:", currentWorkflow.id);
+        savedWorkflow = await noCodeApiClient.updateWorkflow(currentWorkflow.id, workflowDataForAPI);
+        console.log("🔍 [DEBUG] Workflow updated:", savedWorkflow);
+      }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Update the store with the saved workflow from backend
+      const noCodeWorkflow = {
+        id: savedWorkflow.uuid,
+        name: savedWorkflow.name,
+        description: savedWorkflow.description,
+        nodes: savedWorkflow.workflow_data.nodes,
+        edges: savedWorkflow.workflow_data.edges,
+        parameters: {},
+        createdAt: savedWorkflow.created_at,
+        lastModified: savedWorkflow.updated_at,
+        updatedAt: new Date(savedWorkflow.updated_at),
+        hasUnsavedChanges: false
+      };
+
+      const { loadWorkflow } = useNoCodeStore.getState();
+      loadWorkflow(noCodeWorkflow);
 
       setIsWorkflowSaved(true);
 
       // Reset save status after delay
       setTimeout(() => setIsWorkflowSaved(false), 3000);
 
-      console.log("Workflow saved successfully");
-      return workflowData;
+      toast({
+        title: "Workflow Saved",
+        description: `Successfully saved "${savedWorkflow.name}" with ${nodes.length} nodes and ${edges.length} connections`,
+      });
+
+      console.log("🔍 [DEBUG] Workflow saved successfully to backend");
+      return savedWorkflow;
     } catch (error) {
-      console.error("Failed to save workflow:", error);
-      alert("Failed to save workflow. Please try again.");
+      console.error("🔍 [DEBUG] Failed to save workflow:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save workflow. Please try again.",
+        variant: "destructive",
+      });
       throw error;
     }
-  }, [nodes, edges, updateWorkflow, currentWorkflow]);
+  }, [nodes, edges, currentWorkflow]);
 
   const handleExecuteWorkflow = useCallback(() => {
     // First validate the workflow
