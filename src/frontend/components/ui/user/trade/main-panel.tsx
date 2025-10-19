@@ -184,6 +184,7 @@ export default function MainPanel() {
         }
       } catch (err) {
         if (mounted) {
+          console.error('[Trading UI] Failed to fetch /api/trading/trades', err);
           setError("Failed to fetch trade history");
         } 
       } finally {
