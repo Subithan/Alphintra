@@ -61,6 +61,7 @@ def create_checkout_session_for_strategy(db: Session, strategy_id: int, user_ema
     
     try:
         # 2. Call the Stripe API to create the Checkout Session
+        # Add ui_mode parameter to ensure compatibility
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[
@@ -75,12 +76,19 @@ def create_checkout_session_for_strategy(db: Session, strategy_id: int, user_ema
             # Pass our unique subscription ID to Stripe for later reference in the webhook
             metadata={"local_subscription_id": new_subscription.id},
             customer_email=user_email,
+            # Explicitly set ui_mode to 'hosted' for better compatibility
+            ui_mode="hosted",
         )
 
         print(f"DEBUG: Created Stripe Checkout Session: {checkout_session.id}")
         print(f"DEBUG: Session URL: {checkout_session.url}")
         print(f"DEBUG: Session status: {checkout_session.status}")
         print(f"DEBUG: Session payment_status: {checkout_session.payment_status}")
+        print(f"DEBUG: Session ui_mode: {checkout_session.ui_mode}")
+
+        # Verify the session URL is valid
+        if not checkout_session.url:
+            raise HTTPException(status_code=500, detail="Stripe did not return a valid checkout URL")
 
         # 3. Update the subscription record with the actual session ID
         new_subscription.stripe_session_id = checkout_session.id

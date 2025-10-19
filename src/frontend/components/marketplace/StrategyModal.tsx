@@ -45,7 +45,10 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
             const stripeUrl = await initiateStripeCheckout(strategy.id);
             console.log('[StrategyModal] Received Stripe URL:', stripeUrl);
             console.log('[StrategyModal] Redirecting to Stripe...');
-            window.location.href = stripeUrl; 
+            
+            // Use window.location.replace for more reliable redirect
+            // This replaces the current page in history instead of adding a new entry
+            window.location.replace(stripeUrl);
         } catch (err) {
             console.error("[StrategyModal] Stripe Checkout Failed:", err);
             setError((err as Error).message || "Payment processing failed. Please try again.");
