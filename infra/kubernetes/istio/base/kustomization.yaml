@@ -10,4 +10,5 @@ resources:
   - requestauthentication-jwt.yaml
   - authorizationpolicy-gateway.yaml
   - authorizationpolicy-trading-public.yaml
+  - authorizationpolicy-gateway-allow-all.yaml
   - serviceentry-managed-services.yaml

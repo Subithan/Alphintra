@@ -7,6 +7,9 @@ metadata:
     component: backend
     environment: dev
 spec:
+  revisionHistoryLimit: 1
+  strategy:
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
