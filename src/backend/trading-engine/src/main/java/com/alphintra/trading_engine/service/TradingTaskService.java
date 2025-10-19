@@ -93,27 +93,31 @@ public class TradingTaskService {
         try {
             binanceExchange = ExchangeFactory.INSTANCE.createExchange(BinanceExchange.class);
 
-            // Apply proxy settings to the XChange client if provided
-            if (proxySettings.isEnabled()) {
-                ExchangeSpecification spec = binanceExchange.getExchangeSpecification();
-                spec.setProxyHost(proxySettings.getHost());
-                spec.setProxyPort(proxySettings.getPort());
-                // Some XChange versions don't support proxy auth setters; rely on env/JVM properties
-                binanceExchange.applySpecification(spec);
-                System.out.println("🔌 Applied HTTP proxy to XChange: " + proxySettings.getHost() + ":" + proxySettings.getPort());
-            }
+            // Always work against a single spec instance, then apply once
+            ExchangeSpecification spec = binanceExchange.getExchangeSpecification();
 
             if (binanceTestnetEnabled) {
                 System.out.println("🧪 Using Binance Testnet (testnet.binance.vision)");
-                binanceExchange.getExchangeSpecification().setExchangeSpecificParametersItem("Use_Sandbox", true);
-                binanceExchange.getExchangeSpecification().setSslUri("https://testnet.binance.vision");
-                binanceExchange.getExchangeSpecification().setHost("testnet.binance.vision");
+                spec.setExchangeSpecificParametersItem("Use_Sandbox", true);
+                spec.setSslUri("https://testnet.binance.vision");
+                spec.setHost("testnet.binance.vision");
             } else {
                 System.out.println("🚀 Using Binance Production API");
-                binanceExchange.getExchangeSpecification().setExchangeSpecificParametersItem("Use_Sandbox", false);
-                binanceExchange.getExchangeSpecification().setSslUri("https://api.binance.com");
-                binanceExchange.getExchangeSpecification().setHost("api.binance.com");
+                spec.setExchangeSpecificParametersItem("Use_Sandbox", false);
+                spec.setSslUri("https://api.binance.com");
+                spec.setHost("api.binance.com");
             }
+
+            // Apply proxy settings if provided
+            if (proxySettings.isEnabled()) {
+                spec.setProxyHost(proxySettings.getHost());
+                spec.setProxyPort(proxySettings.getPort());
+                System.out.println("🔌 Applied HTTP proxy to XChange: " + proxySettings.getHost() + ":" + proxySettings.getPort());
+            }
+
+            // Apply the full spec before remote init
+            binanceExchange.applySpecification(spec);
+            System.out.println("➡️ XChange target endpoint: " + spec.getSslUri() + " (host=" + spec.getHost() + ")");
 
             // The slow call, now executed only on application startup
             binanceExchange.remoteInit();
