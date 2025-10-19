@@ -36,14 +36,18 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
     const handleCheckout = async () => {
         if (strategy.price === 'free' || isProcessing) return; 
 
+        console.log('[StrategyModal] Starting checkout for strategy:', strategy.id);
         setIsProcessing(true);
         setError(null);
 
         try {
+            console.log('[StrategyModal] Calling initiateStripeCheckout...');
             const stripeUrl = await initiateStripeCheckout(strategy.id);
+            console.log('[StrategyModal] Received Stripe URL:', stripeUrl);
+            console.log('[StrategyModal] Redirecting to Stripe...');
             window.location.href = stripeUrl; 
         } catch (err) {
-            console.error("Stripe Checkout Failed:", err);
+            console.error("[StrategyModal] Stripe Checkout Failed:", err);
             setError((err as Error).message || "Payment processing failed. Please try again.");
             setIsProcessing(false);
         }

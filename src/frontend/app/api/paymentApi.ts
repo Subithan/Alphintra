@@ -15,6 +15,9 @@ export async function initiateStripeCheckout(strategyId: string): Promise<string
   const CHECKOUT_ENDPOINT = `${MARKETPLACE_API_URL}/strategies/${strategyId}/purchase?user_email=${encodeURIComponent(userEmail)}`;
 
   try {
+    console.log('[Payment API] Initiating checkout for strategy:', strategyId);
+    console.log('[Payment API] Calling endpoint:', CHECKOUT_ENDPOINT);
+    
     const response = await fetch(CHECKOUT_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -24,25 +27,31 @@ export async function initiateStripeCheckout(strategyId: string): Promise<string
       body: JSON.stringify({}), 
     });
 
+    console.log('[Payment API] Response status:', response.status);
+
     if (!response.ok) {
       // Check for application-specific errors from the Marketplace service
       const errorBody = await response.json();
+      console.error('[Payment API] Error response:', errorBody);
       throw new Error(errorBody.detail || `Checkout API failed with status: ${response.status}`);
     }
 
     // Parse the JSON response to get the Stripe checkout URL
     const data = await response.json();
+    console.log('[Payment API] Received data:', data);
     
     if (!data.checkout_url) {
+      console.error('[Payment API] No checkout_url in response:', data);
       throw new Error('No checkout URL received from server');
     }
 
+    console.log('[Payment API] Returning checkout URL:', data.checkout_url);
     // Return the Stripe checkout URL for the frontend to redirect to
     return data.checkout_url;
 
   } catch (error) {
-    console.error('Payment Error in initiateStripeCheckout:', error);
-    throw new Error('Failed to initiate payment. Check logs for API details.'); 
+    console.error('[Payment API] Exception caught:', error);
+    throw error; // Re-throw the original error instead of wrapping it
   }
 }
 
