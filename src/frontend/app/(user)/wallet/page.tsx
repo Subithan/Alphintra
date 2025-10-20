@@ -191,21 +191,21 @@ export default function Wallet() {
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Binance API Key
-                  <span className="text-xs text-muted-foreground ml-2">
+                  {/* <span className="text-xs text-muted-foreground ml-2">
                     (Must be 64 characters)
-                  </span>
+                  </span> */}
                 </label>
                 <input
                   type="text"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your 64-character Binance API Key"
+                  placeholder="Enter your Binance API Key"
                   className="w-full p-3 bg-muted/20 border border-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 font-mono text-sm"
                   maxLength={64}
                 />
-                <div className="text-xs text-muted-foreground mt-1">
+                {/* <div className="text-xs text-muted-foreground mt-1">
                   Length: {apiKey.length}/64 characters
-                </div>
+                </div> */}
               </div>
 
               <div>
@@ -220,7 +220,7 @@ export default function Wallet() {
                     type={showSecret ? "text" : "password"}
                     value={secretKey}
                     onChange={(e) => setSecretKey(e.target.value)}
-                    placeholder="Enter your 64-character Binance Secret Key"
+                    placeholder="Enter your Binance Secret Key"
                     className="w-full p-3 bg-muted/20 border border-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 pr-12 font-mono text-sm"
                     maxLength={64}
                   />
@@ -236,9 +236,9 @@ export default function Wallet() {
                     )}
                   </button>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
+                {/* <div className="text-xs text-muted-foreground mt-1">
                   Length: {secretKey.length}/64 characters
-                </div>
+                </div> */}
               </div>
 
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">

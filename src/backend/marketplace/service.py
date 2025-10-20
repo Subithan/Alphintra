@@ -1,7 +1,7 @@
 from typing import Any, List
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from model import Order, OrderCreate, Strategy, StrategyCreate
 
@@ -39,6 +39,17 @@ def get_strategy_or_404(db: Session, strategy_id: int) -> Strategy:
 def list_orders(db: Session) -> List[Order]:
     """Return all orders (useful for debugging via curl/Adminer)."""
     return db.query(Order).order_by(Order.id.desc()).all()
+
+
+def list_orders_for_buyer(db: Session, buyer_id: int) -> List[Order]:
+    """Return orders for a specific buyer, including strategy information."""
+    return (
+        db.query(Order)
+        .options(joinedload(Order.strategy))
+        .filter(Order.buyer_id == buyer_id)
+        .order_by(Order.id.desc())
+        .all()
+    )
 
 
 def purchase_strategy(db: Session, strategy_id: int, payload: OrderCreate) -> Order:

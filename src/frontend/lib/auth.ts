@@ -64,6 +64,44 @@ export const removeUser = (): void => {
   localStorage.removeItem(USER_KEY);
 };
 
+export const getUserId = (): number | null => {
+  if (typeof window === 'undefined') return null;
+
+  const rawUser = localStorage.getItem('alphintra_jwt_user') ?? localStorage.getItem(USER_KEY);
+  if (rawUser) {
+    try {
+      const parsed = JSON.parse(rawUser);
+      const candidate = parsed?.id ?? parsed?.userId ?? parsed?.sub;
+      if (typeof candidate === 'string') {
+        const asNumber = Number(candidate);
+        if (!Number.isNaN(asNumber)) return asNumber;
+      } else if (typeof candidate === 'number') {
+        return candidate;
+      }
+    } catch {
+      // ignore parsing issues and fall back to decoding the token
+    }
+  }
+
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const candidate = payload?.id ?? payload?.userId ?? payload?.sub;
+    if (typeof candidate === 'string') {
+      const asNumber = Number(candidate);
+      return Number.isNaN(asNumber) ? null : asNumber;
+    }
+    if (typeof candidate === 'number') {
+      return candidate;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 // Auth state checks
 export const isAuthenticated = (): boolean => {
   return getToken() !== null;

@@ -78,3 +78,17 @@ class OrderRead(OrderBase):
     status: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StrategySummary(BaseModel):
+    id: int
+    name: str
+    price_cents: int
+    description: str
+    subscriber_count: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderWithStrategyRead(OrderRead):
+    strategy: StrategySummary

@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import { Strategy } from './types'; // Assumes this is where your provided interface lives
-import { purchaseStrategy } from '@/app/api/paymentApi'; 
 import { X, ArrowUpRight, TrendingUp, Users, Shield, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 
 // Define the component props
 interface StrategyModalProps {
@@ -17,7 +17,7 @@ interface StrategyModalProps {
 export default function StrategyModal({ strategy, onClose }: StrategyModalProps) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const router = useRouter();
 
     // Function to map risk level to a color
     const getRiskColor = (risk: string) => {
@@ -33,24 +33,15 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
         }
     };
     
-    const handlePurchase = async () => {
+    const handlePurchase = () => {
         if (strategy.price === 'free' || isProcessing) return;
-
-        setIsProcessing(true);
-        setError(null);
-        setSuccessMessage(null);
-
         try {
-            // TODO: replace buyerId with the authenticated user's identifier
-            const order = await purchaseStrategy(strategy.id, {
-                buyerId: 1,
-                notes: `Marketplace purchase for strategy ${strategy.id}`,
-            });
-            setSuccessMessage(`Purchase complete! Order #${order.id}`);
+            setIsProcessing(true);
+            router.push(`/marketplace/purchase/${strategy.id}`);
         } catch (err) {
-            setError((err as Error).message || 'Failed to complete purchase. Please try again.');
+            setError('Failed to open checkout. Please try again.');
+            setIsProcessing(false);
         }
-        setIsProcessing(false);
     };
 
     // Corrected access to performance properties
@@ -150,12 +141,9 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
                         {error && (
                             <p className="text-red-400 text-center mb-3 text-sm font-medium">{error}</p>
                         )}
-                        {successMessage && (
-                            <p className="text-green-400 text-center mb-3 text-sm font-medium">{successMessage}</p>
-                        )}
                         <Button
                             onClick={handlePurchase} 
-                            disabled={isProcessing || strategy.price === 'free' || !!successMessage}
+                            disabled={isProcessing || strategy.price === 'free'}
                             className={`w-full py-7 text-xl font-bold rounded-lg transition-colors ${
                                 isProcessing 
                                     ? 'bg-gray-600 cursor-not-allowed' 
@@ -165,12 +153,12 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
                             {isProcessing ? (
                                 <>
                                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    Processing...
+                                    Redirecting...
                                 </>
-                            ) : successMessage ? 'Purchased' : priceText}
+                            ) : priceText}
                         </Button>
                         <p className="text-center text-xs text-gray-500 mt-2">
-                            Purchases are recorded instantly and include 1 month of updates.
+                            You&apos;ll review and confirm your payment details on the next screen.
                         </p>
                     </div>
 
