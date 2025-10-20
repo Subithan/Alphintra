@@ -139,7 +139,7 @@ spring:
         - id: wallet-service
           uri: ${WALLET_SERVICE_URI:http://wallet-service.alphintra.svc.cluster.local:8011}
           predicates:
-            - Path=/binance/**
+            - Path=/binance/**, /coinbase/**
           filters:
             - name: RequestRateLimiter
               args:

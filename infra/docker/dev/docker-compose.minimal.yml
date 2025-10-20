@@ -260,7 +260,7 @@ services:
     image: adminer:latest
     container_name: alphintra-adminer
     ports:
-      - "8080:8080"
+      - "8081:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -458,16 +458,11 @@ services:
     container_name: alphintra-marketplace
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8012"]
     environment:
-      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/alphintra-marketplace
-      REDIS_URL: redis://:redis123@redis:6379
-      STRIPE_SECRET_KEY: sk_test_placeholder_stripe_secret_key
-      STRIPE_PUBLISHABLE_KEY: pk_test_placeholder_stripe_publishable_key
-      STRIPE_WEBHOOK_SECRET: whsec_placeholder_webhook_secret
-      DOMAIN_URL: http://localhost:3000
+      DATABASE_URL: postgresql://alphintra:alphintra123@postgres:5432/marketplace
+      # postgresql://alphintra:alphintra123@postgres:5432/marketplace
+      MARKETPLACE_SEED_DEMO_DATA: "true"
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     ports:
       - "8012:8012"

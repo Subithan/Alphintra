@@ -1,111 +1,63 @@
-# marketplace/main.py
-
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware # <--- NEW IMPORT for CORS
-from sqlmodel import Session, select
 from typing import Annotated, List
 
-# CRITICAL FIX: Explicitly import 'engine' along with the functions
-from database import create_db_and_tables, get_session, engine 
-from model import Strategy
-from service import create_checkout_session_for_strategy
-from webhooks import router as webhooks_router
+from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
+# from fastapi.staticfiles import StaticFiles
 
-# The session dependency type
+from config import settings
+from database import create_db_and_tables, get_session, seed_demo_data
+from model import OrderCreate, OrderRead, StrategyCreate, StrategyRead
+from service import purchase_strategy, create_strategy, list_orders, list_strategies
+
 SessionDep = Annotated[Session, Depends(get_session)]
 
-# 1. Initialize FastAPI app
-app = FastAPI(
-    title="Stripe Marketplace API",
-    version="1.0.0",
-)
+app = FastAPI(title="Marketplace Service", version="1.0.0")
 
-# 2. ADD CORS MIDDLEWARE (FIX)
-# These origins cover common frontend development ports (3000=React/Vite, 8080=Vue/Webpack)
-origins = [
-    "http://localhost",
-    "http://localhost:3000",
-    "http://localhost:8080",
-    "http://localhost:5173", # Common Vite port
-    "http://127.0.0.1:3000",
-]
+# Serve local images / assets from /static
+# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Include the webhook router
-app.include_router(webhooks_router, prefix="/webhooks")
-
-
 @app.on_event("startup")
-def on_startup():
-    """
-    Called when the application starts.
-    1. Assigns the imported engine to the app state.
-    2. Creates database tables.
-    3. Adds dummy data if none exists.
-    """
-    app.state.engine = engine
+def startup() -> None:
     create_db_and_tables()
-    
-    with Session(app.state.engine) as session:
-        if not session.exec(select(Strategy)).first():
-            dummy_strategy = Strategy(
-                name="Day Trading Bot",
-                price_cents=9999, # $99.99
-                description="Our top performing day trading algorithm.",
-            )
-            session.add(dummy_strategy)
-            session.commit()
-            print("INFO: Added a dummy Strategy for testing.")
+    seed_demo_data()
 
-
-# --- Application Routes ---
 
 @app.get("/", include_in_schema=False)
-def root():
+def root() -> RedirectResponse:
     return RedirectResponse(url="/docs")
 
 
-@app.get("/strategies/", response_model=List[Strategy])
+@app.get("/strategies", response_model=List[StrategyRead])
 def read_strategies(db: SessionDep):
-    """List all available trading strategies."""
-    strategies = db.exec(select(Strategy)).all()
-    return strategies
+    return list_strategies(db)
 
 
-@app.post("/strategies/{strategy_id}/purchase")
-def purchase_strategy(strategy_id: int, user_email: str, db: SessionDep):
-    """
-    Creates a Stripe Checkout Session and returns the checkout URL as JSON.
-    The frontend will handle the redirect to Stripe.
-    """
-    checkout_session = create_checkout_session_for_strategy(db, strategy_id, user_email)
-    
-    # Return the Stripe Checkout URL as JSON for the frontend to handle
-    return {"checkout_url": checkout_session.url, "session_id": checkout_session.id}
+@app.post("/strategies", response_model=StrategyRead, status_code=201)
+def create_strategies(strategy: StrategyCreate, db: SessionDep):
+    return create_strategy(db, strategy)
 
 
-# --- Frontend Feedback Routes (Simplified) ---
+@app.post("/strategies/{strategy_id}/purchase", response_model=OrderRead, status_code=201)
+def buy_strategy(strategy_id: int, order: OrderCreate, db: SessionDep):
+    return purchase_strategy(db, strategy_id, order)
 
-@app.get("/success")
-def payment_success(session_id: str):
-    return {"message": "Payment successful! We are fulfilling your order. Session ID: " + session_id}
 
-@app.get("/cancel")
-def payment_cancel():
-    return {"message": "Payment cancelled. You were not charged."}
+@app.get("/orders", response_model=List[OrderRead])
+def read_orders(db: SessionDep):
+    return list_orders(db)
+
 
 @app.get("/health")
 def health_check():
-    """
-    Health check endpoint for the service.
-    """
     return {"status": "healthy"}
