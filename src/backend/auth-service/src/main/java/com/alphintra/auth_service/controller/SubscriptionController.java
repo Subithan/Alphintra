@@ -7,14 +7,21 @@ import com.alphintra.auth_service.entity.User;
 import com.alphintra.auth_service.repository.UserRepository;
 import com.alphintra.auth_service.service.StripeService;
 import com.alphintra.auth_service.service.SubscriptionService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import jakarta.validation.Valid;
 import java.util.Optional;
+import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/subscriptions")
@@ -26,6 +33,7 @@ public class SubscriptionController {
   private final StripeService stripeService;
   private final SubscriptionService subscriptionService;
   private final UserRepository userRepository;
+  private final SecretKey jwtSigningKey;
 
   @Value("${stripe.webhook-secret}")
   private String webhookSecret;
@@ -33,17 +41,42 @@ public class SubscriptionController {
   public SubscriptionController(
       StripeService stripeService,
       SubscriptionService subscriptionService,
-      UserRepository userRepository) {
+      UserRepository userRepository,
+      @Value("${jwt.secret}") String jwtSecret) {
     this.stripeService = stripeService;
     this.subscriptionService = subscriptionService;
     this.userRepository = userRepository;
+    this.jwtSigningKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+  }
+
+  /**
+   * Extract username from JWT token in Authorization header
+   */
+  private String extractUsernameFromToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
+    }
+    
+    String token = authHeader.substring(7);
+    try {
+      Claims claims = Jwts.parserBuilder()
+          .setSigningKey(jwtSigningKey)
+          .build()
+          .parseClaimsJws(token)
+          .getBody();
+      return claims.getSubject();
+    } catch (Exception e) {
+      logger.error("Failed to parse JWT token", e);
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid JWT token");
+    }
   }
 
   @PostMapping("/create-checkout-session")
   public ResponseEntity<CheckoutSessionResponse> createCheckoutSession(
-      Authentication authentication, @Valid @RequestBody CheckoutSessionRequest request) {
+      @RequestHeader(value = "Authorization", required = false) String authHeader,
+      @Valid @RequestBody CheckoutSessionRequest request) {
     try {
-      String username = authentication.getName();
+      String username = extractUsernameFromToken(authHeader);
       logger.info(
           "Creating checkout session for user: {}, priceId: {}", username, request.getPriceId());
 
@@ -52,6 +85,10 @@ public class SubscriptionController {
 
       logger.info("Checkout session created successfully: {}", response.getSessionId());
       return ResponseEntity.ok(response);
+    } catch (ResponseStatusException e) {
+      logger.error("Authentication error: {}", e.getReason());
+      return ResponseEntity.status(e.getStatusCode())
+          .body(CheckoutSessionResponse.error(e.getReason()));
     } catch (IllegalArgumentException e) {
       logger.error("Invalid request for checkout session: {}", e.getMessage());
       return ResponseEntity.badRequest()
