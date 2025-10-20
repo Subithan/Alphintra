@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: alphintra
+  labels:
+    environment: dev
+    project: alphintra
+    managed-by: kustomize
