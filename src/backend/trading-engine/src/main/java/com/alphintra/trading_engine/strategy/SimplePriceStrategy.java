@@ -145,15 +145,40 @@ import com.alphintra.trading_engine.model.Position;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 
 /**
  * A simple trading strategy that includes both a take-profit and a stop-loss exit strategy.
+ * Now supports different buy thresholds for different trading pairs.
  */
 public class SimplePriceStrategy implements TradingStrategy {
 
-    // --- Entry Conditions ---
-    private static final BigDecimal BUY_PRICE_THRESHOLD = new BigDecimal("17.00");  // Lower than current price of ~$16.12
+    // --- Symbol-Specific Entry Conditions ---
+    private static final Map<String, BigDecimal> BUY_PRICE_THRESHOLDS = new HashMap<>();
+    static {
+        // Crypto pairs - set to very high to always buy (for testing)
+        BUY_PRICE_THRESHOLDS.put("BTC/USDT", new BigDecimal("999999.00"));  // Always buy BTC below $999,999
+        BUY_PRICE_THRESHOLDS.put("ETH/USDT", new BigDecimal("999999.00"));  // Always buy ETH below $999,999
+        BUY_PRICE_THRESHOLDS.put("BNB/USDT", new BigDecimal("9999.00"));    // Always buy BNB below $9,999
+        BUY_PRICE_THRESHOLDS.put("SOL/USDT", new BigDecimal("9999.00"));    // Always buy SOL below $9,999
+        BUY_PRICE_THRESHOLDS.put("XRP/USDT", new BigDecimal("100.00"));     // Buy XRP below $100
+        BUY_PRICE_THRESHOLDS.put("ADA/USDT", new BigDecimal("50.00"));      // Buy ADA below $50
+        BUY_PRICE_THRESHOLDS.put("DOGE/USDT", new BigDecimal("10.00"));     // Buy DOGE below $10
+        BUY_PRICE_THRESHOLDS.put("MATIC/USDT", new BigDecimal("50.00"));    // Buy MATIC below $50
+        BUY_PRICE_THRESHOLDS.put("DOT/USDT", new BigDecimal("500.00"));     // Buy DOT below $500
+        BUY_PRICE_THRESHOLDS.put("AVAX/USDT", new BigDecimal("500.00"));    // Buy AVAX below $500
+        BUY_PRICE_THRESHOLDS.put("LINK/USDT", new BigDecimal("500.00"));    // Buy LINK below $500
+        BUY_PRICE_THRESHOLDS.put("UNI/USDT", new BigDecimal("500.00"));     // Buy UNI below $500
+        BUY_PRICE_THRESHOLDS.put("ATOM/USDT", new BigDecimal("500.00"));    // Buy ATOM below $500
+        BUY_PRICE_THRESHOLDS.put("ETC/USDT", new BigDecimal("500.00"));     // Buy ETC below $500
+        BUY_PRICE_THRESHOLDS.put("LTC/USDT", new BigDecimal("9999.00"));    // Buy LTC below $9,999
+        
+        // Add more pairs as needed
+        // For production, consider using a database or config file for these thresholds
+    }
+    
+    private static final BigDecimal DEFAULT_BUY_THRESHOLD = new BigDecimal("999999.00");  // Default for unlisted pairs
     private static final BigDecimal MINIMUM_USDT_TO_TRADE = new BigDecimal("0.50");  // Lower minimum to allow trading with testnet balance
 
     // --- Exit Conditions ---
@@ -165,6 +190,8 @@ public class SimplePriceStrategy implements TradingStrategy {
 
         if (openPositionOpt.isPresent()) {
             // --- SELL LOGIC (POSITION IS OPEN) ---
+            // Position is open - strategy will NEVER signal SELL (position stays open forever)
+            // But we still calculate the targets for display purposes in pending orders
             Position openPosition = openPositionOpt.get();
             BigDecimal entryPrice = openPosition.getEntryPrice();
 
@@ -174,38 +201,37 @@ public class SimplePriceStrategy implements TradingStrategy {
                 return Signal.HOLD;
             }
 
-            // Calculate exit targets
+            // Calculate exit targets (for pending orders display only)
             BigDecimal takeProfitTarget = entryPrice.multiply(TAKE_PROFIT_PERCENTAGE).setScale(4, RoundingMode.HALF_UP);
             BigDecimal stopLossTarget = entryPrice.multiply(STOP_LOSS_PERCENTAGE).setScale(4, RoundingMode.HALF_UP);
 
-            System.out.println("🎯 STRATEGY [SELL CHECK]: Entry: " + entryPrice.setScale(2, RoundingMode.HALF_UP) +
+            System.out.println("🎯 STRATEGY [POSITION OPEN]: Entry: " + entryPrice.setScale(2, RoundingMode.HALF_UP) +
                                ", Current: " + currentPrice +
                                ", Stop-Loss Target: < " + stopLossTarget +
                                ", Take-Profit Target: > " + takeProfitTarget);
-
-            if (currentPrice.compareTo(takeProfitTarget) > 0) {
-                System.out.println("✅ STRATEGY [SELL]: Current price is above the TAKE PROFIT target. Signaling SELL.");
-                return Signal.SELL;
-            } else if (currentPrice.compareTo(stopLossTarget) < 0) {
-                System.out.println("🚨 STRATEGY [SELL]: Current price is below the STOP LOSS target. Signaling SELL to limit losses.");
-                return Signal.SELL;
-            } else {
-                return Signal.HOLD; // Price is between our targets, so we wait.
-            }
+            
+            // ALWAYS HOLD - Never automatically sell
+            System.out.println("� STRATEGY [HOLD]: Position will remain open (auto-sell disabled).");
+            return Signal.HOLD;
 
         } else {
             // --- BUY LOGIC (NO POSITION IS OPEN) ---
             String quoteCurrency = symbol.split("/")[1]; // e.g., USDT
             BigDecimal quoteBalance = balances.getOrDefault(quoteCurrency, BigDecimal.ZERO);
 
-            if (currentPrice.compareTo(BUY_PRICE_THRESHOLD) < 0) {
+            // Get the buy threshold for this specific symbol, or use default
+            BigDecimal buyThreshold = BUY_PRICE_THRESHOLDS.getOrDefault(symbol, DEFAULT_BUY_THRESHOLD);
+
+            if (currentPrice.compareTo(buyThreshold) < 0) {
                 if (quoteBalance.compareTo(MINIMUM_USDT_TO_TRADE) > 0) {
-                    System.out.println("✅ STRATEGY [BUY]: Price is below threshold. Signaling BUY.");
+                    System.out.println("✅ STRATEGY [BUY]: Price " + currentPrice + " is below threshold " + buyThreshold + " for " + symbol + ". Signaling BUY.");
                     return Signal.BUY;
                 } else {
+                    System.out.println("ℹ️ STRATEGY [HOLD]: Price is below threshold but insufficient balance (" + quoteBalance + " " + quoteCurrency + ").");
                     return Signal.HOLD; // Price is good, but not enough funds
                 }
             } else {
+                System.out.println("ℹ️ STRATEGY [HOLD]: Price " + currentPrice + " is above buy threshold " + buyThreshold + " for " + symbol + ".");
                 return Signal.HOLD; // Price is too high to buy
             }
         }

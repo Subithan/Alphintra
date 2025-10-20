@@ -37,6 +37,7 @@ public class PendingOrderService {
 
         // Create ONE pending order with both take-profit and stop-loss prices
         PendingOrder pendingOrder = new PendingOrder();
+        pendingOrder.setUserId(position.getUserId());
         pendingOrder.setPositionId(position.getId());
         pendingOrder.setTakeProfitPrice(takeProfitPrice);
         pendingOrder.setStopLossPrice(stopLossPrice);

@@ -21,6 +21,12 @@ public class Position {
     private BigDecimal quantity;
     private LocalDateTime openedAt;
     private LocalDateTime closedAt;
+    
+    @Column(name = "exit_price", precision = 18, scale = 8)
+    private BigDecimal exitPrice;
+    
+    @Column(name = "pnl", precision = 18, scale = 8)
+    private BigDecimal pnl; // Profit and Loss in quote currency
 
     @Enumerated(EnumType.STRING)
     private PositionStatus status;

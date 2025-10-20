@@ -27,21 +27,28 @@ export type Portfolio = {
 };
 
 export type Bot = {
-  name: string;
-  asset: string;
-  pnl: number;
-  status: 'Running' | 'Stopped' | 'Error';
-  stats: string;
+  id: number;
+  userId: number;
+  strategyId: number;
+  status: 'RUNNING' | 'STOPPED' | 'ERROR';
+  symbol: string;
+  capitalAllocationPercentage: number;
+  startedAt: string;
+  stoppedAt?: string | null;
 };
 
 export type Position = {
+  id: number;
+  userId: number;
+  botId: number;
   asset: string;
-  type: 'Long' | 'Short';
-  quantity: number;
+  symbol: string;
   entryPrice: number;
-  markPrice: number;
-  pnl: number;
-  pnlPercentage: number;
+  quantity: number;
+  openedAt: string;
+  closedAt?: string | null;
+  status: 'OPEN' | 'CLOSED';
+  pnl?: number | null;
 };
 
 export interface Order {
@@ -75,6 +82,20 @@ export type Trade = {
   quantity: number;
   pnl: number;
   time: string;
+};
+
+export type PendingOrder = {
+  id: number;
+  positionId: number;
+  takeProfitPrice: number | null;
+  stopLossPrice: number | null;
+  quantity: number;
+  status: 'PENDING' | 'TRIGGERED' | 'CANCELLED';
+  symbol: string;
+  createdAt: string;
+  triggeredAt?: string | null;
+  triggeredType?: string | null;
+  cancelledAt?: string | null;
 };
 
 export type OrderBookEntry = {

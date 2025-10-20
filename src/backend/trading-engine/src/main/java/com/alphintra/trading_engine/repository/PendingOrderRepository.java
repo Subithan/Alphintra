@@ -15,4 +15,12 @@ public interface PendingOrderRepository extends JpaRepository<PendingOrder, Long
     List<PendingOrder> findByStatus(PendingOrderStatus status);
     
     List<PendingOrder> findBySymbolAndStatus(String symbol, PendingOrderStatus status);
+    
+    List<PendingOrder> findBySymbol(String symbol);
+    
+    List<PendingOrder> findByPositionId(Long positionId);
+    
+    List<PendingOrder> findByUserId(Long userId);
+    
+    List<PendingOrder> findByUserIdAndStatus(Long userId, PendingOrderStatus status);
 }

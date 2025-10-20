@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS trading_bots (
 -- Create the trade_orders table
 CREATE TABLE IF NOT EXISTS trade_orders (
     id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
     bot_id BIGINT,
     exchange_order_id VARCHAR(255),
     symbol VARCHAR(255) NOT NULL,
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS trade_orders (
 -- Create the pending_orders table
 CREATE TABLE IF NOT EXISTS pending_orders (
     id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
     position_id BIGINT NOT NULL,
     take_profit_price DECIMAL(18, 8),
     stop_loss_price DECIMAL(18, 8),

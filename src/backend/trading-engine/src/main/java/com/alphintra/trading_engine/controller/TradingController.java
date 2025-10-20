@@ -1,6 +1,7 @@
 package com.alphintra.trading_engine.controller;
 
 import com.alphintra.trading_engine.dto.StartBotRequest;
+import com.alphintra.trading_engine.dto.StopBotsResponse;
 import com.alphintra.trading_engine.dto.TradeOrderDTO;
 import com.alphintra.trading_engine.model.TradingBot;
 import com.alphintra.trading_engine.service.BalanceService;
@@ -36,9 +37,13 @@ public class TradingController {
     }
 
     @PostMapping("/bots/stop") 
-    public ResponseEntity<String> stopAllBots() {
+    public ResponseEntity<StopBotsResponse> stopAllBots() {
         List<TradingBot> stoppedBots = tradingService.stopBots();
-        return ResponseEntity.ok("Stop request processed. " + stoppedBots.size() + " bots were stopped.");
+        StopBotsResponse response = new StopBotsResponse(
+            "Stop request processed. " + stoppedBots.size() + " bots were stopped.",
+            stoppedBots.size()
+        );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/trades")
@@ -51,5 +56,25 @@ public class TradingController {
     public ResponseEntity<Map<String, java.math.BigDecimal>> getBalance(@RequestParam Long userId) {
         Map<String, java.math.BigDecimal> balances = balanceService.getAccountBalance(userId);
         return ResponseEntity.ok(balances);
+    }
+
+    @GetMapping("/bots")
+    public ResponseEntity<List<TradingBot>> getAllBots(@RequestParam(required = false) Long userId) {
+        if (userId != null) {
+            return ResponseEntity.ok(tradingService.getBotsByUserId(userId));
+        }
+        return ResponseEntity.ok(tradingService.getAllBots());
+    }
+
+    @GetMapping("/bots/{id}")
+    public ResponseEntity<TradingBot> getBotById(@PathVariable Long id) {
+        return tradingService.getBotById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/bots/running")
+    public ResponseEntity<List<TradingBot>> getRunningBots(@RequestParam(required = false) Long userId) {
+        return ResponseEntity.ok(tradingService.getRunningBots(userId));
     }
 }

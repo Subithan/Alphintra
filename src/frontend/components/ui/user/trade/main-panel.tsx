@@ -26,9 +26,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
-import type { Position, Bot, Order, Trade } from '@/lib/api/types';
-import { getToken } from '@/lib/auth';
+import type { Order, Trade, PendingOrder } from '@/lib/api/types';
+import { getToken, getUserId } from '@/lib/auth';
 import { buildGatewayUrl } from '@/lib/config/gateway';
+import { tradingApi, type Position, type TradingBot } from '@/lib/api/trading-api';
 
 interface TradeOrderData {
   id: number;
@@ -42,160 +43,75 @@ interface TradeOrderData {
   createdAt: string;
 }
 
-const positions: Position[] = [
-  {
-    asset: 'BTC/USDT',
-    type: 'Long',
-    quantity: 0.5,
-    entryPrice: 65000,
-    markPrice: 68123.45,
-    pnl: 1561.72,
-    pnlPercentage: 4.8,
-  },
-  {
-    asset: 'ETH/USDT',
-    type: 'Short',
-    quantity: 10,
-    entryPrice: 3500,
-    markPrice: 3450.5,
-    pnl: -495,
-    pnlPercentage: -1.41,
-  },
-  {
-    asset: 'SOL/USDT',
-    type: 'Long',
-    quantity: 100,
-    entryPrice: 150,
-    markPrice: 162.3,
-    pnl: 1230,
-    pnlPercentage: 8.2,
-  },
-];
-
-const activeBots: Bot[] = [
-  {
-    name: 'BTC Grid Master',
-    asset: 'BTC/USDT',
-    pnl: 234.56,
-    status: 'Running',
-    stats: 'Win Rate: 68%',
-  },
-  {
-    name: 'ETH Momentum Rider',
-    asset: 'ETH/USDT',
-    pnl: -56.12,
-    status: 'Stopped',
-    stats: 'Trades: 128',
-  },
-  {
-    name: 'SOL Scalper Pro',
-    asset: 'SOL/USDT',
-    pnl: 102.78,
-    status: 'Stopped',
-    stats: 'Avg PNL: $1.12',
-  },
-  {
-    name: 'DCA Bot',
-    asset: 'ADA/USDT',
-    pnl: 12.4,
-    status: 'Error',
-    stats: 'Last error: API Key Invalid',
-  },
-];
-
-const generateMockId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `order-${Math.random().toString(36).slice(2)}`;
-
-const createMockOrder = (overrides: Partial<Order>): Order => ({
-  orderId: overrides.orderId ?? Math.floor(Math.random() * 100000),
-  orderUuid: overrides.orderUuid ?? generateMockId(),
-  userId: overrides.userId ?? 0,
-  accountId: overrides.accountId ?? 0,
-  symbol: overrides.symbol ?? '',
-  side: overrides.side ?? 'BUY',
-  orderType: overrides.orderType ?? 'LIMIT',
-  quantity: overrides.quantity ?? '0',
-  price: overrides.price ?? '0',
-  stopPrice: overrides.stopPrice ?? null,
-  timeInForce: overrides.timeInForce ?? 'GTC',
-  status: overrides.status ?? 'PENDING',
-  filledQuantity: overrides.filledQuantity ?? '0',
-  averagePrice: overrides.averagePrice ?? null,
-  fee: overrides.fee ?? '0',
-  exchange: overrides.exchange ?? 'MockExchange',
-  clientOrderId: overrides.clientOrderId ?? null,
-  exchangeOrderId: overrides.exchangeOrderId ?? null,
-  createdAt: overrides.createdAt ?? new Date().toISOString(),
-  updatedAt: overrides.updatedAt ?? new Date().toISOString(),
-  expiresAt: overrides.expiresAt ?? null,
-});
-
-const mockPendingOrders: Order[] = [
-  createMockOrder({
-    symbol: 'BTC/USDT',
-    orderType: 'LIMIT',
-    side: 'SELL',
-    price: '68000.0',
-    quantity: '0.5',
-    status: 'PENDING',
-  }),
-  createMockOrder({
-    symbol: 'ETH/USDT',
-    orderType: 'LIMIT',
-    side: 'BUY',
-    price: '3450.0',
-    quantity: '5.0',
-    status: 'PENDING',
-  }),
-];
-
 const ROW_HEIGHT = 40;
 const VISIBLE_ROWS = 4;
 const MAX_HEIGHT = 240; // 40px * 4 rows
 
 export default function MainPanel() {
-  const [pendingOrders, setPendingOrders] = useState<Order[]>(mockPendingOrders);
+  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [activeBots, setActiveBots] = useState<TradingBot[]>([]);
   const [tradeHistory, setTradeHistory] = useState<TradeOrderData[]>([]);
   const [loading, setLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Get user ID from JWT token
+    const id = getUserId();
+    setUserId(id);
+    console.log('[Trading UI] User ID from JWT:', id);
+  }, []);
 
   useEffect(() => {
     let mounted = true; 
-    const fetchTradeHistory = async () => {
+    
+    const fetchAllData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const token = getToken();
-        const response = await fetch(buildGatewayUrl('/api/trading/trades?limit=20'), {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: TradeOrderData[] = await response.json();
+        // Get user ID from JWT
+        const currentUserId = getUserId();
+        console.log('[Trading UI] Fetching data for user ID:', currentUserId);
+
+        // Fetch all data in parallel - filtered by user ID
+        const [trades, orders, pos, bots] = await Promise.all([
+          tradingApi.getTradeHistory(20),
+          currentUserId ? tradingApi.getPendingOrders(currentUserId, 'PENDING') : tradingApi.getPendingOrders(undefined, 'PENDING'),
+          currentUserId ? tradingApi.getPositions(currentUserId, 'OPEN') : tradingApi.getPositions(undefined, 'OPEN'),
+          currentUserId ? tradingApi.getAllBots(currentUserId) : tradingApi.getAllBots()
+        ]);
         
         if (mounted) {
-          setTradeHistory(data);
+          setTradeHistory(trades);
+          setPendingOrders(orders);
+          setPositions(pos);
+          setActiveBots(bots);
+          
+          console.log('[Trading UI] Data loaded:', {
+            trades: trades.length,
+            orders: orders.length,
+            positions: pos.length,
+            bots: bots.length
+          });
         }
       } catch (err) {
         if (mounted) {
-          console.error('[Trading UI] Failed to fetch /api/trading/trades', err);
-          setError("Failed to fetch trade history");
+          console.error('[Trading UI] Failed to fetch trading data', err);
+          setError("Failed to fetch trading data");
         } 
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchTradeHistory();
+    fetchAllData();
     
     // Poll for updates every 10 seconds
-    const interval = setInterval(fetchTradeHistory, 10000);
+    const interval = setInterval(fetchAllData, 10000);
 
     return () => {
       mounted = false;
@@ -203,9 +119,25 @@ export default function MainPanel() {
     };
   }, []);
 
-  return ( 
-    <Tabs defaultValue="orders" className="w-full max-w-full">
-      <TabsList className="flex flex-col flex-nowrap w-full gap-1 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:gap-2 min-w-[300px] p-0">
+  return (
+    <div className="w-full">
+      {/* User Info Display */}
+      
+      
+      <Tabs defaultValue="bots" className="w-full max-w-full">
+        <TabsList className="flex flex-col flex-nowrap w-full gap-1 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:gap-2 min-w-[300px] p-0">
+        <TabsTrigger
+          value="bots"
+          className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
+        >
+          Bots ({activeBots.length})
+        </TabsTrigger>
+        <TabsTrigger
+          value="positions"
+          className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
+        >
+          Open Positions ({positions.length})
+        </TabsTrigger>
         <TabsTrigger
           value="orders"
           className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
@@ -216,37 +148,25 @@ export default function MainPanel() {
           value="history"
           className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
         >
-          Trade History ({tradeHistory.length})
-        </TabsTrigger>
-        <TabsTrigger
-          value="positions"
-          className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
-        >
-          Open Positions ({positions.length})
-        </TabsTrigger>
-        <TabsTrigger
-          value="bots"
-          className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
-        >
-          Active Bots
+          Trade History 
         </TabsTrigger>
       </TabsList>
       <div className="mt-2 sm:mt-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-        <TabsContent value="positions">
-          <ScrollArea style={{ maxHeight: MAX_HEIGHT }}>
-            {positions.length > 0 ? (
-              <PositionsTable data={positions} />
-            ) : (
-              <p className="p-2 sm:p-4 text-xs sm:text-sm text-muted-foreground">No open positions</p>
-            )}
-          </ScrollArea>
-        </TabsContent>
         <TabsContent value="bots">
           <ScrollArea style={{ maxHeight: MAX_HEIGHT }}>
             {activeBots.length > 0 ? (
               <ActiveBotsTable data={activeBots} />
             ) : (
               <p className="p-2 sm:p-4 text-xs sm:text-sm text-muted-foreground">No active bots</p>
+            )}
+          </ScrollArea>
+        </TabsContent>
+        <TabsContent value="positions">
+          <ScrollArea style={{ maxHeight: MAX_HEIGHT }}>
+            {positions.length > 0 ? (
+              <PositionsTable data={positions} />
+            ) : (
+              <p className="p-2 sm:p-4 text-xs sm:text-sm text-muted-foreground">No open positions</p>
             )}
           </ScrollArea>
         </TabsContent>
@@ -265,19 +185,12 @@ export default function MainPanel() {
         </TabsContent>
         <TabsContent value="history">
           <ScrollArea style={{ maxHeight: MAX_HEIGHT }}>
-            {loading ? (
-              <p className="p-2 sm:p-4 text-xs sm:text-sm">Loading trades...</p>
-            ) : error ? (
-              <p className="p-2 sm:p-4 text-xs sm:text-sm text-red-500">{error}</p>
-            ) : tradeHistory.length > 0 ? (
-              <TradeHistoryTable data={tradeHistory} />
-            ) : (
-              <p className="p-2 sm:p-4 text-xs sm:text-sm text-muted-foreground">No trade history</p>
-            )}
+            <p className="p-2 sm:p-4 text-xs sm:text-sm text-muted-foreground">No trade history</p>
           </ScrollArea>
         </TabsContent>
       </div>
     </Tabs>
+    </div>
   );
 }
 
@@ -286,31 +199,39 @@ const PositionsTable = ({ data }: { data: Position[] }) => (
     <Table className="min-w-[600px] overflow-x-auto">
       <TableHeader>
         <TableRow>
-          <TableHead className="text-xs sm:text-sm">Asset</TableHead>
-          <TableHead className="text-xs sm:text-sm">Type</TableHead>
+          <TableHead className="text-xs sm:text-sm">Symbol</TableHead>
+          <TableHead className="text-xs sm:text-sm">Status</TableHead>
           <TableHead className="text-xs sm:text-sm text-right">Quantity</TableHead>
           <TableHead className="text-xs sm:text-sm text-right">Entry Price</TableHead>
-          <TableHead className="text-xs sm:text-sm text-right">Mark Price</TableHead>
-          <TableHead className="text-xs sm:text-sm text-right">PNL (USDT)</TableHead>
+          {/* <TableHead className="text-xs sm:text-sm text-right">Opened At</TableHead> */}
+          <TableHead className="text-xs sm:text-sm text-right">PNL</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {data.map((pos) => (
-          <TableRow key={pos.asset} style={{ height: ROW_HEIGHT }}>
-            <TableCell className="font-medium text-xs sm:text-sm">{pos.asset}</TableCell>
+          <TableRow key={pos.id} style={{ height: ROW_HEIGHT }}>
+            <TableCell className="font-medium text-xs sm:text-sm">{pos.symbol}</TableCell>
             <TableCell className="text-xs sm:text-sm">
-              <span className={pos.type === 'Long' ? 'text-[#0b9981]' : 'text-red-500'}>
-                {pos.type}
-              </span>
+              <Badge variant={pos.status === 'OPEN' ? 'default' : 'secondary'}>
+                {pos.status}
+              </Badge>
             </TableCell>
             <TableCell className="text-right text-xs sm:text-sm">{pos.quantity}</TableCell>
             <TableCell className="text-right text-xs sm:text-sm">${pos.entryPrice.toLocaleString()}</TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">${pos.markPrice.toLocaleString()}</TableCell>
+            {/* <TableCell className="text-right text-xs sm:text-sm">
+              {new Date(pos.createdAt).toLocaleString()}
+            </TableCell> */}
             <TableCell
-              className={`text-right font-semibold text-xs sm:text-sm ${pos.pnl >= 0 ? 'text-[#0b9981]' : 'text-red-500'}`}
+              className={`text-right font-semibold text-xs sm:text-sm ${(pos.pnl || 0) >= 0 ? 'text-[#0b9981]' : 'text-red-500'}`}
             >
-              {pos.pnl >= 0 ? '+' : ''}
-              {pos.pnl.toFixed(2)} ({pos.pnlPercentage.toFixed(2)}%)
+              {pos.pnl ? (
+                <>
+                  {pos.pnl >= 0 ? '+' : ''}
+                  {pos.pnl.toFixed(2)}
+                </>
+              ) : (
+                'N/A'
+              )}
             </TableCell>
           </TableRow>
         ))}
@@ -319,44 +240,41 @@ const PositionsTable = ({ data }: { data: Position[] }) => (
   </div>
 );
 
-const ActiveBotsTable = ({ data }: { data: Bot[] }) => (
+const ActiveBotsTable = ({ data }: { data: TradingBot[] }) => (
   <div className="overflow-x-auto">
     <Table className="min-w-[600px]">
       <TableHeader>
         <TableRow>
-          <TableHead className="text-xs sm:text-sm">Name</TableHead>
-          <TableHead className="text-xs sm:text-sm">Asset</TableHead>
+          <TableHead className="text-xs sm:text-sm">Bot ID</TableHead>
+          <TableHead className="text-xs sm:text-sm">Symbol</TableHead>
           <TableHead className="text-xs sm:text-sm">Status</TableHead>
-          <TableHead className="text-xs sm:text-sm">Performance</TableHead>
-          <TableHead className="text-xs sm:text-sm text-right">PNL (USDT)</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Capital %</TableHead>
+          {/* <TableHead className="text-xs sm:text-sm text-right">Started At</TableHead> */}
         </TableRow>
       </TableHeader>
       <TableBody>
         {data.map((bot) => (
-          <TableRow key={bot.name} style={{ height: ROW_HEIGHT }}>
-            <TableCell className="font-medium text-xs sm:text-sm">{bot.name}</TableCell>
-            <TableCell className="text-xs sm:text-sm">{bot.asset}</TableCell>
+          <TableRow key={bot.id} style={{ height: ROW_HEIGHT }}>
+            <TableCell className="font-medium text-xs sm:text-sm">#{bot.id}</TableCell>
+            <TableCell className="text-xs sm:text-sm">{bot.symbol}</TableCell>
             <TableCell className="text-xs sm:text-sm">
               <Badge
                 variant={
-                  bot.status === 'Running'
+                  bot.status === 'RUNNING'
                     ? 'default'
-                    : bot.status === 'Stopped'
+                    : bot.status === 'STOPPED'
                     ? 'secondary'
                     : 'destructive'
                 }
-                className={bot.status === 'Running' ? 'bg-[#0b9981]' : ''}
+                className={bot.status === 'RUNNING' ? 'bg-[#0b9981]' : ''}
               >
                 {bot.status}
               </Badge>
             </TableCell>
-            <TableCell className="text-xs sm:text-sm">{bot.stats}</TableCell>
-            <TableCell
-              className={`text-right font-semibold text-xs sm:text-sm ${bot.pnl >= 0 ? 'text-[#0b9981]' : 'text-red-500'}`}
-            >
-              {bot.pnl >= 0 ? '+' : ''}
-              {bot.pnl.toFixed(2)}
-            </TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">{bot.capitalAllocationPercentage}%</TableCell>
+            {/* <TableCell className="text-right text-xs sm:text-sm">
+              {new Date(bot.createdAt).toLocaleString()}
+            </TableCell> */}
           </TableRow>
         ))}
       </TableBody>
@@ -364,32 +282,38 @@ const ActiveBotsTable = ({ data }: { data: Bot[] }) => (
   </div>
 );
 
-const PendingOrdersTable = ({ data }: { data: Order[] }) => (
+const PendingOrdersTable = ({ data }: { data: PendingOrder[] }) => (
   <div className="overflow-x-auto">
     <Table className="min-w-[600px]">
       <TableHeader>
         <TableRow>
-          <TableHead className="text-xs sm:text-sm">Asset</TableHead>
-          <TableHead className="text-xs sm:text-sm">Type</TableHead>
-          <TableHead className="text-xs sm:text-sm">Side</TableHead>
-          <TableHead className="text-xs sm:text-sm text-right">Price</TableHead>
+          <TableHead className="text-xs sm:text-sm">Symbol</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Take Profit</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Stop Loss</TableHead>
           <TableHead className="text-xs sm:text-sm text-right">Quantity</TableHead>
           <TableHead className="text-xs sm:text-sm text-right">Status</TableHead>
+          {/* <TableHead className="text-xs sm:text-sm text-right">Created At</TableHead> */}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.map((order, index) => (
-          <TableRow key={`${order.symbol}-${index}`} style={{ height: ROW_HEIGHT }}>
+        {data.map((order) => (
+          <TableRow key={order.id} style={{ height: ROW_HEIGHT }}>
             <TableCell className="font-medium text-xs sm:text-sm">{order.symbol}</TableCell>
-            <TableCell className="text-xs sm:text-sm">{order.orderType}</TableCell>
-            <TableCell className={`text-xs sm:text-sm ${order.side === 'BUY' ? 'text-[#0b9981]' : 'text-red-500'}`}>
-              {order.side}
+            <TableCell className="text-right text-xs sm:text-sm text-[#0b9981]">
+              {order.takeProfitPrice ? `$${order.takeProfitPrice.toFixed(2)}` : 'N/A'}
             </TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">${parseFloat(order.price).toLocaleString()}</TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">{parseFloat(order.quantity).toLocaleString()}</TableCell>
+            <TableCell className="text-right text-xs sm:text-sm text-red-500">
+              {order.stopLossPrice ? `$${order.stopLossPrice.toFixed(2)}` : 'N/A'}
+            </TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">{order.quantity}</TableCell>
             <TableCell className="text-right text-xs sm:text-sm">
-              <Badge variant="outline">{order.status}</Badge>
+              <Badge variant={order.status === 'PENDING' ? 'outline' : order.status === 'TRIGGERED' ? 'default' : 'secondary'}>
+                {order.status}
+              </Badge>
             </TableCell>
+            {/* <TableCell className="text-right text-xs sm:text-sm">
+              {new Date(order.createdAt).toLocaleString()}
+            </TableCell> */}
           </TableRow>
         ))}
       </TableBody>
@@ -402,7 +326,7 @@ const TradeHistoryTable = ({ data }: { data: TradeOrderData[] }) => (
     <Table className="min-w-[600px]">
       <TableHeader>
         <TableRow>
-          <TableHead className="text-xs sm:text-sm">Time</TableHead>
+          {/* <TableHead className="text-xs sm:text-sm">Time</TableHead> */}
           <TableHead className="text-xs sm:text-sm">Asset</TableHead>
           <TableHead className="text-xs sm:text-sm">Type</TableHead>
           <TableHead className="text-xs sm:text-sm">Side</TableHead>
@@ -414,9 +338,9 @@ const TradeHistoryTable = ({ data }: { data: TradeOrderData[] }) => (
       <TableBody>
         {data.map((trade) => (
           <TableRow key={trade.id} style={{ height: ROW_HEIGHT }}>
-            <TableCell className="text-xs sm:text-sm">
+            {/* <TableCell className="text-xs sm:text-sm">
               {new Date(trade.createdAt).toLocaleString()}
-            </TableCell>
+            </TableCell> */}
             <TableCell className="font-medium text-xs sm:text-sm">
               {trade.symbol}
             </TableCell>

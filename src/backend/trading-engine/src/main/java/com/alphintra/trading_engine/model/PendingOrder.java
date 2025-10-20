@@ -14,6 +14,9 @@ public class PendingOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     @Column(name = "position_id", nullable = false)
     private Long positionId;
 

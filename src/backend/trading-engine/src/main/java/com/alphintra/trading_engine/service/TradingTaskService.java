@@ -112,13 +112,15 @@ public class TradingTaskService {
                     // --- CHECK PENDING ORDERS FIRST ---
                     checkAndTriggerPendingOrders(bot, credentials, currentPrice, openPosition);
 
-                    Map<String, BigDecimal> balances = fetchAccountBalanceDirectAPI(credentials, baseCurrency, quoteCurrency);
-                    System.out.println("   💰 Balances: " + baseCurrency + "=" + balances.get(baseCurrency) + ", " + quoteCurrency + "=" + balances.get(quoteCurrency));
-                    Signal signal = strategy.decide(bot.getSymbol(), currentPrice, balances, openPosition);
-                    System.out.println("   🎯 Strategy Decision: " + signal);
+                    // Only execute BUY orders if no position is open
+                    // SELL orders are ONLY executed through pending order triggers (take-profit/stop-loss)
+                    if (openPosition.isEmpty()) {
+                        Map<String, BigDecimal> balances = fetchAccountBalanceDirectAPI(credentials, baseCurrency, quoteCurrency);
+                        System.out.println("   💰 Balances: " + baseCurrency + "=" + balances.get(baseCurrency) + ", " + quoteCurrency + "=" + balances.get(quoteCurrency));
+                        Signal signal = strategy.decide(bot.getSymbol(), currentPrice, balances, openPosition);
+                        System.out.println("   🎯 Strategy Decision: " + signal);
 
-                    switch (signal) {
-                        case BUY:
+                        if (signal == Signal.BUY) {
                             System.out.println("🔥 ACTION: Preparing to execute a BUY order.");
                             // Use bot's capital allocation percentage (convert from percentage to decimal)
                             BigDecimal availableUsdt = balances.get(quoteCurrency);
@@ -134,28 +136,20 @@ public class TradingTaskService {
                                 System.out.println("⚠️ SKIPPING BUY: Order value " + orderValue + " " + quoteCurrency + " is below minimum notional " + MIN_NOTIONAL);
                                 System.out.println("   ℹ️ You need at least $" + MIN_NOTIONAL + " worth of " + quoteCurrency + " to place an order.");
                                 System.out.println("   ℹ️ Current allocation (" + bot.getCapitalAllocationPercentage() + "% of " + availableUsdt + ") = " + orderValue);
-                                break;
-                            }
-                            
-                            BigDecimal rawBuyQuantity = usdtToSpend.divide(currentPrice, 8, RoundingMode.DOWN);
-                            BigDecimal adjustedBuyQuantity = adjustQuantityToStepSize(rawBuyQuantity, ETC_USDT_STEP_SIZE);
-                            orderExecutionService.placeMarketOrder(bot, credentials, bot.getSymbol(), "BUY", adjustedBuyQuantity, openPosition);
-                            break;
-                        case SELL:
-                            if (openPosition.isPresent()) {
-                                System.out.println("💰 ACTION: Preparing to execute a SELL order.");
-                                BigDecimal sellQuantity = openPosition.get().getQuantity();
-                                // We sell the exact quantity from our position, so no need to adjust
-                                orderExecutionService.placeMarketOrder(bot, credentials, bot.getSymbol(), "SELL", sellQuantity, openPosition);
                             } else {
-                                System.out.println("⚠️ STRATEGY WARNING: Received SELL signal but no open position found.");
+                                BigDecimal rawBuyQuantity = usdtToSpend.divide(currentPrice, 8, RoundingMode.DOWN);
+                                BigDecimal adjustedBuyQuantity = adjustQuantityToStepSize(rawBuyQuantity, ETC_USDT_STEP_SIZE);
+                                orderExecutionService.placeMarketOrder(bot, credentials, bot.getSymbol(), "BUY", adjustedBuyQuantity, openPosition, null, null, currentPrice);
                             }
-                            break;
-                        case HOLD:
-                             // No action needed, but logging is handled by the strategy now.
-                            break;
+                        } else {
+                            System.out.println("   ⏸️ No position open. Waiting for BUY signal...");
+                        }
+                    } else {
+                        System.out.println("   📊 Position is OPEN. Monitoring pending orders (TP/SL) for exit...");
                     }
-                    long sleepTime = (signal == Signal.BUY || signal == Signal.SELL) ? 15000 : 5000;
+                    
+                    // Sleep: longer if position is open (waiting for TP/SL), shorter if searching for entry
+                    long sleepTime = openPosition.isPresent() ? 3000 : 5000;
                     Thread.sleep(sleepTime);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -225,8 +219,12 @@ public class TradingTaskService {
 
     /**
      * Checks pending orders and triggers execution if price conditions are met
+     * DISABLED: Auto-sell is turned off - positions remain open, pending orders are for display only
      */
     private void checkAndTriggerPendingOrders(TradingBot bot, WalletCredentialsDTO credentials, BigDecimal currentPrice, Optional<Position> openPosition) {
+        // AUTO-SELL DISABLED - Positions will never be closed automatically
+        // Pending orders are created for display purposes only (showing stop-loss and take-profit levels)
+        
         if (openPosition.isEmpty()) {
             return; // No position = no pending orders to check
         }
@@ -234,53 +232,37 @@ public class TradingTaskService {
         Position position = openPosition.get();
         List<PendingOrder> pendingOrders = pendingOrderService.getPendingOrdersBySymbol(bot.getSymbol());
 
+        // Check and LOG if conditions would trigger, but don't execute
         for (PendingOrder pendingOrder : pendingOrders) {
             // Only check pending orders for the current position
             if (!pendingOrder.getPositionId().equals(position.getId())) {
                 continue;
             }
 
-            boolean shouldTrigger = false;
-            String triggerReason = null;
-
-            // Check take-profit condition
+            // Check take-profit condition (LOG ONLY)
             if (pendingOrder.getTakeProfitPrice() != null && 
                 currentPrice.compareTo(pendingOrder.getTakeProfitPrice()) >= 0) {
-                shouldTrigger = true;
-                triggerReason = "TAKE_PROFIT";
-                System.out.println("🎯 TAKE_PROFIT TRIGGERED! Current: " + currentPrice + " >= Target: " + pendingOrder.getTakeProfitPrice());
+                System.out.println("📊 TAKE_PROFIT LEVEL REACHED (not executing): Current: " + currentPrice + " >= Target: " + pendingOrder.getTakeProfitPrice());
             }
-            // Check stop-loss condition
+            // Check stop-loss condition (LOG ONLY)
             else if (pendingOrder.getStopLossPrice() != null && 
                      currentPrice.compareTo(pendingOrder.getStopLossPrice()) <= 0) {
-                shouldTrigger = true;
-                triggerReason = "STOP_LOSS";
-                System.out.println("🛑 STOP_LOSS TRIGGERED! Current: " + currentPrice + " <= Target: " + pendingOrder.getStopLossPrice());
+                System.out.println("� STOP_LOSS LEVEL REACHED (not executing): Current: " + currentPrice + " <= Target: " + pendingOrder.getStopLossPrice());
             }
 
+            // NOTE: No actual execution - positions stay open
+            // Uncomment the code below to re-enable auto-sell:
+            /*
             if (shouldTrigger) {
-                // Mark as triggered
                 pendingOrderService.markAsTriggered(pendingOrder, triggerReason);
-
-                // Execute the SELL order
-                System.out.println("💰 Executing " + triggerReason + " SELL order...");
                 orderExecutionService.placeMarketOrder(
-                    bot, 
-                    credentials, 
-                    bot.getSymbol(), 
-                    "SELL", 
-                    pendingOrder.getQuantity(), 
-                    openPosition,
-                    triggerReason,
-                    pendingOrder.getId()
+                    bot, credentials, bot.getSymbol(), "SELL", 
+                    pendingOrder.getQuantity(), openPosition, triggerReason, pendingOrder.getId(), currentPrice
                 );
-
-                // Cancel other pending orders (OCO logic)
                 pendingOrderService.cancelOtherPendingOrders(position.getId(), pendingOrder.getId());
-
-                // Exit the loop since position is now closed
                 break;
             }
+            */
         }
     }
 }

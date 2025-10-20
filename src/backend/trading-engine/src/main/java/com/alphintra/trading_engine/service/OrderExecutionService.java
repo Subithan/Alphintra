@@ -50,12 +50,17 @@ public class OrderExecutionService {
 
     @Transactional
     public void placeMarketOrder(TradingBot bot, WalletCredentialsDTO credentials, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt, String exitReason, Long pendingOrderId) {
+        placeMarketOrder(bot, credentials, symbol, side, quantity, openPositionOpt, exitReason, pendingOrderId, null);
+    }
+
+    @Transactional
+    public void placeMarketOrder(TradingBot bot, WalletCredentialsDTO credentials, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt, String exitReason, Long pendingOrderId, BigDecimal currentMarketPrice) {
         System.out.println("EXECUTING ORDER: " + side + " " + quantity + " " + symbol);
         
         // MOCK MODE: Simulate order execution without calling Binance API
         if (MOCK_MODE) {
             System.out.println("🧪 MOCK MODE: Simulating order execution...");
-            handleMockOrder(bot, symbol, side, quantity, openPositionOpt, exitReason, pendingOrderId);
+            handleMockOrder(bot, symbol, side, quantity, openPositionOpt, exitReason, pendingOrderId, currentMarketPrice);
             return;
         }
         
@@ -104,6 +109,7 @@ public class OrderExecutionService {
 
                 // Create the historical trade record
                 TradeOrder tradeOrder = new TradeOrder();
+                tradeOrder.setUserId(bot.getUserId());
                 tradeOrder.setBotId(bot.getId());
                 tradeOrder.setExchangeOrderId(String.valueOf(responseJson.getLong("orderId")));
                 tradeOrder.setSymbol(symbol);
@@ -144,9 +150,17 @@ public class OrderExecutionService {
                     openPositionOpt.ifPresent(positionToClose -> {
                         positionToClose.setStatus(PositionStatus.CLOSED);
                         positionToClose.setClosedAt(LocalDateTime.now());
+                        positionToClose.setExitPrice(averagePrice);
+                        
+                        // Calculate PNL: (exitPrice - entryPrice) * quantity
+                        BigDecimal pnl = averagePrice.subtract(positionToClose.getEntryPrice())
+                                                     .multiply(positionToClose.getQuantity());
+                        positionToClose.setPnl(pnl);
+                        
                         positionRepository.save(positionToClose);
                         System.out.println("✅ POSITION CLOSED and updated in database." + 
-                                         (exitReason != null ? " Reason: " + exitReason : ""));
+                                         (exitReason != null ? " Reason: " + exitReason : "") +
+                                         " | PNL: " + pnl);
                     });
                 }
             } else {
@@ -178,14 +192,15 @@ public class OrderExecutionService {
     /**
      * Mock order execution for testing without Binance API
      */
-    private void handleMockOrder(TradingBot bot, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt, String exitReason, Long pendingOrderId) {
-        // Simulate market price
-        BigDecimal mockPrice = new BigDecimal("16.20"); // Mock ETC price
+    private void handleMockOrder(TradingBot bot, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt, String exitReason, Long pendingOrderId, BigDecimal currentMarketPrice) {
+        // Use the current market price if provided, otherwise fallback to mock price
+        BigDecimal mockPrice = (currentMarketPrice != null) ? currentMarketPrice : new BigDecimal("16.20");
         
         System.out.println("✅ MOCK ORDER EXECUTED: " + side + " " + quantity + " " + symbol + " @ " + mockPrice);
         
         // Save trade order record
         TradeOrder order = new TradeOrder();
+        order.setUserId(bot.getUserId());
         order.setBotId(bot.getId());
         order.setSymbol(symbol);
         order.setType("MARKET");
@@ -223,6 +238,12 @@ public class OrderExecutionService {
             Position position = openPositionOpt.get();
             position.setStatus(PositionStatus.CLOSED);
             position.setClosedAt(LocalDateTime.now());
+            position.setExitPrice(mockPrice);
+            
+            // Calculate PNL: (exitPrice - entryPrice) * quantity
+            BigDecimal profitLoss = mockPrice.subtract(position.getEntryPrice()).multiply(quantity);
+            position.setPnl(profitLoss);
+            
             positionRepository.save(position);
             
             // Mark pending orders as triggered if this was from a pending order
@@ -231,7 +252,6 @@ public class OrderExecutionService {
                 System.out.println("📋 Pending order " + pendingOrderId + " was triggered");
             }
             
-            BigDecimal profitLoss = mockPrice.subtract(position.getEntryPrice()).multiply(quantity);
             System.out.println("💰 MOCK POSITION CLOSED: P/L=" + profitLoss + " " + (exitReason != null ? ("(" + exitReason + ")") : ""));
         }
     }

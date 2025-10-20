@@ -15,6 +15,9 @@ public class TradeOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     private Long botId;
 
     private String exchangeOrderId;

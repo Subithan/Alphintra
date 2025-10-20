@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -63,5 +64,24 @@ public class TradingService {
             bot.setStoppedAt(LocalDateTime.now());
         }
         return botRepository.saveAll(runningBots);
+    }
+
+    public List<TradingBot> getAllBots() {
+        return botRepository.findAll();
+    }
+
+    public List<TradingBot> getBotsByUserId(Long userId) {
+        return botRepository.findByUserId(userId);
+    }
+
+    public Optional<TradingBot> getBotById(Long id) {
+        return botRepository.findById(id);
+    }
+
+    public List<TradingBot> getRunningBots(Long userId) {
+        if (userId != null) {
+            return botRepository.findByUserIdAndStatus(userId, BotStatus.RUNNING);
+        }
+        return botRepository.findByStatus(BotStatus.RUNNING);
     }
 }

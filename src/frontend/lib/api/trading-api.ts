@@ -34,16 +34,44 @@ export interface StartBotRequest {
 export interface TradingBot {
   id: number;
   userId: number;
-  strategyId: number;
-  status: string;
-  capitalAllocation: number;
+  status: 'RUNNING' | 'STOPPED' | 'ERROR';
+  capitalAllocationPercentage: number;
   symbol: string;
-  createdAt: string;
-  updatedAt: string;
+  startedAt: string;
+
 }
 
 export interface StopBotsResponse {
   message: string;
+  botsStoppedCount: number;
+}
+
+export interface Position {
+  id: number;
+  userId: number;
+  botId: number;
+  asset: string;
+  symbol: string;
+  entryPrice: number;
+  quantity: number;
+  openedAt: string;
+  closedAt?: string | null;
+  status: 'OPEN' | 'CLOSED';
+  pnl?: number | null;
+}
+
+export interface PendingOrder {
+  id: number;
+  positionId: number;
+  takeProfitPrice: number | null;
+  stopLossPrice: number | null;
+  quantity: number;
+  status: 'PENDING' | 'TRIGGERED' | 'CANCELLED';
+  symbol: string;
+  createdAt: string;
+  triggeredAt?: string | null;
+  triggeredType?: string | null;
+  cancelledAt?: string | null;
 }
 
 class TradingApiService extends BaseApiClient {
@@ -89,6 +117,60 @@ class TradingApiService extends BaseApiClient {
    */
   async stopAllBots(): Promise<StopBotsResponse> {
     return this.post<StopBotsResponse>('/api/trading/bots/stop');
+  }
+
+  /**
+   * Get all bots for a user
+   */
+  async getAllBots(userId?: number): Promise<TradingBot[]> {
+    const queryString = userId ? this.buildQueryString({ userId }) : '';
+    return this.get<TradingBot[]>(`/api/trading/bots${queryString ? `?${queryString}` : ''}`);
+  }
+
+  /**
+   * Get running bots for a user
+   */
+  async getRunningBots(userId?: number): Promise<TradingBot[]> {
+    const queryString = userId ? this.buildQueryString({ userId }) : '';
+    return this.get<TradingBot[]>(`/api/trading/bots/running${queryString ? `?${queryString}` : ''}`);
+  }
+
+  /**
+   * Get all positions
+   */
+  async getPositions(userId?: number, status?: string): Promise<Position[]> {
+    const params: any = {};
+    if (userId) params.userId = userId;
+    if (status) params.status = status;
+    const queryString = this.buildQueryString(params);
+    return this.get<Position[]>(`/api/trading/positions${queryString ? `?${queryString}` : ''}`);
+  }
+
+  /**
+   * Get open positions for a user
+   */
+  async getOpenPositions(userId: number): Promise<Position[]> {
+    const queryString = this.buildQueryString({ userId });
+    return this.get<Position[]>(`/api/trading/positions/open?${queryString}`);
+  }
+
+  /**
+   * Get all pending orders
+   */
+  async getPendingOrders(userId?: number, status?: string, symbol?: string): Promise<PendingOrder[]> {
+    const params: any = {};
+    if (userId) params.userId = userId;
+    if (status) params.status = status;
+    if (symbol) params.symbol = symbol;
+    const queryString = this.buildQueryString(params);
+    return this.get<PendingOrder[]>(`/api/trading/pending-orders${queryString ? `?${queryString}` : ''}`);
+  }
+
+  /**
+   * Get pending orders for a specific position
+   */
+  async getPendingOrdersByPosition(positionId: number): Promise<PendingOrder[]> {
+    return this.get<PendingOrder[]>(`/api/trading/pending-orders/position/${positionId}`);
   }
 }
 
