@@ -30,9 +30,7 @@ import {
   ChevronRight,
   ChevronDown,
   Plus,
-  Edit3,
-  Check,
-  X
+  Edit3
 } from 'lucide-react'
 import Editor from '@monaco-editor/react'
 import { ProjectExplorer } from './ProjectExplorer'
@@ -802,30 +800,54 @@ export function EnhancedIDE({
     setIsEditingProjectName(true)
   }, [currentProject?.name])
 
-  const saveProjectName = useCallback(() => {
-    if (!currentProject || !editingProjectName.trim()) {
+  const saveProjectName = useCallback(async () => {
+    if (!currentProject) {
       setIsEditingProjectName(false)
       return
     }
 
-    const updatedProject = {
-      ...currentProject,
-      name: editingProjectName.trim()
+    const trimmedName = editingProjectName.trim()
+
+    if (!trimmedName) {
+      setEditingProjectName(currentProject.name || '')
+      setIsEditingProjectName(false)
+      return
     }
 
-    startTransition(() => {
-      setCurrentProject(updatedProject)
+    if (trimmedName === currentProject.name) {
+      setIsEditingProjectName(false)
+      return
+    }
+
+    try {
+      if (currentProject.id && currentProject.id !== 'default') {
+        const updatedProject = await fileManagementApi.updateProject(currentProject.id, { name: trimmedName })
+
+        startTransition(() => {
+          setCurrentProject(prev => prev ? { ...prev, name: updatedProject.name } : prev)
+        })
+      } else {
+        startTransition(() => {
+          setCurrentProject(prev => prev ? { ...prev, name: trimmedName } : prev)
+        })
+      }
+
+      setEditingProjectName(trimmedName)
       setIsEditingProjectName(false)
       setNotification({ type: 'success', message: 'Project name updated' })
-    })
-
-    setTimeout(() => setNotification(null), 3000)
+    } catch (error) {
+      console.error('Failed to update project name:', error)
+      const message = error instanceof Error ? error.message : 'Failed to update project name'
+      setNotification({ type: 'error', message })
+    } finally {
+      setTimeout(() => setNotification(null), 3000)
+    }
   }, [currentProject, editingProjectName])
 
   const cancelEditingProjectName = useCallback(() => {
     setIsEditingProjectName(false)
-    setEditingProjectName('')
-  }, [])
+    setEditingProjectName(currentProject?.name || '')
+  }, [currentProject?.name])
 
   // Command palette commands
   // Auto-save functionality
@@ -978,6 +1000,11 @@ export function EnhancedIDE({
     }
   }
 
+  const resolvedProjectName = currentProject?.name || 'Enhanced IDE'
+  const displayProjectName = isMobile
+    ? (resolvedProjectName.length > 12 ? `${resolvedProjectName.slice(0, 12)}...` : resolvedProjectName)
+    : resolvedProjectName
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -1069,37 +1096,36 @@ export function EnhancedIDE({
           {/* Editable Project Name */}
           <div className="flex items-center space-x-2">
             {isEditingProjectName ? (
-              <div className="ide-project-name-edit flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={editingProjectName}
-                  onChange={(e) => setEditingProjectName(e.target.value)}
-                  onBlur={saveProjectName}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveProjectName()
-                    if (e.key === 'Escape') cancelEditingProjectName()
-                  }}
-                  className="bg-transparent border-none outline-none font-semibold text-lg px-2 py-1 rounded"
-                  autoFocus
-                />
-                <Button size="sm" variant="ghost" onClick={saveProjectName}>
-                  <Check className="h-3 w-3" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={cancelEditingProjectName}>
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
+              <input
+                type="text"
+                value={editingProjectName}
+                onChange={(e) => setEditingProjectName(e.target.value)}
+                onBlur={() => {
+                  void saveProjectName()
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    void saveProjectName()
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault()
+                    cancelEditingProjectName()
+                  }
+                }}
+                className="w-full max-w-xs border border-primary/40 bg-background px-2 py-1 rounded-md font-semibold text-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                placeholder="Project name"
+                autoFocus
+              />
             ) : (
-              <h1
-                className={`ide-project-name font-semibold cursor-pointer px-2 py-1 rounded transition-all duration-300 hover:bg-muted ${isMobile ? 'text-base' : 'text-lg'}`}
+              <button
+                type="button"
+                className={`ide-project-name font-semibold cursor-pointer px-2 py-1 rounded transition-all duration-300 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary ${isMobile ? 'text-base' : 'text-lg'}`}
                 onClick={startEditingProjectName}
                 title="Click to edit project name"
               >
-                {isMobile
-                  ? (currentProject?.name || 'IDE').slice(0, 12) + '...'
-                  : currentProject?.name || 'Enhanced IDE'
-                }
-              </h1>
+                {displayProjectName}
+              </button>
             )}
           </div>
 

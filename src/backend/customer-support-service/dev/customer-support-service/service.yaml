@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-support-service
+  namespace: alphintra
+  labels:
+    app: customer-support-service
+spec:
+  selector:
+    app: customer-support-service
+  ports:
+  - name: http
+    port: 8010
+    targetPort: 8010
+    protocol: TCP
+  - name: websocket
+    port: 8011
+    targetPort: 8011
+    protocol: TCP
+  type: ClusterIP
