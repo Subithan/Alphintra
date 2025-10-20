@@ -96,14 +96,24 @@ public class AuthService {
 
   @Transactional
   public boolean activateSubscription(Long userId, String planName) {
-    return userRepository.findById(userId).map(user -> {
-      user.setSubscriptionStatus("ACTIVE");
-      user.setSubscriptionPlan(planName);
-      user.setSubscriptionStartDate(java.time.LocalDateTime.now());
-      userRepository.save(user);
-      log.info("Activated subscription for userId={}, plan={}", userId, planName);
-      return true;
-    }).orElse(false);
+    try {
+      log.info("Attempting to activate subscription for userId={}, plan={}", userId, planName);
+      return userRepository.findById(userId).map(user -> {
+        log.info("Found user: {}", user.getUsername());
+        user.setSubscriptionStatus("ACTIVE");
+        user.setSubscriptionPlan(planName);
+        user.setSubscriptionStartDate(java.time.LocalDateTime.now());
+        userRepository.save(user);
+        log.info("Successfully activated subscription for userId={}, plan={}", userId, planName);
+        return true;
+      }).orElseGet(() -> {
+        log.warn("User not found with userId={}", userId);
+        return false;
+      });
+    } catch (Exception e) {
+      log.error("Error activating subscription for userId={}: {}", userId, e.getMessage(), e);
+      throw e;
+    }
   }
 
   // All JWT validation (validate/introspect) removed; only issuing tokens remains.
