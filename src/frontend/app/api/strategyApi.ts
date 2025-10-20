@@ -1,7 +1,7 @@
 import { Strategy } from '@/components/marketplace/types'; // Import your existing Strategy type
 
 // *** CRITICAL FIX: Use the proxy path defined in next.config.js ***
-// This URL will be automatically rewritten by Next.js to: http://localhost:8012/strategies/
+// This URL will be automatically rewritten by Next.js to: http://api.alphintra.com/strategies/
 const STRATEGIES_API_URL = '/api/v1/strategies/'; 
 
 /**

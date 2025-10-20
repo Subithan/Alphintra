@@ -1,7 +1,7 @@
 import { getUserId } from '@/lib/auth';
 
 const MARKETPLACE_API_URL =
-  process.env.NEXT_PUBLIC_MARKETPLACE_API_URL ?? 'http://localhost:8012';
+  process.env.NEXT_PUBLIC_MARKETPLACE_API_URL ?? 'http://api.alphintra.com';
 
 export interface PurchasePayload {
   buyerId?: number;
