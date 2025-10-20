@@ -9,14 +9,14 @@ interface CodeGenerationRequest {
   complexity_level?: 'beginner' | 'intermediate' | 'advanced'
   include_comments?: boolean
   max_tokens?: number
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
 interface CodeExplanationRequest {
   code: string
   context?: string
   focus_areas?: string[]
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
 interface CodeOptimizationRequest {
@@ -24,14 +24,14 @@ interface CodeOptimizationRequest {
   optimization_type?: 'performance' | 'readability' | 'security' | 'memory' | 'trading_specific'
   context?: string
   preserve_functionality?: boolean
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
 interface CodeDebuggingRequest {
   code: string
   error_message?: string
   context?: string
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
 interface CodeGenerationResponse {
@@ -103,17 +103,17 @@ interface AICodeState {
   isOptimizing: boolean
   isDebugging: boolean
   isGeneratingTests: boolean
-  
+
   // Current operation results
   lastGeneration: CodeGenerationResponse | null
   lastExplanation: CodeExplanationResponse | null
   lastOptimization: CodeOptimizationResponse | null
   lastDebugging: CodeDebuggingResponse | null
   lastTestGeneration: TestGenerationResponse | null
-  
+
   // Settings
   settings: {
-    defaultProvider: 'openai' | 'anthropic'
+    defaultProvider: 'openai' | 'anthropic' | 'gemini'
     defaultComplexity: 'beginner' | 'intermediate' | 'advanced'
     includeComments: boolean
     maxTokens: number
@@ -180,7 +180,7 @@ interface AICodeActions {
 type AICodeStore = AICodeState & AICodeActions
 
 const defaultSettings: AICodeState['settings'] = {
-  defaultProvider: 'openai',
+  defaultProvider: 'gemini',
   defaultComplexity: 'intermediate',
   includeComments: true,
   maxTokens: 2000,
