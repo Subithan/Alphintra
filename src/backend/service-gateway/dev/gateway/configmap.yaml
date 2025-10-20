@@ -21,3 +21,4 @@ data:
   AI_ML_SERVICE_URI: http://ai-ml-strategy-service.platform:8002
   CUSTOMER_SUPPORT_SERVICE_URI: http://customer-support-service.platform:8010
   WALLET_SERVICE_URI: http://wallet-service.alphintra.svc.cluster.local:8011
+  MARKETPLACE_URI: http://marketplace.alphintra.svc.cluster.local:8012

@@ -17,7 +17,7 @@ const nextConfig = {
         // Source path: This is what your frontend code must now call.
         source: '/api/v1/:path*',
         // Destination: Next.js forwards the request to your Dockerized backend on port 8012.
-        destination: 'http://localhost:8012/:path*',
+        destination: 'http://api.alphintra.com/:path*',
       },
     ];
   },
