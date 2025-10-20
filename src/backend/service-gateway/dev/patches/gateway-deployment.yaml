@@ -21,7 +21,7 @@ spec:
               value: http://trading-engine.alphintra.svc.cluster.local:8008
             - name: MARKETPLACE_SERVICE_URI
               valueFrom: null
-              value: http://marketplace-service.alphintra.svc.cluster.local:8200
+              value: http://marketplace-service.alphintra.svc.cluster.local:8012
             - name: GRAPHQL_SERVICE_URI
               valueFrom: null
               value: http://graphql-service.alphintra.svc.cluster.local:8300
