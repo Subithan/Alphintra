@@ -26,6 +26,7 @@ import {
   Star
 } from 'lucide-react'
 import { EditorMode } from './EnhancedIDE'
+import type { CodeGenerationResponse } from '@/lib/stores/ai-code-store'
 
 interface Message {
   id: string
@@ -59,7 +60,7 @@ interface File {
 interface AIAssistantPanelProps {
   mode: EditorMode
   currentFile: File | null
-  onGenerate: (prompt: string) => Promise<void>
+  onGenerate: (prompt: string) => Promise<CodeGenerationResponse | void>
   onExplain: (selectedText?: string) => Promise<void>
   onOptimize: () => Promise<void>
   onDebug: (errorMessage?: string) => Promise<void>
@@ -81,7 +82,7 @@ export function AIAssistantPanel({
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your specialized Trading Strategy AI Assistant. I can help you create trading algorithms, implement technical indicators, develop risk management systems, build backtesting frameworks, and optimize trading strategies. What trading solution would you like to develop?',
+      content: 'Hello! I\'m your specialized Trading Strategy AI Assistant. I can help you create trading algorithms, implement technical indicators, develop risk management systems, build backtesting frameworks, and optimize trading strategies. When I make edits, the IDE applies them automatically—watch for the Keep/Undo banner if you want to review or revert. What trading solution would you like to develop?',
       timestamp: new Date()
     }
   ])
@@ -128,6 +129,45 @@ export function AIAssistantPanel({
     setMessages(prev => [...prev, newMessage])
   }
 
+  const formatGenerationMessage = (result: CodeGenerationResponse): string => {
+    const parts: string[] = []
+    if (result.code) {
+      const trimmed = result.code.trim()
+      const codeBlock = trimmed.startsWith('```') ? trimmed : ['```', trimmed, '```'].join('\n')
+      parts.push(codeBlock)
+    }
+
+    if (result.explanation) {
+      parts.push(`**Explanation:** ${result.explanation}`)
+    }
+
+    if (result.suggestions?.length) {
+      parts.push(
+        '**Suggestions:**',
+        result.suggestions.map(s => `- ${s}`).join('\n')
+      )
+    }
+
+    return parts.join('\n\n')
+  }
+
+  const addGenerationResponseMessage = (
+    result: CodeGenerationResponse,
+    operation: string
+  ) => {
+    addMessage({
+      type: 'assistant',
+      content: formatGenerationMessage(result),
+      timestamp: new Date(),
+      metadata: {
+        operation,
+        tokensUsed: result.tokens_used,
+        provider: result.provider,
+        confidence: result.confidence_score
+      }
+    })
+  }
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isGenerating) return
 
@@ -147,13 +187,17 @@ export function AIAssistantPanel({
       
       if (lowerMessage.includes('generate') || lowerMessage.includes('create') || lowerMessage.includes('write')) {
         // Code generation
-        await onGenerate(userMessage)
-        addMessage({
-          type: 'assistant',
-          content: 'I\'ve generated code based on your request. Check the editor for the results!',
-          timestamp: new Date(),
-          metadata: { operation: 'generate' }
-        })
+        const generation = await onGenerate(userMessage)
+        if (generation) {
+          addGenerationResponseMessage(generation, 'generate')
+        } else {
+          addMessage({
+            type: 'assistant',
+            content: 'I attempted to generate the code, but no changes were returned. Please review the editor.',
+            timestamp: new Date(),
+            metadata: { operation: 'generate' }
+          })
+        }
       } else if (lowerMessage.includes('explain') || lowerMessage.includes('what does')) {
         // Code explanation
         await onExplain()
@@ -183,12 +227,16 @@ export function AIAssistantPanel({
         })
       } else {
         // General chat - use generate for now
-        await onGenerate(userMessage)
-        addMessage({
-          type: 'assistant',
-          content: 'I\'ve processed your request. Let me know if you need any clarifications or modifications!',
-          timestamp: new Date()
-        })
+        const generation = await onGenerate(userMessage)
+        if (generation) {
+          addGenerationResponseMessage(generation, 'generate')
+        } else {
+          addMessage({
+            type: 'assistant',
+            content: 'I processed your request, but I could not produce updated code. Let me know if you need further adjustments.',
+            timestamp: new Date()
+          })
+        }
       }
     } catch (error) {
       addMessage({
@@ -231,7 +279,12 @@ export function AIAssistantPanel({
           content: 'Generate unit tests for this code',
           timestamp: new Date()
         })
-        await onGenerate('Generate comprehensive unit tests for this code')
+        {
+          const generation = await onGenerate('Generate comprehensive unit tests for this code')
+          if (generation) {
+            addGenerationResponseMessage(generation, 'generate-tests')
+          }
+        }
         break
     }
   }
@@ -295,7 +348,10 @@ export function AIAssistantPanel({
 
         <TabsContent value="chat" className="flex-1 flex flex-col mx-4 h-full data-[state=active]:flex data-[state=active]:flex-col">
           {/* Chat Messages */}
-          <ScrollArea ref={scrollAreaRef} className="flex-1 mb-4 min-h-0 overflow-auto h-0">
+          <ScrollArea
+            ref={scrollAreaRef}
+            className="flex-1 mb-4 min-h-0 max-h-[55vh] overflow-y-auto"
+          >
             <div className="space-y-4 pr-4">
               {messages.map((message) => (
                 <div

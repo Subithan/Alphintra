@@ -443,12 +443,13 @@ class DatabaseStrategyHandler:
 
 
 # Convenience functions for main.py integration
-def execute_database_strategy_mode(workflow: NoCodeWorkflow, 
+def execute_database_strategy_mode(workflow: NoCodeWorkflow,
                                  execution_config: Dict[str, Any],
+                                 user_id: int,
                                  db: Session) -> Dict[str, Any]:
     """Convenience function for main.py integration"""
     handler = DatabaseStrategyHandler()
-    return handler.execute_strategy_mode(workflow, execution_config, db)
+    return handler.execute_strategy_mode(workflow, execution_config, user_id, db)
 
 
 def get_strategy_from_database(workflow_id: int, 

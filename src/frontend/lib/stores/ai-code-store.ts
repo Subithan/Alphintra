@@ -34,7 +34,7 @@ interface CodeDebuggingRequest {
   preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
-interface CodeGenerationResponse {
+export interface CodeGenerationResponse {
   success: boolean
   code: string
   explanation: string
@@ -224,6 +224,14 @@ const initialUsage: AICodeState['usage'] = {
   }
 }
 
+const SUPPORTED_PROVIDERS: Array<AICodeState['settings']['defaultProvider']> = ['gemini']
+
+const normalizeProvider = (
+  requested?: 'openai' | 'anthropic' | 'gemini'
+): 'gemini' => {
+  return SUPPORTED_PROVIDERS.includes(requested as any) ? (requested as 'gemini') : 'gemini'
+}
+
 const initialState: AICodeState = {
   isGenerating: false,
   isExplaining: false,
@@ -262,7 +270,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider,
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              ),
               complexity_level: request.complexity_level || get().settings.defaultComplexity,
               include_comments: request.include_comments ?? get().settings.includeComments,
               max_tokens: request.max_tokens || get().settings.maxTokens
@@ -325,7 +335,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              )
             })
           })
           
@@ -385,7 +397,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              )
             })
           })
           
@@ -445,7 +459,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              )
             })
           })
           
@@ -506,7 +522,7 @@ export const useAICodeStore = create<AICodeStore>()(
             body: JSON.stringify({
               ...request,
               test_type: request.test_type || 'unit',
-              preferred_provider: get().settings.defaultProvider
+              preferred_provider: normalizeProvider(get().settings.defaultProvider)
             })
           })
           
