@@ -26,6 +26,7 @@ import {
   Star
 } from 'lucide-react'
 import { EditorMode } from './EnhancedIDE'
+import type { CodeGenerationResponse } from '@/lib/stores/ai-code-store'
 
 interface Message {
   id: string
@@ -59,7 +60,7 @@ interface File {
 interface AIAssistantPanelProps {
   mode: EditorMode
   currentFile: File | null
-  onGenerate: (prompt: string) => Promise<void>
+  onGenerate: (prompt: string) => Promise<CodeGenerationResponse | void>
   onExplain: (selectedText?: string) => Promise<void>
   onOptimize: () => Promise<void>
   onDebug: (errorMessage?: string) => Promise<void>
@@ -81,7 +82,7 @@ export function AIAssistantPanel({
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI coding assistant. I can help you generate code, explain concepts, optimize performance, debug issues, and create tests. What would you like to work on?',
+      content: 'Hello! I\'m your specialized Trading Strategy AI Assistant. I can help you create trading algorithms, implement technical indicators, develop risk management systems, build backtesting frameworks, and optimize trading strategies. When I make edits, the IDE applies them automatically—watch for the Keep/Undo banner if you want to review or revert. What trading solution would you like to develop?',
       timestamp: new Date()
     }
   ])
@@ -89,7 +90,7 @@ export function AIAssistantPanel({
   const [activeTab, setActiveTab] = useState('chat')
   const [suggestions, setSuggestions] = useState<CodeSuggestion[]>([])
   const [complexity, setComplexity] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
-  const [provider, setProvider] = useState<'openai' | 'anthropic'>('openai')
+  const [provider, setProvider] = useState<'openai' | 'anthropic' | 'gemini'>('gemini')
   const [contextMode, setContextMode] = useState<'full' | 'selection' | 'none'>('full')
   
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -97,10 +98,28 @@ export function AIAssistantPanel({
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
-    }
+    setTimeout(() => {
+      const scrollArea = scrollAreaRef.current
+      if (scrollArea) {
+        const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]')
+        if (viewport) {
+          viewport.scrollTop = viewport.scrollHeight
+        }
+      }
+    }, 100)
   }, [messages])
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      const scrollArea = scrollAreaRef.current
+      if (scrollArea) {
+        const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]')
+        if (viewport) {
+          viewport.scrollTop = viewport.scrollHeight
+        }
+      }
+    }, 100)
+  }
 
   const addMessage = (message: Omit<Message, 'id'>) => {
     const newMessage: Message = {
@@ -108,6 +127,45 @@ export function AIAssistantPanel({
       id: Date.now().toString()
     }
     setMessages(prev => [...prev, newMessage])
+  }
+
+  const formatGenerationMessage = (result: CodeGenerationResponse): string => {
+    const parts: string[] = []
+    if (result.code) {
+      const trimmed = result.code.trim()
+      const codeBlock = trimmed.startsWith('```') ? trimmed : ['```', trimmed, '```'].join('\n')
+      parts.push(codeBlock)
+    }
+
+    if (result.explanation) {
+      parts.push(`**Explanation:** ${result.explanation}`)
+    }
+
+    if (result.suggestions?.length) {
+      parts.push(
+        '**Suggestions:**',
+        result.suggestions.map(s => `- ${s}`).join('\n')
+      )
+    }
+
+    return parts.join('\n\n')
+  }
+
+  const addGenerationResponseMessage = (
+    result: CodeGenerationResponse,
+    operation: string
+  ) => {
+    addMessage({
+      type: 'assistant',
+      content: formatGenerationMessage(result),
+      timestamp: new Date(),
+      metadata: {
+        operation,
+        tokensUsed: result.tokens_used,
+        provider: result.provider,
+        confidence: result.confidence_score
+      }
+    })
   }
 
   const handleSendMessage = async () => {
@@ -129,13 +187,17 @@ export function AIAssistantPanel({
       
       if (lowerMessage.includes('generate') || lowerMessage.includes('create') || lowerMessage.includes('write')) {
         // Code generation
-        await onGenerate(userMessage)
-        addMessage({
-          type: 'assistant',
-          content: 'I\'ve generated code based on your request. Check the editor for the results!',
-          timestamp: new Date(),
-          metadata: { operation: 'generate' }
-        })
+        const generation = await onGenerate(userMessage)
+        if (generation) {
+          addGenerationResponseMessage(generation, 'generate')
+        } else {
+          addMessage({
+            type: 'assistant',
+            content: 'I attempted to generate the code, but no changes were returned. Please review the editor.',
+            timestamp: new Date(),
+            metadata: { operation: 'generate' }
+          })
+        }
       } else if (lowerMessage.includes('explain') || lowerMessage.includes('what does')) {
         // Code explanation
         await onExplain()
@@ -165,12 +227,16 @@ export function AIAssistantPanel({
         })
       } else {
         // General chat - use generate for now
-        await onGenerate(userMessage)
-        addMessage({
-          type: 'assistant',
-          content: 'I\'ve processed your request. Let me know if you need any clarifications or modifications!',
-          timestamp: new Date()
-        })
+        const generation = await onGenerate(userMessage)
+        if (generation) {
+          addGenerationResponseMessage(generation, 'generate')
+        } else {
+          addMessage({
+            type: 'assistant',
+            content: 'I processed your request, but I could not produce updated code. Let me know if you need further adjustments.',
+            timestamp: new Date()
+          })
+        }
       }
     } catch (error) {
       addMessage({
@@ -213,7 +279,12 @@ export function AIAssistantPanel({
           content: 'Generate unit tests for this code',
           timestamp: new Date()
         })
-        await onGenerate('Generate comprehensive unit tests for this code')
+        {
+          const generation = await onGenerate('Generate comprehensive unit tests for this code')
+          if (generation) {
+            addGenerationResponseMessage(generation, 'generate-tests')
+          }
+        }
         break
     }
   }
@@ -238,7 +309,7 @@ export function AIAssistantPanel({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center space-x-2">
@@ -258,7 +329,8 @@ export function AIAssistantPanel({
         </CardTitle>
       </CardHeader>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+      <CardContent className="flex-1 flex flex-col p-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
         <TabsList className="mx-4 mb-2">
           <TabsTrigger value="chat" className="flex items-center space-x-1">
             <MessageSquare className="h-3 w-3" />
@@ -274,9 +346,12 @@ export function AIAssistantPanel({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="chat" className="flex-1 flex flex-col mx-4">
+        <TabsContent value="chat" className="flex-1 flex flex-col mx-4 h-full data-[state=active]:flex data-[state=active]:flex-col">
           {/* Chat Messages */}
-          <ScrollArea ref={scrollAreaRef} className="flex-1 mb-4">
+          <ScrollArea
+            ref={scrollAreaRef}
+            className="flex-1 mb-4 min-h-0 max-h-[55vh] overflow-y-auto"
+          >
             <div className="space-y-4 pr-4">
               {messages.map((message) => (
                 <div
@@ -348,9 +423,9 @@ export function AIAssistantPanel({
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder={
-                  mode === 'ai-first' 
-                    ? 'Describe what you want to build in natural language...'
-                    : 'Ask me anything about your code...'
+                  mode === 'ai-first'
+                    ? 'Describe the trading strategy you want to create...'
+                    : 'Ask me about trading strategies, indicators, or your code...'
                 }
                 className="flex-1 min-h-[60px] resize-none"
                 onKeyDown={(e) => {
@@ -427,39 +502,129 @@ export function AIAssistantPanel({
             </div>
 
             <div>
-              <h3 className="text-sm font-medium mb-2">Code Templates</h3>
+              <h3 className="text-sm font-medium mb-2">Trading Strategy Templates</h3>
               <div className="space-y-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a basic trading strategy class with buy/sell signals')}
+                  onClick={() => onGenerate('Create a moving average crossover strategy with SMA and EMA signals')}
                 >
-                  Trading Strategy Template
+                  📈 Moving Average Crossover
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a technical indicator calculator with SMA, EMA, RSI')}
+                  onClick={() => onGenerate('Create a RSI-based mean reversion strategy with overbought/oversold signals')}
                 >
-                  Technical Indicators
+                  🔄 RSI Mean Reversion
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a backtesting framework with performance metrics')}
+                  onClick={() => onGenerate('Create a Bollinger Bands breakout strategy with volatility filters')}
                 >
-                  Backtesting Framework
+                  📊 Bollinger Bands Breakout
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full justify-start text-xs"
-                  onClick={() => onGenerate('Create a risk management system with position sizing')}
+                  onClick={() => onGenerate('Create a MACD momentum strategy with signal line crossovers')}
                 >
-                  Risk Management
+                  ⚡ MACD Momentum Strategy
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium mb-2">Technical Indicators</h3>
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Implement a complete set of technical indicators: SMA, EMA, RSI, MACD, Bollinger Bands, ATR')}
+                >
+                  📊 Complete Indicator Suite
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Create a custom technical indicator combining multiple signals')}
+                >
+                  🔧 Custom Indicator
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Implement an adaptive indicator that adjusts to market volatility')}
+                >
+                  🎯 Adaptive Indicator
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium mb-2">Risk & Portfolio</h3>
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Create a comprehensive risk management system with position sizing, stop-loss, and take-profit')}
+                >
+                  🛡️ Risk Management System
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Implement a portfolio optimization strategy using Modern Portfolio Theory')}
+                >
+                  📈 Portfolio Optimizer
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Create a drawdown control system with portfolio heat management')}
+                >
+                  🌡️ Drawdown Control
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium mb-2">Backtesting & Analysis</h3>
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Create a professional backtesting framework with Sharpe ratio, max drawdown, and other metrics')}
+                >
+                  📊 Backtesting Framework
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Implement market regime detection and strategy adaptation logic')}
+                >
+                  🔄 Market Regime Detection
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => onGenerate('Create performance attribution analysis to understand strategy drivers')}
+                >
+                  📈 Performance Attribution
                 </Button>
               </div>
             </div>
@@ -487,11 +652,12 @@ export function AIAssistantPanel({
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">AI Provider</label>
-              <Select value={provider} onValueChange={(value: 'openai' | 'anthropic') => setProvider(value)}>
+              <Select value={provider} onValueChange={(value: 'openai' | 'anthropic' | 'gemini') => setProvider(value)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="gemini">Google Gemini (Trading AI)</SelectItem>
                   <SelectItem value="openai">OpenAI GPT-4</SelectItem>
                   <SelectItem value="anthropic">Anthropic Claude</SelectItem>
                 </SelectContent>
@@ -536,6 +702,7 @@ export function AIAssistantPanel({
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -30,9 +30,7 @@ import {
   ChevronRight,
   ChevronDown,
   Plus,
-  Edit3,
-  Check,
-  X
+  Edit3
 } from 'lucide-react'
 import Editor from '@monaco-editor/react'
 import { ProjectExplorer } from './ProjectExplorer'
@@ -40,6 +38,7 @@ import type { ProjectFile as ExplorerFile, Project as ExplorerProject } from './
 import { AIAssistantPanel } from './AIAssistantPanel'
 import { TerminalPanel } from './TerminalPanel'
 import { useAICodeStore } from '@/lib/stores/ai-code-store'
+import type { CodeGenerationResponse } from '@/lib/stores/ai-code-store'
 import { useAICodeOperationStates } from '@/lib/stores/ai-code-store'
 import { useTheme } from 'next-themes'
 import { CommandPalette } from './CommandPalette'
@@ -49,6 +48,41 @@ import { fileManagementApi, type ProjectInfo as BackendProject, type FileInfo as
 export type EditorMode = 'traditional' | 'ai-assisted' | 'ai-first'
 
 type IDEFile = ExplorerFile
+
+type AIChangeOperation = 'generate' | 'optimize' | 'debug' | 'test'
+
+const stripMarkdownCodeFences = (value: string): string => {
+  if (!value) return ''
+  const trimmed = value.trim()
+  if (!trimmed.startsWith('```')) {
+    return value
+  }
+
+  const lines = trimmed.split('\n')
+  // remove opening fence
+  lines.shift()
+  // remove closing fence(s)
+  while (lines.length && lines[lines.length - 1].trim().startsWith('```')) {
+    lines.pop()
+  }
+  return lines.join('\n')
+}
+
+interface PendingChange {
+  id: string
+  fileId: string
+  fileName: string
+  operation: AIChangeOperation
+  prevContent: string
+  newContent: string
+  metadata?: {
+    prompt?: string
+    notes?: string
+    rawCode?: string
+    explanation?: string
+  }
+  timestamp: number
+}
 
 interface Project extends ExplorerProject {
   settings: {
@@ -89,6 +123,7 @@ export function EnhancedIDE({
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
   const [isEditingProjectName, setIsEditingProjectName] = useState(false)
   const [editingProjectName, setEditingProjectName] = useState('')
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null)
 
   const editorRef = useRef<any>(null)
   const resizeTimeoutRef = useRef<NodeJS.Timeout>()
@@ -438,27 +473,48 @@ export function EnhancedIDE({
     }
   }, [activeFile, onRun])
 
-  const handleAIGenerate = async (prompt: string) => {
+  const handleAIGenerate = async (prompt: string): Promise<CodeGenerationResponse | void> => {
     if (!activeFile) return
     
+    const currentContent = editorRef.current?.getValue?.() ?? activeFile.content ?? ''
+    const combinedPrompt = [
+      prompt.trim(),
+      '',
+      `Current contents of ${activeFile.name}:`,
+      '```' + (activeFile.language || ''),
+      currentContent,
+      '```',
+      '',
+      `Please return the full updated contents of ${activeFile.name} as plain code (no markdown fences).`
+    ].join('\n')
+
     try {
       const result = await generateCode({
-        prompt,
-        context: activeFile.content,
+        prompt: combinedPrompt,
+        context: currentContent,
         language: activeFile.language,
         complexity_level: 'intermediate',
         include_comments: true
       })
       
       if (result.code) {
-        // Replace or append generated code
-        const currentContent = editorRef.current?.getValue() || ''
-        const newContent = currentContent + '\n\n' + result.code
-        editorRef.current?.setValue(newContent)
-        handleEditorChange(newContent)
+        applyAIChange({
+          newContent: result.code,
+          prevContent: currentContent,
+          operation: 'generate',
+          metadata: { 
+            prompt,
+            rawCode: result.code,
+            explanation: result.explanation
+          }
+        })
       }
+
+      return result
     } catch (error) {
       console.error('AI generation failed:', error)
+      setNotification({ type: 'error', message: 'AI generation failed' })
+      setTimeout(() => setNotification(null), 3000)
     }
   }
 
@@ -490,11 +546,18 @@ export function EnhancedIDE({
       })
       
       if (result.optimized_code) {
-        editorRef.current?.setValue(result.optimized_code)
-        handleEditorChange(result.optimized_code)
+        const currentContent = editorRef.current?.getValue?.() || activeFile.content || ''
+        applyAIChange({
+          newContent: result.optimized_code,
+          prevContent: currentContent,
+          operation: 'optimize',
+          metadata: { notes: 'Performance optimization', rawCode: result.optimized_code }
+        })
       }
     } catch (error) {
       console.error('AI optimization failed:', error)
+      setNotification({ type: 'error', message: 'AI optimization failed' })
+      setTimeout(() => setNotification(null), 3000)
     }
   }
 
@@ -579,6 +642,52 @@ export function EnhancedIDE({
 
     setTimeout(() => setNotification(null), 3000)
   }, [currentProject])
+
+  const applyAIChange = useCallback((
+    change: {
+      newContent: string
+      prevContent: string
+      operation: AIChangeOperation
+      metadata?: PendingChange['metadata']
+    }
+  ) => {
+    if (!activeFile) return
+
+    const editorInstance = editorRef.current
+    const sanitizedContent = stripMarkdownCodeFences(change.newContent)
+
+    if (sanitizedContent === change.prevContent) {
+      setNotification({
+        type: 'error',
+        message: 'AI did not provide any changes to apply.'
+      })
+      setTimeout(() => setNotification(null), 3000)
+      return
+    }
+
+    if (editorInstance?.setValue) {
+      editorInstance.setValue(sanitizedContent)
+    }
+
+    handleEditorChange(sanitizedContent)
+
+    setPendingChange({
+      id: `${Date.now()}`,
+      fileId: activeFile.id,
+      fileName: activeFile.name,
+      operation: change.operation,
+      prevContent: change.prevContent,
+      newContent: sanitizedContent,
+      metadata: change.metadata,
+      timestamp: Date.now()
+    })
+
+    setNotification({
+      type: 'success',
+      message: `AI ${change.operation} applied to ${activeFile.name}`
+    })
+    setTimeout(() => setNotification(null), 3000)
+  }, [activeFile, handleEditorChange])
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -691,30 +800,54 @@ export function EnhancedIDE({
     setIsEditingProjectName(true)
   }, [currentProject?.name])
 
-  const saveProjectName = useCallback(() => {
-    if (!currentProject || !editingProjectName.trim()) {
+  const saveProjectName = useCallback(async () => {
+    if (!currentProject) {
       setIsEditingProjectName(false)
       return
     }
 
-    const updatedProject = {
-      ...currentProject,
-      name: editingProjectName.trim()
+    const trimmedName = editingProjectName.trim()
+
+    if (!trimmedName) {
+      setEditingProjectName(currentProject.name || '')
+      setIsEditingProjectName(false)
+      return
     }
 
-    startTransition(() => {
-      setCurrentProject(updatedProject)
+    if (trimmedName === currentProject.name) {
+      setIsEditingProjectName(false)
+      return
+    }
+
+    try {
+      if (currentProject.id && currentProject.id !== 'default') {
+        const updatedProject = await fileManagementApi.updateProject(currentProject.id, { name: trimmedName })
+
+        startTransition(() => {
+          setCurrentProject(prev => prev ? { ...prev, name: updatedProject.name } : prev)
+        })
+      } else {
+        startTransition(() => {
+          setCurrentProject(prev => prev ? { ...prev, name: trimmedName } : prev)
+        })
+      }
+
+      setEditingProjectName(trimmedName)
       setIsEditingProjectName(false)
       setNotification({ type: 'success', message: 'Project name updated' })
-    })
-
-    setTimeout(() => setNotification(null), 3000)
+    } catch (error) {
+      console.error('Failed to update project name:', error)
+      const message = error instanceof Error ? error.message : 'Failed to update project name'
+      setNotification({ type: 'error', message })
+    } finally {
+      setTimeout(() => setNotification(null), 3000)
+    }
   }, [currentProject, editingProjectName])
 
   const cancelEditingProjectName = useCallback(() => {
     setIsEditingProjectName(false)
-    setEditingProjectName('')
-  }, [])
+    setEditingProjectName(currentProject?.name || '')
+  }, [currentProject?.name])
 
   // Command palette commands
   // Auto-save functionality
@@ -804,13 +937,52 @@ export function EnhancedIDE({
       })
       
       if (result.corrected_code) {
-        editorRef.current?.setValue(result.corrected_code)
-        handleEditorChange(result.corrected_code)
+        const currentContent = editorRef.current?.getValue?.() || activeFile.content || ''
+        applyAIChange({
+          newContent: result.corrected_code,
+          prevContent: currentContent,
+          operation: 'debug',
+          metadata: { notes: errorMessage, rawCode: result.corrected_code }
+        })
       }
     } catch (error) {
       console.error('AI debugging failed:', error)
+      setNotification({ type: 'error', message: 'AI debugging failed' })
+      setTimeout(() => setNotification(null), 3000)
     }
   }
+
+  const undoPendingAIChange = useCallback(() => {
+    if (!pendingChange) return
+
+    const previous = pendingChange.prevContent
+    if (editorRef.current?.setValue) {
+      editorRef.current.setValue(previous)
+    }
+
+    handleEditorChange(previous)
+    setPendingChange(null)
+    setNotification({ type: 'success', message: 'AI changes undone' })
+    setTimeout(() => setNotification(null), 3000)
+  }, [pendingChange, handleEditorChange])
+
+  const keepPendingAIChange = useCallback(() => {
+    if (!pendingChange) return
+
+    setPendingChange(null)
+    setNotification({ type: 'success', message: 'AI changes kept' })
+    setTimeout(() => setNotification(null), 3000)
+  }, [pendingChange])
+
+  useEffect(() => {
+    if (!pendingChange || !activeFile) return
+    if (pendingChange.fileId !== activeFile.id) return
+
+    const editorContent = editorRef.current?.getValue?.() ?? activeFile.content ?? ''
+    if (editorContent === pendingChange.prevContent) {
+      setPendingChange(null)
+    }
+  }, [pendingChange, activeFile])
 
   const getEditorModeIcon = (mode: EditorMode) => {
     switch (mode) {
@@ -827,6 +999,11 @@ export function EnhancedIDE({
       case 'ai-first': return 'Natural language programming interface'
     }
   }
+
+  const resolvedProjectName = currentProject?.name || 'Enhanced IDE'
+  const displayProjectName = isMobile
+    ? (resolvedProjectName.length > 12 ? `${resolvedProjectName.slice(0, 12)}...` : resolvedProjectName)
+    : resolvedProjectName
 
   if (isLoading) {
     return (
@@ -854,6 +1031,32 @@ export function EnhancedIDE({
             )}
             <span className="text-sm font-medium">{notification.message}</span>
           </div>
+        </div>
+      )}
+
+      {pendingChange && activeFile && pendingChange.fileId === activeFile.id && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm">
+          <Card className="border border-primary/40 shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center space-x-2">
+                <Bot className="h-4 w-4" />
+                <span>AI updated {pendingChange.fileName}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Changes from the AI {pendingChange.operation} were applied automatically. Keep them or undo to restore the previous version.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={undoPendingAIChange}>
+                  Undo
+                </Button>
+                <Button size="sm" onClick={keepPendingAIChange}>
+                  Keep
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -893,37 +1096,36 @@ export function EnhancedIDE({
           {/* Editable Project Name */}
           <div className="flex items-center space-x-2">
             {isEditingProjectName ? (
-              <div className="ide-project-name-edit flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={editingProjectName}
-                  onChange={(e) => setEditingProjectName(e.target.value)}
-                  onBlur={saveProjectName}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveProjectName()
-                    if (e.key === 'Escape') cancelEditingProjectName()
-                  }}
-                  className="bg-transparent border-none outline-none font-semibold text-lg px-2 py-1 rounded"
-                  autoFocus
-                />
-                <Button size="sm" variant="ghost" onClick={saveProjectName}>
-                  <Check className="h-3 w-3" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={cancelEditingProjectName}>
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
+              <input
+                type="text"
+                value={editingProjectName}
+                onChange={(e) => setEditingProjectName(e.target.value)}
+                onBlur={() => {
+                  void saveProjectName()
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    void saveProjectName()
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault()
+                    cancelEditingProjectName()
+                  }
+                }}
+                className="w-full max-w-xs border border-primary/40 bg-background px-2 py-1 rounded-md font-semibold text-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                placeholder="Project name"
+                autoFocus
+              />
             ) : (
-              <h1
-                className={`ide-project-name font-semibold cursor-pointer px-2 py-1 rounded transition-all duration-300 hover:bg-muted ${isMobile ? 'text-base' : 'text-lg'}`}
+              <button
+                type="button"
+                className={`ide-project-name font-semibold cursor-pointer px-2 py-1 rounded transition-all duration-300 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary ${isMobile ? 'text-base' : 'text-lg'}`}
                 onClick={startEditingProjectName}
                 title="Click to edit project name"
               >
-                {isMobile
-                  ? (currentProject?.name || 'IDE').slice(0, 12) + '...'
-                  : currentProject?.name || 'Enhanced IDE'
-                }
-              </h1>
+                {displayProjectName}
+              </button>
             )}
           </div>
 

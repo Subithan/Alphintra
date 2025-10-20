@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: alphintra
+resources:
+  - customer-support-service
+patches:
+  - path: patches/customer-support-deployment.yaml
+  - path: patches/customer-support-service-cloudsql.yaml
+  - path: patches/customer-support-service-serviceaccount.yaml
+images:
+  - name: us-central1-docker.pkg.dev/alphintra-472817/alphintra/customer-support-service
+    newTag: latest
+configMapGenerator:
+  - name: customer-support-service-config
+    behavior: merge
+    literals:
+      - log-level=DEBUG
+      - redis-host=redis.alphintra.svc.cluster.local
+      - redis-port=6379
+      - elasticsearch-host=elasticsearch.alphintra.svc.cluster.local
+      - elasticsearch-port=9200
+secretGenerator:
+  - name: customer-support-service-secrets
+    behavior: merge
+    literals:
+      - database-url=jdbc:postgresql://127.0.0.1:5432/alphintra_customer_support
+      - db-user=customer_support
+      - db-password=alphintra@123
+      - jwt-secret=U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=
