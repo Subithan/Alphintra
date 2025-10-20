@@ -1,20 +1,30 @@
-// Marketplace API base URL (override with NEXT_PUBLIC_MARKETPLACE_API_URL if needed)
+import { getUserId } from '@/lib/auth';
+
 const MARKETPLACE_API_URL =
   process.env.NEXT_PUBLIC_MARKETPLACE_API_URL ?? 'http://localhost:8012';
 
-// Stripe Publishable Key - This is safe to expose in the frontend
-const STRIPE_PUBLISHABLE_KEY = 
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
-  'pk_test_51SJrdmI8b6luJNpeyPm1TkxA1ZJTolJ1AfcNvW8zeaLHdB2V81YyqbXQeVJNxzfEgiOtAOt3t3Yq6gxRbWgvNvbe00c3VIQ4Eu';
+export interface PurchasePayload {
+  buyerId?: number;
+  notes?: string;
+}
 
-/**
- * Calls the marketplace service to record a purchase for a strategy.
- * The backend will create an order with status `paid` and increment subscriber count.
- */
+export interface PurchaseResponse {
+  id: number;
+  strategy_id: number;
+  buyer_id: number;
+  status: string;
+  notes?: string | null;
+}
+
 export async function purchaseStrategy(
   strategyId: string | number,
-  payload: PurchasePayload
+  payload: PurchasePayload = {}
 ): Promise<PurchaseResponse> {
+  const buyerId = payload.buyerId ?? getUserId();
+  if (!buyerId) {
+    throw new Error('Unable to determine current user. Please sign in again.');
+  }
+
   const endpoint = `${MARKETPLACE_API_URL}/strategies/${strategyId}/purchase`;
 
   const response = await fetch(endpoint, {
@@ -23,7 +33,7 @@ export async function purchaseStrategy(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      buyer_id: payload.buyerId,
+      buyer_id: buyerId,
       notes: payload.notes ?? null,
     }),
   });

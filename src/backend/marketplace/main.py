@@ -8,8 +8,20 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from database import create_db_and_tables, get_session, seed_demo_data
-from model import OrderCreate, OrderRead, StrategyCreate, StrategyRead
-from service import purchase_strategy, create_strategy, list_orders, list_strategies
+from model import (
+    OrderCreate,
+    OrderRead,
+    OrderWithStrategyRead,
+    StrategyCreate,
+    StrategyRead,
+)
+from service import (
+    purchase_strategy,
+    create_strategy,
+    list_orders,
+    list_orders_for_buyer,
+    list_strategies,
+)
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
@@ -56,6 +68,11 @@ def buy_strategy(strategy_id: int, order: OrderCreate, db: SessionDep):
 @app.get("/orders", response_model=List[OrderRead])
 def read_orders(db: SessionDep):
     return list_orders(db)
+
+
+@app.get("/orders/by-buyer/{buyer_id}", response_model=List[OrderWithStrategyRead])
+def read_orders_for_buyer(buyer_id: int, db: SessionDep):
+    return list_orders_for_buyer(db, buyer_id)
 
 
 @app.get("/health")

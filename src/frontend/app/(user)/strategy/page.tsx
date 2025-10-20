@@ -6,6 +6,7 @@ import GradientBorder from '@/components/ui/GradientBorder';
 import { Plus, Plug, ShoppingCart, User } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { fetchMyStrategies, MyStrategySummary } from "@/lib/api/myStrategies";
+import { fetchOrdersForCurrentUser, PurchasedStrategy } from "@/app/api/ordersApi";
 
 export default function Strategy() {
   const { resolvedTheme } = useTheme();
@@ -13,6 +14,9 @@ export default function Strategy() {
   const [myStrategies, setMyStrategies] = useState<MyStrategySummary[]>([]);
   const [loadingStrategies, setLoadingStrategies] = useState(true);
   const [strategiesError, setStrategiesError] = useState<string | null>(null);
+  const [boughtStrategies, setBoughtStrategies] = useState<PurchasedStrategy[]>([]);
+  const [loadingBought, setLoadingBought] = useState(true);
+  const [boughtError, setBoughtError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -43,6 +47,22 @@ export default function Strategy() {
         setStrategiesError(err.message ?? "Failed to load strategies");
       })
       .finally(() => setLoadingStrategies(false));
+  }, [mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    setLoadingBought(true);
+    fetchOrdersForCurrentUser()
+      .then((orders) => {
+        setBoughtStrategies(orders);
+        setBoughtError(null);
+      })
+      .catch((err) => {
+        console.error("Failed to load purchased strategies", err);
+        setBoughtError(err.message ?? "Failed to load purchased strategies");
+      })
+      .finally(() => setLoadingBought(false));
   }, [mounted]);
 
   if (!mounted) return null;
@@ -115,67 +135,54 @@ export default function Strategy() {
             <ShoppingCart className="w-5 h-5 text-green-500" />
             <h3 className="text-xl font-semibold">Bought Strategies</h3>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <div>
-                  <div className="font-medium">Professional Scalping Bot</div>
-                  <div className="text-sm text-muted-foreground">High-frequency trading • By @TradingPro</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-green-500 font-semibold">+18.7%</span>
-                <button 
-                  onClick={() => handlePluginClick("Professional Scalping Bot")}
-                  className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
-                >
-                  <Plug className="w-3 h-3" />
-                  Plugin
-                </button>
-              </div>
+          {loadingBought ? (
+            <p className="text-sm text-muted-foreground">Loading purchases...</p>
+          ) : boughtError ? (
+            <p className="text-sm text-red-500">{boughtError}</p>
+          ) : boughtStrategies.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You haven&apos;t purchased any strategies yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {boughtStrategies.map((purchase) => {
+                const price =
+                  purchase.strategy.priceCents === 0
+                    ? 'Free'
+                    : `$${(purchase.strategy.priceCents / 100).toFixed(2)}`;
+                return (
+                  <div
+                    key={purchase.orderId}
+                    className="flex items-center justify-between p-4 bg-muted/20 rounded-lg"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      <div>
+                        <div className="font-medium">
+                          {purchase.strategy.name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Order #{purchase.orderId} • {purchase.status}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {price} • Subscribers: {purchase.strategy.subscriberCount}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() =>
+                          handlePluginClick(purchase.strategy.name)
+                        }
+                        className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
+                      >
+                        <Plug className="w-3 h-3" />
+                        Plugin
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <div>
-                  <div className="font-medium">Arbitrage Master</div>
-                  <div className="text-sm text-muted-foreground">Cross-exchange arbitrage • By @ArbitrageKing</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-green-500 font-semibold">+15.2%</span>
-                <button 
-                  onClick={() => handlePluginClick("Arbitrage Master")}
-                  className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
-                >
-                  <Plug className="w-3 h-3" />
-                  Plugin
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
-                <div>
-                  <div className="font-medium">AI Sentiment Trader</div>
-                  <div className="text-sm text-muted-foreground">News sentiment analysis • By @AITrader</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-green-500 font-semibold">+22.4%</span>
-                <button 
-                  onClick={() => handlePluginClick("AI Sentiment Trader")}
-                  className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
-                >
-                  <Plug className="w-3 h-3" />
-                  Plugin
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </GradientBorder>
       </div>
     </div>
