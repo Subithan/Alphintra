@@ -34,15 +34,32 @@ export type Bot = {
   stats: string;
 };
 
-export type Position = {
+// API Response types for Trading Engine
+export interface TradingBot {
+  id: number;
+  userId: number;
+  strategyId: number;
+  status: 'RUNNING' | 'STOPPED' | 'ERROR';
+  symbol: string;
+  capitalAllocation: number;
+  startedAt: string;
+  stoppedAt: string | null;
+}
+
+export interface TradingPosition {
+  id: number;
+  userId: number;
+  botId: number;
   asset: string;
-  type: 'Long' | 'Short';
-  quantity: number;
+  symbol: string;
   entryPrice: number;
-  markPrice: number;
-  pnl: number;
-  pnlPercentage: number;
-};
+  quantity: number;
+  openedAt: string;
+  closedAt: string | null;
+  status: 'OPEN' | 'CLOSED';
+}
+
+
 
 export interface Order {
   orderId: number;
@@ -68,31 +85,7 @@ export interface Order {
   expiresAt: string | null;
 }
 
-export type Trade = {
-  asset: string;
-  side: 'Buy' | 'Sell';
-  price: number;
-  quantity: number;
-  pnl: number;
-  time: string;
-};
 
-export type OrderBookEntry = {
-    price: number;
-    amount: number;
-    total: number;
-}
-
-export interface OrderRequest {
-  userId: number;
-  accountId: number;
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  orderType: 'LIMIT' | 'MARKET' | 'STOP';
-  quantity: number;
-  price: number;
-  timeInForce: 'GTC' | 'FOK' | 'IOC';
-}
 
 export interface User {
   name: string;

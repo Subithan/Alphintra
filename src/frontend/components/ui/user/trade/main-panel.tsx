@@ -26,9 +26,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
-import type { Position, Bot, Order, Trade } from '@/lib/api/types';
+import type { Position, Bot, Order, Trade, TradingBot, TradingPosition } from '@/lib/api/types';
 import { getToken } from '@/lib/auth';
 import { buildGatewayUrl } from '@/lib/config/gateway';
+import { tradingApi } from '@/lib/api/trading-api';
 
 interface TradeOrderData {
   id: number;
@@ -158,44 +159,57 @@ const MAX_HEIGHT = 240; // 40px * 4 rows
 export default function MainPanel() {
   const [pendingOrders, setPendingOrders] = useState<Order[]>(mockPendingOrders);
   const [tradeHistory, setTradeHistory] = useState<TradeOrderData[]>([]);
+  const [tradingBots, setTradingBots] = useState<TradingBot[]>([]);
+  const [tradingPositions, setTradingPositions] = useState<TradingPosition[]>([]);
   const [loading, setLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true; 
-    const fetchTradeHistory = async () => {
+    
+    const fetchAllData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const token = getToken();
-        const response = await fetch(buildGatewayUrl('/api/trading/trades?limit=20'), {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: TradeOrderData[] = await response.json();
+        // Fetch trade history, bots, and positions in parallel
+        const [trades, bots, positions] = await Promise.all([
+          tradingApi.getTradeHistory(20).catch(err => {
+            console.error('[Trading UI] Failed to fetch trades:', err);
+            return [];
+          }),
+          tradingApi.getBots().catch(err => {
+            console.error('[Trading UI] Failed to fetch bots:', err);
+            return [];
+          }),
+          tradingApi.getPositions().catch(err => {
+            console.error('[Trading UI] Failed to fetch positions:', err);
+            return [];
+          }),
+        ]);
         
         if (mounted) {
-          setTradeHistory(data);
+          setTradeHistory(trades);
+          setTradingBots(bots);
+          setTradingPositions(positions);
+          console.log('[Trading UI] Data loaded:', { trades: trades.length, bots: bots.length, positions: positions.length });
         }
       } catch (err) {
         if (mounted) {
-          console.error('[Trading UI] Failed to fetch /api/trading/trades', err);
-          setError("Failed to fetch trade history");
+          console.error('[Trading UI] Failed to fetch trading data', err);
+          setError("Failed to fetch trading data");
         } 
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchTradeHistory();
+    fetchAllData();
     
     // Poll for updates every 10 seconds
-    const interval = setInterval(fetchTradeHistory, 10000);
+    const interval = setInterval(fetchAllData, 10000);
 
     return () => {
       mounted = false;
@@ -222,20 +236,24 @@ export default function MainPanel() {
           value="positions"
           className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
         >
-          Open Positions ({positions.length})
+          Open Positions ({tradingPositions.filter(p => p.status === 'OPEN').length})
         </TabsTrigger>
         <TabsTrigger
           value="bots"
           className="w-full text-xs sm:text-sm py-3 px-2 text-left sm:text-center min-h-[44px] box-border"
         >
-          Active Bots
+          Active Bots ({tradingBots.filter(b => b.status === 'RUNNING').length})
         </TabsTrigger>
       </TabsList>
       <div className="mt-2 sm:mt-4 rounded-lg border bg-card text-card-foreground shadow-sm">
         <TabsContent value="positions">
           <ScrollArea style={{ maxHeight: MAX_HEIGHT }}>
-            {positions.length > 0 ? (
-              <PositionsTable data={positions} />
+            {loading ? (
+              <p className="p-2 sm:p-4 text-xs sm:text-sm">Loading positions...</p>
+            ) : error ? (
+              <p className="p-2 sm:p-4 text-xs sm:text-sm text-red-500">{error}</p>
+            ) : tradingPositions.filter(p => p.status === 'OPEN').length > 0 ? (
+              <TradingPositionsTable data={tradingPositions.filter(p => p.status === 'OPEN')} />
             ) : (
               <p className="p-2 sm:p-4 text-xs sm:text-sm text-muted-foreground">No open positions</p>
             )}
@@ -243,8 +261,12 @@ export default function MainPanel() {
         </TabsContent>
         <TabsContent value="bots">
           <ScrollArea style={{ maxHeight: MAX_HEIGHT }}>
-            {activeBots.length > 0 ? (
-              <ActiveBotsTable data={activeBots} />
+            {loading ? (
+              <p className="p-2 sm:p-4 text-xs sm:text-sm">Loading bots...</p>
+            ) : error ? (
+              <p className="p-2 sm:p-4 text-xs sm:text-sm text-red-500">{error}</p>
+            ) : tradingBots.length > 0 ? (
+              <TradingBotsTable data={tradingBots} />
             ) : (
               <p className="p-2 sm:p-4 text-xs sm:text-sm text-muted-foreground">No active bots</p>
             )}
@@ -453,6 +475,88 @@ const TradeHistoryTable = ({ data }: { data: TradeOrderData[] }) => (
                 {trade.status}
               </Badge>
             </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </div>
+);
+
+const TradingPositionsTable = ({ data }: { data: TradingPosition[] }) => (
+  <div className="overflow-x-auto">
+    <Table className="min-w-[600px]">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="text-xs sm:text-sm">Asset</TableHead>
+          <TableHead className="text-xs sm:text-sm">Symbol</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Quantity</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Entry Price</TableHead>
+          <TableHead className="text-xs sm:text-sm">Opened At</TableHead>
+          <TableHead className="text-xs sm:text-sm">Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((position) => (
+          <TableRow key={position.id} style={{ height: ROW_HEIGHT }}>
+            <TableCell className="font-medium text-xs sm:text-sm">{position.asset}</TableCell>
+            <TableCell className="text-xs sm:text-sm text-[#0b9981]">{position.symbol}</TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">{position.quantity.toFixed(8)}</TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">${position.entryPrice.toLocaleString()}</TableCell>
+            <TableCell className="text-xs sm:text-sm">
+              {new Date(position.openedAt).toLocaleString()}
+            </TableCell>
+            <TableCell className="text-xs sm:text-sm">
+              <Badge 
+                variant={position.status === 'OPEN' ? 'default' : 'secondary'}
+                className={position.status === 'OPEN' ? 'bg-[#0b9981]' : ''}
+              >
+                {position.status}
+              </Badge>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </div>
+);
+
+const TradingBotsTable = ({ data }: { data: TradingBot[] }) => (
+  <div className="overflow-x-auto">
+    <Table className="min-w-[600px]">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="text-xs sm:text-sm">Bot ID</TableHead>
+          <TableHead className="text-xs sm:text-sm">Symbol</TableHead>
+          <TableHead className="text-xs sm:text-sm">Status</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">Capital Allocation</TableHead>
+          <TableHead className="text-xs sm:text-sm">Started At</TableHead>
+          <TableHead className="text-xs sm:text-sm">Strategy ID</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((bot) => (
+          <TableRow key={bot.id} style={{ height: ROW_HEIGHT }}>
+            <TableCell className="font-medium text-xs sm:text-sm">#{bot.id}</TableCell>
+            <TableCell className="text-xs sm:text-sm font-medium text-[#0b9981]">{bot.symbol}</TableCell>
+            <TableCell className="text-xs sm:text-sm">
+              <Badge
+                variant={
+                  bot.status === 'RUNNING'
+                    ? 'default'
+                    : bot.status === 'STOPPED'
+                    ? 'secondary'
+                    : 'destructive'
+                }
+                className={bot.status === 'RUNNING' ? 'bg-[#0b9981]' : ''}
+              >
+                {bot.status}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right text-xs sm:text-sm">{bot.capitalAllocation}%</TableCell>
+            <TableCell className="text-xs sm:text-sm">
+              {new Date(bot.startedAt).toLocaleString()}
+            </TableCell>
+            <TableCell className="text-xs sm:text-sm">Strategy #{bot.strategyId}</TableCell>
           </TableRow>
         ))}
       </TableBody>

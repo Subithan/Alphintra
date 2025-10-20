@@ -16,7 +16,7 @@ export default function Trade() {
   return (
     <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8">
       <div className="grid grid-cols-1 gap-4 sm:gap-6">
-        {/* Top Row: Portfolio Summary */}
+        {/* Top Row: Bot Control */}
         <div className="col-span-1">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full">

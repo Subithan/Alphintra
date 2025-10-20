@@ -54,3 +54,7 @@ data:
 
   # Application Settings
   SKIP_DB_INIT: "true"
+
+  # Mock Trading Mode (for demo when Binance is unavailable)
+  TRADING_MOCK_ENABLED: "true"
+  BINANCE_API_ENABLED: "false"
