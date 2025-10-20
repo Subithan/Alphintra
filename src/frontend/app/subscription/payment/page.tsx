@@ -226,11 +226,11 @@ export default function PaymentPage() {
         {/* Back Button */}
         <Button
           variant="ghost"
-          className="mb-6 gap-2 bg-yellow-500 text-white hover:bg-yellow-600"
+          className="mb-6 gap-2 text-gray-700"
           onClick={() => router.back()}
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Subscriptions
+          Back 
         </Button>
 
         {/* Payment Header */}

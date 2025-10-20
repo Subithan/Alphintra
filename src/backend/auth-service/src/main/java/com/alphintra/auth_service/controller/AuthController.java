@@ -39,21 +39,29 @@ public class AuthController {
 
   @PostMapping("/activate-subscription")
   public ResponseEntity<?> activateSubscription(@RequestBody Map<String, Object> request) {
-    Long userId = ((Number) request.get("userId")).longValue();
-    String planName = (String) request.get("planName");
-    
-    boolean success = authService.activateSubscription(userId, planName);
-    
-    if (success) {
-      return ResponseEntity.ok(Map.of(
-        "success", true,
-        "message", "Subscription activated successfully"
-      ));
-    } else {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+    try {
+      Long userId = ((Number) request.get("userId")).longValue();
+      String planName = (String) request.get("planName");
+      
+      boolean success = authService.activateSubscription(userId, planName);
+      
+      if (success) {
+        return ResponseEntity.ok(Map.of(
+          "success", true,
+          "message", "Subscription activated successfully"
+        ));
+      } else {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+          .body(Map.of(
+            "success", false,
+            "message", "User not found"
+          ));
+      }
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(Map.of(
           "success", false,
-          "message", "User not found"
+          "message", "Error activating subscription: " + e.getMessage()
         ));
     }
   }
