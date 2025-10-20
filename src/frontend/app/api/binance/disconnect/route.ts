@@ -1,27 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-declare global {
-  var userConnections: Map<string, any>;
-}
+const WALLET_SERVICE_URL =
+  process.env.WALLET_SERVICE_URL ?? 'http://localhost:8011';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const userId = 'current_user'; // Get from authenticated session
-    
-    if (global.userConnections) {
-      global.userConnections.delete(userId);
+    const response = await fetch(
+      `${WALLET_SERVICE_URL}/binance/disconnect`,
+      {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      },
+    );
+
+    if (!response.ok) {
+      let detail = response.statusText;
+      try {
+        const body = await response.json();
+        detail = body?.detail ?? body?.error ?? detail;
+      } catch {
+        // ignore parse errors
+      }
+
+      return NextResponse.json(
+        { error: detail ?? 'Failed to disconnect from Binance' },
+        { status: response.status },
+      );
     }
 
-    return NextResponse.json({
-      message: 'Successfully disconnected from Binance',
-      connected: false
-    });
-
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error disconnecting:', error);
+    console.error('Error disconnecting from Binance:', error);
     return NextResponse.json(
-      { error: 'Failed to disconnect' },
-      { status: 500 }
+      { error: 'Failed to reach wallet service' },
+      { status: 502 },
     );
   }
 }
