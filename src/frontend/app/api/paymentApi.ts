@@ -2,7 +2,9 @@
 const MARKETPLACE_API_URL = 'http://localhost:8012';
 
 // Stripe Publishable Key - This is safe to expose in the frontend
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SJZB57MYY8D91xgcKjqiIzt4UMQHumxkVsCbWkhN9AFyUZZfATXvRz4NNrqIJeTQ8skkTuPvTWiTp64K7C3OXW1008gmw4O99';
+const STRIPE_PUBLISHABLE_KEY = 
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
+  'pk_test_51SJrdmI8b6luJNpeyPm1TkxA1ZJTolJ1AfcNvW8zeaLHdB2V81YyqbXQeVJNxzfEgiOtAOt3t3Yq6gxRbWgvNvbe00c3VIQ4Eu';
 
 /**
  * Initiates the Stripe Checkout process for a given strategy.

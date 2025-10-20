@@ -7,3 +7,6 @@ metadata:
 data:
   kyc-endpoint: https://kyc-placeholder.example.com
   log-level: INFO
+  # Stripe Redirect URLs for Production
+  STRIPE_SUCCESS_URL: https://alphintra.com/subscription/success
+  STRIPE_CANCEL_URL: https://alphintra.com/subscription/cancel
