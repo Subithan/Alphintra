@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import logging
+import time
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import settings
@@ -16,8 +18,38 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, futu
 
 def create_db_and_tables() -> None:
     """Create database tables if they do not exist."""
+    _wait_for_database()
     Base.metadata.create_all(bind=engine, checkfirst=True)
     logger.info("Database schema ready.")
+
+
+def _wait_for_database(max_attempts: int = 10, delay_seconds: float = 3.0) -> None:
+    """Block until a connection to the database can be established.
+
+    When the application and Cloud SQL proxy containers start simultaneously,
+    the proxy may not be ready to accept connections immediately. Without a
+    retry loop the first database operation will fail with ``Connection refused``
+    and crash the application startup. Retrying here ensures the application
+    waits for the proxy to be ready before proceeding with migrations.
+    """
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+            if attempt > 1:
+                logger.info("Database became reachable after %s attempts.", attempt)
+            return
+        except OperationalError as exc:  # pragma: no cover - defensive logging
+            logger.warning(
+                "Database not ready (attempt %s/%s): %s",
+                attempt,
+                max_attempts,
+                exc,
+            )
+            if attempt == max_attempts:
+                raise
+            time.sleep(delay_seconds)
 
 
 def seed_demo_data() -> None:
