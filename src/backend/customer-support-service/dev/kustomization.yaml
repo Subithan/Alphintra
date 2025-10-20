@@ -12,7 +12,7 @@ images:
     newTag: latest
 configMapGenerator:
   - name: customer-support-service-config
-    behavior: merge
+    behavior: create
     literals:
       - log-level=DEBUG
       - redis-host=redis.alphintra.svc.cluster.local
@@ -21,7 +21,7 @@ configMapGenerator:
       - elasticsearch-port=9200
 secretGenerator:
   - name: customer-support-service-secrets
-    behavior: merge
+    behavior: create
     literals:
       - database-url=jdbc:postgresql://127.0.0.1:5432/alphintra_customer_support
       - db-user=customer_support
