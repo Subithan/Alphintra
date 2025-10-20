@@ -2,18 +2,10 @@
 const MARKETPLACE_API_URL =
   process.env.NEXT_PUBLIC_MARKETPLACE_API_URL ?? 'http://localhost:8012';
 
-export interface PurchasePayload {
-  buyerId: number;
-  notes?: string;
-}
-
-export interface PurchaseResponse {
-  id: number;
-  strategy_id: number;
-  buyer_id: number;
-  status: string;
-  notes?: string | null;
-}
+// Stripe Publishable Key - This is safe to expose in the frontend
+const STRIPE_PUBLISHABLE_KEY = 
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
+  'pk_test_51SJrdmI8b6luJNpeyPm1TkxA1ZJTolJ1AfcNvW8zeaLHdB2V81YyqbXQeVJNxzfEgiOtAOt3t3Yq6gxRbWgvNvbe00c3VIQ4Eu';
 
 /**
  * Calls the marketplace service to record a purchase for a strategy.

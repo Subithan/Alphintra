@@ -40,10 +40,10 @@ spring:
         - id: auth-service
           uri: ${AUTH_SERVICE_URI:http://auth-service.default.svc.cluster.local:8009}
           predicates:
-            - Path=/api/auth/**, /api/users/**, /api/kyc/**
+            - Path=/api/auth/**, /api/users/**, /api/kyc/**, /api/subscriptions/**
           filters:
             - PreserveHostHeader
-            - RemoveRequestHeader=Cookie
+            # - RemoveRequestHeader=Cookie  # Commented out to allow JWT tokens to pass through
         - id: trading-engine
           uri: ${TRADING_ENGINE_URI:http://trading-engine.default.svc.cluster.local:8008}
           predicates:

@@ -191,9 +191,9 @@ export default function Profile() {
       
       console.log('✅ Account deleted successfully');
       
-      // Clear all localStorage and redirect to login
+      // Clear all localStorage and redirect to alphintra.com
       localStorage.clear();
-      router.push('/login');
+      window.location.href = 'https://alphintra.com';
     } catch (error: any) {
       console.error('❌ Failed to delete account:', error);
       alert('Failed to delete account. Please try again.');

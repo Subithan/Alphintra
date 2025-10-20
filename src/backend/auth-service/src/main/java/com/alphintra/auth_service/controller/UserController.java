@@ -41,36 +41,72 @@ public class UserController {
   }
 
   @PutMapping("/me")
-  public ResponseEntity<UserProfile> updateProfile(
-      @AuthenticationPrincipal UserDetails principal,
-      @Valid @RequestBody UserUpdateRequest request) {
-    User user = loadUser(principal);
-    if (request.getFirstName() != null) {
-      user.setFirstName(request.getFirstName());
+  public ResponseEntity<UserProfile> updateProfile(@Valid @RequestBody UserUpdateRequest request) {
+    try {
+      // Get user identifier from request
+      if (request.getEmail() == null && request.getUsername() == null) {
+        log.error("No user identifier provided in update request");
+        throw new ResourceNotFoundException("User email or username is required");
+      }
+
+      User user;
+      if (request.getEmail() != null) {
+        user = userRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+      } else {
+        user = userRepository.findByUsername(request.getUsername())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + request.getUsername()));
+      }
+
+      log.info("Updating profile for user: {}", user.getUsername());
+
+      if (request.getFirstName() != null) {
+        user.setFirstName(request.getFirstName());
+      }
+      if (request.getLastName() != null) {
+        user.setLastName(request.getLastName());
+      }
+      if (request.getDateOfBirth() != null) {
+        user.setDateOfBirth(request.getDateOfBirth());
+      }
+      if (request.getPhoneNumber() != null) {
+        user.setPhoneNumber(request.getPhoneNumber());
+      }
+      if (request.getAddress() != null) {
+        user.setAddress(request.getAddress());
+      }
+      User saved = userRepository.save(user);
+      log.info("Profile updated successfully for user: {}", saved.getUsername());
+      return ResponseEntity.ok(UserMapper.toProfile(saved));
+    } catch (Exception e) {
+      log.error("Error updating profile: {}", e.getMessage(), e);
+      throw e;
     }
-    if (request.getLastName() != null) {
-      user.setLastName(request.getLastName());
-    }
-    if (request.getDateOfBirth() != null) {
-      user.setDateOfBirth(request.getDateOfBirth());
-    }
-    if (request.getPhoneNumber() != null) {
-      user.setPhoneNumber(request.getPhoneNumber());
-    }
-    if (request.getAddress() != null) {
-      user.setAddress(request.getAddress());
-    }
-    User saved = userRepository.save(user);
-    return ResponseEntity.ok(UserMapper.toProfile(saved));
   }
 
   @DeleteMapping("/account")
   @Transactional
-  public ResponseEntity<Map<String, String>> deleteAccount(
-      @AuthenticationPrincipal UserDetails principal) {
+  public ResponseEntity<Map<String, String>> deleteAccount(@RequestBody Map<String, String> request) {
     try {
-      User user = loadUser(principal);
-      String username = principal.getUsername();
+      String email = request.get("email");
+      String username = request.get("username");
+
+      if (email == null && username == null) {
+        log.error("No user identifier provided in delete request");
+        throw new ResourceNotFoundException("User email or username is required");
+      }
+
+      User user;
+      if (email != null) {
+        user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+      } else {
+        user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+      }
+
+      String userIdentifier = user.getUsername();
+      log.info("Attempting to delete account for username: {}", userIdentifier);
 
       // Clear the roles relationship before deleting
       user.getRoles().clear();
@@ -80,11 +116,11 @@ public class UserController {
       userRepository.delete(user);
       userRepository.flush();
 
-      log.info("User account deleted successfully for username: {}", username);
+      log.info("User account deleted successfully for username: {}", userIdentifier);
 
       Map<String, String> response = new HashMap<>();
       response.put("message", "Account deleted successfully");
-      response.put("username", username);
+      response.put("username", userIdentifier);
 
       return ResponseEntity.ok(response);
     } catch (Exception e) {
