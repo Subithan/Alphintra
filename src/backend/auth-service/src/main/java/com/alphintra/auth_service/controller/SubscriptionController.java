@@ -17,15 +17,15 @@ import javax.crypto.SecretKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/subscriptions")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "https://alphintra.com")
 public class SubscriptionController {
 
   private static final Logger logger = LoggerFactory.getLogger(SubscriptionController.class);
@@ -50,9 +50,9 @@ public class SubscriptionController {
   }
 
   /**
-   * Extract username from JWT token in Authorization header
+   * Extract user ID from JWT token in Authorization header
    */
-  private String extractUsernameFromToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+  private Long extractUserIdFromToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
     }
@@ -64,7 +64,23 @@ public class SubscriptionController {
           .build()
           .parseClaimsJws(token)
           .getBody();
-      return claims.getSubject();
+      
+      // Extract user_id from claims
+      Object userIdObj = claims.get("user_id");
+      if (userIdObj == null) {
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found in token");
+      }
+      
+      // Handle both Integer and Long types
+      if (userIdObj instanceof Integer) {
+        return ((Integer) userIdObj).longValue();
+      } else if (userIdObj instanceof Long) {
+        return (Long) userIdObj;
+      } else {
+        return Long.parseLong(userIdObj.toString());
+      }
+    } catch (ResponseStatusException e) {
+      throw e;
     } catch (Exception e) {
       logger.error("Failed to parse JWT token", e);
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid JWT token");
@@ -76,12 +92,16 @@ public class SubscriptionController {
       @RequestHeader(value = "Authorization", required = false) String authHeader,
       @Valid @RequestBody CheckoutSessionRequest request) {
     try {
-      String username = extractUsernameFromToken(authHeader);
+      Long userId = extractUserIdFromToken(authHeader);
       logger.info(
-          "Creating checkout session for user: {}, priceId: {}", username, request.getPriceId());
+          "Creating checkout session for userId: {}, priceId: {}", userId, request.getPriceId());
+
+      User user = userRepository
+          .findById(userId)
+          .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
       CheckoutSessionResponse response =
-          stripeService.createCheckoutSession(username, request.getPriceId());
+          stripeService.createCheckoutSession(user.getUsername(), request.getPriceId());
 
       logger.info("Checkout session created successfully: {}", response.getSessionId());
       return ResponseEntity.ok(response);
@@ -135,6 +155,49 @@ public class SubscriptionController {
     } catch (Exception e) {
       logger.error("Webhook processing failed", e);
       return ResponseEntity.badRequest().body("Webhook error: " + e.getMessage());
+    }
+  }
+
+  @PostMapping("/confirm-payment")
+  public ResponseEntity<?> confirmPayment(
+      @RequestHeader(value = "Authorization", required = false) String authHeader,
+      @RequestBody(required = false) java.util.Map<String, String> requestBody) {
+    try {
+      Long userId = extractUserIdFromToken(authHeader);
+      logger.info("Confirming payment for userId: {}", userId);
+
+      User user = userRepository
+          .findById(userId)
+          .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+      // Update subscription status to ACTIVE
+      user.setSubscriptionStatus("ACTIVE");
+      user.setSubscriptionStartDate(java.time.LocalDateTime.now());
+      
+      // Set plan name from request body if provided
+      if (requestBody != null && requestBody.containsKey("planName")) {
+        user.setSubscriptionPlan(requestBody.get("planName"));
+      }
+      
+      userRepository.save(user);
+
+      logger.info("Payment confirmed and subscription activated for userId: {}", userId);
+      return ResponseEntity.ok()
+          .body(java.util.Map.of(
+              "success", true,
+              "message", "Subscription activated successfully",
+              "userId", userId,
+              "username", user.getUsername(),
+              "subscriptionStatus", "ACTIVE"
+          ));
+    } catch (ResponseStatusException e) {
+      logger.error("Error confirming payment: {}", e.getReason());
+      return ResponseEntity.status(e.getStatusCode())
+          .body(java.util.Map.of("success", false, "message", e.getReason()));
+    } catch (Exception e) {
+      logger.error("Failed to confirm payment", e);
+      return ResponseEntity.internalServerError()
+          .body(java.util.Map.of("success", false, "message", "Failed to confirm payment: " + e.getMessage()));
     }
   }
 }
