@@ -19,6 +19,8 @@ configMapGenerator:
     literals:
       - kyc-endpoint=https://dev-kyc.alphintra.internal
       - log-level=DEBUG
+      - STRIPE_SUCCESS_URL=https://alphintra.com/subscription/success
+      - STRIPE_CANCEL_URL=https://alphintra.com/subscription/cancel
   - name: service-gateway-config
     behavior: merge
     literals:
@@ -34,3 +36,12 @@ configMapGenerator:
       - NO_CODE_SERVICE_URI=http://no-code-service.alphintra.svc.cluster.local:8004
       - AI_ML_SERVICE_URI=http://ai-ml-strategy-service.alphintra.svc.cluster.local:8002
       - CUSTOMER_SUPPORT_SERVICE_URI=http://customer-support-service.alphintra.svc.cluster.local:8010
+secretGenerator:
+  - name: auth-service-secrets
+    behavior: merge
+    literals:
+      - STRIPE_API_KEY=sk_test_51SJrdmI8b6luJNpeAKKwZyqWcoEsHNuVgyPQ16qY6qtmMHeu18OuiAKx8V68cm9OdtbAAb3EimwYsKaV1nlUiQkr00jEKvOBsC
+      - STRIPE_WEBHOOK_SECRET=whsec_q4Y6z8A3SkCIQCUEHwS2CjgmNAtRT6nv
+      - STRIPE_PRICE_ID_BASIC=price_1SJsePI8b6luJNpeBVzbXtCJ
+      - STRIPE_PRICE_ID_PRO=price_1SJsePI8b6luJNpeBVzbXtCJ
+      - STRIPE_PRICE_ID_ENTERPRISE=price_1SJsePI8b6luJNpeBVzbXtCJ
