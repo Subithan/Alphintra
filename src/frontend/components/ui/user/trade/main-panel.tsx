@@ -26,7 +26,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
-import type { Position, Bot, Order, Trade, TradingBot, TradingPosition } from '@/lib/api/types';
+import type {  Bot, Order, TradingBot, TradingPosition } from '@/lib/api/types';
 import { getToken } from '@/lib/auth';
 import { buildGatewayUrl } from '@/lib/config/gateway';
 import { tradingApi } from '@/lib/api/trading-api';
@@ -41,6 +41,16 @@ interface TradeOrderData {
   amount: number;
   status: string;
   createdAt: string;
+}
+
+interface Position {
+  asset: string;
+  type: 'Long' | 'Short';
+  quantity: number;
+  entryPrice: number;
+  markPrice: number;
+  pnl: number;
+  pnlPercentage: number;
 }
 
 const positions: Position[] = [
