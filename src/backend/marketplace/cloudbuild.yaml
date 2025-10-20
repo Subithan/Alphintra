@@ -1,0 +1,165 @@
+# Cloud Build pipeline for the Marketplace service
+# - Restores Python dependency cache from GCS
+# - Installs dependencies and runs smoke tests in parallel with Docker build
+# - Builds & pushes a multi-stage Docker image
+# - Applies the dev kustomize manifests to the GKE cluster
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  substitutionOption: ALLOW_LOOSE
+
+substitutions:
+  _SERVICE_NAME: marketplace-service
+  _PROJECT_ID: alphintra-472817
+  _COMMIT_SHA: latest
+  _DOCKERFILE: Dockerfile
+  _GCS_CACHE_BUCKET: alphintra-472817-python-cache
+
+steps:
+  # ---------------------------------------------------------------------------
+  # Phase 1. Restore cached pip directory (if present)
+  # ---------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Restore-Python-Cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🔄 Restoring pip cache from gs://${_GCS_CACHE_BUCKET}..."
+        if gsutil -q stat "gs://${_GCS_CACHE_BUCKET}/marketplace-pip-cache.tar.gz"; then
+          gsutil -q cp "gs://${_GCS_CACHE_BUCKET}/marketplace-pip-cache.tar.gz" /tmp/pip-cache.tar.gz
+          mkdir -p /workspace/.pip-cache
+          tar -xzf /tmp/pip-cache.tar.gz -C /workspace/.pip-cache --strip-components=1 || true
+          echo "✅ Pip cache restored"
+        else
+          echo "ℹ️  No existing cache found (first build)"
+        fi
+    volumes:
+      - name: pip-cache
+        path: /workspace/.pip-cache
+    timeout: '120s'
+
+  # ---------------------------------------------------------------------------
+  # Phase 2. Install dependencies (re-uses cache if available)
+  # ---------------------------------------------------------------------------
+  - name: 'python:3.11-slim'
+    id: 'Install-Dependencies'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "🏗️  Installing Python dependencies..."
+        python -m venv /workspace/.venv
+        source /workspace/.venv/bin/activate
+        pip install --upgrade pip
+        pip install --cache-dir=/workspace/.pip-cache -r requirements.txt
+        python -c "import fastapi, sqlalchemy, psycopg2" && echo "✅ Core dependencies imported"
+    volumes:
+      - name: pip-cache
+        path: /workspace/.pip-cache
+      - name: venv
+        path: /workspace/.venv
+    waitFor: ['Restore-Python-Cache']
+    timeout: '300s'
+
+  # ---------------------------------------------------------------------------
+  # Phase 3. Smoke tests (non-blocking, but fails build on hard errors)
+  # ---------------------------------------------------------------------------
+  - name: 'python:3.11-slim'
+    id: 'Smoke-Tests'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "🧪 Running smoke tests..."
+        source /workspace/.venv/bin/activate
+        python -m compileall .
+        python -c "from main import app; from database import create_db_and_tables; print('✅ Application imports OK')"
+    volumes:
+      - name: pip-cache
+        path: /workspace/.pip-cache
+      - name: venv
+        path: /workspace/.venv
+    waitFor: ['Install-Dependencies']
+    timeout: '180s'
+
+  # ---------------------------------------------------------------------------
+  # Phase 4. Build and push Docker image with multi-stage Dockerfile
+  # ---------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build-Image'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "🐳 Building Docker image..."
+        docker build \
+          -f ${_DOCKERFILE} \
+          -t gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA} \
+          -t gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest \
+          .
+        echo "✅ Docker image built"
+    waitFor: ['Install-Dependencies']
+    timeout: '240s'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push-Image-SHA'
+    args:
+      - 'push'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+    waitFor: ['Build-Image']
+    timeout: '120s'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push-Image-Latest'
+    args:
+      - 'push'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'
+    waitFor: ['Push-Image-SHA']
+    timeout: '120s'
+
+  # ---------------------------------------------------------------------------
+  # Phase 5. Deploy to the dev environment using kustomize overlay
+  # ---------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: 'Apply-Dev-Manifests'
+    args:
+      - 'apply'
+      - '-k'
+      - 'dev'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=alphintra-cluster'
+    waitFor: ['Push-Image-Latest']
+    timeout: '120s'
+
+  # ---------------------------------------------------------------------------
+  # Phase 6. Persist updated pip cache back to GCS
+  # ---------------------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Save-Python-Cache'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        echo "💾 Saving pip cache back to GCS..."
+        if [ -d /workspace/.pip-cache ] && [ "$(ls -A /workspace/.pip-cache)" ]; then
+          tar -czf /tmp/pip-cache.tar.gz -C /workspace/.pip-cache .
+          gsutil -q cp /tmp/pip-cache.tar.gz "gs://${_GCS_CACHE_BUCKET}/marketplace-pip-cache.tar.gz"
+          echo "✅ Cache uploaded"
+        else
+          echo "ℹ️  Nothing to cache"
+        fi
+    volumes:
+      - name: pip-cache
+        path: /workspace/.pip-cache
+    waitFor: ['Push-Image-Latest']
+    timeout: '120s'
+
+images:
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:${_COMMIT_SHA}'
+  - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}:latest'

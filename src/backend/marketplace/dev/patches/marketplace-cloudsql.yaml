@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketplace-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: marketplace-service
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: marketplace-service-secrets
+                  key: DATABASE_URL
+            - name: CLOUD_SQL_CONNECTION_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: marketplace-service-secrets
+                  key: CLOUD_SQL_CONNECTION_NAME
+            - name: DB_POOL_SIZE
+              value: "10"
+            - name: DB_MAX_OVERFLOW
+              value: "20"
+            - name: DB_POOL_TIMEOUT
+              value: "30"
+            - name: DB_POOL_RECYCLE
+              value: "1800"
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.10.1
+          args:
+            - "--port=5432"
+            - "--address=127.0.0.1"
+            - "--private-ip"
+            - "--structured-logs"
+            - "--credential-file=/secrets/cloudsql/service-account.json"
+            - "$(CLOUD_SQL_CONNECTION_NAME)"
+          env:
+            - name: CLOUD_SQL_CONNECTION_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: marketplace-service-secrets
+                  key: CLOUD_SQL_CONNECTION_NAME
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: cloudsql-sa
+              mountPath: /secrets/cloudsql
+              readOnly: true
+      volumes:
+        - name: cloudsql-sa
+          secret:
+            secretName: cloudsql-sa-secret
