@@ -36,6 +36,12 @@ public class TradeOrder {
 
     private String status; // e.g., "OPEN", "FILLED", "CANCELED"
 
+    @Column(name = "pending_order_id")
+    private Long pendingOrderId; // Reference to pending order if this was a triggered exit
+
+    @Column(name = "exit_reason")
+    private String exitReason; // "TAKE_PROFIT", "STOP_LOSS", "MANUAL"
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 }

@@ -1,3 +1,5 @@
+
+
 package com.alphintra.trading_engine.service;
 
 import com.alphintra.trading_engine.dto.WalletCredentialsDTO;
@@ -32,12 +34,31 @@ public class OrderExecutionService {
 
     private final PositionRepository positionRepository;
     private final TradeOrderRepository tradeOrderRepository;
-    private final BinanceTimeService binanceTimeService; // <-- INJECT THE TIME SERVICE
-    private final HttpClient httpClient;
+    private final BinanceTimeService binanceTimeService;
+    private final PendingOrderService pendingOrderService; // <-- ADD THIS
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+    
+    // Mock mode for testing without valid API keys
+    private static final boolean MOCK_MODE = Boolean.parseBoolean(System.getenv().getOrDefault("MOCK_TRADING_MODE", "false"));
 
     @Transactional
     public void placeMarketOrder(TradingBot bot, WalletCredentialsDTO credentials, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt) {
+        placeMarketOrder(bot, credentials, symbol, side, quantity, openPositionOpt, null, null);
+    }
+
+    @Transactional
+    public void placeMarketOrder(TradingBot bot, WalletCredentialsDTO credentials, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt, String exitReason, Long pendingOrderId) {
         System.out.println("EXECUTING ORDER: " + side + " " + quantity + " " + symbol);
+        
+        // MOCK MODE: Simulate order execution without calling Binance API
+        if (MOCK_MODE) {
+            System.out.println("🧪 MOCK MODE: Simulating order execution...");
+            handleMockOrder(bot, symbol, side, quantity, openPositionOpt, exitReason, pendingOrderId);
+            return;
+        }
+        
         try {
             String apiKey = credentials.apiKey();
             String secretKey = credentials.secretKey();
@@ -91,6 +112,8 @@ public class OrderExecutionService {
                 tradeOrder.setStatus(responseJson.getString("status"));
                 tradeOrder.setAmount(new BigDecimal(responseJson.getString("executedQty")));
                 tradeOrder.setCreatedAt(LocalDateTime.now());
+                tradeOrder.setExitReason(exitReason); // <-- ADD exit reason (TAKE_PROFIT / STOP_LOSS / MANUAL)
+                tradeOrder.setPendingOrderId(pendingOrderId); // <-- ADD pending order reference
                 BigDecimal averagePrice = calculateAveragePrice(responseJson);
                 tradeOrder.setPrice(averagePrice);
                 tradeOrderRepository.save(tradeOrder);
@@ -111,14 +134,19 @@ public class OrderExecutionService {
                     position.setOpenedAt(LocalDateTime.now());
                     position.setClosedAt(null);
 
-                    positionRepository.save(position);
+                    Position savedPosition = positionRepository.save(position);
                     System.out.println("✅ POSITION OPENED and saved to database.");
+
+                    // Create pending orders (take-profit and stop-loss)
+                    pendingOrderService.createPendingOrdersForPosition(savedPosition, averagePrice);
+
                 } else if ("SELL".equals(side)) {
                     openPositionOpt.ifPresent(positionToClose -> {
                         positionToClose.setStatus(PositionStatus.CLOSED);
                         positionToClose.setClosedAt(LocalDateTime.now());
                         positionRepository.save(positionToClose);
-                        System.out.println("✅ POSITION CLOSED and updated in database.");
+                        System.out.println("✅ POSITION CLOSED and updated in database." + 
+                                         (exitReason != null ? " Reason: " + exitReason : ""));
                     });
                 }
             } else {
@@ -146,4 +174,66 @@ public class OrderExecutionService {
         if (totalQuantity.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
         return totalCost.divide(totalQuantity, 8, RoundingMode.HALF_UP);
     }
+    
+    /**
+     * Mock order execution for testing without Binance API
+     */
+    private void handleMockOrder(TradingBot bot, String symbol, String side, BigDecimal quantity, Optional<Position> openPositionOpt, String exitReason, Long pendingOrderId) {
+        // Simulate market price
+        BigDecimal mockPrice = new BigDecimal("16.20"); // Mock ETC price
+        
+        System.out.println("✅ MOCK ORDER EXECUTED: " + side + " " + quantity + " " + symbol + " @ " + mockPrice);
+        
+        // Save trade order record
+        TradeOrder order = new TradeOrder();
+        order.setBotId(bot.getId());
+        order.setSymbol(symbol);
+        order.setType("MARKET");
+        order.setSide(side);
+        order.setPrice(mockPrice);
+        order.setAmount(quantity);
+        order.setStatus("FILLED");
+        order.setExitReason(exitReason);
+        order.setPendingOrderId(pendingOrderId);
+        order.setCreatedAt(LocalDateTime.now());
+        tradeOrderRepository.save(order);
+        
+        if ("BUY".equals(side)) {
+            // Create a new position
+            String asset = symbol.split("/")[0];
+            Position position = new Position();
+            position.setUserId(bot.getUserId());
+            position.setBotId(bot.getId());
+            position.setSymbol(symbol);
+            position.setAsset(asset);
+            position.setQuantity(quantity);
+            position.setEntryPrice(mockPrice);
+            position.setStatus(PositionStatus.OPEN);
+            position.setOpenedAt(LocalDateTime.now());
+            Position savedPosition = positionRepository.save(position);
+            
+            System.out.println("📊 MOCK POSITION CREATED: ID=" + savedPosition.getId() + ", Entry=" + mockPrice + ", Qty=" + quantity);
+            
+            // Create pending orders (take-profit and stop-loss)
+            pendingOrderService.createPendingOrdersForPosition(savedPosition, mockPrice);
+            System.out.println("✅ MOCK PENDING ORDERS CREATED for position " + savedPosition.getId());
+            
+        } else if ("SELL".equals(side) && openPositionOpt.isPresent()) {
+            // Close the position
+            Position position = openPositionOpt.get();
+            position.setStatus(PositionStatus.CLOSED);
+            position.setClosedAt(LocalDateTime.now());
+            positionRepository.save(position);
+            
+            // Mark pending orders as triggered if this was from a pending order
+            if (pendingOrderId != null) {
+                // The pending order service will handle marking it as triggered
+                System.out.println("📋 Pending order " + pendingOrderId + " was triggered");
+            }
+            
+            BigDecimal profitLoss = mockPrice.subtract(position.getEntryPrice()).multiply(quantity);
+            System.out.println("💰 MOCK POSITION CLOSED: P/L=" + profitLoss + " " + (exitReason != null ? ("(" + exitReason + ")") : ""));
+        }
+    }
 }
+

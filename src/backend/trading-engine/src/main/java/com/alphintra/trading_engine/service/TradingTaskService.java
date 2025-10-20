@@ -2,6 +2,7 @@ package com.alphintra.trading_engine.service;
 
 import com.alphintra.trading_engine.dto.WalletCredentialsDTO;
 import com.alphintra.trading_engine.model.BotStatus;
+import com.alphintra.trading_engine.model.PendingOrder;
 import com.alphintra.trading_engine.model.Position;
 import com.alphintra.trading_engine.model.PositionStatus;
 import com.alphintra.trading_engine.model.TradingBot;
@@ -18,13 +19,10 @@ import org.knowm.xchange.binance.BinanceExchange;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Ticker;
 import org.knowm.xchange.service.marketdata.MarketDataService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import com.alphintra.trading_engine.config.ProxySettings;
-import org.knowm.xchange.ExchangeSpecification;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -38,6 +36,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -49,28 +48,12 @@ public class TradingTaskService {
     private final OrderExecutionService orderExecutionService;
     private final PositionRepository positionRepository;
     private final BinanceTimeService binanceTimeService;
-    private final HttpClient httpClient;
-    private final ProxySettings proxySettings;
-
-    @Value("${binance.api.enabled:true}")
-    private boolean binanceApiEnabled;
-
-    @Value("${binance.api.testnet.enabled:true}")
-    private boolean binanceTestnetEnabled;
-
-    // Step size mapping for different trading pairs
-    private static final Map<String, BigDecimal> STEP_SIZE_MAP = Map.of(
-        "BTC/USDT", new BigDecimal("0.00001"),
-        "ETH/USDT", new BigDecimal("0.0001"),
-        "BNB/USDT", new BigDecimal("0.001"),
-        "SOL/USDT", new BigDecimal("0.01"),
-        "ETC/USDT", new BigDecimal("0.01"),
-        "XRP/USDT", new BigDecimal("0.1"),
-        "ADA/USDT", new BigDecimal("0.1"),
-        "DOGE/USDT", new BigDecimal("1")
-    );
     
-    private static final BigDecimal DEFAULT_STEP_SIZE = new BigDecimal("0.01"); // Fallback
+    // Mock mode for testing without valid API keys
+    private static final boolean MOCK_MODE = Boolean.parseBoolean(System.getenv().getOrDefault("MOCK_TRADING_MODE", "false"));
+    private final PendingOrderService pendingOrderService; // <-- ADD THIS
+
+    private static final BigDecimal ETC_USDT_STEP_SIZE = new BigDecimal("0.01");
 
     // Singleton instances for the shared exchange connection
     private Exchange binanceExchange;
@@ -79,79 +62,26 @@ public class TradingTaskService {
     @PostConstruct
     public void initializeExchange() {
         System.out.println("🔧 Initializing shared Binance Exchange connection (this happens only once)...");
-
-        // Check if Binance API is enabled in configuration
-        if (!binanceApiEnabled) {
-            System.out.println("⚠️ Binance API is disabled in configuration. Trading functionality will be disabled.");
-            System.out.println("   Set BINANCE_API_ENABLED=true to enable trading functionality.");
-            binanceExchange = null;
-            marketDataService = null;
-            return;
-        }
-
-        System.out.println("🌐 Binance API is enabled. Attempting to initialize exchange connection...");
         try {
             binanceExchange = ExchangeFactory.INSTANCE.createExchange(BinanceExchange.class);
-
-            // Always work against a single spec instance, then apply once
-            ExchangeSpecification spec = binanceExchange.getExchangeSpecification();
-
-            if (binanceTestnetEnabled) {
-                System.out.println("🧪 Using Binance Testnet (testnet.binance.vision)");
-                spec.setExchangeSpecificParametersItem("Use_Sandbox", true);
-                spec.setSslUri("https://testnet.binance.vision");
-                spec.setHost("testnet.binance.vision");
-            } else {
-                System.out.println("🚀 Using Binance Production API");
-                spec.setExchangeSpecificParametersItem("Use_Sandbox", false);
-                spec.setSslUri("https://api.binance.com");
-                spec.setHost("api.binance.com");
-            }
-
-            // Apply proxy settings if provided
-            if (proxySettings.isEnabled()) {
-                spec.setProxyHost(proxySettings.getHost());
-                spec.setProxyPort(proxySettings.getPort());
-                System.out.println("🔌 Applied HTTP proxy to XChange: " + proxySettings.getHost() + ":" + proxySettings.getPort());
-            }
-
-            // Apply the full spec before remote init
-            binanceExchange.applySpecification(spec);
-            System.out.println("➡️ XChange target endpoint: " + spec.getSslUri() + " (host=" + spec.getHost() + ")");
-
+            binanceExchange.getExchangeSpecification().setExchangeSpecificParametersItem("Use_Sandbox", true);
+            binanceExchange.getExchangeSpecification().setSslUri("https://testnet.binance.vision");
+            binanceExchange.getExchangeSpecification().setHost("testnet.binance.vision");
+            
             // The slow call, now executed only on application startup
             binanceExchange.remoteInit();
             marketDataService = binanceExchange.getMarketDataService();
             System.out.println("✅ Shared Binance Exchange connection initialized successfully.");
-            System.out.println("   Environment: " + (binanceTestnetEnabled ? "Testnet" : "Production"));
-        } catch (Exception e) {
-            System.err.println("⚠️ WARNING: Could not initialize Binance Exchange on startup. Trading functionality will be disabled.");
-            System.err.println("   Error: " + e.getMessage());
-            if (e.getMessage().contains("HTTP status code was not OK: 451")) {
-                System.err.println("   📍 This appears to be a geographic restriction issue.");
-                System.err.println("   💡 Solutions:");
-                System.err.println("      1. Set BINANCE_API_ENABLED=false to disable trading in cloud");
-                System.err.println("      2. Deploy to a non-US region (e.g., Europe, Asia)");
-                System.err.println("      3. Use a VPN/proxy solution");
-                System.err.println("      4. Use a different exchange API");
-            }
-            System.err.println("   Application will continue without exchange integration.");
-            // Set exchange to null to indicate it's not available
-            binanceExchange = null;
-            marketDataService = null;
+        } catch (IOException e) {
+            System.err.println("🔥 FATAL ERROR: Could not initialize Binance Exchange on startup.");
+            // In a production system, you might want to terminate the application if this fails.
+            e.printStackTrace();
         }
     }
 
     @Async
     public void runTradingLoop(TradingBot bot, WalletCredentialsDTO credentials) {
         System.out.println("🚀 Starting background trading loop for bot ID: " + bot.getId());
-
-        // Check if exchange is available
-        if (binanceExchange == null || marketDataService == null) {
-            System.err.println("❌ Exchange service is not available. Trading loop cannot start for bot ID: " + bot.getId());
-            return;
-        }
-
         try {
             // --- The slow initialization is GONE from this loop ---
             TradingStrategy strategy = new SimplePriceStrategy();
@@ -179,41 +109,37 @@ public class TradingTaskService {
                     BigDecimal currentPrice = ticker.getLast();
                     System.out.println("📈 " + bot.getSymbol() + " price = " + currentPrice);
 
+                    // --- CHECK PENDING ORDERS FIRST ---
+                    checkAndTriggerPendingOrders(bot, credentials, currentPrice, openPosition);
+
                     Map<String, BigDecimal> balances = fetchAccountBalanceDirectAPI(credentials, baseCurrency, quoteCurrency);
+                    System.out.println("   💰 Balances: " + baseCurrency + "=" + balances.get(baseCurrency) + ", " + quoteCurrency + "=" + balances.get(quoteCurrency));
                     Signal signal = strategy.decide(bot.getSymbol(), currentPrice, balances, openPosition);
+                    System.out.println("   🎯 Strategy Decision: " + signal);
 
                     switch (signal) {
                         case BUY:
                             System.out.println("🔥 ACTION: Preparing to execute a BUY order.");
+                            // Use bot's capital allocation percentage (convert from percentage to decimal)
+                            BigDecimal availableUsdt = balances.get(quoteCurrency);
+                            BigDecimal allocationDecimal = bot.getCapitalAllocationPercentage().divide(new BigDecimal("100"), 4, RoundingMode.DOWN);
+                            BigDecimal usdtToSpend = availableUsdt.multiply(allocationDecimal);
+                            System.out.println("   💵 Using " + usdtToSpend + " " + quoteCurrency + " (" + bot.getCapitalAllocationPercentage() + "% of " + availableUsdt + " available)");
                             
-                            // Get the capital allocation percentage from the bot
-                            Integer capitalAllocationPercent = bot.getCapitalAllocation();
-                            if (capitalAllocationPercent == null) {
-                                capitalAllocationPercent = 100; // Default to 100%
-                            }
+                            // Binance minimum notional check (typically $5-10 for most pairs)
+                            BigDecimal MIN_NOTIONAL = new BigDecimal("5.0");
+                            BigDecimal orderValue = usdtToSpend;
                             
-                            // Calculate available USDT balance and apply capital allocation percentage
-                            BigDecimal totalAvailableUsdt = balances.get(quoteCurrency);
-                            BigDecimal allocatedUsdtToSpend = totalAvailableUsdt
-                                .multiply(new BigDecimal(capitalAllocationPercent))
-                                .divide(new BigDecimal("100"), 2, RoundingMode.DOWN);
-                            
-                            System.out.println("💰 Capital Allocation: " + capitalAllocationPercent + "% of " + totalAvailableUsdt + " USDT = " + allocatedUsdtToSpend + " USDT to spend");
-                            
-                            // Ensure we have a minimum USDT amount to trade
-                            if (allocatedUsdtToSpend.compareTo(new BigDecimal("10.0")) < 0) {
-                                System.out.println("⚠️ Allocated capital (" + allocatedUsdtToSpend + " USDT) is below minimum trade amount of 10 USDT. Skipping BUY.");
+                            if (orderValue.compareTo(MIN_NOTIONAL) < 0) {
+                                System.out.println("⚠️ SKIPPING BUY: Order value " + orderValue + " " + quoteCurrency + " is below minimum notional " + MIN_NOTIONAL);
+                                System.out.println("   ℹ️ You need at least $" + MIN_NOTIONAL + " worth of " + quoteCurrency + " to place an order.");
+                                System.out.println("   ℹ️ Current allocation (" + bot.getCapitalAllocationPercentage() + "% of " + availableUsdt + ") = " + orderValue);
                                 break;
                             }
                             
-                            // Calculate how much crypto we can buy with the allocated USDT
-                            BigDecimal stepSize = getStepSizeForSymbol(bot.getSymbol());
-                            BigDecimal rawCryptoQuantityToBuy = allocatedUsdtToSpend.divide(currentPrice, 8, RoundingMode.DOWN);
-                            BigDecimal adjustedCryptoQuantity = adjustQuantityToStepSize(rawCryptoQuantityToBuy, stepSize);
-                            
-                            System.out.println("📊 Buying " + adjustedCryptoQuantity + " " + baseCurrency + " with " + allocatedUsdtToSpend + " USDT at price " + currentPrice + " USDT per " + baseCurrency);
-                            
-                            orderExecutionService.placeMarketOrder(bot, credentials, bot.getSymbol(), "BUY", adjustedCryptoQuantity, openPosition);
+                            BigDecimal rawBuyQuantity = usdtToSpend.divide(currentPrice, 8, RoundingMode.DOWN);
+                            BigDecimal adjustedBuyQuantity = adjustQuantityToStepSize(rawBuyQuantity, ETC_USDT_STEP_SIZE);
+                            orderExecutionService.placeMarketOrder(bot, credentials, bot.getSymbol(), "BUY", adjustedBuyQuantity, openPosition);
                             break;
                         case SELL:
                             if (openPosition.isPresent()) {
@@ -248,6 +174,15 @@ public class TradingTaskService {
 
     private Map<String, BigDecimal> fetchAccountBalanceDirectAPI(WalletCredentialsDTO credentials, String baseCurrency, String quoteCurrency) {
         Map<String, BigDecimal> balances = new HashMap<>();
+        
+        // MOCK MODE: Return fake balances for testing
+        if (MOCK_MODE) {
+            balances.put(baseCurrency, new BigDecimal("1000.0"));  // 1000 ETC
+            balances.put(quoteCurrency, new BigDecimal("10000.0")); // 10,000 FDUSD
+            System.out.println("🧪 MOCK MODE: Using fake balances - " + baseCurrency + "=1000.0, " + quoteCurrency + "=10000.0");
+            return balances;
+        }
+        
         balances.put(baseCurrency, BigDecimal.ZERO);
         balances.put(quoteCurrency, BigDecimal.ZERO);
         try {
@@ -265,8 +200,9 @@ public class TradingTaskService {
                 signature.append(String.format("%02x", b));
             }
             String url = "https://testnet.binance.vision/api/v3/account?" + queryString + "&signature=" + signature.toString();
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(30)).header("X-MBX-APIKEY", apiKey).GET().build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 String responseBody = response.body();
@@ -285,15 +221,68 @@ public class TradingTaskService {
     // Unchanged helper methods
     @Transactional(propagation = Propagation.REQUIRES_NEW) public Optional<TradingBot> getFreshBotState(Long botId) { return botRepository.findById(botId); }
     private String extractBalanceFromJson(String responseBody, String asset) { try { String searchPattern = "\"asset\":\"" + asset + "\""; int assetIndex = responseBody.indexOf(searchPattern); if (assetIndex == -1) return "0.00000000"; int freeIndex = responseBody.indexOf("\"free\":\"", assetIndex); if (freeIndex == -1) return "0.00000000"; int startQuote = freeIndex + 8; int endQuote = responseBody.indexOf("\"", startQuote); if (endQuote == -1) return "0.00000000"; return responseBody.substring(startQuote, endQuote); } catch (Exception e) { return "0.00000000"; } }
-    
-    // Public method for balance check (used by TradingService before starting bot)
-    public Map<String, BigDecimal> checkBalance(WalletCredentialsDTO credentials, String baseCurrency, String quoteCurrency) {
-        return fetchAccountBalanceDirectAPI(credentials, baseCurrency, quoteCurrency);
-    }
-    
-    private BigDecimal getStepSizeForSymbol(String symbol) {
-        return STEP_SIZE_MAP.getOrDefault(symbol, DEFAULT_STEP_SIZE);
-    }
-    
     private BigDecimal adjustQuantityToStepSize(BigDecimal quantity, BigDecimal stepSize) { BigDecimal steps = quantity.divide(stepSize, 0, RoundingMode.DOWN); BigDecimal adjustedQuantity = steps.multiply(stepSize); int scale = stepSize.stripTrailingZeros().scale(); return adjustedQuantity.setScale(scale, RoundingMode.DOWN); }
+
+    /**
+     * Checks pending orders and triggers execution if price conditions are met
+     */
+    private void checkAndTriggerPendingOrders(TradingBot bot, WalletCredentialsDTO credentials, BigDecimal currentPrice, Optional<Position> openPosition) {
+        if (openPosition.isEmpty()) {
+            return; // No position = no pending orders to check
+        }
+
+        Position position = openPosition.get();
+        List<PendingOrder> pendingOrders = pendingOrderService.getPendingOrdersBySymbol(bot.getSymbol());
+
+        for (PendingOrder pendingOrder : pendingOrders) {
+            // Only check pending orders for the current position
+            if (!pendingOrder.getPositionId().equals(position.getId())) {
+                continue;
+            }
+
+            boolean shouldTrigger = false;
+            String triggerReason = null;
+
+            // Check take-profit condition
+            if (pendingOrder.getTakeProfitPrice() != null && 
+                currentPrice.compareTo(pendingOrder.getTakeProfitPrice()) >= 0) {
+                shouldTrigger = true;
+                triggerReason = "TAKE_PROFIT";
+                System.out.println("🎯 TAKE_PROFIT TRIGGERED! Current: " + currentPrice + " >= Target: " + pendingOrder.getTakeProfitPrice());
+            }
+            // Check stop-loss condition
+            else if (pendingOrder.getStopLossPrice() != null && 
+                     currentPrice.compareTo(pendingOrder.getStopLossPrice()) <= 0) {
+                shouldTrigger = true;
+                triggerReason = "STOP_LOSS";
+                System.out.println("🛑 STOP_LOSS TRIGGERED! Current: " + currentPrice + " <= Target: " + pendingOrder.getStopLossPrice());
+            }
+
+            if (shouldTrigger) {
+                // Mark as triggered
+                pendingOrderService.markAsTriggered(pendingOrder, triggerReason);
+
+                // Execute the SELL order
+                System.out.println("💰 Executing " + triggerReason + " SELL order...");
+                orderExecutionService.placeMarketOrder(
+                    bot, 
+                    credentials, 
+                    bot.getSymbol(), 
+                    "SELL", 
+                    pendingOrder.getQuantity(), 
+                    openPosition,
+                    triggerReason,
+                    pendingOrder.getId()
+                );
+
+                // Cancel other pending orders (OCO logic)
+                pendingOrderService.cancelOtherPendingOrders(position.getId(), pendingOrder.getId());
+
+                // Exit the loop since position is now closed
+                break;
+            }
+        }
+    }
 }
+
+

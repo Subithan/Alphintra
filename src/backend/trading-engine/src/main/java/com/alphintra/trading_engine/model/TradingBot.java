@@ -3,6 +3,7 @@ package com.alphintra.trading_engine.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -28,8 +29,8 @@ public class TradingBot {
     @Column(nullable = false)
     private String symbol; // e.g., "BTC/USDT"
 
-    @Column(name = "capital_allocation", columnDefinition = "integer default 100")
-    private Integer capitalAllocation = 100; // Percentage of capital to use (0-100)
+    @Column(name = "capital_allocation_percentage", precision = 5, scale = 2)
+    private BigDecimal capitalAllocationPercentage; // 0-100
 
     private LocalDateTime startedAt;
 

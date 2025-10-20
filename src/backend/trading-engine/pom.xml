@@ -47,12 +47,11 @@
             <artifactId>jakarta.validation-api</artifactId>
             <version>3.0.2</version>
         </dependency>
-        <!-- Lombok (compile-time only) -->
+        <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.38</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.knowm.xchange</groupId>
@@ -101,13 +100,6 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>1.18.38</version>
-                        </path>
-                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

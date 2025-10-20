@@ -1,17 +1,27 @@
 package com.alphintra.trading_engine.dto;
 
-// Using a record is a concise way to create a simple data carrier.
-public record StartBotRequest(Long userId, Long strategyId, Integer capitalAllocation, String symbol) {
-    
-    // Compact constructor with validation only
+import java.math.BigDecimal;
+
+/**
+ * Request to start a trading bot
+ * @param userId User ID
+ * @param strategyId Strategy ID
+ * @param symbol Trading pair (e.g., "BTC/FDUSD", "ETH/FDUSD", "ETC/FDUSD")
+ * @param capitalAllocationPercentage Percentage of available balance to use (0-100)
+ */
+public record StartBotRequest(
+    Long userId, 
+    Long strategyId,
+    String symbol,
+    BigDecimal capitalAllocationPercentage
+) {
+    // Validation can be added here if needed
     public StartBotRequest {
-        // Validate if capitalAllocation is provided
-        if (capitalAllocation != null && (capitalAllocation < 0 || capitalAllocation > 100)) {
-            throw new IllegalArgumentException("Capital allocation must be between 0 and 100");
-        }
-        // Validate symbol format
-        if (symbol != null && !symbol.matches("[A-Z]+/[A-Z]+")) {
-            throw new IllegalArgumentException("Symbol must be in format 'BASE/QUOTE' (e.g., 'BTC/USDT')");
+        if (capitalAllocationPercentage != null) {
+            if (capitalAllocationPercentage.compareTo(BigDecimal.ZERO) <= 0 || 
+                capitalAllocationPercentage.compareTo(new BigDecimal("100")) > 0) {
+                throw new IllegalArgumentException("Capital allocation percentage must be between 0 and 100");
+            }
         }
     }
 }

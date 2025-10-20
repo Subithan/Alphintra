@@ -306,8 +306,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: redis123
-      DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra_trading_engine?user=alphintra&password=alphintra123
+      DATABASE_URL: jdbc:postgresql://postgres:5432/alphintra_trading_engine
+      DB_USERNAME: alphintra
+      DB_PASSWORD: alphintra123
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MOCK_TRADING_MODE: "true"  # Enable mock trading mode for testing without valid API keys
     depends_on:
       postgres:
         condition: service_healthy

@@ -20,7 +20,7 @@ COPY --from=builder /app/src/main/resources/init_database.sql init_database.sql
 
 # Set environment variables with defaults
 ENV SPRING_PROFILES_ACTIVE=standalone
-ENV DATABASE_URL=postgresql://alphintra:alphintra123@postgres:5432/alphintra_trading_engine
+ENV DATABASE_URL=jdbc:postgresql://alphintra:alphintra123@postgres:5432/alphintra_trading_engine
 ENV REDIS_HOST=redis
 ENV REDIS_PORT=6379
 ENV REDIS_PASSWORD=redis123

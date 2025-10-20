@@ -1,0 +1,29 @@
+# Stage 1: Build the Java application
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
+WORKDIR /app
+
+# Copy pom.xml first and resolve dependencies to cache them
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Now copy source code and build
+COPY src ./src
+RUN mvn clean package -DskipTests -B
+
+# Stage 2: Create minimal distroless image
+FROM gcr.io/distroless/java17-debian12
+WORKDIR /app
+
+# Copy application files
+COPY --from=builder /app/target/trading-engine-1.0-SNAPSHOT.jar app.jar
+COPY --from=builder /app/src/main/resources/init_database.sql init_database.sql
+
+# Set environment variables with defaults
+ENV SPRING_PROFILES_ACTIVE=standalone
+ENV DATABASE_URL=postgresql://alphintra:alphintra123@postgres:5432/alphintra_trading_engine
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
+ENV REDIS_PASSWORD=redis123
+
+# Run Spring Boot executable JAR
+ENTRYPOINT ["java", "-jar", "app.jar"]
