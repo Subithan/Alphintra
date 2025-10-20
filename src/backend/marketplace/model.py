@@ -1,35 +1,80 @@
-# marketplace/models.py
+from typing import List, Optional
 
-from typing import Optional
-from sqlmodel import Field, SQLModel, Relationship
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-# --- Core Marketplace Models ---
 
-class StrategyBase(SQLModel):
+class Base(DeclarativeBase):
+    pass
+
+
+class Strategy(Base):
+    __tablename__ = "strategy"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    price_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    strategy_file: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # image_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    subscriber_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    orders: Mapped[List["Order"]] = relationship(
+        "Order",
+        back_populates="strategy",
+        cascade="all, delete-orphan",
+    )
+
+
+class Order(Base):
+    __tablename__ = "order"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    strategy_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("strategy.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    buyer_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="paid")
+
+    strategy: Mapped["Strategy"] = relationship("Strategy", back_populates="orders")
+
+
+class StrategyBase(BaseModel):
     name: str
-    price_cents: int = Field(gt=0, description="Price in CENTS")
-    description: str
-    stripe_price_id: Optional[str] = Field(default=None, index=True)
-    subscriber_count: int = Field(default=0)
+    price_cents: int = Field(gt=0, description="Price in cents")
+    description: str = ""
+    is_active: bool = True
+    strategy_file: Optional[str] = None
+    # image_url: Optional[str] = None
 
-class Strategy(StrategyBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+class StrategyCreate(StrategyBase):
+    pass
 
-    # Optional: Define relationship to subscriptions
-    subscriptions: list["Subscription"] = Relationship(back_populates="strategy")
 
-# --- Subscription Model (The outcome of a successful payment) ---
+class StrategyRead(StrategyBase):
+    id: int
+    subscriber_count: int
 
-class SubscriptionBase(SQLModel):
-    # Foreign key link
-    strategy_id: int = Field(index=True, foreign_key="strategy.id")
-    # Payment details from Stripe
-    stripe_session_id: str = Field(unique=True, index=True)
-    customer_email: str
-    status: str = Field(default="pending") # e.g., "pending", "paid", "failed"
+    model_config = ConfigDict(from_attributes=True)
 
-class Subscription(SubscriptionBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
 
-    # Optional: Define relationship to Strategy
-    strategy: Strategy = Relationship(back_populates="subscriptions")
+class OrderBase(BaseModel):
+    buyer_id: int
+    notes: Optional[str] = Field(default=None, max_length=1024)
+
+
+class OrderCreate(OrderBase):
+    pass
+
+
+class OrderRead(OrderBase):
+    id: int
+    strategy_id: int
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
