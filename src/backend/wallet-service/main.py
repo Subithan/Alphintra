@@ -571,7 +571,7 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
         api_key = _read_key(connection.encrypted_api_key)
         secret_key = _read_key(connection.encrypted_secret_key)
 
-        # Initialize Coinbase exchange
+        # Initialize Coinbase exchange with CCXT
         exchange = ccxt.coinbase({
             'apiKey': api_key,
             'secret': secret_key,
@@ -580,7 +580,7 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
         })
 
         try:
-            print("DEBUG: Using Coinbase Production API")
+            print("DEBUG: Using Coinbase API via CCXT")
 
             balance_data = await exchange.fetch_balance()
 
@@ -632,10 +632,12 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
             print(f"DEBUG: Traceback fetching Coinbase balances: {traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Failed to fetch balances: {api_error}")
         finally:
+            # Always close the exchange connection
             try:
                 await exchange.close()
             except Exception:
                 pass
+
     except HTTPException:
         raise
     except Exception as e:

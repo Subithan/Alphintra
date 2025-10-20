@@ -5,17 +5,19 @@ import { useState, useEffect } from "react";
 import GradientBorder from '@/components/ui/GradientBorder';
 import { Plus, Plug, ShoppingCart, User } from 'lucide-react';
 import { useRouter } from "next/navigation";
+import { fetchMyStrategies, MyStrategySummary } from "@/lib/api/myStrategies";
 
 export default function Strategy() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [myStrategies, setMyStrategies] = useState<MyStrategySummary[]>([]);
+  const [loadingStrategies, setLoadingStrategies] = useState(true);
+  const [strategiesError, setStrategiesError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  if (!mounted) return null;
 
   const handlePluginClick = (strategyName: string) => {
     console.log(`Activating plugin for strategy: ${strategyName}`);
@@ -26,6 +28,24 @@ export default function Strategy() {
     console.log("Creating new strategy...");
     router.push("/strategy-hub"); // Add this navigation
   };
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    setLoadingStrategies(true);
+    fetchMyStrategies()
+      .then((data) => {
+        setMyStrategies(data);
+        setStrategiesError(null);
+      })
+      .catch((err) => {
+        console.error("Failed to load strategies", err);
+        setStrategiesError(err.message ?? "Failed to load strategies");
+      })
+      .finally(() => setLoadingStrategies(false));
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -51,67 +71,42 @@ export default function Strategy() {
             <User className="w-5 h-5 text-blue-500" />
             <h3 className="text-xl font-semibold">My Created Strategies</h3>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <div>
-                  <div className="font-medium">Bitcoin DCA Strategy</div>
-                  <div className="text-sm text-muted-foreground">Dollar Cost Averaging • Created by you</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-green-500 font-semibold">+12.5%</span>
-                <button 
-                  onClick={() => handlePluginClick("Bitcoin DCA Strategy")}
-                  className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
+          {loadingStrategies ? (
+            <p className="text-sm text-muted-foreground">Loading strategies...</p>
+          ) : strategiesError ? (
+            <p className="text-sm text-red-500">{strategiesError}</p>
+          ) : myStrategies.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You haven&apos;t created any strategies yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {myStrategies.map((strategy) => (
+                <div
+                  key={strategy.workflow_uuid}
+                  className="flex items-center justify-between p-4 bg-muted/20 rounded-lg"
                 >
-                  <Plug className="w-3 h-3" />
-                  Plugin
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <div>
-                  <div className="font-medium">Custom Grid Trading</div>
-                  <div className="text-sm text-muted-foreground">Advanced Grid Algorithm • Created by you</div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-3 h-3 bg-green-500 rounded-full" />
+                    <div>
+                      <div className="font-medium">{strategy.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {strategy.code_metrics.lines} lines •{" "}
+                        {strategy.compiler_version}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handlePluginClick(strategy.name)}
+                      className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
+                    >
+                      <Plug className="w-3 h-3" />
+                      Plugin
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-green-500 font-semibold">+8.3%</span>
-                <button 
-                  onClick={() => handlePluginClick("Custom Grid Trading")}
-                  className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
-                >
-                  <Plug className="w-3 h-3" />
-                  Plugin
-                </button>
-              </div>
+              ))}
             </div>
-
-            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                <div>
-                  <div className="font-medium">ML Momentum Strategy</div>
-                  <div className="text-sm text-muted-foreground">Machine Learning Based • Created by you</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-red-500 font-semibold">-2.1%</span>
-                <button 
-                  onClick={() => handlePluginClick("ML Momentum Strategy")}
-                  className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
-                >
-                  <Plug className="w-3 h-3" />
-                  Plugin
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </GradientBorder>
 
         {/* Bought Strategies */}
