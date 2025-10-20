@@ -141,21 +141,23 @@ export default function PaymentPage() {
     setIsProcessing(true);
 
     try {
-      // Get JWT token from localStorage or sessionStorage
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      // Get userId from localStorage
+      const userIdStr = localStorage.getItem('userId') || sessionStorage.getItem('userId');
       
-      if (!token) {
-        throw new Error('Authentication token not found. Please log in again.');
+      if (!userIdStr) {
+        throw new Error('User ID not found. Please log in again.');
       }
 
-      // Call backend to confirm payment and update subscription status
-      const response = await fetch('https://api.alphintra.com/api/subscriptions/confirm-payment', {
+      const userId = parseInt(userIdStr);
+
+      // Call simple backend endpoint to activate subscription
+      const response = await fetch('https://api.alphintra.com/api/auth/activate-subscription', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          userId: userId,
           planName: planId // Send the plan name (pro or max)
         })
       });
@@ -166,7 +168,7 @@ export default function PaymentPage() {
       }
 
       const data = await response.json();
-      console.log('Payment confirmed:', data);
+      console.log('Subscription activated:', data);
       
       setIsProcessing(false);
       setPaymentSuccess(true);

@@ -94,6 +94,18 @@ public class AuthService {
     return new AuthResponse(token, UserMapper.toProfile(user));
   }
 
+  @Transactional
+  public boolean activateSubscription(Long userId, String planName) {
+    return userRepository.findById(userId).map(user -> {
+      user.setSubscriptionStatus("ACTIVE");
+      user.setSubscriptionPlan(planName);
+      user.setSubscriptionStartDate(java.time.LocalDateTime.now());
+      userRepository.save(user);
+      log.info("Activated subscription for userId={}, plan={}", userId, planName);
+      return true;
+    }).orElse(false);
+  }
+
   // All JWT validation (validate/introspect) removed; only issuing tokens remains.
 
   private String buildToken(String subject, Set<Role> roles, Long userId) {
