@@ -34,11 +34,34 @@ COPY --from=builder /app/target/dependency/BOOT-INF/lib /app/lib
 COPY --from=builder /app/target/dependency/META-INF /app/META-INF
 COPY --from=builder /app/target/dependency/BOOT-INF/classes /app
 
+# Copy database initialization script for CloudSQL
+COPY --from=builder /app/src/main/resources/db/migration/V1__Create_customer_support_schema.sql init_database.sql
+
+# Copy additional migration files if they exist
+COPY --from=builder /app/src/main/resources/db/migration/ ./migrations/
+
 # Set working directory
 WORKDIR /app
 
 # Expose ports
-EXPOSE 8010 8085
+EXPOSE 8010 8011 8085
+
+# Spring Boot configuration
+ENV SPRING_PROFILES_ACTIVE=cloud
+ENV DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/alphintra_customer_support
+ENV DB_USER=customer_support
+ENV DB_PASSWORD=alphintra@123
+
+# JWT secret for signing tokens (should match other services)
+ENV JWT_SECRET=U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=
+
+# Redis configuration
+ENV REDIS_HOST=redis.alphintra.svc.cluster.local
+ENV REDIS_PORT=6379
+
+# Elasticsearch configuration
+ENV ELASTICSEARCH_HOST=elasticsearch.alphintra.svc.cluster.local
+ENV ELASTICSEARCH_PORT=9200
 
 # Set JVM options optimized for containers and minimal memory usage
 ENV JAVA_OPTS="-XX:+UseContainerSupport \
@@ -51,6 +74,9 @@ ENV JAVA_OPTS="-XX:+UseContainerSupport \
                 -XX:MaxMetaspaceSize=128m \
                 -XX:+TieredCompilation \
                 -XX:TieredStopAtLevel=1"
+
+# Health check endpoint (disabled for distroless image, will be handled by kubernetes liveness probe)
+# HEALTHCHECK instruction is not available in distroless images
 
 # Run the application using the classpath (more efficient than fat JAR)
 ENTRYPOINT ["java", "-cp", "/app:/app/lib/*", "com.alphintra.customersupport.CustomerSupportApplication"]

@@ -1,7 +1,7 @@
 import { Strategy } from '@/components/marketplace/types'; // Import your existing Strategy type
 
 // *** CRITICAL FIX: Use the proxy path defined in next.config.js ***
-// This URL will be automatically rewritten by Next.js to: http://localhost:8012/strategies/
+// This URL will be automatically rewritten by Next.js to: http://api.alphintra.com/strategies/
 const STRATEGIES_API_URL = '/api/v1/strategies/'; 
 
 /**
@@ -29,26 +29,36 @@ export async function fetchStrategies(): Promise<Strategy[]> {
 
         const restStrategies = await response.json();
 
-        // The REST service returns a simpler object (name, id, price_cents, description, subscriber_count).
-        // The old GraphQL type expects more fields (creatorName, assetType, performance).
-        // We must map the REST data to the expected Strategy type format to avoid frontend errors.
-        const mappedStrategies: Strategy[] = restStrategies.map((strategy: any) => ({
-            id: strategy.id,
-            name: strategy.name,
-            price: strategy.price_cents / 100, // Convert cents to dollars for the frontend
-            subscriberCount: strategy.subscriber_count,
-
-            // *** MOCK DATA FOR MISSING FIELDS ***
-            creatorName: "Alphintra Team", 
-            rating: 5,
-            assetType: "Crypto", 
-            riskLevel: "Medium", 
-            performance: { 
-                totalReturn: 0.25, 
-                maxDrawdown: 0.10, 
-                sharpeRatio: 1.5 
-            }
-        }));
+        const mappedStrategies: Strategy[] = restStrategies.map((strategy: any) => {
+            const priceCents = Number(strategy.price_cents ?? 0);
+            return {
+                id: Number(strategy.id),
+                name: strategy.name ?? 'Untitled Strategy',
+                description: strategy.description ?? 'No description provided.',
+                category: 'general',
+                assetType: (strategy.asset_type ?? 'Crypto') as string,
+                tradingPairs: strategy.trading_pairs ?? [],
+                price: priceCents === 0 ? 'free' : priceCents / 100,
+                riskLevel: ((strategy.risk_level ?? 'medium') as string).toLowerCase() as 'low' | 'medium' | 'high',
+                verificationStatus: 'APPROVED',
+                performance: {
+                    totalReturn: strategy.total_return ?? 0.25,
+                    annualizedReturn: strategy.annualized_return ?? 0.18,
+                    maxDrawdown: strategy.max_drawdown ?? 0.1,
+                    sharpeRatio: strategy.sharpe_ratio ?? 1.5,
+                    winRate: strategy.win_rate ?? 55,
+                },
+                rating: strategy.rating ?? 4.6,
+                reviewCount: strategy.review_count ?? 42,
+                subscriberCount: strategy.subscriber_count ?? 0,
+                lastUpdated: strategy.updated_at ?? new Date().toISOString(),
+                isVerified: strategy.is_verified ?? true,
+                thumbnail: strategy.thumbnail ?? 'apex-5min',
+                gradientColors: strategy.gradient_colors ?? ['#1a2a6c', '#b21f1f', '#fdbb2d'],
+                creatorId: (strategy.creator_id ?? 'team').toString(),
+                creatorName: strategy.creator_name ?? 'Alphintra Team',
+            };
+        });
 
         return mappedStrategies;
 
@@ -57,4 +67,10 @@ export async function fetchStrategies(): Promise<Strategy[]> {
         // Ensure the error doesn't stop the application
         return []; 
     }
+}
+
+export async function fetchStrategyById(id: string | number): Promise<Strategy | null> {
+    const strategies = await fetchStrategies();
+    const numericId = Number(id);
+    return strategies.find((strategy) => strategy.id === numericId) ?? null;
 }

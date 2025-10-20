@@ -9,14 +9,14 @@ interface CodeGenerationRequest {
   complexity_level?: 'beginner' | 'intermediate' | 'advanced'
   include_comments?: boolean
   max_tokens?: number
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
 interface CodeExplanationRequest {
   code: string
   context?: string
   focus_areas?: string[]
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
 interface CodeOptimizationRequest {
@@ -24,17 +24,17 @@ interface CodeOptimizationRequest {
   optimization_type?: 'performance' | 'readability' | 'security' | 'memory' | 'trading_specific'
   context?: string
   preserve_functionality?: boolean
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
 interface CodeDebuggingRequest {
   code: string
   error_message?: string
   context?: string
-  preferred_provider?: 'openai' | 'anthropic'
+  preferred_provider?: 'openai' | 'anthropic' | 'gemini'
 }
 
-interface CodeGenerationResponse {
+export interface CodeGenerationResponse {
   success: boolean
   code: string
   explanation: string
@@ -103,17 +103,17 @@ interface AICodeState {
   isOptimizing: boolean
   isDebugging: boolean
   isGeneratingTests: boolean
-  
+
   // Current operation results
   lastGeneration: CodeGenerationResponse | null
   lastExplanation: CodeExplanationResponse | null
   lastOptimization: CodeOptimizationResponse | null
   lastDebugging: CodeDebuggingResponse | null
   lastTestGeneration: TestGenerationResponse | null
-  
+
   // Settings
   settings: {
-    defaultProvider: 'openai' | 'anthropic'
+    defaultProvider: 'openai' | 'anthropic' | 'gemini'
     defaultComplexity: 'beginner' | 'intermediate' | 'advanced'
     includeComments: boolean
     maxTokens: number
@@ -180,7 +180,7 @@ interface AICodeActions {
 type AICodeStore = AICodeState & AICodeActions
 
 const defaultSettings: AICodeState['settings'] = {
-  defaultProvider: 'openai',
+  defaultProvider: 'gemini',
   defaultComplexity: 'intermediate',
   includeComments: true,
   maxTokens: 2000,
@@ -224,6 +224,14 @@ const initialUsage: AICodeState['usage'] = {
   }
 }
 
+const SUPPORTED_PROVIDERS: Array<AICodeState['settings']['defaultProvider']> = ['gemini']
+
+const normalizeProvider = (
+  requested?: 'openai' | 'anthropic' | 'gemini'
+): 'gemini' => {
+  return SUPPORTED_PROVIDERS.includes(requested as any) ? (requested as 'gemini') : 'gemini'
+}
+
 const initialState: AICodeState = {
   isGenerating: false,
   isExplaining: false,
@@ -262,7 +270,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider,
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              ),
               complexity_level: request.complexity_level || get().settings.defaultComplexity,
               include_comments: request.include_comments ?? get().settings.includeComments,
               max_tokens: request.max_tokens || get().settings.maxTokens
@@ -325,7 +335,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              )
             })
           })
           
@@ -385,7 +397,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              )
             })
           })
           
@@ -445,7 +459,9 @@ export const useAICodeStore = create<AICodeStore>()(
             },
             body: JSON.stringify({
               ...request,
-              preferred_provider: request.preferred_provider || get().settings.defaultProvider
+              preferred_provider: normalizeProvider(
+                request.preferred_provider || get().settings.defaultProvider
+              )
             })
           })
           
@@ -506,7 +522,7 @@ export const useAICodeStore = create<AICodeStore>()(
             body: JSON.stringify({
               ...request,
               test_type: request.test_type || 'unit',
-              preferred_provider: get().settings.defaultProvider
+              preferred_provider: normalizeProvider(get().settings.defaultProvider)
             })
           })
           

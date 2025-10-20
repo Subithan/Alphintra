@@ -14,7 +14,7 @@ import strawberry
 from strawberry.fastapi import GraphQLRouter
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL, GRAPHQL_WS_PROTOCOL
 from graphql_resolvers import Query, Mutation, Subscription
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app import create_app
 from app.api import register_routes
@@ -320,6 +320,7 @@ async def generate_code(
         generation_result = execute_database_strategy_mode(
             workflow=workflow,
             execution_config={"optimization_level": 2},
+            user_id=current_user.id,
             db=db
         )
 
@@ -448,6 +449,7 @@ async def set_execution_mode(
                 strategy_result = execute_database_strategy_mode(
                     workflow=workflow,
                     execution_config=request.config,
+                    user_id=current_user.id,
                     db=db
                 )
 

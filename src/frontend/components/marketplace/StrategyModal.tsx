@@ -1,16 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import { Strategy } from './types'; // Assumes this is where your provided interface lives
-import { initiateStripeCheckout, getStripePublishableKey } from '@/app/api/paymentApi'; 
 import { X, ArrowUpRight, TrendingUp, Users, Shield, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-
-// Initialize Stripe.js with your publishable key
-const stripePromise = loadStripe(getStripePublishableKey());
+import { useRouter } from 'next/navigation';
 
 // Define the component props
 interface StrategyModalProps {
@@ -21,6 +17,7 @@ interface StrategyModalProps {
 export default function StrategyModal({ strategy, onClose }: StrategyModalProps) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
     // Function to map risk level to a color
     const getRiskColor = (risk: string) => {
@@ -36,38 +33,13 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
         }
     };
     
-    // CRITICAL CHECKOUT LOGIC using Stripe.js
-    const handleCheckout = async () => {
-        if (strategy.price === 'free' || isProcessing) return; 
-
-        console.log('[StrategyModal] Starting checkout for strategy:', strategy.id);
-        setIsProcessing(true);
-        setError(null);
-
+    const handlePurchase = () => {
+        if (strategy.price === 'free' || isProcessing) return;
         try {
-            // Get Stripe.js instance
-            const stripe = await stripePromise;
-            if (!stripe) {
-                throw new Error('Stripe.js failed to load');
-            }
-
-            console.log('[StrategyModal] Calling initiateStripeCheckout...');
-            // Get the session ID from your backend
-            const sessionId = await initiateStripeCheckout(strategy.id);
-            console.log('[StrategyModal] Received session ID:', sessionId);
-
-            console.log('[StrategyModal] Redirecting to Stripe Checkout...');
-            // Use Stripe.js to redirect to checkout
-            // @ts-ignore - redirectToCheckout exists but types may not be updated
-            const result = await stripe.redirectToCheckout({ sessionId });
-            
-            // If we reach here without redirecting, there was an error
-            if (result?.error) {
-                throw new Error(result.error.message);
-            }
+            setIsProcessing(true);
+            router.push(`/marketplace/purchase/${strategy.id}`);
         } catch (err) {
-            console.error("[StrategyModal] Stripe Checkout Failed:", err);
-            setError((err as Error).message || "Payment processing failed. Please try again.");
+            setError('Failed to open checkout. Please try again.');
             setIsProcessing(false);
         }
     };
@@ -170,7 +142,7 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
                             <p className="text-red-400 text-center mb-3 text-sm font-medium">{error}</p>
                         )}
                         <Button
-                            onClick={handleCheckout} 
+                            onClick={handlePurchase} 
                             disabled={isProcessing || strategy.price === 'free'}
                             className={`w-full py-7 text-xl font-bold rounded-lg transition-colors ${
                                 isProcessing 
@@ -181,12 +153,12 @@ export default function StrategyModal({ strategy, onClose }: StrategyModalProps)
                             {isProcessing ? (
                                 <>
                                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    Processing Payment...
+                                    Redirecting...
                                 </>
                             ) : priceText}
                         </Button>
                         <p className="text-center text-xs text-gray-500 mt-2">
-                            Price includes 1 month of updates.
+                            You&apos;ll review and confirm your payment details on the next screen.
                         </p>
                     </div>
 

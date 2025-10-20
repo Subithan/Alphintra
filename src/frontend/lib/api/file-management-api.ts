@@ -58,6 +58,12 @@ export interface CreateProjectRequest {
   template?: 'basic' | 'trading' | 'ml' | 'research';
 }
 
+export interface UpdateProjectRequest {
+  name?: string;
+  description?: string;
+  settings?: Record<string, any>;
+}
+
 export interface FileListOptions {
   include_content?: boolean;
 }
@@ -92,6 +98,10 @@ export class FileManagementApi extends BaseApiClient {
 
   async deleteProject(projectId: string): Promise<{ message: string }> {
     return this.delete<{ message: string }>(`/api/files/projects/${projectId}`);
+  }
+
+  async updateProject(projectId: string, request: UpdateProjectRequest): Promise<ProjectInfo> {
+    return this.patch<ProjectInfo>(`/api/files/projects/${projectId}`, request);
   }
 
   // File Management

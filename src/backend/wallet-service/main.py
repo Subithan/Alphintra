@@ -272,15 +272,21 @@ async def get_balances(db: Session = Depends(get_db)):
             'enableRateLimit': True,
             'timeout': 60000,
         })
-            
-        try:
 
-            # Always enable sandbox mode for testnet
-            # exchange.set_sandbox_mode(True)
-            print("DEBUG: Using production Binance API") 
-            # use sandbox/testnet if stored
-            # if getattr(connection, "exchange_environment", "").lower() == "testnet":
-            #     exchange.set_sandbox_mode(True)
+        try:
+            # ============================================================
+            # PRODUCTION MODE (COMMENTED OUT - US GCP blocked by Binance)
+            # ============================================================
+            # print("DEBUG: Using production Binance API")
+            # balance_data = await exchange.fetch_balance()
+
+            # ============================================================
+            # TESTNET MODE (ACTIVE)
+            # ============================================================
+            # Enable sandbox mode for Binance testnet
+            exchange.set_sandbox_mode(True)
+            print("DEBUG: Using Binance TESTNET API (testnet.binance.vision)")
+            print(f"DEBUG: Testnet enabled for connection: {connection.uuid}")
 
             balance_data = await exchange.fetch_balance()
 
@@ -425,6 +431,285 @@ async def get_binance_credentials(userId: int, db: Session = Depends(get_db)):
         raise he
     except Exception as e:
         print(f"DEBUG: Error fetching credentials for userId {userId}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching credentials.")
+
+# ============================================================================
+# COINBASE ENDPOINTS
+# ============================================================================
+
+@app.post("/coinbase/connect")
+async def connect_to_coinbase(request: ConnectRequest, db: Session = Depends(get_db)):
+    """Connect to Coinbase exchange and store credentials"""
+    print("DEBUG: connect_to_coinbase function called")
+
+    try:
+        print(f"DEBUG: API Key received: {request.apiKey[:10] if request.apiKey else 'None'}...")
+        print(f"DEBUG: Secret Key length: {len(request.secretKey) if request.secretKey else 'No secret'}")
+
+        # Validate inputs
+        if not request.apiKey or not request.secretKey:
+            print("DEBUG: Missing API key or secret key")
+            raise HTTPException(status_code=400, detail="API Key and Secret Key are required")
+
+        if len(request.apiKey) < 10 or len(request.secretKey) < 10:
+            print("DEBUG: Keys too short")
+            raise HTTPException(status_code=400, detail="API Key and Secret Key seem too short")
+
+        current_user = get_current_user_from_db(db)
+
+        # Check if connection already exists for this user
+        existing_connection = db.query(WalletConnection).filter(
+            WalletConnection.user_id == current_user.id,
+            WalletConnection.exchange_name == 'coinbase',
+            WalletConnection.is_active == True
+        ).first()
+
+        if existing_connection:
+            print("DEBUG: Updating existing Coinbase connection...")
+            existing_connection.encrypted_api_key = request.apiKey
+            existing_connection.encrypted_secret_key = request.secretKey
+            existing_connection.last_used_at = func.now()
+            existing_connection.connection_status = 'connected'
+            existing_connection.last_error = None
+            connection = existing_connection
+        else:
+            print("DEBUG: Creating new Coinbase connection...")
+            connection = WalletConnection(
+                user_id=current_user.id,
+                exchange_name='coinbase',
+                exchange_environment='production',
+                encrypted_api_key=request.apiKey,
+                encrypted_secret_key=request.secretKey,
+                connection_name=f"Coinbase Connection ({datetime.now().strftime('%Y-%m-%d')})",
+                is_active=True,
+                connection_status='connected'
+            )
+
+        if not existing_connection:
+            db.add(connection)
+
+        db.commit()
+        db.refresh(connection)
+        print(f"DEBUG: Coinbase connection stored successfully with ID: {connection.uuid}")
+
+        return ConnectionResponse(
+            connected=True,
+            message="Successfully connected to Coinbase"
+        )
+
+    except HTTPException as he:
+        print(f"DEBUG: HTTP Exception: {he.detail}")
+        raise he
+    except Exception as e:
+        print(f"DEBUG: Unexpected error: {str(e)}")
+        print(f"DEBUG: Error type: {type(e)}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+@app.get("/coinbase/connection-status")
+async def get_coinbase_connection_status(db: Session = Depends(get_db)):
+    """Check if user has active Coinbase connection"""
+    print("DEBUG: get_coinbase_connection_status called")
+
+    try:
+        current_user = get_current_user_from_db(db)
+        print(f"DEBUG: Checking Coinbase connection for user: {current_user.email}")
+
+        connection = db.query(WalletConnection).filter(
+            WalletConnection.user_id == current_user.id,
+            WalletConnection.exchange_name == 'coinbase',
+            WalletConnection.is_active == True,
+            WalletConnection.connection_status == 'connected'
+        ).first()
+
+        connected = connection is not None
+        print(f"DEBUG: Coinbase connection status: {connected}")
+
+        if connection:
+            connection.last_used_at = func.now()
+            db.commit()
+
+        return ConnectionResponse(connected=connected)
+
+    except Exception as e:
+        print(f"DEBUG: Error checking Coinbase connection status: {str(e)}")
+        return ConnectionResponse(connected=False)
+
+@app.get("/coinbase/balances")
+async def get_coinbase_balances(db: Session = Depends(get_db)):
+    """Fetch balances from Coinbase"""
+    print("DEBUG: get_coinbase_balances called")
+    try:
+        current_user = get_current_user_from_db(db)
+        print(f"DEBUG: Getting Coinbase balances for user: {current_user.email}")
+
+        connection = db.query(WalletConnection).filter(
+            WalletConnection.user_id == current_user.id,
+            WalletConnection.exchange_name == 'coinbase',
+            WalletConnection.is_active == True,
+            WalletConnection.connection_status == 'connected'
+        ).first()
+
+        if not connection:
+            print("DEBUG: No active Coinbase connection found")
+            raise HTTPException(status_code=401, detail="Not connected to Coinbase")
+
+        print("DEBUG: Active Coinbase connection found, fetching balances...")
+        connection.last_used_at = func.now()
+        db.commit()
+
+        # Read stored credentials
+        def _read_key(k):
+            if isinstance(k, (bytes, bytearray)):
+                try:
+                    return k.decode()
+                except Exception:
+                    return str(k)
+            return str(k)
+
+        api_key = _read_key(connection.encrypted_api_key)
+        secret_key = _read_key(connection.encrypted_secret_key)
+
+        # Initialize Coinbase exchange with CCXT
+        exchange = ccxt.coinbase({
+            'apiKey': api_key,
+            'secret': secret_key,
+            'enableRateLimit': True,
+            'timeout': 60000,
+        })
+
+        try:
+            print("DEBUG: Using Coinbase API via CCXT")
+
+            balance_data = await exchange.fetch_balance()
+
+            totals = balance_data.get('total', {}) if isinstance(balance_data, dict) else {}
+            free = balance_data.get('free', {}) if isinstance(balance_data, dict) else {}
+            used = balance_data.get('used', {}) if isinstance(balance_data, dict) else {}
+
+            balances = []
+            for asset, total_amount in totals.items():
+                try:
+                    total_f = float(total_amount or 0)
+                except Exception:
+                    total_f = 0.0
+                if total_f > 0:
+                    balances.append({
+                        'asset': asset,
+                        'free': str(free.get(asset, 0)),
+                        'locked': str(used.get(asset, 0))
+                    })
+
+            print(f"DEBUG: Returning Coinbase balances for connection: {connection.uuid}")
+            return {"balances": balances}
+
+        except AuthenticationError as auth_err:
+            connection.connection_status = 'error'
+            connection.last_error = f"AuthenticationError: {auth_err}"
+            db.commit()
+            raise HTTPException(status_code=401, detail="Authentication failed: check Coinbase API key/secret")
+        except (ExchangeNotAvailable, NetworkError) as net_err:
+            connection.connection_status = 'error'
+            connection.last_error = f"Network/Exchange error: {net_err}"
+            db.commit()
+            raise HTTPException(status_code=503, detail="Coinbase not reachable right now")
+        except (RequestTimeout,) as rt:
+            connection.connection_status = 'error'
+            connection.last_error = f"RequestTimeout: {rt}"
+            db.commit()
+            raise HTTPException(status_code=504, detail="Timeout contacting Coinbase")
+        except (DDoSProtection, RateLimitExceeded) as rl:
+            connection.connection_status = 'error'
+            connection.last_error = f"RateLimit: {rl}"
+            db.commit()
+            raise HTTPException(status_code=429, detail="Rate limit / DDoS protection triggered")
+        except Exception as api_error:
+            connection.connection_status = 'error'
+            connection.last_error = str(api_error)
+            db.commit()
+            import traceback
+            print(f"DEBUG: Traceback fetching Coinbase balances: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"Failed to fetch balances: {api_error}")
+        finally:
+            # Always close the exchange connection
+            try:
+                await exchange.close()
+            except Exception:
+                pass
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"DEBUG: Error fetching Coinbase balances: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to fetch balances: {str(e)}")
+
+@app.post("/coinbase/disconnect")
+async def disconnect_from_coinbase(db: Session = Depends(get_db)):
+    """Disconnect from Coinbase"""
+    print("DEBUG: disconnect_from_coinbase called")
+
+    try:
+        current_user = get_current_user_from_db(db)
+        print(f"DEBUG: Disconnecting Coinbase user: {current_user.email}")
+
+        connections = db.query(WalletConnection).filter(
+            WalletConnection.user_id == current_user.id,
+            WalletConnection.exchange_name == 'coinbase',
+            WalletConnection.is_active == True
+        ).all()
+
+        if connections:
+            print(f"DEBUG: Found {len(connections)} Coinbase connections to disconnect")
+            for connection in connections:
+                connection.is_active = False
+                connection.connection_status = 'disconnected'
+                print(f"DEBUG: Disconnected Coinbase connection: {connection.uuid}")
+
+            db.commit()
+        else:
+            print("DEBUG: No active Coinbase connections found")
+
+        return ConnectionResponse(
+            connected=False,
+            message="Successfully disconnected from Coinbase"
+        )
+
+    except Exception as e:
+        print(f"DEBUG: Error disconnecting from Coinbase: {str(e)}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to disconnect: {str(e)}")
+
+@app.get("/coinbase/credentials", response_model=CredentialsResponse)
+async def get_coinbase_credentials(userId: int, db: Session = Depends(get_db)):
+    """Retrieves the active Coinbase API key and secret for a SPECIFIC user"""
+    print(f"DEBUG: /coinbase/credentials endpoint called for userId: {userId}")
+
+    try:
+        connection = db.query(WalletConnection).filter(
+            WalletConnection.user_id == userId,
+            WalletConnection.exchange_name == 'coinbase',
+            WalletConnection.is_active == True,
+            WalletConnection.connection_status == 'connected'
+        ).first()
+
+        if not connection:
+            print(f"DEBUG: No active Coinbase connection found for userId: {userId}.")
+            raise HTTPException(status_code=404, detail=f"Active Coinbase connection not found for userId: {userId}.")
+
+        api_key = connection.encrypted_api_key
+        secret_key = connection.encrypted_secret_key
+
+        print(f"DEBUG: Found Coinbase credentials for userId: {userId}. Sending API Key starting with: {api_key[:5]}...")
+        return CredentialsResponse(apiKey=api_key, secretKey=secret_key)
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"DEBUG: Error fetching Coinbase credentials for userId {userId}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error while fetching credentials.")
 
 # ...existing code...

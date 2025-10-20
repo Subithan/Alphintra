@@ -1,5 +1,5 @@
 export interface Strategy {
-  id: string;
+  id: number;
   name: string;
   creatorId: string;
   creatorName: string;
@@ -15,7 +15,7 @@ export interface Strategy {
     annualizedReturn: number;
     maxDrawdown: number;
     sharpeRatio: number;
-    winRate: number; // This is correctly nested here!
+    winRate: number;
   };
   rating: number;
   reviewCount: number;

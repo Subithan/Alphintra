@@ -13,11 +13,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -54,7 +52,7 @@ class TicketServiceTest {
     @BeforeEach
     void setUp() {
         // Setup test data
-        UUID userId = UUID.randomUUID();
+        String userId = "user-12345";
         createTicketDto = new CreateTicketDto();
         createTicketDto.setUserId(userId);
         createTicketDto.setTitle("Test Ticket");
@@ -64,6 +62,7 @@ class TicketServiceTest {
         mockTicket = new Ticket(
             "TKT-20241201-0001",
             userId,
+            "user@example.com",
             "Test Ticket",
             "This is a test ticket description",
             TicketCategory.TECHNICAL,
@@ -103,7 +102,7 @@ class TicketServiceTest {
         verify(smartTicketRoutingService).findBestAgent(any(Ticket.class));
         verify(ticketRepository).save(any(Ticket.class));
         verify(supportAgentRepository).save(any(SupportAgent.class));
-        verify(auditService).logTicketCreation(anyString(), any(UUID.class), anyString());
+        verify(auditService).logTicketCreation(anyString(), anyString(), anyString());
         verify(notificationService).sendTicketCreatedNotification(any(Ticket.class));
         verify(notificationService).sendTicketAssignedNotification(any(Ticket.class), any(SupportAgent.class));
     }
@@ -117,6 +116,7 @@ class TicketServiceTest {
         Ticket unassignedTicket = new Ticket(
             "TKT-20241201-0002",
             createTicketDto.getUserId(),
+            "user@example.com",
             createTicketDto.getTitle(),
             createTicketDto.getDescription(),
             createTicketDto.getCategory(),

@@ -13,6 +13,7 @@ import type { SubscriptionPlan } from '@/components/subscriptions';
 import { Card, CardContent } from '@/components/ui/no-code/card';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface SubscriptionModalProps {
 
 export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [showComparison, setShowComparison] = useState(false);
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [currentPlan] = useState<string | undefined>(undefined);
@@ -180,28 +182,21 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
     setIsLoading(planId);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // TODO: Implement actual subscription API call
-      // const response = await fetch('/api/subscriptions/create', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ planId }),
-      // });
-
+      // Show loading toast
       toast({
-        title: 'Subscription Processing',
-        description: `Redirecting to payment for ${planId.toUpperCase()} plan...`,
+        title: 'Redirecting to Payment',
+        description: `Opening payment page for ${planId.toUpperCase()} plan...`,
       });
 
-      // Close modal and redirect to payment
-      // onClose();
-      // router.push(`/subscriptions/checkout?plan=${planId}`);
+      // Close modal
+      onClose();
+
+      // Navigate to payment page with plan information
+      router.push(`/subscription/payment?plan=${planId}`);
     } catch (error) {
       toast({
-        title: 'Subscription Failed',
-        description: 'Unable to process subscription. Please try again.',
+        title: 'Navigation Failed',
+        description: 'Unable to open payment page. Please try again.',
         variant: 'destructive',
       });
     } finally {
