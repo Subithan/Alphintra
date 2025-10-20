@@ -69,6 +69,42 @@ spec:
                 configMapKeyRef:
                   name: auth-service-config
                   key: kyc-endpoint
+            # Stripe Configuration
+            - name: STRIPE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secrets
+                  key: STRIPE_API_KEY
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+            - name: STRIPE_PRICE_ID_BASIC
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secrets
+                  key: STRIPE_PRICE_ID_BASIC
+            - name: STRIPE_PRICE_ID_PRO
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secrets
+                  key: STRIPE_PRICE_ID_PRO
+            - name: STRIPE_PRICE_ID_ENTERPRISE
+              valueFrom:
+                secretKeyRef:
+                  name: auth-service-secrets
+                  key: STRIPE_PRICE_ID_ENTERPRISE
+            - name: STRIPE_SUCCESS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: STRIPE_SUCCESS_URL
+            - name: STRIPE_CANCEL_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: auth-service-config
+                  key: STRIPE_CANCEL_URL
           resources:
             requests:
               cpu: 100m
