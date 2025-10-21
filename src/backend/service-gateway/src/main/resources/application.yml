@@ -147,7 +147,7 @@ spring:
                 redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:80}
                 key-resolver: "#{@principalKeyResolver}"
         - id: marketplace-service
-          uri: ${MARKETPLACE_service_URI:http://wallet-service.alphintra.svc.cluster.local:8012}
+          uri: ${MARKETPLACE_SERVICE_URI:http://wallet-service.alphintra.svc.cluster.local:8012}
           predicates:
             - Path=/strategies/**, /orders/**
           filters:
