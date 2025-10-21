@@ -17,7 +17,8 @@ export default function Bot() {
   const [hasRunningBot, setHasRunningBot] = useState(false);
   const [checkingBots, setCheckingBots] = useState(true);
   
-  const botOptions = ['Bot Alpha', 'Bot Beta', 'Bot Gamma'];
+  const botOptions = ['Untitled Model', 'Subi'
+  ];
   const coinOptions = [
     'BTC/USDT',
     'ETH/USDT',
@@ -38,16 +39,15 @@ export default function Bot() {
 
   // Bot descriptions
   const botDescriptions: Record<string, string> = {
-    'Bot Alpha': 'A conservative trading bot that focuses on stable returns with minimal risk. Uses advanced technical indicators to identify low-volatility opportunities.',
-    'Bot Beta': 'A balanced trading bot that combines growth potential with risk management. Employs both trend-following and mean-reversion strategies.',
-    'Bot Gamma': 'An aggressive trading bot designed for maximum returns. Utilizes high-frequency trading strategies and leverages market volatility.'
+    'Untiled Model': 'A conservative trading bot that focuses on stable returns with minimal risk. Uses advanced technical indicators to identify low-volatility opportunities.',
+    'Subi': 'A balanced trading bot that combines growth potential with risk management. Employs both trend-following and mean-reversion strategies.',
+   
   };
 
   // Map bot names to strategy IDs
   const botStrategyMap: Record<string, number> = {
-    'Bot Alpha': 1,
-    'Bot Beta': 1,
-    'Bot Gamma': 1
+    'Untiled Model': 1,
+    'Subi': 1
   };
 
   useEffect(() => {
