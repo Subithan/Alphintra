@@ -49,16 +49,8 @@ spec:
             secretKeyRef:
               name: customer-support-service-secrets
               key: jwt-secret
-        - name: REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: customer-support-service-config
-              key: redis-host
-        - name: REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: customer-support-service-config
-              key: redis-port
+        - name: SPRING_AUTOCONFIGURE_EXCLUDE
+          value: "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,org.springframework.boot.actuator.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration"
         - name: ELASTICSEARCH_HOST
           valueFrom:
             configMapKeyRef:
@@ -78,7 +70,7 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /actuator/health
+            path: /api/customer-support/actuator/health
             port: 8010
           initialDelaySeconds: 60
           periodSeconds: 30
@@ -86,7 +78,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /actuator/health/readiness
+            path: /api/customer-support/actuator/health/readiness
             port: 8010
           initialDelaySeconds: 30
           periodSeconds: 10

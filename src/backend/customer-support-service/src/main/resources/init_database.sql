@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS agent_specializations (
 -- Support Tickets Table
 CREATE TABLE IF NOT EXISTS support_tickets (
     ticket_id VARCHAR(20) PRIMARY KEY,
-    user_id UUID NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
     user_email VARCHAR(255) NOT NULL,
     user_name VARCHAR(200),
     title VARCHAR(500) NOT NULL,

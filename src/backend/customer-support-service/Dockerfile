@@ -55,10 +55,6 @@ ENV DB_PASSWORD=alphintra@123
 # JWT secret for signing tokens (should match other services)
 ENV JWT_SECRET=U29tZVZlcnlTdHJvbmdTZWNyZXRLZXlXaXRoRW5vdWdoQnl0ZXNGb3JFUjUxMkFsZ29yaXRobS0xMjM0NTY3ODkwYWJjZGVmZ2hpams=
 
-# Redis configuration
-ENV REDIS_HOST=redis.alphintra.svc.cluster.local
-ENV REDIS_PORT=6379
-
 # Elasticsearch configuration
 ENV ELASTICSEARCH_HOST=elasticsearch.alphintra.svc.cluster.local
 ENV ELASTICSEARCH_PORT=9200
