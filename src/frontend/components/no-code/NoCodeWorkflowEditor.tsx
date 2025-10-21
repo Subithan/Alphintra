@@ -183,40 +183,78 @@ function NoCodeWorkflowEditorInner({
       workflowUpdatedAt: currentWorkflow?.updatedAt
     });
 
-    // Only sync when workflow is loaded from backend (has updatedAt) AND it's different from ReactFlow state
-    if (currentWorkflow && currentWorkflow.updatedAt) {
-      const currentNodesCount = nodes.length;
-      const currentEdgesCount = edges.length;
-      const newNodesCount = currentWorkflow.nodes.length;
-      const newEdgesCount = currentWorkflow.edges.length;
-
-      // Only sync if the workflow in store has more nodes than ReactFlow (indicating fresh load from backend)
-      // OR if ReactFlow is empty but store has data
-      if ((newNodesCount > currentNodesCount) || (currentNodesCount === 0 && newNodesCount > 0)) {
-        console.log('🔍 [DEBUG] Syncing saved workflow to ReactFlow:', {
-          workflowId: currentWorkflow.id,
-          workflowName: currentWorkflow.name,
-          nodesCount: newNodesCount,
-          edgesCount: newEdgesCount,
-          hasNodes: newNodesCount > 0,
-          hasEdges: newEdgesCount > 0,
-          reason: 'Fresh load from backend'
-        });
-
-        setNodes(currentWorkflow.nodes);
-        setEdges(currentWorkflow.edges);
-      } else {
-        console.log('🔍 [DEBUG] No sync needed - ReactFlow has more recent changes');
-      }
-    } else {
+    if (!currentWorkflow || !currentWorkflow.updatedAt) {
       console.log('🔍 [DEBUG] Not syncing - default workflow or no updatedAt timestamp');
+      return;
+    }
+
+    const workflowNodes = Array.isArray(currentWorkflow.nodes)
+      ? currentWorkflow.nodes
+      : [];
+    const workflowEdges = Array.isArray(currentWorkflow.edges)
+      ? currentWorkflow.edges
+      : [];
+
+    const nodeMap = new Map(nodes.map(node => [node.id, node]));
+    const edgeMap = new Map(edges.map(edge => [edge.id, edge]));
+
+    const nodesChanged =
+      workflowNodes.length !== nodes.length ||
+      workflowNodes.some(node => {
+        const currentNode = nodeMap.get(node.id);
+        if (!currentNode) {
+          return true;
+        }
+
+        const positionChanged =
+          currentNode.position.x !== node.position.x ||
+          currentNode.position.y !== node.position.y;
+        const typeChanged = currentNode.type !== node.type;
+        const dataChanged = currentNode.data !== node.data;
+
+        return positionChanged || typeChanged || dataChanged;
+      });
+
+    const edgesChanged =
+      workflowEdges.length !== edges.length ||
+      workflowEdges.some(edge => {
+        const currentEdge = edgeMap.get(edge.id);
+        if (!currentEdge) {
+          return true;
+        }
+
+        return (
+          currentEdge.source !== edge.source ||
+          currentEdge.target !== edge.target ||
+          (currentEdge.sourceHandle || null) !== (edge.sourceHandle || null) ||
+          (currentEdge.targetHandle || null) !== (edge.targetHandle || null) ||
+          (currentEdge.type || 'default') !== (edge.type || 'default')
+        );
+      });
+
+    if (nodesChanged || edgesChanged) {
+      console.log('🔍 [DEBUG] Syncing workflow state to ReactFlow:', {
+        workflowId: currentWorkflow.id,
+        workflowName: currentWorkflow.name,
+        nodesCount: workflowNodes.length,
+        edgesCount: workflowEdges.length,
+        reason: 'Store is authoritative source'
+      });
+
+      setNodes(workflowNodes);
+      setEdges(workflowEdges);
+    } else {
+      console.log('🔍 [DEBUG] No sync needed - ReactFlow already matches store');
     }
   }, [
-    currentWorkflow?.id, // Watch for workflow ID changes (most reliable)
-    currentWorkflow?.updatedAt, // Watch for workflow updates (critical for fresh loads)
+    currentWorkflow?.id,
+    currentWorkflow?.updatedAt,
+    currentWorkflow?.nodes,
+    currentWorkflow?.edges,
+    nodes,
+    edges,
     setNodes,
     setEdges,
-    // Only include nodes/edges length to prevent infinite loops, not to trigger syncs
   ]);
 
   // Track ReactFlow state changes and update store for all workflows
