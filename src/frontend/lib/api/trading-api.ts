@@ -3,6 +3,7 @@
 
 import { BaseApiClient } from './api-client';
 import { getToken } from '../auth';
+import { tradingHttpBaseUrl } from '../config/gateway';
 
 export interface TradeOrderData {
   id: number;
@@ -76,7 +77,7 @@ export interface PendingOrder {
 
 class TradingApiService extends BaseApiClient {
   constructor() {
-    super();
+    super({ baseUrl: tradingHttpBaseUrl });
   }
 
   /**

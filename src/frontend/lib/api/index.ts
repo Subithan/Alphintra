@@ -7,7 +7,7 @@ import { marketDataApi } from './market-data-api';
 import { riskManagementApi } from './risk-management-api';
 import { noCodeApiClient } from './no-code-api';
 import { subscriptionApiClient } from './subscription-api';
-import { gatewayHttpBaseUrl } from '../config/gateway';
+import { gatewayHttpBaseUrl, authHttpBaseUrl } from '../config/gateway';
 import { getToken } from '../auth';
 
 // Re-export for external use
@@ -76,7 +76,7 @@ class AuthApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = gatewayHttpBaseUrl;
+    this.baseUrl = authHttpBaseUrl;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

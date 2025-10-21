@@ -1,7 +1,7 @@
 // file path: "D:\Alphintra\Alphintra\src\frontend\lib\api\auth-service-api.ts"
 
 import axios from 'axios';
-import { gatewayHttpBaseUrl } from '../config/gateway';
+import { authHttpBaseUrl } from '../config/gateway';
 import { getToken } from '../auth';
 
 
@@ -64,7 +64,7 @@ export class AuthServiceApiClient {
 
   constructor() {
     this.api = axios.create({
-      baseURL: gatewayHttpBaseUrl,
+      baseURL: authHttpBaseUrl,
       headers: {
         'Content-Type': 'application/json',
       },
