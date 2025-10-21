@@ -105,6 +105,7 @@ function NoCodeConsoleContent() {
   
   // No-code store
   const { currentWorkflow, loadWorkflow } = useNoCodeStore();
+  const workflowIdFromUrl = searchParams.get('workflow');
   
   // Workflow hooks
   useWorkflow({
@@ -535,11 +536,17 @@ function NoCodeConsoleContent() {
 
   // Load workflow from URL parameter
   useEffect(() => {
-    const workflowId = searchParams.get('workflow');
-    if (workflowId && user) {
-      loadWorkflowById(workflowId);
+    if (!workflowIdFromUrl || !user) {
+      return;
     }
-  }, [searchParams, user, loadWorkflowById]);
+
+    // Avoid reloading the workflow if it's already active in the store.
+    if (currentWorkflow?.id === workflowIdFromUrl) {
+      return;
+    }
+
+    loadWorkflowById(workflowIdFromUrl);
+  }, [workflowIdFromUrl, user, currentWorkflow?.id, loadWorkflowById]);
 
   // Debug: Log current workflow state whenever it changes
   useEffect(() => {
