@@ -299,32 +299,6 @@ export default function Profile() {
           )}
         </section>
 
-        {/* Binance Connection Section */}
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Exchange Connection</h2>
-          <div className="rounded-xl border border-muted/40 bg-muted/10 p-4 flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-foreground">Binance API</h3>
-              <p className="text-sm text-muted-foreground">
-                {isConnectedToBinance 
-                  ? 'Your Binance account is connected' 
-                  : 'Connect your Binance account to start trading'}
-              </p>
-            </div>
-            <button
-              onClick={handleBinanceConnect}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                isConnectedToBinance
-                  ? 'bg-green-500 hover:bg-green-600 text-white'
-                  : 'bg-yellow-400 hover:bg-yellow-500 text-black'
-              }`}
-            >
-              {isConnectedToBinance ? 'Connected' : 'Connect Binance'}
-            </button>
-          </div>
-        </section>
-
-        <BalanceCard />
 
         {/* Security Section */}
         <section className="space-y-3">

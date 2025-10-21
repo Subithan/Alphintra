@@ -8,7 +8,7 @@ import { coinfetcher } from "@/lib/api/fetcher";
 import { Coin } from "@/lib/api/types";
 import { useTheme } from "next-themes";
 
-const rowsPerPage = 7;
+const rowsPerPage = 10;
 
 export default function CryptoTable() {
   const [currentPage, setCurrentPage] = useState(1);
