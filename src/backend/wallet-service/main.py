@@ -80,7 +80,7 @@ class CredentialsResponse(BaseModel):
 
 class ConnectRequest(BaseModel):
     apiKey: str
-    secretKey: str
+    privateKey: str
 
 class Balance(BaseModel):
     asset: str
@@ -443,15 +443,15 @@ async def connect_to_coinbase(request: ConnectRequest, db: Session = Depends(get
     print("DEBUG: connect_to_coinbase function called")
 
     try:
-        print(f"DEBUG: API Key received: {request.apiKey[:10] if request.apiKey else 'None'}...")
-        print(f"DEBUG: Secret Key length: {len(request.secretKey) if request.secretKey else 'No secret'}")
+        print(f"DEBUG: API Key Name received: {request.apiKey.split('/')[-1] if request.apiKey else 'None'}")
+        print(f"DEBUG: Private Key received: {'Yes' if request.privateKey else 'No'}")
 
         # Validate inputs
-        if not request.apiKey or not request.secretKey:
+        if not request.apiKey or not request.privateKey:
             print("DEBUG: Missing API key or secret key")
-            raise HTTPException(status_code=400, detail="API Key and Secret Key are required")
+            raise HTTPException(status_code=400, detail="API Key Name (apiKey) and Private Key (privateKey) are required")
 
-        if len(request.apiKey) < 10 or len(request.secretKey) < 10:
+        if len(request.apiKey) < 10 or len(request.privateKey) < 10:
             print("DEBUG: Keys too short")
             raise HTTPException(status_code=400, detail="API Key and Secret Key seem too short")
 
@@ -466,8 +466,8 @@ async def connect_to_coinbase(request: ConnectRequest, db: Session = Depends(get
 
         if existing_connection:
             print("DEBUG: Updating existing Coinbase connection...")
-            existing_connection.encrypted_api_key = request.apiKey
-            existing_connection.encrypted_secret_key = request.secretKey
+            existing_connection.encrypted_api_key = request.apiKey # This is the API Key 'name'
+            existing_connection.encrypted_secret_key = request.privateKey # This is the PEM private key
             existing_connection.last_used_at = func.now()
             existing_connection.connection_status = 'connected'
             existing_connection.last_error = None
@@ -477,9 +477,9 @@ async def connect_to_coinbase(request: ConnectRequest, db: Session = Depends(get
             connection = WalletConnection(
                 user_id=current_user.id,
                 exchange_name='coinbase',
-                exchange_environment='production',
-                encrypted_api_key=request.apiKey,
-                encrypted_secret_key=request.secretKey,
+                exchange_environment='production', # Advanced Trade API is production
+                encrypted_api_key=request.apiKey, # Store the API Key 'name'
+                encrypted_secret_key=request.privateKey, # Store the PEM private key
                 connection_name=f"Coinbase Connection ({datetime.now().strftime('%Y-%m-%d')})",
                 is_active=True,
                 connection_status='connected'
@@ -569,15 +569,20 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
             return str(k)
 
         api_key = _read_key(connection.encrypted_api_key)
-        secret_key = _read_key(connection.encrypted_secret_key)
+        private_key = _read_key(connection.encrypted_secret_key)
 
         # Initialize Coinbase exchange with CCXT
-        exchange = ccxt.coinbase({
-            'apiKey': api_key,
-            'secret': secret_key,
+        exchange_config = {
+            'apiKey': api_key, # The API Key 'name'
+            'secret': private_key, # The PEM private key
             'enableRateLimit': True,
             'timeout': 60000,
-        })
+            # IMPORTANT: This synchronizes the local clock with the server's clock
+            # to prevent 401 Unauthorized errors due to timestamp mismatches.
+            'options': { 'fetchTime': True },
+        }
+
+        exchange = ccxt.coinbase(exchange_config)
 
         try:
             print("DEBUG: Using Coinbase API via CCXT")
@@ -585,9 +590,9 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
             balance_data = await exchange.fetch_balance()
 
             totals = balance_data.get('total', {}) if isinstance(balance_data, dict) else {}
-            free = balance_data.get('free', {}) if isinstance(balance_data, dict) else {}
-            used = balance_data.get('used', {}) if isinstance(balance_data, dict) else {}
-
+            free = balance_data.get('free', {}) or {} # Ensure it's a dict, not None
+            used = balance_data.get('used', {}) or {} # Ensure it's a dict, not None
+            
             balances = []
             for asset, total_amount in totals.items():
                 try:
