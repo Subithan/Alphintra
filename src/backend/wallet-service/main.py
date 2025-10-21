@@ -185,11 +185,11 @@ async def connect_to_binance(request: ConnectRequest, db: Session = Depends(get_
             existing_connection.encrypted_api_key = request.apiKey
             existing_connection.encrypted_secret_key = request.secretKey
             existing_connection.last_used_at = func.now()
-        existing_connection.connection_status = 'connected'
-        existing_connection.last_error = None
-        existing_connection.exchange_environment = normalized_env
-        existing_connection.updated_at = func.now()
-        connection = existing_connection
+            existing_connection.connection_status = 'connected'
+            existing_connection.last_error = None
+            existing_connection.exchange_environment = normalized_env
+            existing_connection.updated_at = func.now()
+            connection = existing_connection
         else:
              print("DEBUG: Creating new connection...")
              # Create new connection

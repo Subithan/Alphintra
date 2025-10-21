@@ -29,9 +29,9 @@ export default function StatsBar({ filteredStrategies }: StatsBarProps) {
       </div>
       <div className="flex items-center gap-2">
         <Star className="h-4 w-4 text-yellow-500" />
-        <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+        {/* <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
           Avg Rating: {avgRating}/5
-        </span>
+        </span> */}
       </div>
     </div>
   );
