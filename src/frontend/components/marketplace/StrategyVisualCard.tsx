@@ -153,8 +153,8 @@ export default function StrategyVisualCard({ strategy, viewMode, onClick }: Stra
 
         <div className="flex items-center justify-between text-xs mb-3">
           <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-            <span className="text-gray-700 dark:text-gray-300">{strategy.rating} ({strategy.reviewCount})</span>
+            {/* <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /> */}
+            {/* <span className="text-gray-700 dark:text-gray-300">{strategy.rating} ({strategy.reviewCount})</span> */}
           </div>
           <div className="flex items-center gap-1">
             <Users className="h-3 w-3 text-gray-400 dark:text-gray-500" />
