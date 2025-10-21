@@ -5,7 +5,5 @@ metadata:
   namespace: alphintra
 data:
   log-level: "INFO"
-  redis-host: "redis.alphintra.svc.cluster.local"
-  redis-port: "6379"
   elasticsearch-host: "elasticsearch.alphintra.svc.cluster.local"
   elasticsearch-port: "9200"

@@ -67,9 +67,25 @@ public class DockerNetworkDatabaseInitializer {
             try {
                 URI dbUri = new URI(databaseUrl.replace("jdbc:postgresql://", "http://"));
                 String userInfo = dbUri.getUserInfo();
-                String user = userInfo != null ? userInfo.split(":")[0] : "postgres";
-                String password = userInfo != null && userInfo.contains(":") ? userInfo.split(":")[1] : "";
-                String host = dbUri.getHost();
+                String defaultUser = firstNonEmpty(
+                    System.getenv("DB_USER"),
+                    System.getenv("SPRING_DATASOURCE_USERNAME"),
+                    "customer_support"
+                );
+                String defaultPassword = firstNonEmpty(
+                    System.getenv("DB_PASSWORD"),
+                    System.getenv("SPRING_DATASOURCE_PASSWORD"),
+                    "alphintra@123"
+                );
+                String user = userInfo != null ? userInfo.split(":")[0] : defaultUser;
+                String password = (userInfo != null && userInfo.contains(":")) ? userInfo.split(":")[1] : defaultPassword;
+                if (user == null || user.isEmpty()) {
+                    user = defaultUser;
+                }
+                if (password == null) {
+                    password = defaultPassword;
+                }
+                String host = dbUri.getHost() != null ? dbUri.getHost() : "127.0.0.1";
                 String port = String.valueOf(dbUri.getPort() != -1 ? dbUri.getPort() : 5432);
 
                 String postgresUrl = String.format("jdbc:postgresql://%s:%s/postgres", host, port);
@@ -84,12 +100,13 @@ public class DockerNetworkDatabaseInitializer {
 
         // Fallback to common configurations
         String[][] fallbackConfigs = {
-            {"postgres", "5432", "alphintra", "alphintra123"},
+            {"127.0.0.1", "5432", "customer_support", "alphintra@123"},
+            {"localhost", "5432", "customer_support", "alphintra@123"},
+            {"postgres", "5432", "customer_support", "alphintra@123"},
             {"postgres", "5432", "postgres", "postgres"},
             {"postgres", "5432", "postgres", ""},
-            {"postgresql", "5432", "alphintra", "alphintra123"},
-            {"db", "5432", "alphintra", "alphintra123"},
-            {"localhost", "5432", "alphintra", "alphintra123"}
+            {"postgresql", "5432", "customer_support", "alphintra@123"},
+            {"db", "5432", "customer_support", "alphintra@123"}
         };
 
         for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
@@ -200,6 +217,18 @@ public class DockerNetworkDatabaseInitializer {
             
             if (tableExists) {
                 System.out.println("support_tickets table exists, checking for missing columns...");
+                // Ensure user_id column type is VARCHAR (was UUID in earlier schema)
+                try (ResultSet colType = stmt.executeQuery(
+                    "SELECT data_type FROM information_schema.columns WHERE table_name = 'support_tickets' AND column_name = 'user_id'")) {
+                    if (colType.next()) {
+                        String dataType = colType.getString(1);
+                        if ("uuid".equalsIgnoreCase(dataType)) {
+                            System.out.println("Altering support_tickets.user_id from UUID to VARCHAR(255)...");
+                            stmt.execute("ALTER TABLE support_tickets ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text");
+                            System.out.println("✓ support_tickets.user_id column type updated to VARCHAR(255)");
+                        }
+                    }
+                }
                 
                 // Check if estimated_resolution_time column exists in support_tickets
                 try (ResultSet columnCheck = stmt.executeQuery(
@@ -354,5 +383,14 @@ public class DockerNetworkDatabaseInitializer {
         }
 
         return statements;
+    }
+
+    private static String firstNonEmpty(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isEmpty()) {
+                return value;
+            }
+        }
+        return null;
     }
 }

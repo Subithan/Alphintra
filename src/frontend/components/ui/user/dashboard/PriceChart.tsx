@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import BitcoinChart from "./BitCoinChart";
+import BitcoinChart from "./BitcoinChart";
 
 export default function PriceChart() {
   return (

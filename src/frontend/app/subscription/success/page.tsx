@@ -2,12 +2,12 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { SearchParamsWrapper } from '@/components/hooks/use-search-params';
 
-export default function SubscriptionSuccessPage() {
+function SubscriptionSuccessContent({ searchParams }: { searchParams: URLSearchParams }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
@@ -60,5 +60,13 @@ export default function SubscriptionSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SubscriptionSuccessPage() {
+  return (
+    <SearchParamsWrapper fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center"><p className="text-lg text-gray-600">Loading...</p></div></div>}>
+      {(searchParams) => <SubscriptionSuccessContent searchParams={searchParams} />}
+    </SearchParamsWrapper>
   );
 }

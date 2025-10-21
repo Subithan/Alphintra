@@ -20,8 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -52,16 +50,14 @@ public class TicketController {
     )
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Ticket created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid ticket data"),
-        @ApiResponse(responseCode = "401", description = "Authentication required")
+        @ApiResponse(responseCode = "400", description = "Invalid ticket data")
     })
     public ResponseEntity<TicketDto> createTicket(
-            @Valid @RequestBody CreateTicketDto createTicketDto,
-            Authentication authentication) {
+            @Valid @RequestBody CreateTicketDto createTicketDto) {
         
         logger.info("Creating ticket for user: {}", createTicketDto.getUserId());
         
-        String createdBy = getAgentId(authentication);
+        String createdBy = getAgentId();
         TicketDto ticket = ticketService.createTicket(createTicketDto, createdBy);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(ticket);
@@ -88,8 +84,7 @@ public class TicketController {
             @Parameter(description = "Filter by priority") @RequestParam(required = false) TicketPriority priority,
             @Parameter(description = "Filter tickets assigned to me") @RequestParam(required = false) Boolean assignedToMe,
             @Parameter(description = "Start date for filtering") @RequestParam(required = false) LocalDateTime startDate,
-            @Parameter(description = "End date for filtering") @RequestParam(required = false) LocalDateTime endDate,
-            Authentication authentication) {
+            @Parameter(description = "End date for filtering") @RequestParam(required = false) LocalDateTime endDate) {
 
         Sort.Direction sortDirection = direction.equalsIgnoreCase("desc") ? 
             Sort.Direction.DESC : Sort.Direction.ASC;
@@ -102,7 +97,7 @@ public class TicketController {
             filter.setUserId(userId);
         }
         
-        filter.setAgentId(assignedToMe != null && assignedToMe ? getAgentId(authentication) : agentId);
+        filter.setAgentId(assignedToMe != null && assignedToMe ? getAgentId() : agentId);
         filter.setStatus(status);
         filter.setCategory(category);
         filter.setPriority(priority);
@@ -140,10 +135,9 @@ public class TicketController {
     // @PreAuthorize("hasRole('SUPPORT_AGENT')") // Disabled for development
     public ResponseEntity<TicketDto> updateTicket(
             @Parameter(description = "Ticket ID") @PathVariable String ticketId,
-            @Valid @RequestBody UpdateTicketDto updateDto,
-            Authentication authentication) {
+            @Valid @RequestBody UpdateTicketDto updateDto) {
         
-        String updatedBy = getAgentId(authentication);
+        String updatedBy = getAgentId();
         TicketDto ticket = ticketService.updateTicket(ticketId, updateDto, updatedBy);
         
         return ResponseEntity.ok(ticket);
@@ -160,10 +154,9 @@ public class TicketController {
     // @PreAuthorize("hasRole('SUPPORT_AGENT')") // Disabled for development
     public ResponseEntity<TicketDto> escalateTicket(
             @Parameter(description = "Ticket ID") @PathVariable String ticketId,
-            @Valid @RequestBody EscalationDto escalationDto,
-            Authentication authentication) {
+            @Valid @RequestBody EscalationDto escalationDto) {
         
-        String escalatedBy = getAgentId(authentication);
+        String escalatedBy = getAgentId();
         TicketDto ticket = ticketService.escalateTicket(ticketId, escalationDto, escalatedBy);
         
         return ResponseEntity.ok(ticket);
@@ -180,10 +173,9 @@ public class TicketController {
     // @PreAuthorize("hasRole('SUPPORT_AGENT')") // Disabled for development
     public ResponseEntity<TicketDto> closeTicket(
             @Parameter(description = "Ticket ID") @PathVariable String ticketId,
-            @Parameter(description = "Closure reason") @RequestParam(required = false) String reason,
-            Authentication authentication) {
+            @Parameter(description = "Closure reason") @RequestParam(required = false) String reason) {
         
-        String closedBy = getAgentId(authentication);
+        String closedBy = getAgentId();
         TicketDto ticket = ticketService.closeTicket(ticketId, closedBy, reason);
         
         return ResponseEntity.ok(ticket);
@@ -218,11 +210,10 @@ public class TicketController {
     public ResponseEntity<Page<TicketDto>> getMyTickets(
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Filter by status") @RequestParam(required = false) List<TicketStatus> statuses,
-            Authentication authentication) {
+            @Parameter(description = "Filter by status") @RequestParam(required = false) List<TicketStatus> statuses) {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt"));
-        String agentId = getAgentId(authentication);
+        String agentId = getAgentId();
         
         Page<TicketDto> tickets = ticketService.getAgentTickets(agentId, statuses, pageable);
         return ResponseEntity.ok(tickets);
@@ -308,14 +299,9 @@ public class TicketController {
 
     // Private helper methods
 
-    private String getAgentId(Authentication authentication) {
-        // TODO: Extract agent ID from authentication principal
-        // This depends on how the authentication is set up
-        if (authentication == null) {
-            // Return a dummy agent ID for development when authentication is disabled
-            return "dev-agent-001";
-        }
-        return authentication.getName();
+    private String getAgentId() {
+        // Placeholder agent identifier while authentication is disabled
+        return "dev-agent-001";
     }
 
     /**

@@ -54,6 +54,9 @@ public class TicketService {
     public TicketDto createTicket(CreateTicketDto createTicketDto, String createdBy) {
         logger.info("Creating new ticket for user: {}", createTicketDto.getUserId());
 
+        // Normalize userId to a UUID string if DB column is of type UUID
+        String normalizedUserId = normalizeUserId(createTicketDto.getUserId());
+
         // Generate unique ticket ID
         String ticketId = ticketIdGeneratorService.generateTicketId();
 
@@ -66,7 +69,7 @@ public class TicketService {
         // Create ticket entity
         Ticket ticket = new Ticket(
             ticketId,
-            createTicketDto.getUserId(),
+            normalizedUserId,
             "user@example.com", // TODO: Get actual user email from user service
             createTicketDto.getTitle(),
             createTicketDto.getDescription(),
@@ -111,6 +114,22 @@ public class TicketService {
         }
 
         return convertToDto(ticket);
+    }
+
+    /**
+     * Converts arbitrary user identifiers to a UUID string for DB compatibility when
+     * the backing column is of type UUID. If the input is already a valid UUID, it is returned as-is.
+     * Otherwise a stable name-based UUID (v3-like) is generated from the input bytes.
+     */
+    private String normalizeUserId(String userId) {
+        if (userId == null || userId.isEmpty()) return "00000000-0000-0000-0000-000000000000";
+        try {
+            java.util.UUID.fromString(userId);
+            return userId; // already a valid UUID string
+        } catch (IllegalArgumentException ex) {
+            java.util.UUID derived = java.util.UUID.nameUUIDFromBytes(userId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return derived.toString();
+        }
     }
 
     /**

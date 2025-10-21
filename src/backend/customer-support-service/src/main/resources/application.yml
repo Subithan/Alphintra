@@ -10,12 +10,12 @@ spring:
     name: customer-support-service
   
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE:local}
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/alphintra_customer_support
-    username: postgres
-    password: alphintra123
+    url: ${DATABASE_URL:jdbc:postgresql://127.0.0.1:5432/alphintra_customer_support}
+    username: ${DB_USER:${SPRING_DATASOURCE_USERNAME:customer_support}}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:alphintra@123}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -42,18 +42,6 @@ spring:
     baseline-on-migrate: true
     baseline-version: 1
   
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: 
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-  
   mail:
     host: smtp.gmail.com
     port: 587
@@ -66,25 +54,6 @@ spring:
           starttls:
             enable: true
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8081/auth}
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-    fetch-registry: true
-    register-with-eureka: true
-    healthcheck:
-      enabled: true
-  instance:
-    prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30
-    lease-expiration-duration-in-seconds: 90
-
 management:
   endpoints:
     web:
@@ -93,6 +62,11 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    mail:
+      enabled: false
+    elasticsearch:
+      enabled: false
   metrics:
     export:
       prometheus:
@@ -148,19 +122,9 @@ support:
   knowledge-base:
     elasticsearch:
       enabled: true
-      hosts: localhost:9200
+      hosts: ${ELASTICSEARCH_HOSTS:localhost:9200}
       index-name: support-kb
     auto-learning: true
-  
-  security:
-    data-masking:
-      enabled: true
-      mask-patterns:
-        email: "(.{2}).*@"
-        phone: "(\\d{3})\\d{4}(\\d{3})"
-    consent:
-      default-duration-hours: 4
-      max-duration-hours: 24
   
   monitoring:
     metrics:
@@ -177,26 +141,14 @@ spring:
       on-profile: kubernetes
   
   datasource:
-    url: jdbc:postgresql://postgresql-service:5432/alphintra_customer_support
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:alphintra123}
+    url: ${DATABASE_URL:jdbc:postgresql://postgresql-service:5432/alphintra_customer_support}
+    username: ${DB_USER:${SPRING_DATASOURCE_USERNAME:customer_support}}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:alphintra@123}}
   
-  data:
-    redis:
-      host: redis-service
-      port: 6379
-      password: ${REDIS_PASSWORD:}
-
-eureka:
-  client:
-    enabled: false
-    service-url:
-      defaultZone: http://eureka-server:8761/eureka/
-
 support:
   knowledge-base:
     elasticsearch:
-      hosts: elasticsearch-service:9200
+      hosts: ${ELASTICSEARCH_HOSTS:elasticsearch-service:9200}
 
 ---
 spring:
@@ -211,23 +163,5 @@ spring:
       on-profile: docker
   
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra_customer_support?user=alphintra&password=alphintra123}
+    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/alphintra_customer_support?user=customer_support&password=alphintra%40123}
     driver-class-name: org.postgresql.Driver
-  
-  data:
-    redis:
-      url: ${REDIS_URL:redis://:redis123@redis:6379}
-  
-  security:
-    enabled: false
-  
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-      - org.springframework.boot.actuator.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
-
-eureka:
-  client:
-    enabled: false
-    service-url:
-      defaultZone: http://eureka-server:8761/eureka/

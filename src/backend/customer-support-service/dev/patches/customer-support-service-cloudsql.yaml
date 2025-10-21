@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: customer-support-service
+  namespace: alphintra
 spec:
   template:
     spec:
@@ -11,11 +12,16 @@ spec:
           args:
             - "--structured-logs"
             - "--port=5432"
-            - "--address=0.0.0.0"
+            - "--address=127.0.0.1"
             - "--private-ip"
+            - "--credentials-file=/secrets/cloudsql/service-account.json"
             - "alphintra-472817:us-central1:alphintra-db-instance"
           securityContext:
             runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: 10m
@@ -23,3 +29,11 @@ spec:
             limits:
               cpu: 100m
               memory: 128Mi
+          volumeMounts:
+            - name: cloudsql-sa
+              mountPath: /secrets/cloudsql
+              readOnly: true
+      volumes:
+        - name: cloudsql-sa
+          secret:
+            secretName: cloudsql-sa-secret
