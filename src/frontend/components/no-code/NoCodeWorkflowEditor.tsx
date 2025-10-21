@@ -170,21 +170,34 @@ function NoCodeWorkflowEditorInner({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const isSyncingFromStoreRef = useRef(false);
+  const nodesRef = useRef<Node[]>(nodes);
+  const edgesRef = useRef<Edge[]>(edges);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
 
   // Sync store changes to ReactFlow when store is updated externally
   useEffect(() => {
-    console.log('🔍 [DEBUG] Sync useEffect triggered:', {
+    console.log("🔍 [DEBUG] Sync useEffect triggered:", {
       currentWorkflowId: currentWorkflow?.id,
       currentWorkflowName: currentWorkflow?.name,
-      currentNodesCount: nodes.length,
-      currentEdgesCount: edges.length,
+      currentNodesCount: nodesRef.current.length,
+      currentEdgesCount: edgesRef.current.length,
       workflowNodesCount: currentWorkflow?.nodes?.length || 0,
       workflowEdgesCount: currentWorkflow?.edges?.length || 0,
-      workflowUpdatedAt: currentWorkflow?.updatedAt
+      workflowUpdatedAt: currentWorkflow?.updatedAt,
     });
 
     if (!currentWorkflow || !currentWorkflow.updatedAt) {
-      console.log('🔍 [DEBUG] Not syncing - default workflow or no updatedAt timestamp');
+      console.log(
+        "🔍 [DEBUG] Not syncing - default workflow or no updatedAt timestamp",
+      );
       return;
     }
 
@@ -195,12 +208,12 @@ function NoCodeWorkflowEditorInner({
       ? currentWorkflow.edges
       : [];
 
-    const nodeMap = new Map(nodes.map(node => [node.id, node]));
-    const edgeMap = new Map(edges.map(edge => [edge.id, edge]));
+    const nodeMap = new Map(nodesRef.current.map((node) => [node.id, node]));
+    const edgeMap = new Map(edgesRef.current.map((edge) => [edge.id, edge]));
 
     const nodesChanged =
-      workflowNodes.length !== nodes.length ||
-      workflowNodes.some(node => {
+      workflowNodes.length !== nodesRef.current.length ||
+      workflowNodes.some((node) => {
         const currentNode = nodeMap.get(node.id);
         if (!currentNode) {
           return true;
@@ -216,8 +229,8 @@ function NoCodeWorkflowEditorInner({
       });
 
     const edgesChanged =
-      workflowEdges.length !== edges.length ||
-      workflowEdges.some(edge => {
+      workflowEdges.length !== edgesRef.current.length ||
+      workflowEdges.some((edge) => {
         const currentEdge = edgeMap.get(edge.id);
         if (!currentEdge) {
           return true;
@@ -228,62 +241,55 @@ function NoCodeWorkflowEditorInner({
           currentEdge.target !== edge.target ||
           (currentEdge.sourceHandle || null) !== (edge.sourceHandle || null) ||
           (currentEdge.targetHandle || null) !== (edge.targetHandle || null) ||
-          (currentEdge.type || 'default') !== (edge.type || 'default')
+          (currentEdge.type || "default") !== (edge.type || "default")
         );
       });
 
     if (nodesChanged || edgesChanged) {
-      console.log('🔍 [DEBUG] Syncing workflow state to ReactFlow:', {
+      console.log("🔍 [DEBUG] Syncing workflow state to ReactFlow:", {
         workflowId: currentWorkflow.id,
         workflowName: currentWorkflow.name,
         nodesCount: workflowNodes.length,
         edgesCount: workflowEdges.length,
-        reason: 'Store is authoritative source'
+        reason: "Store is authoritative source",
       });
 
-      setNodes(workflowNodes);
-      setEdges(workflowEdges);
+      isSyncingFromStoreRef.current = true;
+      setNodes(workflowNodes.map((node) => ({ ...node })));
+      setEdges(workflowEdges.map((edge) => ({ ...edge })));
     } else {
-      console.log('🔍 [DEBUG] No sync needed - ReactFlow already matches store');
+      console.log(
+        "🔍 [DEBUG] No sync needed - ReactFlow already matches store",
+      );
     }
-  }, [
-    currentWorkflow?.id,
-    currentWorkflow?.updatedAt,
-    currentWorkflow?.nodes,
-    currentWorkflow?.edges,
-    nodes,
-    edges,
-    setNodes,
-    setEdges,
-  ]);
+  }, [currentWorkflow?.id, currentWorkflow?.updatedAt, setNodes, setEdges]);
 
   // Track ReactFlow state changes and update store for all workflows
   useEffect(() => {
-    console.log('🔍 [DEBUG] ReactFlow nodes/edges changed:', {
+    console.log("🔍 [DEBUG] ReactFlow nodes/edges changed:", {
       nodesCount: nodes.length,
       edgesCount: edges.length,
       nodes: nodes.slice(0, 2),
       edges: edges.slice(0, 2),
-      workflowId: currentWorkflow?.id
+      workflowId: currentWorkflow?.id,
+      isSyncingFromStore: isSyncingFromStoreRef.current,
     });
 
-    // Update store with ReactFlow changes for all workflows
-    if (currentWorkflow) {
-      console.log('🔍 [DEBUG] Updating store with ReactFlow changes for workflow:', currentWorkflow.id);
-      const { updateWorkflow } = useNoCodeStore.getState();
-
-      // Update the current workflow in the store with ReactFlow state
-      const { loadWorkflow } = useNoCodeStore.getState();
-      const updatedWorkflow = {
-        ...currentWorkflow,
-        nodes: nodes,
-        edges: edges,
-        updatedAt: new Date(),
-        hasUnsavedChanges: true
-      };
-      loadWorkflow(updatedWorkflow);
+    if (!currentWorkflow) {
+      return;
     }
-  }, [nodes, edges, currentWorkflow?.id]);
+
+    if (isSyncingFromStoreRef.current) {
+      isSyncingFromStoreRef.current = false;
+      return;
+    }
+
+    console.log(
+      "🔍 [DEBUG] Updating store with ReactFlow changes for workflow:",
+      currentWorkflow.id,
+    );
+    updateWorkflow({ nodes, edges });
+  }, [nodes, edges, currentWorkflow?.id, updateWorkflow]);
 
   // Run validation when workflow changes
   useEffect(() => {
