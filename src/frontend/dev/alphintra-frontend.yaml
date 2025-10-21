@@ -32,6 +32,11 @@ spec:
           value: "1"
         - name: NEXT_PUBLIC_GATEWAY_URL
           value: "https://api.alphintra.com"
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: frontend-secrets
+              key: GEMINI_API_KEY
         resources:
           requests:
             memory: "256Mi"
