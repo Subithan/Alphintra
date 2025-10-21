@@ -23,9 +23,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 overflow-x-hidden">
         <div className="col-span-5 lg:col-start-1 lg:col-end-4 flex flex-col gap-8">
-          <GradientBorder gradientAngle="275deg" className="p-5">
+          {/* <GradientBorder gradientAngle="275deg" className="p-5">
             <BalanceCard />
-          </GradientBorder>
+          </GradientBorder> */}
           <GradientBorder gradientAngle="275deg" className="p-5">
             <CryptoTable />
           </GradientBorder>

@@ -1,8 +1,10 @@
 package com.alphintra.trading_engine.controller;
 
+import com.alphintra.trading_engine.dto.PositionWithPnLDTO;
 import com.alphintra.trading_engine.model.Position;
 import com.alphintra.trading_engine.model.PositionStatus;
 import com.alphintra.trading_engine.repository.PositionRepository;
+import com.alphintra.trading_engine.service.PositionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,34 +17,28 @@ import java.util.List;
 public class PositionController {
 
     private final PositionRepository positionRepository;
+    private final PositionService positionService;
 
     /**
-     * Get all open positions for a user
+     * Get all positions with real-time PNL calculation
      */
     @GetMapping
-    public ResponseEntity<List<Position>> getAllPositions(
+    public ResponseEntity<List<PositionWithPnLDTO>> getAllPositions(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String status) {
         
-        if (userId != null && status != null) {
-            PositionStatus positionStatus = PositionStatus.valueOf(status.toUpperCase());
-            return ResponseEntity.ok(positionRepository.findByUserIdAndStatus(userId, positionStatus));
-        } else if (userId != null) {
-            return ResponseEntity.ok(positionRepository.findByUserId(userId));
-        } else if (status != null) {
-            PositionStatus positionStatus = PositionStatus.valueOf(status.toUpperCase());
-            return ResponseEntity.ok(positionRepository.findByStatus(positionStatus));
-        }
+        PositionStatus positionStatus = status != null ? PositionStatus.valueOf(status.toUpperCase()) : null;
+        List<PositionWithPnLDTO> positions = positionService.getPositionsWithPnL(userId, positionStatus);
         
-        return ResponseEntity.ok(positionRepository.findAll());
+        return ResponseEntity.ok(positions);
     }
 
     /**
-     * Get open positions for a specific user
+     * Get open positions with real-time PNL for a specific user
      */
     @GetMapping("/open")
-    public ResponseEntity<List<Position>> getOpenPositions(@RequestParam Long userId) {
-        List<Position> positions = positionRepository.findByUserIdAndStatus(userId, PositionStatus.OPEN);
+    public ResponseEntity<List<PositionWithPnLDTO>> getOpenPositions(@RequestParam Long userId) {
+        List<PositionWithPnLDTO> positions = positionService.getPositionsWithPnL(userId, PositionStatus.OPEN);
         return ResponseEntity.ok(positions);
     }
 

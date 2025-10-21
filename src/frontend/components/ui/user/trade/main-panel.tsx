@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Tabs,
   TabsContent,
@@ -47,14 +47,22 @@ const ROW_HEIGHT = 40;
 const VISIBLE_ROWS = 4;
 const MAX_HEIGHT = 240; // 40px * 4 rows
 
+interface PositionWithPnL extends Position {
+  currentPrice?: number;
+  calculatedPnl?: number;
+  pnlPercentage?: number;
+}
+
 export default function MainPanel() {
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
+  const [positions, setPositions] = useState<PositionWithPnL[]>([]);
   const [activeBots, setActiveBots] = useState<TradingBot[]>([]);
   const [tradeHistory, setTradeHistory] = useState<TradeOrderData[]>([]);
   const [loading, setLoading] = useState(true); 
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   useEffect(() => {
     // Get user ID from JWT token
@@ -63,19 +71,22 @@ export default function MainPanel() {
     console.log('[Trading UI] User ID from JWT:', id);
   }, []);
 
+  // Effect to fetch initial data
   useEffect(() => {
     let mounted = true; 
     
     const fetchAllData = async () => {
       try {
-        setLoading(true);
+        if (isInitialLoad) {
+          setLoading(true);
+        }
         setError(null);
 
         // Get user ID from JWT
         const currentUserId = getUserId();
         console.log('[Trading UI] Fetching data for user ID:', currentUserId);
 
-        // Fetch all data in parallel - filtered by user ID
+        // Fetch all data in parallel - backend now calculates PNL
         const [trades, orders, pos, bots] = await Promise.all([
           tradingApi.getTradeHistory(20),
           currentUserId ? tradingApi.getPendingOrders(currentUserId, 'PENDING') : tradingApi.getPendingOrders(undefined, 'PENDING'),
@@ -86,14 +97,20 @@ export default function MainPanel() {
         if (mounted) {
           setTradeHistory(trades);
           setPendingOrders(orders);
-          setPositions(pos);
+          setPositions(pos as PositionWithPnL[]); // Backend now returns positions with PNL
           setActiveBots(bots);
+          setLastUpdate(new Date());
+          
+          if (isInitialLoad) {
+            setIsInitialLoad(false);
+          }
           
           console.log('[Trading UI] Data loaded:', {
             trades: trades.length,
             orders: orders.length,
             positions: pos.length,
-            bots: bots.length
+            bots: bots.length,
+            timestamp: new Date().toLocaleTimeString()
           });
         }
       } catch (err) {
@@ -103,26 +120,35 @@ export default function MainPanel() {
         } 
       } finally {
         if (mounted) {
-          setLoading(false);
+          if (isInitialLoad) {
+            setLoading(false);
+          }
         }
       }
     };
 
     fetchAllData();
     
-    // Poll for updates every 10 seconds
-    const interval = setInterval(fetchAllData, 10000);
+    // Poll for updates every 5 seconds (backend calculates PNL)
+    const interval = setInterval(fetchAllData, 5000);
 
     return () => {
       mounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [isInitialLoad]);
 
   return (
     <div className="w-full">
       {/* User Info Display */}
-      
+      {lastUpdate && (
+        <div className="mb-2 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+            <span>Live - Updated {lastUpdate.toLocaleTimeString()}</span>
+          </div>
+        </div>
+      )}
       
       <Tabs defaultValue="bots" className="w-full max-w-full">
         <TabsList className="flex flex-col flex-nowrap w-full gap-1 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:gap-2 min-w-[300px] p-0">
@@ -194,7 +220,7 @@ export default function MainPanel() {
   );
 }
 
-const PositionsTable = ({ data }: { data: Position[] }) => (
+const PositionsTable = ({ data }: { data: PositionWithPnL[] }) => (
   <div className="overflow-x-auto" style={{ overflowX: 'auto' }}>
     <Table className="min-w-[600px] overflow-x-auto">
       <TableHeader>
@@ -203,38 +229,40 @@ const PositionsTable = ({ data }: { data: Position[] }) => (
           <TableHead className="text-xs sm:text-sm">Status</TableHead>
           <TableHead className="text-xs sm:text-sm text-right">Quantity</TableHead>
           <TableHead className="text-xs sm:text-sm text-right">Entry Price</TableHead>
-          {/* <TableHead className="text-xs sm:text-sm text-right">Opened At</TableHead> */}
-          <TableHead className="text-xs sm:text-sm text-right">PNL</TableHead>
+          <TableHead className="text-xs sm:text-sm text-right">PNL (USDT)</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.map((pos) => (
-          <TableRow key={pos.id} style={{ height: ROW_HEIGHT }}>
-            <TableCell className="font-medium text-xs sm:text-sm">{pos.symbol}</TableCell>
-            <TableCell className="text-xs sm:text-sm">
-              <Badge variant={pos.status === 'OPEN' ? 'default' : 'secondary'}>
-                {pos.status}
-              </Badge>
-            </TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">{pos.quantity}</TableCell>
-            <TableCell className="text-right text-xs sm:text-sm">${pos.entryPrice.toLocaleString()}</TableCell>
-            {/* <TableCell className="text-right text-xs sm:text-sm">
-              {new Date(pos.createdAt).toLocaleString()}
-            </TableCell> */}
-            <TableCell
-              className={`text-right font-semibold text-xs sm:text-sm ${(pos.pnl || 0) >= 0 ? 'text-[#0b9981]' : 'text-red-500'}`}
-            >
-              {pos.pnl ? (
-                <>
-                  {pos.pnl >= 0 ? '+' : ''}
-                  {pos.pnl.toFixed(2)}
-                </>
-              ) : (
-                'N/A'
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
+        {data.map((pos) => {
+          const pnl = pos.calculatedPnl ?? pos.pnl ?? 0;
+          const pnlPercent = pos.pnlPercentage ?? 0;
+          
+          return (
+            <TableRow key={pos.id} style={{ height: ROW_HEIGHT }}>
+              <TableCell className="font-medium text-xs sm:text-sm">{pos.symbol}</TableCell>
+              <TableCell className="text-xs sm:text-sm">
+                <Badge variant={pos.status === 'OPEN' ? 'default' : 'secondary'} className={pos.status === 'OPEN' ? 'bg-[#0b9981]' : ''}>
+                  {pos.status}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right text-xs sm:text-sm">{pos.quantity.toFixed(6)}</TableCell>
+              <TableCell className="text-right text-xs sm:text-sm">${pos.entryPrice.toLocaleString()}</TableCell>
+
+              <TableCell
+                className={`text-right font-semibold text-xs sm:text-sm ${pnl >= 0 ? 'text-[#0b9981]' : 'text-red-500'}`}
+              >
+                <div className="flex flex-col items-end">
+                  <span>
+                    {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
+                  </span>
+                  <span className="text-[10px] opacity-70">
+                    ({pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%)
+                  </span>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   </div>

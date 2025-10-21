@@ -8,7 +8,7 @@ import { coinfetcher } from "@/lib/api/fetcher";
 import { Coin } from "@/lib/api/types";
 import { useTheme } from "next-themes";
 
-const rowsPerPage = 7;
+const rowsPerPage = 10;
 
 export default function CryptoTable() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,7 +66,8 @@ export default function CryptoTable() {
       {/* Table */}
       <div
         className={cn(
-          "overflow-x-auto rounded-lg",
+          "overflow-x-auto overflow-y-auto rounded-lg",
+          "max-h-[calc(100vh-100px)] min-h-[500px]", // Responsive height with minimum
           resolvedTheme === "dark" ? "bg-[#0a0a1a]" : "bg-white"
         )}
       >

@@ -300,7 +300,7 @@ export default function Profile() {
         </section>
 
         {/* Binance Connection Section */}
-        <section className="space-y-3">
+        {/* <section className="space-y-3">
           <h2 className="text-lg font-semibold">Exchange Connection</h2>
           <div className="rounded-xl border border-muted/40 bg-muted/10 p-4 flex items-center justify-between">
             <div className="space-y-1">
@@ -322,9 +322,9 @@ export default function Profile() {
               {isConnectedToBinance ? 'Connected' : 'Connect Binance'}
             </button>
           </div>
-        </section>
+        </section> */}
 
-        <BalanceCard />
+        {/* <BalanceCard /> */}
 
         {/* Security Section */}
         <section className="space-y-3">
