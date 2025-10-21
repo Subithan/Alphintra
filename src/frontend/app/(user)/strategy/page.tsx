@@ -114,15 +114,7 @@ export default function Strategy() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handlePluginClick(strategy.name)}
-                      className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
-                    >
-                      <Plug className="w-3 h-3" />
-                      Plugin
-                    </button>
-                  </div>
+                  
                 </div>
               ))}
             </div>
@@ -167,17 +159,7 @@ export default function Strategy() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() =>
-                          handlePluginClick(purchase.strategy.name)
-                        }
-                        className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-1 rounded-md text-sm transition-colors"
-                      >
-                        <Plug className="w-3 h-3" />
-                        Plugin
-                      </button>
-                    </div>
+                    
                   </div>
                 );
               })}
