@@ -113,8 +113,9 @@ const AuthPage: React.FC = () => {
         
         setMessage({ type: 'success', text: 'Login successful! Welcome to trading!' });
         
-        // Check if user is admin and redirect accordingly
-        if (response.user.email === 'admin@alphintra.com') {
+        if (response.user.id === 73) {
+          window.location.href = '/support/dashboard';
+        } else if (response.user.email === 'admin@alphintra.com') {
           console.log('Admin user detected, redirecting to admin dashboard');
           window.location.href = 'https://alphintra.com/support/dashboard';
         } else {
