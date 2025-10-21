@@ -139,6 +139,7 @@ export function ConfigurationPanel({ selectedNode, onNodeSelect }: Configuration
       console.log('Deleting node:', selectedNode); // Debug log
       removeNode(selectedNode);
       console.log('Node deletion called'); // Debug log
+      onNodeSelect?.(null);
     }
   };
 
