@@ -3,6 +3,7 @@
 
 import { BaseApiClient } from './api-client';
 import { getToken } from '../auth';
+import type { TradingBot, TradingPosition } from './types';
 
 export interface TradeOrderData {
   id: number;
@@ -24,22 +25,22 @@ export interface BalanceInfo {
   total: number;
 }
 
+export interface UserBalance {
+  id: number;
+  userId: number;
+  asset: string;
+  free: number;
+  locked: number;
+  total: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StartBotRequest {
   userId: number;
   strategyId: number;
   capitalAllocation?: number;
   symbol?: string;
-}
-
-export interface TradingBot {
-  id: number;
-  userId: number;
-  strategyId: number;
-  status: string;
-  capitalAllocation: number;
-  symbol: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface StopBotsResponse {
@@ -89,6 +90,42 @@ class TradingApiService extends BaseApiClient {
    */
   async stopAllBots(): Promise<StopBotsResponse> {
     return this.post<StopBotsResponse>('/api/trading/bots/stop');
+  }
+
+  /**
+   * Get all trading bots for the authenticated user
+   */
+  async getBots(): Promise<TradingBot[]> {
+    const token = getToken();
+    console.log('[Trading API] getBots called', {
+      hasToken: !!token,
+      isClient: typeof window !== 'undefined',
+    });
+    return this.get<TradingBot[]>('/api/trading/bots');
+  }
+
+  /**
+   * Get all positions for the authenticated user
+   */
+  async getPositions(): Promise<TradingPosition[]> {
+    const token = getToken();
+    console.log('[Trading API] getPositions called', {
+      hasToken: !!token,
+      isClient: typeof window !== 'undefined',
+    });
+    return this.get<TradingPosition[]>('/api/trading/positions');
+  }
+
+  /**
+   * Get user balances for the authenticated user
+   */
+  async getUserBalances(): Promise<UserBalance[]> {
+    const token = getToken();
+    console.log('[Trading API] getUserBalances called', {
+      hasToken: !!token,
+      isClient: typeof window !== 'undefined',
+    });
+    return this.get<UserBalance[]>('/api/trading/user/balances');
   }
 }
 

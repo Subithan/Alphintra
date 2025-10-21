@@ -12,8 +12,7 @@ A comprehensive customer support system for the Alphintra trading platform, prov
 - **AI Assistant**: Intelligent response suggestions and sentiment analysis
 - **Real-time Collaboration**: WebSocket-based real-time updates and agent collaboration
 
-### Security & Privacy
-- **Role-based Access Control**: L1-L4 agent levels with appropriate permissions
+### Privacy & Auditing
 - **Data Masking**: Automatic PII masking based on agent access level
 - **Consent Management**: User consent tracking for sensitive data access
 - **Audit Logging**: Comprehensive audit trail for compliance
@@ -29,7 +28,6 @@ A comprehensive customer support system for the Alphintra trading platform, prov
 - Java 17+
 - Maven 3.8+
 - PostgreSQL 15+
-- Redis 7+
 - Docker (optional)
 
 ### Local Development
@@ -167,8 +165,6 @@ PUT /api/support/agents/{agentId}/status
 | `DB_NAME` | Database name | alphintra_support |
 | `DB_USERNAME` | Database username | postgres |
 | `DB_PASSWORD` | Database password | - |
-| `REDIS_HOST` | Redis host | localhost |
-| `REDIS_PORT` | Redis port | 6379 |
 | `JWT_ISSUER_URI` | JWT issuer URI | http://localhost:8081/auth |
 | `OPENAI_API_KEY` | OpenAI API key for AI features | - |
 
@@ -246,7 +242,6 @@ curl -o support-api.postman.json \
 ### Health Checks
 - **Application Health**: `/actuator/health`
 - **Database Health**: `/actuator/health/db`
-- **Redis Health**: `/actuator/health/redis`
 
 ### Metrics
 - **Prometheus**: `/actuator/prometheus`
@@ -262,20 +257,6 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 ```
 
-## Security
-
-### Access Control
-- **L1 Agents**: Basic ticket access, limited user data
-- **L2 Agents**: Extended access, technical tickets
-- **L3 Specialists**: Full access, complex issues
-- **L4 Managers**: Administrative access, all features
-
-### Data Protection
-- **Encryption**: All sensitive data encrypted at rest and in transit
-- **Masking**: PII automatically masked based on access level
-- **Consent**: User consent required for detailed data access
-- **Audit**: All data access logged and monitored
-
 ## Troubleshooting
 
 ### Common Issues
@@ -289,16 +270,7 @@ logging:
    psql -h localhost -U support_user -d alphintra_support -c "\dt"
    ```
 
-2. **Redis Connection Issues**
-   ```bash
-   # Check Redis connectivity
-   redis-cli ping
-   
-   # Check Redis logs
-   redis-cli monitor
-   ```
-
-3. **Authentication Issues**
+2. **Authentication Issues**
    ```bash
    # Verify JWT token
    curl -H "Authorization: Bearer $TOKEN" \
@@ -318,11 +290,10 @@ mvn spring-boot:run -Dspring-boot.run.profiles=debug
 
 ### Architecture
 - **Spring Boot 3.2**: Main framework
-- **Spring Security**: Authentication and authorization
+-- *(Authentication currently disabled for cloud profile while gateway integration is finalized.)*
 - **Spring Data JPA**: Database access
 - **Spring WebSocket**: Real-time communication
 - **PostgreSQL**: Primary database
-- **Redis**: Caching and session management
 - **OpenAPI 3**: API documentation
 
 ### Code Structure
@@ -334,7 +305,6 @@ src/main/java/com/alphintra/customersupport/
 ├── entity/         # JPA entities
 ├── dto/           # Data transfer objects
 ├── config/        # Configuration classes
-├── security/      # Security configuration
 └── websocket/     # WebSocket handlers
 ```
 

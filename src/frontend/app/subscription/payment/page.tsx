@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/no-code/card';
 import { ArrowLeft, CreditCard, Lock, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SearchParamsWrapper } from '@/components/hooks/use-search-params';
 
 interface PaymentFormData {
   cardNumber: string;
@@ -22,8 +23,7 @@ interface FormErrors {
   amount?: string;
 }
 
-export default function PaymentPage() {
-  const searchParams = useSearchParams();
+function PaymentPageContent({ searchParams }: { searchParams: URLSearchParams }) {
   const router = useRouter();
   const planId = searchParams.get('plan');
   const [planDetails, setPlanDetails] = useState<{
@@ -61,9 +61,10 @@ export default function PaymentPage() {
     };
 
     if (planId && (planId === 'pro' || planId === 'max')) {
-      setPlanDetails(plans[planId]);
+      const plan = plans[planId as keyof typeof plans];
+      setPlanDetails(plan);
       // Update amount based on plan
-      setFormData(prev => ({ ...prev, amount: plans[planId].price.toFixed(2) }));
+      setFormData(prev => ({ ...prev, amount: plan.price.toFixed(2) }));
     } else {
       // If no valid plan, redirect back to subscriptions
       router.push('/subscriptions');
@@ -184,7 +185,7 @@ export default function PaymentPage() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSubmit();
     }
@@ -213,7 +214,7 @@ export default function PaymentPage() {
             <p className="text-sm text-gray-500">Amount Paid</p>
             <p className="text-3xl font-bold text-gray-800">${formData.amount}</p>
           </div>
-          <p className="text-sm text-gray-500 mb-4">Transaction ID: TXN{Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+          <p className="text-sm text-gray-500 mb-4">Transaction ID: TXN{Math.random().toString(36).substring(2, 11).toUpperCase()}</p>
           <p className="text-sm text-indigo-600 font-medium animate-pulse">Redirecting to dashboard...</p>
         </div>
       </div>
@@ -260,7 +261,7 @@ export default function PaymentPage() {
             Your information is encrypted and secure
           </p>
 
-          <div className="space-y-6" onKeyPress={handleKeyPress}>
+          <div className="space-y-6" onKeyDown={handleKeyDown}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Amount
@@ -394,5 +395,13 @@ export default function PaymentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <SearchParamsWrapper fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="text-center"><p className="text-lg text-gray-600">Loading payment details...</p></div></div>}>
+      {(searchParams) => <PaymentPageContent searchParams={searchParams} />}
+    </SearchParamsWrapper>
   );
 }

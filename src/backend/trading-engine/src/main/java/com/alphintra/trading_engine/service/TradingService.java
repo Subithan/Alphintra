@@ -132,4 +132,9 @@ public class TradingService {
         }
         return botRepository.saveAll(runningBots);
     }
+
+    public List<TradingBot> getBotsByUser(Long userId) {
+        System.out.println("📋 Fetching all bots for user: " + userId);
+        return botRepository.findByUserId(userId);
+    }
 }

@@ -10,18 +10,12 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/dashboard",
   },
   {
-    id: "trade",
-    name: "Trade",
-    icon: "solar:graph-new-up-line-duotone",
-    url: "/trade",
-  },
-  {
     id: "strategy",
     name: "Library",
     icon: "solar:library-line-duotone",
     url: "/strategy",
   },
-  {
+    {
     id: "market",
     name: "Market",
     icon: "solar:chart-line-duotone",
@@ -34,11 +28,10 @@ export const mainSidebarItems: SidebarItemType[] = [
     url: "/wallet",
   },
   {
-    id: "subscriptions",
-    name: "Subscriptions",
-    icon: "solar:card-line-duotone",
-    url: "#",
-    isModal: true,
+    id: "trade",
+    name: "Trade",
+    icon: "solar:graph-new-up-line-duotone",
+    url: "/trade",
   },
   {
     id: "ticketing",

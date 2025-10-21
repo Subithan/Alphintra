@@ -247,17 +247,10 @@ export const customerSupportApi = {
     return response;
   },
 
-  async getTickets(filter: TicketFilter = {}, page = 0, size = 20): Promise<PaginatedResponse<Ticket>> {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      size: size.toString(),
-      ...Object.fromEntries(
-        Object.entries(filter).filter(([_, value]) => value !== undefined && value !== null)
-      )
-    });
-    
+  async getTickets(_filter: TicketFilter = {}, _page = 0, _size = 20): Promise<PaginatedResponse<Ticket>> {
+    // Intentionally call base endpoint without query params or payload
     const response = await supportApiClient.get<PaginatedResponse<Ticket>>(
-      `${SUPPORT_API_BASE}/tickets?${params}`
+      `${SUPPORT_API_BASE}/tickets`
     );
     return response;
   },
