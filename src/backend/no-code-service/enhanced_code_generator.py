@@ -100,6 +100,11 @@ class EnhancedCodeGenerator:
 
     def __init__(self):
         self.handlers = dict(HANDLER_REGISTRY)
+
+        # Ensure legacy "riskManagement" nodes share the enhanced risk handler
+        risk_handler = self.handlers.get("risk")
+        if risk_handler and "riskManagement" not in self.handlers:
+            self.handlers["riskManagement"] = risk_handler
         self.fallback_handler = FALLBACK_HANDLER
         self.optimization_passes = [
             self._dead_code_elimination,
@@ -176,6 +181,14 @@ class EnhancedCodeGenerator:
         """Analyze individual node semantics."""
         
         # Define input/output types based on node type
+        risk_io = {
+            "inputs": {
+                "data-input": DataType.OHLCV,
+                "signal-input": DataType.SIGNAL
+            },
+            "outputs": {"risk-output": DataType.RISK_METRICS}
+        }
+
         type_mappings = {
             "dataSource": {
                 "inputs": {},
@@ -214,13 +227,8 @@ class EnhancedCodeGenerator:
                 "inputs": {"signal-input": DataType.SIGNAL},
                 "outputs": {}
             },
-            "riskManagement": {
-                "inputs": {
-                    "data-input": DataType.OHLCV,
-                    "signal-input": DataType.SIGNAL
-                },
-                "outputs": {"risk-output": DataType.RISK_METRICS}
-            },
+            "riskManagement": risk_io,
+            "risk": risk_io,
             "output": {
                 "inputs": {
                     "data-input": DataType.OHLCV,
@@ -548,7 +556,8 @@ class EnhancedCodeGenerator:
         if "condition" in node_types or "logic" in node_types:
             base_imports.append("from typing import Union, Optional")
         
-        if "riskManagement" in node_types:
+        risk_node_types = {"riskManagement", "risk"}
+        if node_types & risk_node_types:
             base_imports.extend([
                 "import math",
                 "from collections import deque"
@@ -628,7 +637,9 @@ class EnhancedCodeGenerator:
     def _generate_risk_management(self, nodes: List[TypedNode], context: CompilationContext) -> str:
         """Generate risk management code."""
         
-        risk_nodes = [node for node in nodes if node.type == "riskManagement"]
+        risk_nodes = [
+            node for node in nodes if node.type in {"riskManagement", "risk"}
+        ]
         if not risk_nodes:
             return "# No risk management defined"
 
