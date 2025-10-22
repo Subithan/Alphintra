@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -384,7 +386,7 @@ class CoinbaseOrderRequest(CoinbaseOrderBase):
 
 class CoinbaseOpenOrderRequest(CoinbaseOrderBase):
     side: str = Field(
-        ..., regex="^(?i)(buy|sell)$", description="Order side: buy for long, sell for short"
+        ..., pattern="^(?i)(buy|sell)$", description="Order side: buy for long, sell for short"
     )
 
 
