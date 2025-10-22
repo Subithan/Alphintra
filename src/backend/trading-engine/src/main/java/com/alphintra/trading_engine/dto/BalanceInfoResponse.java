@@ -12,7 +12,7 @@ public record BalanceInfoResponse(
             "SUCCESS",
             usdt + " USDT",
             btc + " BTC",
-            "Balance retrieved successfully from Binance Testnet",
+            "Balance retrieved successfully from Coinbase",
             "API Key: Valid and Connected"
         );
     }

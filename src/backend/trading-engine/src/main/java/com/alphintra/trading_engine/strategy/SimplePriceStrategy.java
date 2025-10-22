@@ -81,9 +81,9 @@ public class SimplePriceStrategy implements TradingStrategy {
                 System.out.println("║  Symbol: " + String.format("%-59s", symbol) + "║");
                 System.out.println("╠════════════════════════════════════════════════════════════════════╣");
                 System.out.println("║  Action Required:                                                  ║");
-                System.out.println("║  • Add funds to your testnet account                               ║");
-                System.out.println("║  • Visit: https://testnet.binance.vision/                          ║");
-                System.out.println("║  • Request testnet funds from faucet                               ║");
+                System.out.println("║  • Add funds to your Coinbase trading account                      ║");
+                System.out.println("║  • Ensure your API key has trading permissions                     ║");
+                System.out.println("║  • Sync balances via the wallet service                            ║");
                 System.out.println("║                                                                    ║");
                 System.out.println("║  Bot Status: WAITING FOR FUNDS                                     ║");
                 System.out.println("╚════════════════════════════════════════════════════════════════════╝");
