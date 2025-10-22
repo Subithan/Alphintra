@@ -54,16 +54,6 @@
             <version>1.18.38</version>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-binance</artifactId>
-            <version>5.2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20240303</version>
-        </dependency>
         <!-- Add these dependencies to src/backend/trading-engine/pom.xml -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
