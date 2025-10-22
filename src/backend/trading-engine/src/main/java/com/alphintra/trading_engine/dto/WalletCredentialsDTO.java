@@ -7,6 +7,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record WalletCredentialsDTO(
     @JsonProperty("apiKey") String apiKey,
-    @JsonProperty("privateKey") @JsonAlias("secretKey") String privateKey
+    @JsonProperty("secretKey") @JsonAlias("privateKey") String secretKey
 ) {
 }
