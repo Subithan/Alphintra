@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 import ccxt.async_support as ccxt
 from typing import List, Dict, Any, Optional
 import os
+import sys
 import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -14,8 +15,23 @@ from database import get_db, create_tables, engine
 from models import User, WalletConnection
 from ccxt.base.errors import AuthenticationError, RequestTimeout, ExchangeNotAvailable, NetworkError, DDoSProtection, RateLimitExceeded
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+# ---------------------------------------------------------------------------
+# Logging configuration
+# ---------------------------------------------------------------------------
+
+_LOG_LEVEL_NAME = os.getenv("LOG_LEVEL", "INFO").upper()
+_LOG_LEVEL = getattr(logging, _LOG_LEVEL_NAME, logging.INFO)
+
+logging.basicConfig(
+    level=_LOG_LEVEL,
+    format="%(asctime)s %(levelname)s %(name)s:%(lineno)d - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+
+# Suppress extremely noisy CCXT HTTP traces unless explicitly enabled.
+if os.getenv("CCXT_DEBUG", "0") != "1":
+    logging.getLogger("ccxt.base.exchange").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Alphintra Wallet Service", version="1.0.0")
