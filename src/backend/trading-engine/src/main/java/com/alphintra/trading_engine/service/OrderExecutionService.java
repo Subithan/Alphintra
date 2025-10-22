@@ -40,7 +40,7 @@ public class OrderExecutionService {
         System.out.println("EXECUTING ORDER: " + side + " " + quantity + " " + symbol);
         try {
             String apiKey = credentials.apiKey();
-            String secretKey = credentials.secretKey();
+            String secretKey = credentials.privateKey();
             
             // --- FIX IS HERE: Use synchronized server time ---
             long timestamp = binanceTimeService.getServerTime();
