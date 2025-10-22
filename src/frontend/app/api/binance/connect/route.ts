@@ -1,59 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-declare global {
-  var userConnections: Map<string, any>;
-}
-
-if (!global.userConnections) {
-  global.userConnections = new Map();
-}
+const WALLET_SERVICE_URL =
+  process.env.WALLET_SERVICE_URL ?? 'http://localhost:8011';
 
 export async function POST(request: NextRequest) {
   try {
-    const { apiKey, secretKey } = await request.json();
-    
-    if (!apiKey || !secretKey) {
+    const payload = await request.json();
+    const environment =
+      typeof payload?.environment === 'string'
+        ? payload.environment
+        : 'production';
+    const requestBody = {
+      ...payload,
+      environment,
+    };
+
+    const response = await fetch(
+      `${WALLET_SERVICE_URL}/binance/connect`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(requestBody),
+        cache: 'no-store',
+      },
+    );
+
+    if (!response.ok) {
+      let detail = response.statusText;
+      try {
+        const body = await response.json();
+        detail = body?.detail ?? body?.error ?? detail;
+      } catch {
+        // ignore parsing error
+      }
+
       return NextResponse.json(
-        { error: 'API Key and Secret Key are required' },
-        { status: 400 }
+        { error: detail ?? 'Failed to connect to Binance' },
+        { status: response.status },
       );
     }
 
-    // Test connection to Binance (you'll need to install a Binance library)
-    // For now, we'll simulate a successful connection
-    
-    // In production:
-    // 1. Validate the API keys with Binance
-    // 2. Encrypt and store in database
-    // 3. Associate with authenticated user
-    
-    // Simulate API validation
-    if (apiKey.length < 10 || secretKey.length < 10) {
-      return NextResponse.json(
-        { error: 'Invalid API credentials' },
-        { status: 400 }
-      );
-    }
-
-    // Store connection (use proper user auth and encryption in production)
-    const userId = 'current_user'; // Get from authenticated session
-    global.userConnections.set(userId, {
-      apiKey: apiKey, // Encrypt this!
-      secretKey: secretKey, // Encrypt this!
-      connected: true,
-      connectedAt: new Date()
-    });
-
-    return NextResponse.json({
-      message: 'Successfully connected to Binance',
-      connected: true
-    });
-
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Binance connection error:', error);
     return NextResponse.json(
-      { error: 'Failed to connect to Binance' },
-      { status: 500 }
+      { error: 'Failed to reach wallet service' },
+      { status: 502 },
     );
   }
 }

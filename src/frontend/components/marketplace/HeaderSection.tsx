@@ -15,9 +15,9 @@ export default function HeaderSection() {
               Discover and deploy AI-powered trading strategies from top developers
             </p>
           </div>
-          <Button className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-semibold">
+          {/* <Button className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-semibold">
             Become a Developer
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>
