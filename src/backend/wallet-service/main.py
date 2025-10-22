@@ -70,6 +70,109 @@ def _normalize_coinbase_symbol(symbol: str) -> str:
     return symbol
 
 
+def _stringify_amount(value: Optional[float]) -> str:
+    """Return a compact string representation for numeric balance fields."""
+    if value is None:
+        return "0"
+    # ``.15g`` avoids scientific notation for typical crypto balances.
+    formatted = format(value, ".15g")
+    # Guard against formatting edge-cases that yield an empty string.
+    return formatted if formatted else "0"
+
+
+def _extract_available_value(payload: Any) -> Optional[float]:
+    """Handle the different shapes Coinbase may use for balance payloads."""
+    if isinstance(payload, dict):
+        return _safe_float(payload.get("value"))
+    return _safe_float(payload)
+
+
+def _normalize_balances(balance_data: Any) -> List[Dict[str, str]]:
+    """Normalize CCXT balance payloads into a consistent API response."""
+    if not isinstance(balance_data, dict):
+        return []
+
+    totals = balance_data.get("total") or {}
+    free = balance_data.get("free") or {}
+    used = balance_data.get("used") or {}
+
+    normalized: List[Dict[str, str]] = []
+    for asset, total_amount in totals.items():
+        total_value = _safe_float(total_amount)
+        if total_value is None or total_value <= 0:
+            continue
+        normalized.append(
+            {
+                "asset": str(asset),
+                "free": _stringify_amount(_safe_float(free.get(asset))),
+                "locked": _stringify_amount(_safe_float(used.get(asset))),
+            }
+        )
+
+    if normalized:
+        return normalized
+
+    # Fallback: inspect the raw payload returned by Coinbase Advanced Trade.
+    raw_info = balance_data.get("info")
+    accounts: List[Any] = []
+    if isinstance(raw_info, dict):
+        accounts = raw_info.get("accounts") or raw_info.get("data") or raw_info.get("balances") or []
+    elif isinstance(raw_info, list):
+        accounts = raw_info
+
+    if not accounts and isinstance(balance_data.get("data"), list):
+        accounts = balance_data["data"]
+
+    for account in accounts:
+        if not isinstance(account, dict):
+            continue
+
+        asset = (
+            account.get("currency")
+            or account.get("currency_code")
+            or account.get("asset")
+        )
+        if not asset:
+            continue
+
+        free_value = _extract_available_value(
+            account.get("available_balance")
+            or account.get("available")
+        )
+
+        total_value = _extract_available_value(account.get("balance"))
+        if total_value is None:
+            total_value = _safe_float(account.get("value") or account.get("total"))
+
+        locked_value = _extract_available_value(account.get("hold"))
+
+        if total_value is None and free_value is not None and locked_value is not None:
+            total_value = free_value + locked_value
+
+        if locked_value is None and total_value is not None and free_value is not None:
+            locked_value = max(total_value - free_value, 0.0)
+
+        if total_value is None:
+            total_value = free_value
+
+        has_balance = any(
+            (val is not None and val > 0)
+            for val in (total_value, free_value, locked_value)
+        )
+        if not has_balance:
+            continue
+
+        normalized.append(
+            {
+                "asset": str(asset),
+                "free": _stringify_amount(free_value),
+                "locked": _stringify_amount(locked_value),
+            }
+        )
+
+    return normalized
+
+
 def _format_trigger(trigger: Optional[TriggerMetadata]) -> Optional[Dict[str, Any]]:
     if not trigger:
         return None
@@ -621,24 +724,10 @@ async def get_balances(db: Session = Depends(get_db)):
 
             balance_data = await exchange.fetch_balance()
 
-            totals = balance_data.get('total', {}) if isinstance(balance_data, dict) else {}
-            free = balance_data.get('free', {}) if isinstance(balance_data, dict) else {}
-            used = balance_data.get('used', {}) if isinstance(balance_data, dict) else {}
-
-            balances = []
-            for asset, total_amount in totals.items():
-                try:
-                    total_f = float(total_amount or 0)
-                except Exception:
-                    total_f = 0.0
-                if total_f > 0:
-                    balances.append({
-                        'asset': asset,
-                        'free': str(free.get(asset, 0)),
-                        'locked': str(used.get(asset, 0))
-                    })
-
-            print(f"DEBUG: Returning real balances for connection: {connection.uuid}")
+            balances = _normalize_balances(balance_data)
+            print(
+                f"DEBUG: Returning real balances for connection {connection.uuid} (assets={len(balances)})"
+            )
             return {"balances": balances}
 
         except AuthenticationError as auth_err:
@@ -920,24 +1009,10 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
 
             balance_data = await exchange.fetch_balance()
 
-            totals = balance_data.get('total', {}) if isinstance(balance_data, dict) else {}
-            free = balance_data.get('free', {}) or {} # Ensure it's a dict, not None
-            used = balance_data.get('used', {}) or {} # Ensure it's a dict, not None
-            
-            balances = []
-            for asset, total_amount in totals.items():
-                try:
-                    total_f = float(total_amount or 0)
-                except Exception:
-                    total_f = 0.0
-                if total_f > 0:
-                    balances.append({
-                        'asset': asset,
-                        'free': str(free.get(asset, 0)),
-                        'locked': str(used.get(asset, 0))
-                    })
-
-            print(f"DEBUG: Returning Coinbase balances for connection: {connection.uuid}")
+            balances = _normalize_balances(balance_data)
+            print(
+                f"DEBUG: Returning Coinbase balances for connection {connection.uuid} (assets={len(balances)})"
+            )
             return {"balances": balances}
 
         except AuthenticationError as auth_err:
