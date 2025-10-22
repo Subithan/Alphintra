@@ -141,9 +141,16 @@ public class TradingController {
     }
 
     @GetMapping("/balance")
-    public ResponseEntity<BalanceInfoResponse> getUsdtBalance() {
-        System.out.println("📊 Fetching USDT balance from Binance Testnet...");
-        BalanceInfoResponse balance = tradingService.getBalanceInfo();
+    public ResponseEntity<BalanceInfoResponse> getUsdtBalance(
+            @RequestHeader(value = "X-User-Id", required = false) String userId) {
+        if (userId == null || userId.isBlank()) {
+            System.out.println("⚠️ No X-User-Id header provided for /balance request");
+            return ResponseEntity.badRequest().build();
+        }
+
+        Long userIdLong = Long.parseLong(userId);
+        System.out.println("📊 Fetching Coinbase balances for user: " + userIdLong);
+        BalanceInfoResponse balance = tradingService.getBalanceInfo(userIdLong);
         return ResponseEntity.ok(balance);
     }
 

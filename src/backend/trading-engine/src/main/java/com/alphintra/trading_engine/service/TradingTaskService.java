@@ -1,5 +1,6 @@
 package com.alphintra.trading_engine.service;
 
+import com.alphintra.trading_engine.client.WalletServiceClient;
 import com.alphintra.trading_engine.dto.WalletCredentialsDTO;
 import com.alphintra.trading_engine.model.BotStatus;
 import com.alphintra.trading_engine.model.Position;
@@ -26,17 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.alphintra.trading_engine.config.ProxySettings;
 import org.knowm.xchange.ExchangeSpecification;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -48,9 +40,8 @@ public class TradingTaskService {
     private final TradingBotRepository botRepository;
     private final OrderExecutionService orderExecutionService;
     private final PositionRepository positionRepository;
-    private final BinanceTimeService binanceTimeService;
-    private final HttpClient httpClient;
     private final ProxySettings proxySettings;
+    private final WalletServiceClient walletServiceClient;
 
     @Value("${binance.api.enabled:true}")
     private boolean binanceApiEnabled;
@@ -156,9 +147,9 @@ public class TradingTaskService {
             // --- The slow initialization is GONE from this loop ---
             TradingStrategy strategy = new SimplePriceStrategy();
             String[] parts = bot.getSymbol().split("/");
-            CurrencyPair pair = new CurrencyPair(parts[0], parts[1]);
-            String baseCurrency = parts[0];
-            String quoteCurrency = parts[1];
+            String baseCurrency = parts[0].toUpperCase();
+            String quoteCurrency = parts[1].toUpperCase();
+            CurrencyPair pair = new CurrencyPair(baseCurrency, quoteCurrency);
 
             while (true) {
                 Optional<TradingBot> currentBotState = getFreshBotState(bot.getId());
@@ -179,7 +170,7 @@ public class TradingTaskService {
                     BigDecimal currentPrice = ticker.getLast();
                     System.out.println("📈 " + bot.getSymbol() + " price = " + currentPrice);
 
-                    Map<String, BigDecimal> balances = fetchAccountBalanceDirectAPI(credentials, baseCurrency, quoteCurrency);
+                    Map<String, BigDecimal> balances = getBalancesForUser(bot.getUserId(), baseCurrency, quoteCurrency);
                     Signal signal = strategy.decide(bot.getSymbol(), currentPrice, balances, openPosition);
 
                     switch (signal) {
@@ -246,49 +237,37 @@ public class TradingTaskService {
         }
     }
 
-    private Map<String, BigDecimal> fetchAccountBalanceDirectAPI(WalletCredentialsDTO credentials, String baseCurrency, String quoteCurrency) {
-        Map<String, BigDecimal> balances = new HashMap<>();
-        balances.put(baseCurrency, BigDecimal.ZERO);
-        balances.put(quoteCurrency, BigDecimal.ZERO);
+    private Map<String, BigDecimal> getBalancesForUser(Long userId, String baseCurrency, String quoteCurrency) {
+        String normalizedBase = baseCurrency.toUpperCase();
+        String normalizedQuote = quoteCurrency.toUpperCase();
+
+        BigDecimal baseAmount = BigDecimal.ZERO;
+        BigDecimal quoteAmount = BigDecimal.ZERO;
+
         try {
-            String apiKey = credentials.apiKey();
-            String secretKey = credentials.secretKey();
-            long timestamp = binanceTimeService.getServerTime(); // Use synchronized time
-            String queryString = "timestamp=" + timestamp;
-
-            Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            mac.init(secretKeySpec);
-            byte[] hash = mac.doFinal(queryString.getBytes(StandardCharsets.UTF_8));
-            StringBuilder signature = new StringBuilder();
-            for (byte b : hash) {
-                signature.append(String.format("%02x", b));
-            }
-            String url = "https://testnet.binance.vision/api/v3/account?" + queryString + "&signature=" + signature.toString();
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(30)).header("X-MBX-APIKEY", apiKey).GET().build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 200) {
-                String responseBody = response.body();
-                balances.put(baseCurrency, new BigDecimal(extractBalanceFromJson(responseBody, baseCurrency)));
-                balances.put(quoteCurrency, new BigDecimal(extractBalanceFromJson(responseBody, quoteCurrency)));
-                // Reduced logging noise for cleaner output
-            } else {
-                System.err.println("❌ Direct API request for balance failed with status: " + response.statusCode() + " | Response: " + response.body());
+            Map<String, BigDecimal> walletServiceBalances = walletServiceClient.getCoinbaseBalances(userId);
+            if (walletServiceBalances != null) {
+                baseAmount = walletServiceBalances.getOrDefault(normalizedBase, BigDecimal.ZERO);
+                quoteAmount = walletServiceBalances.getOrDefault(normalizedQuote, BigDecimal.ZERO);
             }
         } catch (Exception e) {
-            System.err.println("❌ Error with direct API call for balance: " + e.getMessage());
+            System.err.println("❌ Failed to fetch Coinbase balances for userId " + userId + ": " + e.getMessage());
         }
+
+        Map<String, BigDecimal> balances = new HashMap<>();
+        balances.put(baseCurrency, baseAmount);
+        balances.put(normalizedBase, baseAmount);
+        balances.put(quoteCurrency, quoteAmount);
+        balances.put(normalizedQuote, quoteAmount);
         return balances;
     }
-    
+
     // Unchanged helper methods
     @Transactional(propagation = Propagation.REQUIRES_NEW) public Optional<TradingBot> getFreshBotState(Long botId) { return botRepository.findById(botId); }
-    private String extractBalanceFromJson(String responseBody, String asset) { try { String searchPattern = "\"asset\":\"" + asset + "\""; int assetIndex = responseBody.indexOf(searchPattern); if (assetIndex == -1) return "0.00000000"; int freeIndex = responseBody.indexOf("\"free\":\"", assetIndex); if (freeIndex == -1) return "0.00000000"; int startQuote = freeIndex + 8; int endQuote = responseBody.indexOf("\"", startQuote); if (endQuote == -1) return "0.00000000"; return responseBody.substring(startQuote, endQuote); } catch (Exception e) { return "0.00000000"; } }
-    
+
     // Public method for balance check (used by TradingService before starting bot)
-    public Map<String, BigDecimal> checkBalance(WalletCredentialsDTO credentials, String baseCurrency, String quoteCurrency) {
-        return fetchAccountBalanceDirectAPI(credentials, baseCurrency, quoteCurrency);
+    public Map<String, BigDecimal> checkBalance(Long userId, String baseCurrency, String quoteCurrency) {
+        return getBalancesForUser(userId, baseCurrency, quoteCurrency);
     }
     
     private BigDecimal getStepSizeForSymbol(String symbol) {

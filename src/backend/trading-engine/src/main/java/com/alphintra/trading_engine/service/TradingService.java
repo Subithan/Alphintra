@@ -1,5 +1,6 @@
 package com.alphintra.trading_engine.service;
 
+import com.alphintra.trading_engine.client.WalletServiceClient;
 import com.alphintra.trading_engine.dto.WalletCredentialsDTO;
 import com.alphintra.trading_engine.exception.InsufficientBalanceException;
 import com.alphintra.trading_engine.model.BotStatus;
@@ -20,27 +21,27 @@ public class TradingService {
 
     private final TradingBotRepository botRepository;
     private final TradingTaskService tradingTaskService;
+    private final WalletServiceClient walletServiceClient;
 
     public TradingBot startBot(Long userId, Long strategyId, Integer capitalAllocation, String symbol) {
-        System.out.println("TradingService: startBot method called for userId=" + userId + 
-                         ", strategyId=" + strategyId + 
+        System.out.println("TradingService: startBot method called for userId=" + userId +
+                         ", strategyId=" + strategyId +
                          ", symbol=" + symbol +
                          ", capitalAllocation=" + capitalAllocation + "%");
 
-        System.out.println("🔧 Using Binance TESTNET API credentials for testing.");
-        WalletCredentialsDTO credentials = new WalletCredentialsDTO(
-            "mUYDoV3S2SmePZPyE6VreXJmgL9QHi8T5wd70Jr2n63Z5VdhCDQdHrOsXxv6gplv",
-            "eWZVKMxX6NmXMEtpKBZZxAaKDTypQ2wcJLOokyNz9zUyR4iSPnel5PzYfitD8nUF"
-        );
+        System.out.println("🔐 Fetching Coinbase API credentials for user " + userId + " via wallet-service.");
+        WalletCredentialsDTO credentials = walletServiceClient.getCredentials(userId);
+        String apiKeyPrefix = credentials.apiKey().substring(0, Math.min(credentials.apiKey().length(), 5));
+        System.out.println("🔑 Coinbase API key prefix for trading: " + apiKeyPrefix + "...");
 
         // Extract quote currency (USDT) from symbol
         String[] parts = symbol.split("/");
-        String quoteCurrency = parts.length > 1 ? parts[1] : "USDT";
-        String baseCurrency = parts[0];
+        String quoteCurrency = (parts.length > 1 ? parts[1] : "USDT").toUpperCase();
+        String baseCurrency = parts[0].toUpperCase();
 
         // Check balance BEFORE creating the bot
-        System.out.println("💰 Checking account balance before starting bot...");
-        Map<String, BigDecimal> balances = tradingTaskService.checkBalance(credentials, baseCurrency, quoteCurrency);
+        System.out.println("💰 Checking Coinbase balances before starting bot...");
+        Map<String, BigDecimal> balances = tradingTaskService.checkBalance(userId, baseCurrency, quoteCurrency);
         BigDecimal availableQuote = balances.get(quoteCurrency);
         
         // Calculate allocated amount based on percentage
@@ -81,32 +82,31 @@ public class TradingService {
         return savedBot;
     }
 
-    public com.alphintra.trading_engine.dto.BalanceInfoResponse getBalanceInfo() {
-        System.out.println("💰 Connecting to Binance Testnet to fetch balance...");
-        
-        WalletCredentialsDTO credentials = new WalletCredentialsDTO(
-            "mUYDoV3S2SmePZPyE6VreXJmgL9QHi8T5wd70Jr2n63Z5VdhCDQdHrOsXxv6gplv",
-            "eWZVKMxX6NmXMEtpKBZZxAaKDTypQ2wcJLOokyNz9zUyR4iSPnel5PzYfitD8nUF"
-        );
-        
+    public com.alphintra.trading_engine.dto.BalanceInfoResponse getBalanceInfo(Long userId) {
+        System.out.println("💰 Requesting Coinbase balance snapshot via wallet-service.");
+
+        WalletCredentialsDTO credentials = walletServiceClient.getCredentials(userId);
+        String balanceKeyPrefix = credentials.apiKey().substring(0, Math.min(credentials.apiKey().length(), 5));
+        System.out.println("🔑 Coinbase API key prefix for balance request: " + balanceKeyPrefix + "...");
+
         try {
             // Check balance for BTC/USDT (we just need USDT balance)
-            Map<String, BigDecimal> balances = tradingTaskService.checkBalance(credentials, "BTC", "USDT");
+            Map<String, BigDecimal> balances = tradingTaskService.checkBalance(userId, "BTC", "USDT");
             BigDecimal usdtBalance = balances.get("USDT");
             BigDecimal btcBalance = balances.get("BTC");
-            
+
             // Check if balance fetch was successful (non-zero means API worked)
             if (usdtBalance.compareTo(BigDecimal.ZERO) == 0 && btcBalance.compareTo(BigDecimal.ZERO) == 0) {
                 System.err.println("⚠️ Warning: Both balances are zero - API key may be invalid");
                 return com.alphintra.trading_engine.dto.BalanceInfoResponse.error(
-                    "API returned zero balance. Please check: 1) API key is valid 2) API key has spot trading permissions 3) Account has testnet funds"
+                    "API returned zero balance. Please check: 1) Coinbase API key is valid 2) Key has trading permissions 3) Account has funds"
                 );
             }
-            
+
             System.out.println("✅ Balance retrieved successfully!");
             System.out.println("   USDT: " + usdtBalance);
             System.out.println("   BTC: " + btcBalance);
-            
+
             return com.alphintra.trading_engine.dto.BalanceInfoResponse.success(
                 String.format("%.8f", usdtBalance),
                 String.format("%.8f", btcBalance)
@@ -114,7 +114,7 @@ public class TradingService {
         } catch (Exception e) {
             System.err.println("❌ Error fetching balance: " + e.getMessage());
             return com.alphintra.trading_engine.dto.BalanceInfoResponse.error(
-                "Failed to connect to Binance API: " + e.getMessage()
+                "Failed to retrieve Coinbase balances: " + e.getMessage()
             );
         }
     }
