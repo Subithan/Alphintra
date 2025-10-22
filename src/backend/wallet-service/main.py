@@ -189,6 +189,29 @@ def _normalize_balances(balance_data: Any) -> List[Dict[str, str]]:
     return normalized
 
 
+async def _fetch_coinbase_balance_payload(exchange: ccxt.coinbase) -> Dict[str, Any]:
+    """Fetch Coinbase balances without loading full market metadata."""
+    params = {"limit": 250}
+
+    try:
+        response = await exchange.v3PrivateGetBrokerageAccounts(params)
+        return {"info": response}
+    except AuthenticationError:
+        raise
+    except (ExchangeNotAvailable, NetworkError, RequestTimeout, DDoSProtection, RateLimitExceeded):
+        raise
+    except Exception as primary_error:
+        logger.debug(
+            "v3PrivateGetBrokerageAccounts failed, falling back to v2PrivateGetAccounts: %s",
+            primary_error,
+        )
+        try:
+            response = await exchange.v2PrivateGetAccounts(params)
+            return {"info": response}
+        except Exception as secondary_error:
+            raise primary_error from secondary_error
+
+
 def _format_trigger(trigger: Optional[TriggerMetadata]) -> Optional[Dict[str, Any]]:
     if not trigger:
         return None
@@ -992,8 +1015,6 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
             raise HTTPException(status_code=401, detail="Not connected to Coinbase")
 
         print("DEBUG: Active Coinbase connection found, fetching balances...")
-        connection.last_used_at = func.now()
-        db.commit()
 
         # Read stored credentials
         def _read_key(k):
@@ -1023,9 +1044,9 @@ async def get_coinbase_balances(db: Session = Depends(get_db)):
         try:
             print("DEBUG: Using Coinbase API via CCXT")
 
-            balance_data = await exchange.fetch_balance()
-
-            balances = _normalize_balances(balance_data)
+            balance_payload = await _fetch_coinbase_balance_payload(exchange)
+            balances = _normalize_balances(balance_payload)
+            _coinbase_success(db, connection)
             print(
                 f"DEBUG: Returning Coinbase balances for connection {connection.uuid} (assets={len(balances)})"
             )
