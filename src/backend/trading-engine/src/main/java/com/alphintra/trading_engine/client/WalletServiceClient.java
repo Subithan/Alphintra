@@ -8,6 +8,7 @@ import com.alphintra.trading_engine.dto.CoinbasePositionDTO;
 import com.alphintra.trading_engine.dto.CoinbaseTickerDTO;
 import com.alphintra.trading_engine.dto.CoinbaseTradeDTO;
 import com.alphintra.trading_engine.dto.WalletCredentialsDTO;
+import com.alphintra.trading_engine.exception.WalletServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -63,7 +64,7 @@ public class WalletServiceClient {
 
         } catch (Exception e) {
             System.err.println("❌ ERROR: Failed to fetch Coinbase credentials for userId " + userId);
-            throw new RuntimeException("Could not fetch Coinbase credentials from wallet service.", e);
+            throw new WalletServiceException("Could not fetch Coinbase credentials from wallet service.", e);
         }
     }
 
