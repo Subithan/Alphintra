@@ -3,6 +3,11 @@
 import asyncio
 import json
 from pathlib import Path
+import types
+
+import pytest
+
+pd = pytest.importorskip("pandas")
 
 from workflow_compiler_updated import WorkflowCompiler
 
@@ -24,7 +29,37 @@ def test_compiler_handles_console_nodes() -> None:
 
     assert result["validation"]["is_valid"], result["validation"]["errors"]
     assert result["success"], result["errors"]
-    assert result["code"].strip()
+    code = result["code"].strip()
+    assert code
+
+    strategy_module = types.ModuleType("generated_strategy")
+    exec(code, strategy_module.__dict__)
+
+    expected_functions = [
+        "load_data",
+        "compute_indicators",
+        "evaluate_conditions",
+        "combine_logic",
+        "apply_risk_controls",
+        "generate_trading_decisions",
+        "run_strategy",
+    ]
+
+    for name in expected_functions:
+        assert hasattr(strategy_module, name), f"Missing function: {name}"
+        assert callable(getattr(strategy_module, name)), f"{name} should be callable"
+
+    df = strategy_module.run_strategy()
+    assert isinstance(df, pd.DataFrame)
+
+    decision_columns = [col for col in df.columns if col.startswith("decision_")]
+    assert decision_columns, "Generated dataframe should include decision columns"
+
+    decision_values = set()
+    for col in decision_columns:
+        decision_values.update(df[col].unique())
+
+    assert any(value in {"BUY", "SELL"} for value in decision_values), "Expected BUY/SELL markers"
 
     requirements = result["requirements"]
     assert "pandas" in requirements
