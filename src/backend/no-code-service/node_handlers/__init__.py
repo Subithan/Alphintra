@@ -8,6 +8,10 @@ from .condition import ConditionHandler
 from .logic import LogicHandler
 from .action import ActionHandler
 from .risk import RiskHandler
+from .market_regime_detection import MarketRegimeDetectionHandler
+from .multi_timeframe_analysis import MultiTimeframeAnalysisHandler
+from .correlation_analysis import CorrelationAnalysisHandler
+from .sentiment_analysis import SentimentAnalysisHandler
 from .output import OutputHandler
 from .fallback import FallbackHandler
 
@@ -23,6 +27,10 @@ HANDLER_REGISTRY = {
         LogicHandler(),
         ActionHandler(),
         RiskHandler(),
+        MarketRegimeDetectionHandler(),
+        MultiTimeframeAnalysisHandler(),
+        CorrelationAnalysisHandler(),
+        SentimentAnalysisHandler(),
         OutputHandler(),
     ]
 }
@@ -41,6 +49,10 @@ __all__ = [
     "LogicHandler",
     "ActionHandler",
     "RiskHandler",
+    "MarketRegimeDetectionHandler",
+    "MultiTimeframeAnalysisHandler",
+    "CorrelationAnalysisHandler",
+    "SentimentAnalysisHandler",
     "OutputHandler",
     "FallbackHandler",
 ]

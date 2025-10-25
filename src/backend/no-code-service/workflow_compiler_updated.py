@@ -248,6 +248,110 @@ class WorkflowCompiler:
             },
         )
 
+        register(
+            "marketRegimeDetection",
+            category="analysis",
+            inputs={
+                "data-input": {
+                    "type": "ohlcv",
+                    "description": "Price series used for regime classification",
+                }
+            },
+            outputs={
+                "trend-output": {
+                    "type": "signal",
+                    "description": "Boolean flag indicating a trending market",
+                },
+                "sideways-output": {
+                    "type": "signal",
+                    "description": "Boolean flag indicating a range-bound market",
+                },
+                "volatile-output": {
+                    "type": "signal",
+                    "description": "Boolean flag indicating a high-volatility market",
+                },
+            },
+            templates={
+                "trend-output": "trend regime detection output",
+                "sideways-output": "sideways regime detection output",
+                "volatile-output": "volatile regime detection output",
+            },
+        )
+
+        register(
+            "multiTimeframeAnalysis",
+            category="analysis",
+            inputs={
+                "data-input": {
+                    "type": "ohlcv",
+                    "description": "Base timeframe OHLCV data",
+                }
+            },
+            outputs={
+                "output": {
+                    "type": "ohlcv",
+                    "description": "Aggregated OHLCV features across requested timeframes",
+                }
+            },
+            templates={
+                "output": "multi-timeframe aggregation output",
+            },
+        )
+
+        register(
+            "correlationAnalysis",
+            category="analysis",
+            inputs={
+                "data-input-1": {
+                    "type": "ohlcv",
+                    "description": "Primary asset OHLCV data",
+                },
+                "data-input-2": {
+                    "type": "ohlcv",
+                    "description": "Secondary asset OHLCV data",
+                },
+            },
+            outputs={
+                "output": {
+                    "type": "numeric",
+                    "description": "Rolling correlation between the two inputs",
+                }
+            },
+            templates={
+                "output": "correlation analysis output",
+            },
+        )
+
+        register(
+            "sentimentAnalysis",
+            category="analysis",
+            inputs={
+                "data-input": {
+                    "type": "dataset",
+                    "description": "Structured sentiment feed or derived features",
+                }
+            },
+            outputs={
+                "positive-output": {
+                    "type": "signal",
+                    "description": "Positive sentiment trigger",
+                },
+                "neutral-output": {
+                    "type": "signal",
+                    "description": "Neutral sentiment trigger",
+                },
+                "negative-output": {
+                    "type": "signal",
+                    "description": "Negative sentiment trigger",
+                },
+            },
+            templates={
+                "positive-output": "positive sentiment output",
+                "neutral-output": "neutral sentiment output",
+                "negative-output": "negative sentiment output",
+            },
+        )
+
         return registry
 
     # ------------------------------------------------------------------

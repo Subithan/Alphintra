@@ -244,6 +244,33 @@ class EnhancedCodeGenerator:
                     "signal-input": DataType.SIGNAL
                 },
                 "outputs": {}
+            },
+            "marketRegimeDetection": {
+                "inputs": {"data-input": DataType.OHLCV},
+                "outputs": {
+                    "trend-output": DataType.SIGNAL,
+                    "sideways-output": DataType.SIGNAL,
+                    "volatile-output": DataType.SIGNAL
+                }
+            },
+            "multiTimeframeAnalysis": {
+                "inputs": {"data-input": DataType.OHLCV},
+                "outputs": {"output": DataType.OHLCV}
+            },
+            "correlationAnalysis": {
+                "inputs": {
+                    "data-input-1": DataType.OHLCV,
+                    "data-input-2": DataType.OHLCV
+                },
+                "outputs": {"output": DataType.CORRELATION}
+            },
+            "sentimentAnalysis": {
+                "inputs": {"data-input": DataType.OHLCV},
+                "outputs": {
+                    "positive-output": DataType.SIGNAL,
+                    "neutral-output": DataType.SIGNAL,
+                    "negative-output": DataType.SIGNAL
+                }
             }
         }
 
@@ -325,10 +352,12 @@ class EnhancedCodeGenerator:
         
         # Define type compatibility rules
         compatibility_rules = {
-            DataType.OHLCV: [DataType.NUMERIC, DataType.OHLCV],
-            DataType.NUMERIC: [DataType.NUMERIC, DataType.SIGNAL],
-            DataType.SIGNAL: [DataType.SIGNAL],
-            DataType.UNKNOWN: [DataType.UNKNOWN]
+            DataType.OHLCV: [DataType.NUMERIC, DataType.OHLCV, DataType.CORRELATION, DataType.SENTIMENT, DataType.UNKNOWN],
+            DataType.NUMERIC: [DataType.NUMERIC, DataType.SIGNAL, DataType.CORRELATION],
+            DataType.SIGNAL: [DataType.SIGNAL, DataType.NUMERIC],
+            DataType.CORRELATION: [DataType.CORRELATION, DataType.NUMERIC],
+            DataType.SENTIMENT: [DataType.SENTIMENT, DataType.SIGNAL, DataType.NUMERIC],
+            DataType.UNKNOWN: [DataType.UNKNOWN, DataType.NUMERIC, DataType.SIGNAL]
         }
         
         return target_type in compatibility_rules.get(source_type, [])
@@ -536,6 +565,16 @@ class EnhancedCodeGenerator:
         value_map: Dict[Tuple[str, str], str] = {}
 
         data_nodes = [node for node in nodes if node.type in {"dataSource", "customDataset"}]
+        analysis_nodes = [
+            node
+            for node in nodes
+            if node.type in {
+                "marketRegimeDetection",
+                "multiTimeframeAnalysis",
+                "correlationAnalysis",
+                "sentimentAnalysis",
+            }
+        ]
         indicator_nodes = [node for node in nodes if node.type == "technicalIndicator"]
         condition_nodes = [node for node in nodes if node.type == "condition"]
         logic_nodes = [node for node in nodes if node.type == "logic"]
@@ -543,14 +582,22 @@ class EnhancedCodeGenerator:
         action_nodes = [node for node in nodes if node.type == "action"]
 
         data_fn, value_map = self._emit_data_function(data_nodes, value_map)
-        indicator_fn, value_map = self._emit_indicator_function(indicator_nodes, value_map, incoming_edges)
+        analysis_fn, value_map = self._emit_analysis_function(
+            analysis_nodes, value_map, incoming_edges
+        )
+        indicator_fn, value_map = self._emit_indicator_function(
+            indicator_nodes, value_map, incoming_edges
+        )
         condition_fn, value_map = self._emit_condition_function(condition_nodes, value_map, incoming_edges)
         logic_fn, value_map = self._emit_logic_function(logic_nodes, value_map, incoming_edges)
         risk_fn, value_map = self._emit_risk_function(risk_nodes, value_map, incoming_edges)
         action_fn, _ = self._emit_action_function(action_nodes, value_map, incoming_edges)
-        run_fn = self._emit_run_function()
+        run_fn = self._emit_run_function(include_analysis=bool(analysis_nodes))
 
-        sections = [header, "", imports, "", data_fn, "", indicator_fn, "", condition_fn]
+        sections = [header, "", imports, "", data_fn]
+        if analysis_fn:
+            sections.extend(["", analysis_fn])
+        sections.extend(["", indicator_fn, "", condition_fn])
         sections.extend(["", logic_fn])
         sections.extend(["", risk_fn])
         sections.extend(["", action_fn, "", run_fn])
@@ -615,11 +662,11 @@ class EnhancedCodeGenerator:
                 f"index_{safe_id} = pd.date_range(end=pd.Timestamp.utcnow(), periods={bars}, freq='{freq}')",
                 f"baseline_{safe_id} = 100 + {rng_name}.normal(0, 1, {bars}).cumsum()",
                 f"{df_name} = pd.DataFrame({{",
-                "    'open': baseline_{safe_id} * (1 + {rng_name}.normal(0, 0.002, {bars})),",
-                "    'high': baseline_{safe_id} * (1 + np.abs({rng_name}.normal(0, 0.01, {bars}))),",
-                "    'low': baseline_{safe_id} * (1 - np.abs({rng_name}.normal(0, 0.01, {bars}))),",
-                "    'close': baseline_{safe_id},",
-                "    'volume': {rng_name}.integers(1_000, 10_000, {bars})",
+                f"    'open': baseline_{safe_id} * (1 + {rng_name}.normal(0, 0.002, {bars})),",
+                f"    'high': baseline_{safe_id} * (1 + np.abs({rng_name}.normal(0, 0.01, {bars}))),",
+                f"    'low': baseline_{safe_id} * (1 - np.abs({rng_name}.normal(0, 0.01, {bars}))),",
+                f"    'close': baseline_{safe_id},",
+                f"    'volume': {rng_name}.integers(1_000, 10_000, {bars}),",
                 f"}}, index=index_{safe_id})",
                 f"{df_name}.index.name = 'timestamp'",
             ])
@@ -632,6 +679,185 @@ class EnhancedCodeGenerator:
 
         body.append("return df")
 
+        lines.append(self._indent_block(body))
+        return "\n".join(lines), value_map
+
+    def _emit_analysis_function(
+        self,
+        analysis_nodes: List[TypedNode],
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]]
+    ) -> Tuple[str, Dict[Tuple[str, str], str]]:
+        """Emit advanced analytics transformations (regime, sentiment, etc.)."""
+
+        lines: List[str] = ["def run_advanced_analysis(df: pd.DataFrame) -> pd.DataFrame:"]
+        body: List[str] = ["df = df.copy()"]
+
+        if not analysis_nodes:
+            body.append("return df")
+            lines.append(self._indent_block(body))
+            return "\n".join(lines), value_map
+
+        for node in analysis_nodes:
+            safe_id = self._sanitize_identifier(node.id)
+            params = node.data.get("parameters", {})
+
+            if node.type == "marketRegimeDetection":
+                price_expr = self._resolve_input_expression(
+                    node.id,
+                    "data-input",
+                    value_map,
+                    incoming_edges,
+                    fallback="df['close']"
+                )
+                if price_expr == "df":
+                    price_expr = "df['close']"
+
+                trend_window = int(params.get("trendWindow", params.get("lookback", 50)))
+                volatility_window = int(params.get("volatilityWindow", max(10, trend_window // 2)))
+                volatility_multiplier = float(params.get("volatilityMultiplier", 1.5))
+                trend_bias = float(params.get("trendThreshold", 0.0))
+
+                trend_col = f"regime_{safe_id}_trend"
+                sideways_col = f"regime_{safe_id}_sideways"
+                volatile_col = f"regime_{safe_id}_volatile"
+
+                body.extend([
+                    f"# Market regime detection for node {node.id}",
+                    f"price_{safe_id} = {price_expr}",
+                    f"returns_{safe_id} = price_{safe_id}.pct_change().fillna(0)",
+                    f"trend_ma_{safe_id} = price_{safe_id}.rolling(window={trend_window}, min_periods=1).mean()",
+                    f"trend_signal_{safe_id} = (price_{safe_id} > trend_ma_{safe_id} * (1 + {trend_bias})).fillna(False)",
+                    f"volatility_{safe_id} = returns_{safe_id}.rolling(window={volatility_window}, min_periods=1).std().fillna(0)",
+                    f"vol_threshold_{safe_id} = volatility_{safe_id}.rolling(window={volatility_window}, min_periods=1).median().fillna(method='bfill').fillna(volatility_{safe_id})",
+                    f"df['{trend_col}'] = trend_signal_{safe_id}.astype(bool)",
+                    f"df['{volatile_col}'] = (volatility_{safe_id} > vol_threshold_{safe_id} * {volatility_multiplier}).fillna(False).astype(bool)",
+                    f"df['{sideways_col}'] = (~df['{trend_col}'] & ~df['{volatile_col}']).astype(bool)",
+                ])
+
+                value_map[(node.id, "trend-output")] = f"df['{trend_col}']"
+                value_map[(node.id, "sideways-output")] = f"df['{sideways_col}']"
+                value_map[(node.id, "volatile-output")] = f"df['{volatile_col}']"
+
+            elif node.type == "multiTimeframeAnalysis":
+                data_expr = self._resolve_input_expression(
+                    node.id,
+                    "data-input",
+                    value_map,
+                    incoming_edges,
+                    fallback="df"
+                )
+                if data_expr is None:
+                    data_expr = "df"
+
+                requested = params.get("timeframes") or params.get("higherTimeframes") or ["4H", "1D"]
+                if isinstance(requested, str):
+                    requested = [segment.strip() for segment in requested.split(",") if segment.strip()]
+                timeframes = list(requested) or ["4H"]
+
+                prefix = f"mtf_{safe_id}"
+
+                body.extend([
+                    f"# Multi-timeframe aggregation for node {node.id}",
+                    f"source_df_{safe_id} = {data_expr}",
+                    f"if isinstance(source_df_{safe_id}, pd.Series):",
+                    f"    source_df_{safe_id} = source_df_{safe_id}.to_frame(name='close')",
+                    f"if not isinstance(source_df_{safe_id}, pd.DataFrame):",
+                    f"    source_df_{safe_id} = df",
+                    f"timeframes_{safe_id} = {timeframes!r}",
+                    f"ohlc_map_{safe_id} = {{'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'}}",
+                    f"last_suffix_{safe_id} = None",
+                    f"for tf in timeframes_{safe_id}:",
+                    f"    aggregated_{safe_id} = source_df_{safe_id}.resample(tf).agg(ohlc_map_{safe_id})",
+                    f"    aggregated_{safe_id} = aggregated_{safe_id}.reindex(df.index, method='ffill').fillna(method='bfill')",
+                    f"    suffix_{safe_id} = tf.replace(' ', '').replace(':', '').replace('-', '')",
+                    f"    for column in ['open', 'high', 'low', 'close', 'volume']:",
+                    f"        df[f'{prefix}_' + column + '_' + suffix_{safe_id}] = aggregated_{safe_id}[column]",
+                    f"    last_suffix_{safe_id} = suffix_{safe_id}",
+                    f"if last_suffix_{safe_id}:",
+                    f"    df['{prefix}_active_close'] = df[f'{prefix}_close_' + last_suffix_{safe_id}]",
+                    f"else:",
+                    f"    df['{prefix}_active_close'] = df['close']",
+                ])
+
+                value_map[(node.id, "output")] = f"df['{prefix}_active_close']"
+
+            elif node.type == "correlationAnalysis":
+                left_expr = self._resolve_input_expression(
+                    node.id,
+                    "data-input-1",
+                    value_map,
+                    incoming_edges,
+                    fallback="df['close']"
+                )
+                right_expr = self._resolve_input_expression(
+                    node.id,
+                    "data-input-2",
+                    value_map,
+                    incoming_edges,
+                    fallback="df['close']"
+                )
+                if left_expr == "df":
+                    left_expr = "df['close']"
+                if right_expr == "df":
+                    right_expr = "df['close']"
+
+                corr_col = f"correlation_{safe_id}"
+                window = int(params.get("window", params.get("lookback", 30)))
+
+                body.extend([
+                    f"# Correlation analysis for node {node.id}",
+                    f"left_series_{safe_id} = {left_expr}",
+                    f"right_series_{safe_id} = {right_expr}",
+                    f"if isinstance(left_series_{safe_id}, pd.DataFrame):",
+                    f"    left_series_{safe_id} = left_series_{safe_id}['close']",
+                    f"if isinstance(right_series_{safe_id}, pd.DataFrame):",
+                    f"    right_series_{safe_id} = right_series_{safe_id}['close']",
+                    f"returns_left_{safe_id} = left_series_{safe_id}.pct_change().fillna(0)",
+                    f"returns_right_{safe_id} = right_series_{safe_id}.pct_change().fillna(0)",
+                    f"rolling_corr_{safe_id} = returns_left_{safe_id}.rolling(window={window}, min_periods=1).corr(returns_right_{safe_id})",
+                    f"df['{corr_col}'] = rolling_corr_{safe_id}.fillna(0)",
+                ])
+
+                value_map[(node.id, "output")] = f"df['{corr_col}']"
+
+            elif node.type == "sentimentAnalysis":
+                data_expr = self._resolve_input_expression(
+                    node.id,
+                    "data-input",
+                    value_map,
+                    incoming_edges,
+                    fallback="df['close']"
+                )
+                if data_expr == "df":
+                    data_expr = "df['close']"
+
+                smoothing = int(params.get("smoothing", params.get("window", 14)))
+                threshold = float(params.get("threshold", 0.05))
+
+                pos_col = f"sentiment_{safe_id}_positive"
+                neu_col = f"sentiment_{safe_id}_neutral"
+                neg_col = f"sentiment_{safe_id}_negative"
+
+                body.extend([
+                    f"# Sentiment analysis for node {node.id}",
+                    f"raw_source_{safe_id} = {data_expr}",
+                    f"if isinstance(raw_source_{safe_id}, pd.DataFrame):",
+                    f"    numeric_cols_{safe_id} = raw_source_{safe_id}.select_dtypes(include=['number'])",
+                    f"    base_series_{safe_id} = numeric_cols_{safe_id}.mean(axis=1) if not numeric_cols_{safe_id}.empty else raw_source_{safe_id}.sum(axis=1)",
+                    f"else:",
+                    f"    base_series_{safe_id} = pd.Series(raw_source_{safe_id}, index=df.index) if not isinstance(raw_source_{safe_id}, pd.Series) else raw_source_{safe_id}",
+                    f"smoothed_{safe_id} = base_series_{safe_id}.rolling(window={smoothing}, min_periods=1).mean().fillna(0)",
+                    f"df['{pos_col}'] = (smoothed_{safe_id} > {threshold}).fillna(False).astype(bool)",
+                    f"df['{neg_col}'] = (smoothed_{safe_id} < -{threshold}).fillna(False).astype(bool)",
+                    f"df['{neu_col}'] = (~df['{pos_col}'] & ~df['{neg_col}']).astype(bool)",
+                ])
+
+                value_map[(node.id, "positive-output")] = f"df['{pos_col}']"
+                value_map[(node.id, "neutral-output")] = f"df['{neu_col}']"
+                value_map[(node.id, "negative-output")] = f"df['{neg_col}']"
+
+        body.append("return df")
         lines.append(self._indent_block(body))
         return "\n".join(lines), value_map
 
@@ -665,6 +891,8 @@ class EnhancedCodeGenerator:
 
             if data_expr == "df":
                 series_expr = f"df['{source_column}']"
+            elif data_expr and data_expr.startswith("df_multi_"):
+                series_expr = f"{data_expr}['{source_column}']"
             else:
                 series_expr = data_expr
 
@@ -938,19 +1166,23 @@ class EnhancedCodeGenerator:
         lines.append(self._indent_block(body))
         return "\n".join(lines), value_map
 
-    def _emit_run_function(self) -> str:
+    def _emit_run_function(self, include_analysis: bool) -> str:
         """Emit a helper that chains all generated functions."""
 
         lines = [
             "def run_strategy() -> pd.DataFrame:",
             "    df = load_data()",
+        ]
+        if include_analysis:
+            lines.append("    df = run_advanced_analysis(df)")
+        lines.extend([
             "    df = compute_indicators(df)",
             "    df = evaluate_conditions(df)",
             "    df = combine_logic(df)",
             "    df = apply_risk_controls(df)",
             "    df = generate_trading_decisions(df)",
             "    return df",
-        ]
+        ])
         return "\n".join(lines)
 
     def _resolve_input_expression(
@@ -966,7 +1198,10 @@ class EnhancedCodeGenerator:
 
         for edge in incoming_edges.get(node_id, []):
             if edge.target_handle == handle:
-                return value_map.get((edge.source, edge.source_handle))
+                expr = value_map.get((edge.source, edge.source_handle))
+                if expr is not None:
+                    return expr
+                break
         return fallback
 
     def _resolve_logic_inputs(
