@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from .config import Settings, get_settings
 from .db import get_db
@@ -19,6 +21,15 @@ from .redis import get_redis_client
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer(auto_error=False)
+
+
+@dataclass
+class TokenUser:
+    """Lightweight user representation derived from JWT claims."""
+
+    id: int
+    email: Optional[str] = None
+    claims: Optional[dict] = None
 
 
 def get_settings_dependency() -> Settings:
@@ -113,6 +124,37 @@ async def get_current_user(
 
     if user:
         return user
+
+    if user_id and user_id.isdigit():
+        logger.info("Creating placeholder user for token subject %s", user_id)
+        email = (claims or {}).get("email") or f"user-{user_id}@token.local"
+        try:
+            placeholder_user = User(
+                id=int(user_id),
+                email=email,
+                password_hash="token_user_placeholder",
+                first_name=(claims or {}).get("given_name") or (claims or {}).get("first_name"),
+                last_name=(claims or {}).get("family_name") or (claims or {}).get("last_name"),
+                is_verified=True,
+            )
+            db.add(placeholder_user)
+            db.commit()
+            db.refresh(placeholder_user)
+            return placeholder_user
+        except IntegrityError:
+            logger.warning(
+                "Placeholder user creation raced with existing record for id %s; refetching",
+                user_id,
+            )
+            db.rollback()
+            user = db.query(User).filter(User.id == int(user_id)).first()
+            if user:
+                return user
+        except Exception:  # pragma: no cover - defensive guard
+            logger.exception("Failed to create placeholder user for token subject %s", user_id)
+            db.rollback()
+        # Fall back to lightweight token user representation
+        return TokenUser(id=int(user_id), email=email, claims=claims)
 
     if settings.dev_mode:
         logger.warning("Token resolved no user; returning dev user in DEV_MODE")
