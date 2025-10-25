@@ -16,6 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.sqltypes import ARRAY
 from sqlalchemy.types import TEXT, TypeDecorator
+from pytest import FixtureRequest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -54,10 +55,12 @@ def _prepare_sqlite_models():
 
 
 @pytest.fixture()
-def test_app(monkeypatch) -> Dict[str, Any]:
+def test_app(monkeypatch, request: FixtureRequest) -> Dict[str, Any]:
     """Return FastAPI test client with SQLite-backed dependencies."""
 
-    monkeypatch.setenv("DEV_MODE", "false")
+    dev_mode = bool(getattr(request, "param", False))
+
+    monkeypatch.setenv("DEV_MODE", "true" if dev_mode else "false")
     monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 
     for module_name in [
@@ -125,6 +128,95 @@ def test_app(monkeypatch) -> Dict[str, Any]:
     get_settings.cache_clear()
     for column, original in replacements.items():
         column.type = original
+
+
+@pytest.mark.parametrize("test_app", [True], indirect=True)
+def test_create_and_list_workflows_use_authenticated_user(test_app):
+    """Ensure workflow creation and listing honour the caller even in dev mode."""
+
+    client: TestClient = test_app["client"]
+    session_factory = test_app["session_factory"]
+    models = test_app["models"]
+
+    with session_factory() as db:
+        user = models.User(
+            id=777,
+            email="owner@example.com",
+            password_hash="hash-owner",
+            first_name="Workflow",
+            last_name="Owner",
+            is_verified=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        user_id = user.id
+        user_email = user.email
+
+    token = jwt.encode(
+        {"sub": str(user_id), "email": user_email},
+        "unit-test-secret",
+        algorithm="HS256",
+    )
+
+    create_payload = {
+        "name": "Dev Mode Workflow",
+        "description": "Created while DEV_MODE is true",
+        "category": "test",
+        "tags": ["dev", "mode"],
+        "workflow_data": {"nodes": [], "edges": []},
+        "execution_mode": "backtest",
+    }
+
+    create_response = client.post(
+        "/api/workflows",
+        headers={"Authorization": f"Bearer {token}"},
+        json=create_payload,
+    )
+    assert create_response.status_code == 200
+    created_workflow = create_response.json()
+    assert created_workflow["name"] == create_payload["name"]
+
+    with session_factory() as db:
+        other_user = models.User(
+            id=888,
+            email="other@example.com",
+            password_hash="hash-other",
+            first_name="Other",
+            last_name="User",
+            is_verified=True,
+        )
+        db.add(other_user)
+        db.commit()
+        db.refresh(other_user)
+
+        alien_workflow = models.NoCodeWorkflow(
+            name="Alien Workflow",
+            description="Should never be visible",
+            category="test",
+            tags=["alien"],
+            user_id=other_user.id,
+            workflow_data={"nodes": [], "edges": []},
+        )
+        db.add(alien_workflow)
+        db.commit()
+
+    list_response = client.get(
+        "/api/workflows",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert list_response.status_code == 200
+    workflows = list_response.json()
+    assert len(workflows) == 1
+    assert workflows[0]["id"] == created_workflow["id"]
+
+    detail_response = client.get(
+        f"/api/workflows/{created_workflow['uuid']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert detail_response.status_code == 200, detail_response.text
+    detail_payload = detail_response.json()
+    assert detail_payload["id"] == created_workflow["id"]
 
 
 @pytest.fixture()

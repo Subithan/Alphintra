@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Union
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -12,26 +13,32 @@ from schemas_updated import WorkflowCreate, WorkflowUpdate
 
 
 def _resolve_user_id(current_user: User, dev_mode: bool) -> int:
-    """Return user identifier, mirroring legacy development shortcut."""
+    """Return the authenticated user's identifier regardless of mode."""
 
-    if dev_mode:
-        return 2
     return current_user.id
 
 
 def ensure_workflow_access(
     db: Session,
-    workflow_uuid: str,
+    workflow_uuid: Union[str, UUID],
     current_user: User,
     *,
     dev_mode: bool,
 ) -> NoCodeWorkflow:
     """Fetch workflow ensuring the caller has access rights."""
 
+    if isinstance(workflow_uuid, str):
+        try:
+            workflow_uuid_value: Union[str, UUID] = UUID(workflow_uuid)
+        except ValueError:
+            workflow_uuid_value = workflow_uuid
+    else:
+        workflow_uuid_value = workflow_uuid
+
     workflow = (
         db.query(NoCodeWorkflow)
         .filter(
-            NoCodeWorkflow.uuid == workflow_uuid,
+            NoCodeWorkflow.uuid == workflow_uuid_value,
             (NoCodeWorkflow.user_id == current_user.id) | (NoCodeWorkflow.is_public == True),  # noqa: E712
         )
         .first()
