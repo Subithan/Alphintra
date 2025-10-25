@@ -93,6 +93,8 @@ class CompilationContext:
     symbol_table: Dict[str, Any] = field(default_factory=dict)
     optimization_level: int = 1
     target_mode: OutputMode = OutputMode.TRAINING
+    incoming_edges: Dict[str, List[DataFlowEdge]] = field(default_factory=dict)
+    outgoing_edges: Dict[str, List[DataFlowEdge]] = field(default_factory=dict)
 
 
 class EnhancedCodeGenerator:
@@ -112,25 +114,28 @@ class EnhancedCodeGenerator:
             self._constant_folding,
             self._loop_optimization
         ]
+        self._compilation_context: Optional[CompilationContext] = None
 
     def compile_workflow(
-        self, 
-        workflow: Dict[str, Any], 
+        self,
+        workflow: Dict[str, Any],
         output_mode: OutputMode = OutputMode.TRAINING,
         optimization_level: int = 1
     ) -> Dict[str, Any]:
         """Main compilation entry point."""
-        
+
+        self._compilation_context = None
         # Phase 1: Lexical Analysis and Parsing
         ir = self._parse_workflow(workflow)
         context = CompilationContext(
             target_mode=output_mode,
             optimization_level=optimization_level
         )
-        
+
         # Phase 2: Semantic Analysis
         self._semantic_analysis(ir, context)
-        
+        self._compilation_context = context
+
         # Phase 3: Type Checking and Data Flow Analysis
         self._type_checking(context)
         
@@ -163,16 +168,20 @@ class EnhancedCodeGenerator:
                 type=node.type,
                 data=node.data
             )
-            
+
             # Analyze node semantics
             self._analyze_node_semantics(typed_node, context)
             context.nodes[node_id] = typed_node
+            context.incoming_edges.setdefault(node_id, [])
+            context.outgoing_edges.setdefault(node_id, [])
 
         # Convert edges to data flow edges
         for edge in ir.edges:
             data_flow_edge = self._analyze_edge_semantics(edge, context)
             if data_flow_edge:
                 context.edges.append(data_flow_edge)
+                context.incoming_edges.setdefault(data_flow_edge.target, []).append(data_flow_edge)
+                context.outgoing_edges.setdefault(data_flow_edge.source, []).append(data_flow_edge)
 
         # Validate workflow structure
         self._validate_workflow_structure(context)
@@ -1076,10 +1085,18 @@ class EnhancedCodeGenerator:
         }
 
     # Helper methods for backward compatibility
-    def get_incoming(self, node_id: str) -> List[str]:
+    def get_incoming(self, node_id: str) -> List[Tuple[str, str, str]]:
         """Get incoming connections for a node."""
-        # This would be implemented using the compilation context
-        return []
+
+        if not self._compilation_context:
+            return []
+
+        edges = self._compilation_context.incoming_edges.get(node_id, [])
+        sorted_edges = sorted(edges, key=lambda e: (e.target_handle, e.source, e.source_handle))
+        return [
+            (edge.source, edge.source_handle, edge.target_handle)
+            for edge in sorted_edges
+        ]
 
     def generate_strategy_code(self, workflow: Dict[str, Any], name: str = "GeneratedStrategy") -> Dict[str, Any]:
         """Backward compatibility method."""
