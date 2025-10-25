@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any, Optional
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -32,14 +33,9 @@ def get_redis_dependency():
     return get_redis_client()
 
 
-async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: Session = Depends(get_db),
-) -> Any:
-    """Return a default/local user without enforcing authentication.
+def _ensure_dev_user(db: Session) -> Any:
+    """Create or return the development user for local testing."""
 
-    All requests are allowed; a test user is created/returned if missing.
-    """
     from models import User  # Lazy import to avoid circular dependency
 
     test_email = "dev@alphintra.com"
@@ -56,6 +52,73 @@ async def get_current_user(
         db.commit()
         db.refresh(user)
     return user
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings_dependency),
+) -> Any:
+    """Resolve the caller from the Authorization header.
+
+    When ``DEV_MODE`` is enabled we fall back to a local development user for
+    backwards compatibility. Otherwise the request must present a valid token
+    for a user that exists in the database.
+    """
+
+    from models import User  # Lazy import to avoid circular dependency
+
+    def _unauthorized(detail: str = "Invalid authentication credentials") -> HTTPException:
+        return HTTPException(status_code=401, detail=detail)
+
+    if not credentials or not credentials.credentials:
+        if settings.dev_mode:
+            logger.debug("No credentials supplied; falling back to dev user")
+            return _ensure_dev_user(db)
+        raise _unauthorized()
+
+    token = credentials.credentials
+    try:
+        user_id = extract_user_id_from_token(token)
+        claims = extract_user_claims(token) or {}
+    except Exception:  # pragma: no cover - defensive guard
+        logger.exception("Unexpected error decoding authentication token")
+        if settings.dev_mode:
+            return _ensure_dev_user(db)
+        raise _unauthorized()
+
+    if not user_id and not claims:
+        if settings.dev_mode:
+            logger.warning("Token missing user identifiers; using dev user in DEV_MODE")
+            return _ensure_dev_user(db)
+        raise _unauthorized()
+
+    user: Optional[User] = None
+
+    if user_id:
+        if user_id.isdigit():
+            user = db.query(User).filter(User.id == int(user_id)).first()
+        else:
+            try:
+                uuid_value = uuid.UUID(user_id)
+            except ValueError:
+                uuid_value = None
+            if uuid_value:
+                user = db.query(User).filter(User.uuid == uuid_value).first()
+
+    if not user and claims:
+        email = claims.get("email")
+        if email:
+            user = db.query(User).filter(User.email == email).first()
+
+    if user:
+        return user
+
+    if settings.dev_mode:
+        logger.warning("Token resolved no user; returning dev user in DEV_MODE")
+        return _ensure_dev_user(db)
+
+    raise _unauthorized()
 
 
 def get_user_context(
