@@ -493,509 +493,518 @@ class EnhancedCodeGenerator:
                     node.optimizations.append("vectorized")
 
     def _generate_code(self, context: CompilationContext, config: Dict[str, Any]) -> Dict[str, str]:
-        """Phase 6: Generate code based on compilation context."""
-        
+        """Phase 6: Generate a standalone Python module for the workflow."""
+
         if context.errors:
             return {"error": "Compilation failed with errors"}
 
-        # Sort nodes by execution order
         sorted_nodes = sorted(
             context.nodes.values(),
-            key=lambda n: n.execution_order
+            key=lambda node: node.execution_order
         )
 
-        # Generate code sections
-        imports = self._generate_imports(context)
-        data_loading = self._generate_data_loading(sorted_nodes, context)
-        feature_engineering = self._generate_feature_engineering(sorted_nodes, context)
-        signal_generation = self._generate_signal_generation(sorted_nodes, context)
-        risk_management = self._generate_risk_management(sorted_nodes, context)
-        execution_logic = self._generate_execution_logic(sorted_nodes, context)
+        module_source = self._assemble_strategy_module(sorted_nodes, context)
 
-        # Generate based on target mode
-        if context.target_mode == OutputMode.TRAINING:
-            return self._generate_training_code(
-                imports, data_loading, feature_engineering, 
-                signal_generation, config
-            )
-        elif context.target_mode == OutputMode.BACKTESTING:
-            return self._generate_backtesting_code(
-                imports, data_loading, feature_engineering,
-                signal_generation, risk_management, execution_logic
-            )
-        elif context.target_mode == OutputMode.LIVE_TRADING:
-            return self._generate_live_trading_code(
-                imports, data_loading, feature_engineering,
-                signal_generation, risk_management, execution_logic
-            )
-        else:
-            return self._generate_research_code(
-                imports, data_loading, feature_engineering, signal_generation
-            )
+        return {
+            "main": module_source,
+            "type": "module"
+        }
 
-    def _generate_imports(self, context: CompilationContext) -> str:
-        """Generate import statements."""
-        
-        base_imports = [
-            "import pandas as pd",
-            "import numpy as np",
-            "from datetime import datetime, timedelta",
-            "import warnings",
-            "warnings.filterwarnings('ignore')"
-        ]
+    # ------------------------------------------------------------------
+    # Module assembly helpers
+    # ------------------------------------------------------------------
+    def _assemble_strategy_module(
+        self,
+        nodes: List[TypedNode],
+        context: CompilationContext
+    ) -> str:
+        """Assemble the final module source from workflow nodes."""
 
-        # Add imports based on node types
-        node_types = set(node.type for node in context.nodes.values())
-        
-        if "technicalIndicator" in node_types:
-            base_imports.extend([
-                "import talib as ta",
-                "from scipy import stats"
-            ])
-        
-        if "condition" in node_types or "logic" in node_types:
-            base_imports.append("from typing import Union, Optional")
-        
-        risk_node_types = {"riskManagement", "risk"}
-        if node_types & risk_node_types:
-            base_imports.extend([
-                "import math",
-                "from collections import deque"
-            ])
+        header = self._emit_module_header()
+        imports = self._emit_import_block()
 
-        if context.target_mode == OutputMode.TRAINING:
-            base_imports.extend([
-                "from sklearn.model_selection import train_test_split",
-                "from sklearn.ensemble import RandomForestClassifier",
-                "from sklearn.metrics import classification_report, confusion_matrix",
-                "import joblib"
-            ])
+        incoming_edges = self._build_incoming_edge_lookup(context)
+        value_map: Dict[Tuple[str, str], str] = {}
 
-        return "\n".join(base_imports)
-
-    def _generate_data_loading(self, nodes: List[TypedNode], context: CompilationContext) -> str:
-        """Generate data loading code."""
-        
-        data_nodes = [node for node in nodes if node.type in ["dataSource", "customDataset"]]
-        if not data_nodes:
-            return "# No data sources defined"
-
-        code_lines = []
-        
-        for node in data_nodes:
-            handler = self.handlers.get(node.type, self.fallback_handler)
-            
-            # Generate optimized code if applicable
-            if "vectorized" in node.optimizations:
-                code_lines.append(f"# Vectorized data loading for {node.id}")
-            
-            snippet = handler.handle(node, self)
-            if snippet:
-                code_lines.append(snippet)
-
-        return "\n".join(code_lines)
-
-    def _generate_feature_engineering(self, nodes: List[TypedNode], context: CompilationContext) -> str:
-        """Generate feature engineering code."""
-        
-        feature_nodes = [node for node in nodes if node.type == "technicalIndicator"]
-        if not feature_nodes:
-            return "# No technical indicators defined"
-
-        code_lines = ["# Feature Engineering"]
-        
-        for node in feature_nodes:
-            handler = self.handlers.get(node.type, self.fallback_handler)
-            
-            # Add optimization comments
-            if node.optimizations:
-                code_lines.append(f"# Optimizations: {', '.join(node.optimizations)}")
-            
-            snippet = handler.handle(node, self)
-            if snippet:
-                code_lines.append(snippet)
-
-        return "\n".join(code_lines)
-
-    def _generate_signal_generation(self, nodes: List[TypedNode], context: CompilationContext) -> str:
-        """Generate signal generation code."""
-        
-        signal_nodes = [node for node in nodes if node.type in ["condition", "logic"]]
-        if not signal_nodes:
-            return "# No signal generation logic defined"
-
-        code_lines = ["# Signal Generation"]
-        
-        for node in signal_nodes:
-            handler = self.handlers.get(node.type, self.fallback_handler)
-            snippet = handler.handle(node, self)
-            if snippet:
-                code_lines.append(snippet)
-
-        return "\n".join(code_lines)
-
-    def _generate_risk_management(self, nodes: List[TypedNode], context: CompilationContext) -> str:
-        """Generate risk management code."""
-        
-        risk_nodes = [
-            node for node in nodes if node.type in {"riskManagement", "risk"}
-        ]
-        if not risk_nodes:
-            return "# No risk management defined"
-
-        code_lines = ["# Risk Management"]
-        
-        for node in risk_nodes:
-            handler = self.handlers.get(node.type, self.fallback_handler)
-            snippet = handler.handle(node, self)
-            if snippet:
-                code_lines.append(snippet)
-
-        return "\n".join(code_lines)
-
-    def _generate_execution_logic(self, nodes: List[TypedNode], context: CompilationContext) -> str:
-        """Generate execution logic code."""
-        
+        data_nodes = [node for node in nodes if node.type in {"dataSource", "customDataset"}]
+        indicator_nodes = [node for node in nodes if node.type == "technicalIndicator"]
+        condition_nodes = [node for node in nodes if node.type == "condition"]
+        logic_nodes = [node for node in nodes if node.type == "logic"]
+        risk_nodes = [node for node in nodes if node.type in {"risk", "riskManagement"}]
         action_nodes = [node for node in nodes if node.type == "action"]
+
+        data_fn, value_map = self._emit_data_function(data_nodes, value_map)
+        indicator_fn, value_map = self._emit_indicator_function(indicator_nodes, value_map, incoming_edges)
+        condition_fn, value_map = self._emit_condition_function(condition_nodes, value_map, incoming_edges)
+        logic_fn, value_map = self._emit_logic_function(logic_nodes, value_map, incoming_edges)
+        risk_fn, value_map = self._emit_risk_function(risk_nodes, value_map, incoming_edges)
+        action_fn, _ = self._emit_action_function(action_nodes, value_map, incoming_edges)
+        run_fn = self._emit_run_function()
+
+        sections = [header, "", imports, "", data_fn, "", indicator_fn, "", condition_fn]
+        sections.extend(["", logic_fn])
+        sections.extend(["", risk_fn])
+        sections.extend(["", action_fn, "", run_fn])
+
+        return "\n".join(section.rstrip() for section in sections if section is not None)
+
+    def _emit_module_header(self) -> str:
+        """Return the module level docstring."""
+
+        timestamp = datetime.utcnow().isoformat()
+        return textwrap.dedent(
+            f'''"""
+            Auto-generated Trading Strategy Module
+            Generated at: {timestamp}
+            Compiler: Enhanced No-Code Generator v2.0
+            """'''
+        ).strip()
+
+    def _emit_import_block(self) -> str:
+        """Emit the imports required for the lightweight module."""
+
+        imports = [
+            "from __future__ import annotations",
+            "",
+            "import numpy as np",
+            "import pandas as pd",
+        ]
+        return "\n".join(imports)
+
+    def _emit_data_function(
+        self,
+        data_nodes: List[TypedNode],
+        value_map: Dict[Tuple[str, str], str]
+    ) -> Tuple[str, Dict[Tuple[str, str], str]]:
+        """Emit the load_data function and seed the value map."""
+
+        lines: List[str] = ["def load_data() -> pd.DataFrame:"]
+
+        body: List[str] = []
+        if not data_nodes:
+            body.extend([
+                "df = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'volume'])",
+                "return df",
+            ])
+            lines.append(self._indent_block(body))
+            return "\n".join(lines), value_map
+
+        for index, node in enumerate(data_nodes):
+            params = node.data.get("parameters", {})
+            label = node.data.get("label") or params.get("label") or node.id
+            symbol = params.get("symbol", label)
+            timeframe = params.get("timeframe", "1h")
+            bars = int(params.get("bars", 250))
+            freq = timeframe.upper()
+            safe_id = self._sanitize_identifier(node.id)
+            df_name = f"df_{safe_id}"
+            rng_name = f"rng_{safe_id}"
+
+            body.extend([
+                f"# Data source: {symbol} ({timeframe})",
+                f"{rng_name} = np.random.default_rng({42 + index})",
+                f"index_{safe_id} = pd.date_range(end=pd.Timestamp.utcnow(), periods={bars}, freq='{freq}')",
+                f"baseline_{safe_id} = 100 + {rng_name}.normal(0, 1, {bars}).cumsum()",
+                f"{df_name} = pd.DataFrame({{",
+                "    'open': baseline_{safe_id} * (1 + {rng_name}.normal(0, 0.002, {bars})),",
+                "    'high': baseline_{safe_id} * (1 + np.abs({rng_name}.normal(0, 0.01, {bars}))),",
+                "    'low': baseline_{safe_id} * (1 - np.abs({rng_name}.normal(0, 0.01, {bars}))),",
+                "    'close': baseline_{safe_id},",
+                "    'volume': {rng_name}.integers(1_000, 10_000, {bars})",
+                f"}}, index=index_{safe_id})",
+                f"{df_name}.index.name = 'timestamp'",
+            ])
+
+            if index == 0:
+                body.append("df = {df_name}.copy()".format(df_name=df_name))
+                value_map[(node.id, "data-output")] = "df"
+            else:
+                value_map[(node.id, "data-output")] = "df"
+
+        body.append("return df")
+
+        lines.append(self._indent_block(body))
+        return "\n".join(lines), value_map
+
+    def _emit_indicator_function(
+        self,
+        indicator_nodes: List[TypedNode],
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]]
+    ) -> Tuple[str, Dict[Tuple[str, str], str]]:
+        """Emit indicator computation code and extend the value map."""
+
+        lines: List[str] = ["def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:"]
+        body: List[str] = ["df = df.copy()"]
+
+        if not indicator_nodes:
+            body.append("return df")
+            lines.append(self._indent_block(body))
+            return "\n".join(lines), value_map
+
+        for node in indicator_nodes:
+            params = node.data.get("parameters", {})
+            indicator = params.get("indicator", "SMA").upper()
+            period = int(params.get("period", params.get("timeperiod", 14)))
+            source_column = params.get("source", "close")
+            safe_id = self._sanitize_identifier(node.id)
+
+            data_expr = self._resolve_input_expression(
+                node.id, "data-input", value_map, incoming_edges,
+                fallback="df"
+            )
+
+            if data_expr == "df":
+                series_expr = f"df['{source_column}']"
+            else:
+                series_expr = data_expr
+
+            body.append(f"# Indicator: {indicator} ({node.id})")
+
+            if indicator == "RSI":
+                delta_name = f"delta_{safe_id}"
+                gain_name = f"gain_{safe_id}"
+                loss_name = f"loss_{safe_id}"
+                rs_name = f"rs_{safe_id}"
+                column_name = f"indicator_{safe_id}"
+                body.extend([
+                    f"{delta_name} = {series_expr}.diff()",
+                    f"{gain_name} = {delta_name}.clip(lower=0).rolling(window={period}, min_periods={period}).mean()",
+                    f"{loss_name} = (-{delta_name}.clip(upper=0)).rolling(window={period}, min_periods={period}).mean()",
+                    f"{rs_name} = {gain_name} / {loss_name}.replace(0, np.nan)",
+                    f"df['{column_name}'] = 100 - (100 / (1 + {rs_name}))",
+                    f"df['{column_name}'] = df['{column_name}'].fillna(method='bfill').fillna(50)",
+                ])
+                value_map[(node.id, "output-1")] = f"df['{column_name}']"
+            elif indicator == "SMA":
+                column_name = f"indicator_{safe_id}"
+                body.append(f"df['{column_name}'] = {series_expr}.rolling(window={period}, min_periods=1).mean()")
+                value_map[(node.id, "output-1")] = f"df['{column_name}']"
+            elif indicator == "EMA":
+                column_name = f"indicator_{safe_id}"
+                body.append(f"df['{column_name}'] = {series_expr}.ewm(span={period}, adjust=False).mean()")
+                value_map[(node.id, "output-1")] = f"df['{column_name}']"
+            elif indicator == "MACD":
+                fast = int(params.get("fastPeriod", 12))
+                slow = int(params.get("slowPeriod", 26))
+                signal_period = int(params.get("signalPeriod", 9))
+                macd_col = f"indicator_{safe_id}_macd"
+                signal_col = f"indicator_{safe_id}_signal"
+                hist_col = f"indicator_{safe_id}_hist"
+                body.extend([
+                    f"ema_fast_{safe_id} = {series_expr}.ewm(span={fast}, adjust=False).mean()",
+                    f"ema_slow_{safe_id} = {series_expr}.ewm(span={slow}, adjust=False).mean()",
+                    f"df['{macd_col}'] = ema_fast_{safe_id} - ema_slow_{safe_id}",
+                    f"df['{signal_col}'] = df['{macd_col}'].ewm(span={signal_period}, adjust=False).mean()",
+                    f"df['{hist_col}'] = df['{macd_col}'] - df['{signal_col}']",
+                ])
+                value_map[(node.id, "output-1")] = f"df['{macd_col}']"
+                value_map[(node.id, "output-2")] = f"df['{signal_col}']"
+                value_map[(node.id, "output-3")] = f"df['{hist_col}']"
+            elif indicator in {"BB", "BOLLINGER", "BOLLINGER_BANDS"}:
+                multiplier = float(params.get("multiplier", 2))
+                middle_col = f"indicator_{safe_id}_middle"
+                upper_col = f"indicator_{safe_id}_upper"
+                lower_col = f"indicator_{safe_id}_lower"
+                rolling_mean = f"rolling_mean_{safe_id}"
+                rolling_std = f"rolling_std_{safe_id}"
+                body.extend([
+                    f"{rolling_mean} = {series_expr}.rolling(window={period}, min_periods=1).mean()",
+                    f"{rolling_std} = {series_expr}.rolling(window={period}, min_periods=1).std().fillna(0)",
+                    f"df['{middle_col}'] = {rolling_mean}",
+                    f"df['{upper_col}'] = df['{middle_col}'] + ({multiplier} * {rolling_std})",
+                    f"df['{lower_col}'] = df['{middle_col}'] - ({multiplier} * {rolling_std})",
+                ])
+                value_map[(node.id, "output-1")] = f"df['{middle_col}']"
+                value_map[(node.id, "output-2")] = f"df['{upper_col}']"
+                value_map[(node.id, "output-3")] = f"df['{lower_col}']"
+            else:
+                column_name = f"indicator_{safe_id}"
+                body.extend([
+                    f"# Fallback indicator implementation for {indicator}",
+                    f"df['{column_name}'] = {series_expr}",
+                ])
+                value_map[(node.id, "output-1")] = f"df['{column_name}']"
+
+        body.append("return df")
+        lines.append(self._indent_block(body))
+        return "\n".join(lines), value_map
+
+    def _emit_condition_function(
+        self,
+        condition_nodes: List[TypedNode],
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]]
+    ) -> Tuple[str, Dict[Tuple[str, str], str]]:
+        """Emit boolean signal conditions."""
+
+        lines: List[str] = ["def evaluate_conditions(df: pd.DataFrame) -> pd.DataFrame:"]
+        body: List[str] = ["df = df.copy()"]
+
+        if not condition_nodes:
+            body.append("return df")
+            lines.append(self._indent_block(body))
+            return "\n".join(lines), value_map
+
+        comparison_map = {
+            "less_than": "<",
+            "greater_than": ">",
+            "equal_to": "==",
+            "not_equal": "!=",
+            "greater_than_equal": ">=",
+            "greater_or_equal": ">=",
+            "less_than_equal": "<=",
+            "less_or_equal": "<=",
+        }
+
+        for node in condition_nodes:
+            params = node.data.get("parameters", {})
+            operation = params.get("condition", "greater_than")
+            operator = comparison_map.get(operation, ">")
+            default_value = params.get("value", 0)
+            safe_id = self._sanitize_identifier(node.id)
+            column_name = f"signal_{safe_id}"
+
+            left_expr = self._resolve_input_expression(
+                node.id, "data-input", value_map, incoming_edges,
+                fallback="df['close']"
+            )
+            right_expr = self._resolve_input_expression(
+                node.id, "value-input", value_map, incoming_edges,
+                fallback=repr(default_value)
+            )
+
+            body.extend([
+                f"# Condition ({operation}) for node {node.id}",
+                f"df['{column_name}'] = ({left_expr}) {operator} ({right_expr})",
+                f"df['{column_name}'] = df['{column_name}'].fillna(False)",
+            ])
+
+            value_map[(node.id, "signal-output")] = f"df['{column_name}']"
+
+        body.append("return df")
+        lines.append(self._indent_block(body))
+        return "\n".join(lines), value_map
+
+    def _emit_logic_function(
+        self,
+        logic_nodes: List[TypedNode],
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]]
+    ) -> Tuple[str, Dict[Tuple[str, str], str]]:
+        """Emit logic combination function."""
+
+        lines: List[str] = ["def combine_logic(df: pd.DataFrame) -> pd.DataFrame:"]
+        body: List[str] = ["df = df.copy()"]
+
+        if not logic_nodes:
+            body.append("return df")
+            lines.append(self._indent_block(body))
+            return "\n".join(lines), value_map
+
+        for node in logic_nodes:
+            params = node.data.get("parameters", {})
+            operation = params.get("operation", "AND").upper()
+            safe_id = self._sanitize_identifier(node.id)
+            column_name = f"logic_{safe_id}"
+
+            inputs = self._resolve_logic_inputs(node.id, value_map, incoming_edges)
+
+            if not inputs:
+                body.extend([
+                    f"# Logic node {node.id} has no inputs; defaulting to False",
+                    f"df['{column_name}'] = False",
+                ])
+            else:
+                if operation == "AND":
+                    combined_expr = " & ".join(f"({expr})" for expr in inputs)
+                elif operation == "OR":
+                    combined_expr = " | ".join(f"({expr})" for expr in inputs)
+                elif operation == "XOR":
+                    combined_expr = inputs[0]
+                    for expr in inputs[1:]:
+                        combined_expr = f"({combined_expr}) ^ ({expr})"
+                elif operation == "NOT":
+                    combined_expr = f"~({inputs[0]})"
+                else:
+                    combined_expr = " | ".join(f"({expr})" for expr in inputs)
+
+                body.extend([
+                    f"# Logic ({operation}) for node {node.id}",
+                    f"df['{column_name}'] = {combined_expr}",
+                    f"df['{column_name}'] = df['{column_name}'].fillna(False)",
+                ])
+
+            value_map[(node.id, "output")] = f"df['{column_name}']"
+
+        body.append("return df")
+        lines.append(self._indent_block(body))
+        return "\n".join(lines), value_map
+
+    def _emit_risk_function(
+        self,
+        risk_nodes: List[TypedNode],
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]]
+    ) -> Tuple[str, Dict[Tuple[str, str], str]]:
+        """Emit risk control computation."""
+
+        lines: List[str] = ["def apply_risk_controls(df: pd.DataFrame) -> pd.DataFrame:"]
+        body: List[str] = ["df = df.copy()"]
+
+        if not risk_nodes:
+            body.append("return df")
+            lines.append(self._indent_block(body))
+            return "\n".join(lines), value_map
+
+        for node in risk_nodes:
+            params = node.data.get("parameters", {})
+            safe_id = self._sanitize_identifier(node.id)
+            column_name = f"risk_{safe_id}"
+            max_loss = float(params.get("maxLoss", 5.0))
+
+            signal_expr = self._resolve_input_expression(
+                node.id, "signal-input", value_map, incoming_edges,
+                fallback=None
+            )
+
+            pct_change_expr = "df['close'].pct_change().fillna(0).abs() * 100"
+            risk_expr = f"({pct_change_expr}) <= {max_loss}"
+
+            if signal_expr:
+                risk_expr = f"({risk_expr}) & ({signal_expr})"
+
+            body.extend([
+                f"# Risk control for node {node.id}",
+                f"df['{column_name}'] = {risk_expr}",
+                f"df['{column_name}'] = df['{column_name}'].fillna(True)",
+            ])
+
+            value_map[(node.id, "risk-output")] = f"df['{column_name}']"
+
+        body.append("return df")
+        lines.append(self._indent_block(body))
+        return "\n".join(lines), value_map
+
+    def _emit_action_function(
+        self,
+        action_nodes: List[TypedNode],
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]]
+    ) -> Tuple[str, Dict[Tuple[str, str], str]]:
+        """Emit trade decision logic."""
+
+        lines: List[str] = ["def generate_trading_decisions(df: pd.DataFrame) -> pd.DataFrame:"]
+        body: List[str] = ["df = df.copy()"]
+
         if not action_nodes:
-            return "# No execution logic defined"
+            body.append("df['decision'] = 'HOLD'")
+            body.append("return df")
+            lines.append(self._indent_block(body))
+            return "\n".join(lines), value_map
 
-        code_lines = ["# Execution Logic"]
-        
         for node in action_nodes:
-            handler = self.handlers.get(node.type, self.fallback_handler)
-            snippet = handler.handle(node, self)
-            if snippet:
-                code_lines.append(snippet)
+            params = node.data.get("parameters", {})
+            action = params.get("action", "buy").upper()
+            safe_id = self._sanitize_identifier(node.id)
+            column_name = f"decision_{safe_id}"
 
-        return "\n".join(code_lines)
+            signal_expr = self._resolve_input_expression(
+                node.id, "signal-input", value_map, incoming_edges,
+                fallback=None
+            )
 
-    def _generate_training_code(
-        self, imports: str, data_loading: str, feature_engineering: str,
-        signal_generation: str, config: Dict[str, Any]
-    ) -> Dict[str, str]:
-        """Generate training-specific code."""
-        
-        template = f'''"""
-Auto-generated Training Strategy
-Generated at: {datetime.utcnow().isoformat()}
-Compiler: Enhanced No-Code Generator v2.0
-"""
+            if not signal_expr:
+                signal_expr = "pd.Series(False, index=df.index)"
 
-{imports}
+            decision_value = "BUY" if action == "BUY" else "SELL" if action == "SELL" else action
+            body.extend([
+                f"# Trading action for node {node.id}",
+                f"df['{column_name}'] = np.where({signal_expr}, '{decision_value}', 'HOLD')",
+            ])
 
-class StrategyPipeline:
-    def __init__(self):
-        self.data = None
-        self.features = []
-        self.targets = []
-        
-    def load_data(self):
-        {textwrap.indent(data_loading, "        ")}
-        return self
-        
-    def engineer_features(self):
-        {textwrap.indent(feature_engineering, "        ")}
-        return self
-        
-    def generate_signals(self):
-        {textwrap.indent(signal_generation, "        ")}
-        return self
-        
-    def prepare_training_data(self):
-        # Combine features and prepare for ML training
-        feature_cols = [col for col in self.data.columns if col.startswith('feature_')]
-        target_cols = [col for col in self.data.columns if col.startswith('target_')]
-        
-        if not feature_cols:
-            raise ValueError("No features generated")
-        if not target_cols:
-            raise ValueError("No targets generated")
-            
-        X = self.data[feature_cols].fillna(0)
-        y = self.data[target_cols[0]].fillna(0)  # Use first target
-        
-        return X, y
-    
-    def train_model(self, model_config=None):
-        X, y = self.prepare_training_data()
-        
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-        
-        # Train model
-        model = RandomForestClassifier(
-            n_estimators=model_config.get('n_estimators', 100),
-            random_state=42
-        )
-        model.fit(X_train, y_train)
-        
-        # Evaluate
-        y_pred = model.predict(X_test)
-        print("Classification Report:")
-        print(classification_report(y_test, y_pred))
-        
-        # Save model
-        joblib.dump(model, 'trained_model.joblib')
-        
-        return model
+            value_map[(node.id, "action-output")] = f"df['{column_name}']"
 
-if __name__ == "__main__":
-    pipeline = StrategyPipeline()
-    pipeline.load_data().engineer_features().generate_signals()
-    
-    model_config = {json.dumps(config.get('model', {}), indent=4)}
-    model = pipeline.train_model(model_config)
-    print("Training completed successfully!")
-'''
-        
-        return {
-            "main": template,
-            "type": "training"
-        }
+        body.append("return df")
+        lines.append(self._indent_block(body))
+        return "\n".join(lines), value_map
 
-    def _generate_backtesting_code(
-        self, imports: str, data_loading: str, feature_engineering: str,
-        signal_generation: str, risk_management: str, execution_logic: str
-    ) -> Dict[str, str]:
-        """Generate backtesting-specific code."""
-        
-        template = f'''"""
-Auto-generated Backtesting Strategy
-Generated at: {datetime.utcnow().isoformat()}
-Compiler: Enhanced No-Code Generator v2.0
-"""
+    def _emit_run_function(self) -> str:
+        """Emit a helper that chains all generated functions."""
 
-{imports}
+        lines = [
+            "def run_strategy() -> pd.DataFrame:",
+            "    df = load_data()",
+            "    df = compute_indicators(df)",
+            "    df = evaluate_conditions(df)",
+            "    df = combine_logic(df)",
+            "    df = apply_risk_controls(df)",
+            "    df = generate_trading_decisions(df)",
+            "    return df",
+        ]
+        return "\n".join(lines)
 
-class BacktestingEngine:
-    def __init__(self, initial_capital=10000):
-        self.initial_capital = initial_capital
-        self.capital = initial_capital
-        self.positions = {{}}
-        self.trades = []
-        self.data = None
-        
-    def load_data(self):
-        {textwrap.indent(data_loading, "        ")}
-        return self
-        
-    def engineer_features(self):
-        {textwrap.indent(feature_engineering, "        ")}
-        return self
-        
-    def generate_signals(self):
-        {textwrap.indent(signal_generation, "        ")}
-        return self
-        
-    def apply_risk_management(self):
-        {textwrap.indent(risk_management, "        ")}
-        return self
-        
-    def execute_trades(self):
-        {textwrap.indent(execution_logic, "        ")}
-        return self
-        
-    def run_backtest(self):
-        self.load_data()
-        self.engineer_features()
-        self.generate_signals()
-        self.apply_risk_management()
-        
-        # Simulate trading
-        for i in range(len(self.data)):
-            self.execute_trades_at_index(i)
-            
-        return self.calculate_performance()
-    
-    def execute_trades_at_index(self, index):
-        # Implementation would go here
-        pass
-        
-    def calculate_performance(self):
-        total_return = (self.capital - self.initial_capital) / self.initial_capital
-        return {{
-            'total_return': total_return,
-            'final_capital': self.capital,
-            'num_trades': len(self.trades)
-        }}
+    def _resolve_input_expression(
+        self,
+        node_id: str,
+        handle: str,
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]],
+        *,
+        fallback: Optional[str]
+    ) -> Optional[str]:
+        """Resolve the expression wired into a particular input handle."""
 
-if __name__ == "__main__":
-    engine = BacktestingEngine()
-    results = engine.run_backtest()
-    print(f"Backtest Results: {{results}}")
-'''
-        
-        return {
-            "main": template,
-            "type": "backtesting"
-        }
+        for edge in incoming_edges.get(node_id, []):
+            if edge.target_handle == handle:
+                return value_map.get((edge.source, edge.source_handle))
+        return fallback
 
-    def _generate_live_trading_code(
-        self, imports: str, data_loading: str, feature_engineering: str,
-        signal_generation: str, risk_management: str, execution_logic: str
-    ) -> Dict[str, str]:
-        """Generate live trading-specific code."""
-        
-        template = f'''"""
-Auto-generated Live Trading Strategy
-Generated at: {datetime.utcnow().isoformat()}
-Compiler: Enhanced No-Code Generator v2.0
-"""
+    def _resolve_logic_inputs(
+        self,
+        node_id: str,
+        value_map: Dict[Tuple[str, str], str],
+        incoming_edges: Dict[str, List[DataFlowEdge]]
+    ) -> List[str]:
+        """Return logic input expressions ordered by their input handles."""
 
-{imports}
-import time
-from threading import Thread
+        inputs = []
+        for edge in sorted(incoming_edges.get(node_id, []), key=lambda e: e.target_handle):
+            if not edge.target_handle.startswith("input"):
+                continue
+            expr = value_map.get((edge.source, edge.source_handle))
+            if expr is not None:
+                inputs.append(expr)
+        return inputs
 
-class LiveTradingEngine:
-    def __init__(self, broker_client=None):
-        self.broker_client = broker_client
-        self.running = False
-        self.data_buffer = deque(maxlen=1000)
-        
-    def load_live_data(self):
-        {textwrap.indent(data_loading, "        ")}
-        return self
-        
-    def engineer_features(self):
-        {textwrap.indent(feature_engineering, "        ")}
-        return self
-        
-    def generate_signals(self):
-        {textwrap.indent(signal_generation, "        ")}
-        return self
-        
-    def apply_risk_management(self):
-        {textwrap.indent(risk_management, "        ")}
-        return self
-        
-    def execute_trades(self):
-        {textwrap.indent(execution_logic, "        ")}
-        return self
-        
-    def start_trading(self):
-        self.running = True
-        
-        # Start data feed thread
-        data_thread = Thread(target=self._data_feed_loop)
-        data_thread.start()
-        
-        # Start trading loop
-        trading_thread = Thread(target=self._trading_loop)
-        trading_thread.start()
-        
-    def stop_trading(self):
-        self.running = False
-        
-    def _data_feed_loop(self):
-        while self.running:
-            # Fetch new data and update buffer
-            self.load_live_data()
-            time.sleep(1)  # Update every second
-            
-    def _trading_loop(self):
-        while self.running:
-            if len(self.data_buffer) > 50:  # Minimum data required
-                self.engineer_features()
-                self.generate_signals()
-                self.apply_risk_management()
-                self.execute_trades()
-            
-            time.sleep(5)  # Check every 5 seconds
+    def _build_incoming_edge_lookup(
+        self,
+        context: CompilationContext
+    ) -> Dict[str, List[DataFlowEdge]]:
+        """Build a lookup of incoming edges keyed by target node id."""
 
-if __name__ == "__main__":
-    engine = LiveTradingEngine()
-    print("Starting live trading engine...")
-    engine.start_trading()
-    
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Stopping trading engine...")
-        engine.stop_trading()
-'''
-        
-        return {
-            "main": template,
-            "type": "live_trading"
-        }
+        incoming: Dict[str, List[DataFlowEdge]] = defaultdict(list)
+        for edge in context.edges:
+            incoming[edge.target].append(edge)
+        return incoming
 
-    def _generate_research_code(
-        self, imports: str, data_loading: str, feature_engineering: str, signal_generation: str
-    ) -> Dict[str, str]:
-        """Generate research-specific code."""
-        
-        template = f'''"""
-Auto-generated Research Strategy
-Generated at: {datetime.utcnow().isoformat()}
-Compiler: Enhanced No-Code Generator v2.0
-"""
+    def _indent_block(self, lines: List[str], level: int = 1) -> str:
+        """Indent a list of code lines."""
 
-{imports}
-import matplotlib.pyplot as plt
-import seaborn as sns
+        indent = "    " * level
+        return "\n".join(f"{indent}{line}" for line in lines)
 
-class ResearchPipeline:
-    def __init__(self):
-        self.data = None
-        self.analysis_results = {{}}
-        
-    def load_data(self):
-        {textwrap.indent(data_loading, "        ")}
-        return self
-        
-    def engineer_features(self):
-        {textwrap.indent(feature_engineering, "        ")}
-        return self
-        
-    def generate_signals(self):
-        {textwrap.indent(signal_generation, "        ")}
-        return self
-        
-    def analyze_features(self):
-        feature_cols = [col for col in self.data.columns if col.startswith('feature_')]
-        target_cols = [col for col in self.data.columns if col.startswith('target_')]
-        
-        # Feature correlation analysis
-        if feature_cols:
-            corr_matrix = self.data[feature_cols].corr()
-            
-            plt.figure(figsize=(12, 8))
-            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0)
-            plt.title('Feature Correlation Matrix')
-            plt.tight_layout()
-            plt.savefig('feature_correlation.png')
-            plt.show()
-        
-        # Signal analysis
-        if target_cols:
-            signal_stats = self.data[target_cols[0]].value_counts()
-            print("Signal Distribution:")
-            print(signal_stats)
-            
-        return self
-        
-    def run_analysis(self):
-        self.load_data()
-        self.engineer_features()
-        self.generate_signals()
-        self.analyze_features()
-        
-        print("Research analysis completed!")
-        return self.analysis_results
+    def _sanitize_identifier(self, value: str) -> str:
+        """Return a Python-friendly identifier based on a node id."""
 
-if __name__ == "__main__":
-    pipeline = ResearchPipeline()
-    results = pipeline.run_analysis()
-'''
-        
-        return {
-            "main": template,
-            "type": "research"
-        }
+        safe = []
+        for char in value:
+            if char.isalnum():
+                safe.append(char.lower())
+            else:
+                safe.append("_")
+        result = "".join(safe).strip("_")
+        return result or "node"
 
     def _validate_generated_code(self, generated_code: Dict[str, str]) -> None:
         """Phase 7: Validate generated code."""
