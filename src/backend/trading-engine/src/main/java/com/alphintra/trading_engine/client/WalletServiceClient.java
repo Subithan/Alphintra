@@ -64,6 +64,9 @@ public class WalletServiceClient {
 
         } catch (Exception e) {
             System.err.println("❌ ERROR: Failed to fetch Coinbase credentials for userId " + userId);
+            System.err.println("❌ Exception type: " + e.getClass().getSimpleName());
+            System.err.println("❌ Exception message: " + e.getMessage());
+            e.printStackTrace();
             throw new WalletServiceException("Could not fetch Coinbase credentials from wallet service.", e);
         }
     }

@@ -24,7 +24,7 @@ data:
   ORDER_TOPIC_NAME: "new-orders"
 
   # External Service URLs
-  SERVICES_WALLET_URL: "http://wallet-service.alphintra.svc.cluster.local:8011"
+  SERVICES_WALLET_URL: "http://wallet-service:8011"
   SERVICES_STRATEGY_URL: "http://strategy-service.alphintra.svc.cluster.local:8002"
 
   # Health and Monitoring

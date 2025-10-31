@@ -20,7 +20,7 @@ labels:
 
 images:
   - name: gcr.io/alphintra-472817/trading-engine
-    newTag: latest
+    newTag: BUILDER_SHA
 
 replicas:
   - name: trading-engine
