@@ -54,7 +54,7 @@ def extract_user_id_from_token(token: str) -> Optional[str]:
         return None
 
     # Try different common user ID fields
-    user_id_fields = ['sub', 'user_id', 'userId', 'id']
+    user_id_fields = ['user_id', 'userId', 'id', 'sub']
 
     for field in user_id_fields:
         if field in payload:

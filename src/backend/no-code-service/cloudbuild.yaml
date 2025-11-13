@@ -121,6 +121,31 @@ steps:
     waitFor: ['Package-Application']  # Wait for package to complete first
     timeout: '240s'
 
+  - name: 'python:3.11-slim'
+    id: 'Regression-Matrix'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "🧪 Running regression matrix..."
+        source /tmp/venv/bin/activate
+        export DATABASE_URL=sqlite:///:memory:
+        pytest tests/backend/no_code_service/test_graphql_contract.py \
+               tests/backend/no_code_service/test_workflows_auth.py \
+               tests/backend/no_code_service/test_phase_one_validators.py \
+               tests/backend/no_code_service/test_node_handlers_phase2.py \
+               tests/backend/no_code_service/test_emitters.py \
+               tests/backend/no_code_service/test_compiler_fixtures.py \
+               tests/backend/no_code_service/test_tooling_phase4.py \
+               src/backend/no-code-service/test_workflow_compiler_updated.py
+    volumes:
+      - name: 'python-cache'
+        path: '/root/.cache'
+      - name: 'venv-volume'
+        path: '/tmp/venv'
+    waitFor: ['Run-Tests']
+    timeout: '300s'
+
   # ====================================================================
   # Phase 3: Container Build with Traditional Docker
   # ====================================================================

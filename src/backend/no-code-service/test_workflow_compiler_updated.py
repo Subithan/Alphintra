@@ -70,3 +70,6 @@ def test_compiler_handles_console_nodes() -> None:
     summary = result["validation"]["summary"]
     assert summary["total_nodes"] == len(workflow_definition["nodes"])
     assert summary["total_edges"] == len(workflow_definition["edges"])
+    execution_plan = result["validation"]["execution_plan"]
+    assert execution_plan["ordered_nodes"]
+    assert execution_plan["stages"]

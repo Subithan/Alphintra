@@ -48,6 +48,7 @@ class WorkflowResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     published_at: Optional[datetime]
+    compiler_version: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -80,7 +81,8 @@ class WorkflowResponse(BaseModel):
             last_execution_at=obj.last_execution_at,
             created_at=obj.created_at,
             updated_at=obj.updated_at,
-            published_at=obj.published_at
+            published_at=obj.published_at,
+            compiler_version=getattr(obj, "compiler_version", "Enhanced v2.0"),
         )
 
 # Component schemas

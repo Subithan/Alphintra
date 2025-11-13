@@ -34,6 +34,10 @@ HANDLER_REGISTRY = {
         OutputHandler(),
     ]
 }
+if "risk" in HANDLER_REGISTRY and "riskManagement" not in HANDLER_REGISTRY:
+    HANDLER_REGISTRY["riskManagement"] = HANDLER_REGISTRY["risk"]
+if "dataSource" in HANDLER_REGISTRY and "dataset" not in HANDLER_REGISTRY:
+    HANDLER_REGISTRY.setdefault("dataset", HANDLER_REGISTRY["customDataset"])
 
 # Single instance used when no specific handler is registered for a node type.
 FALLBACK_HANDLER = FallbackHandler()

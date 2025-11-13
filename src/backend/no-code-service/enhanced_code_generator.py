@@ -30,6 +30,173 @@ from ir import Node, Edge, Workflow
 from node_handlers import HANDLER_REGISTRY, FALLBACK_HANDLER
 
 
+@dataclass
+class ModuleSections:
+    """Intermediate representation of module snippets before emission."""
+
+    header: str
+    imports: List[str]
+    functions: List[str] = field(default_factory=list)
+    adapters: List[str] = field(default_factory=list)
+
+
+class SnippetMerger:
+    """Utility to deduplicate and merge code snippets deterministically."""
+
+    def __init__(self) -> None:
+        self._sections: List[str] = []
+        self._seen: Set[str] = set()
+
+    def add(self, snippet: Optional[str]) -> None:
+        if not snippet:
+            return
+        normalized = textwrap.dedent(snippet).strip()
+        if not normalized or normalized in self._seen:
+            return
+        self._sections.append(normalized)
+        self._seen.add(normalized)
+
+    def build(self) -> str:
+        return "\n\n".join(self._sections) + "\n"
+
+
+class BaseEmitter:
+    """Base emitter for converting module sections into final source."""
+
+    name = "base"
+    code_type = "module"
+
+    def render(self, sections: ModuleSections) -> str:
+        merger = SnippetMerger()
+        merger.add(sections.header)
+        merger.add(self._merge_imports(sections.imports + self.required_imports()))
+        for func in sections.functions:
+            merger.add(func)
+        for adapter in self.additional_helpers():
+            merger.add(adapter)
+        for adapter in sections.adapters:
+            merger.add(adapter)
+        return merger.build()
+
+    def required_imports(self) -> List[str]:
+        return []
+
+    def additional_helpers(self) -> List[str]:
+        return []
+
+    @staticmethod
+    def _merge_imports(import_lines: List[str]) -> str:
+        merged: List[str] = []
+        seen: Set[str] = set()
+        for line in import_lines:
+            cleaned = line.rstrip()
+            if not cleaned and (not merged or merged[-1] == ""):
+                continue
+            if cleaned and cleaned not in seen:
+                merged.append(cleaned)
+                seen.add(cleaned)
+            elif not cleaned:
+                merged.append(cleaned)
+        return "\n".join(merged)
+
+
+class BacktestEmitter(BaseEmitter):
+    name = "backtesting"
+
+    def required_imports(self) -> List[str]:
+        return ["import os", "import json", "import requests"]
+
+    def additional_helpers(self) -> List[str]:
+        return [
+            textwrap.dedent(
+                """
+                def send_to_backtest_service(df: pd.DataFrame) -> dict:
+                    \"\"\"Dispatch strategy output to the backtest-service.\"\"\"
+                    endpoint = os.getenv("BACKTEST_SERVICE_URL", "https://backtest-service.alphintra/api/run")
+                    payload = {
+                        "strategy_name": "generated_strategy",
+                        "rows": df.tail(500).to_dict(orient="records"),
+                    }
+                    response = requests.post(endpoint, json=payload, timeout=30)
+                    response.raise_for_status()
+                    return response.json()
+                """
+            ).strip()
+        ]
+
+
+class LiveTradingEmitter(BaseEmitter):
+    name = "live_trading"
+
+    def required_imports(self) -> List[str]:
+        return ["import os", "import json", "import requests", "import websocket"]
+
+    def additional_helpers(self) -> List[str]:
+        return [
+            textwrap.dedent(
+                """
+                def publish_live_signals(df: pd.DataFrame) -> None:
+                    \"\"\"Broadcast signals to the trading-engine.\"\"\"
+                    engine_url = os.getenv("TRADING_ENGINE_URL", "https://trading-engine.alphintra/signals")
+                    payload = {"signals": df.filter(like="decision_").tail(1).to_dict(orient="records")}
+                    requests.post(engine_url, json=payload, timeout=10)
+                """
+            ).strip()
+        ]
+
+
+class TrainingEmitter(BaseEmitter):
+    name = "training"
+
+    def required_imports(self) -> List[str]:
+        return ["import os", "import json", "import base64", "import io", "import requests"]
+
+    def additional_helpers(self) -> List[str]:
+        return [
+            textwrap.dedent(
+                """
+                def submit_training_payload(df: pd.DataFrame) -> dict:
+                    \"\"\"Send features to the ai-ml-strategy-service for offline training.\"\"\"
+                    csv_buffer = io.StringIO()
+                    df.to_csv(csv_buffer)
+                    payload = {
+                        "dataset": base64.b64encode(csv_buffer.getvalue().encode("utf-8")).decode("utf-8"),
+                        "metadata": {"rows": len(df)},
+                    }
+                    endpoint = os.getenv("AI_ML_SERVICE_URL", "https://ai-ml-strategy-service.alphintra/train")
+                    response = requests.post(endpoint, json=payload, timeout=60)
+                    response.raise_for_status()
+                    return response.json()
+                """
+            ).strip()
+        ]
+
+
+class ResearchEmitter(BaseEmitter):
+    name = "research"
+
+    def required_imports(self) -> List[str]:
+        return ["import matplotlib.pyplot as plt"]
+
+    def additional_helpers(self) -> List[str]:
+        return [
+            textwrap.dedent(
+                """
+                def visualize_signals(df: pd.DataFrame) -> None:
+                    \"\"\"Quick visualization helper for research workflows.\"\"\"
+                    plt.figure(figsize=(12, 5))
+                    df['close'].plot(label='Close')
+                    for column in df.columns:
+                        if column.startswith('decision_'):
+                            df[column].replace({'BUY': 1, 'SELL': -1, 'HOLD': 0}).plot(alpha=0.4, label=column)
+                    plt.legend()
+                    plt.title('Strategy Decisions vs Price')
+                    plt.show()
+                """
+            ).strip()
+        ]
+
+
 class DataType(Enum):
     """Data types in the workflow type system."""
     OHLCV = "ohlcv"
@@ -114,6 +281,12 @@ class EnhancedCodeGenerator:
             self._constant_folding,
             self._loop_optimization
         ]
+        self.emitters = {
+            OutputMode.BACKTESTING: BacktestEmitter(),
+            OutputMode.LIVE_TRADING: LiveTradingEmitter(),
+            OutputMode.TRAINING: TrainingEmitter(),
+            OutputMode.RESEARCH: ResearchEmitter(),
+        }
         self._compilation_context: Optional[CompilationContext] = None
 
     def compile_workflow(
@@ -131,6 +304,9 @@ class EnhancedCodeGenerator:
             target_mode=output_mode,
             optimization_level=optimization_level
         )
+        requested_mode = workflow.get("config", {}).get("target_mode") or workflow.get("config", {}).get("execution_target")
+        if requested_mode:
+            context.target_mode = self._resolve_output_mode(requested_mode, context.target_mode)
 
         # Phase 2: Semantic Analysis
         self._semantic_analysis(ir, context)
@@ -278,6 +454,16 @@ class EnhancedCodeGenerator:
             mapping = type_mappings[node.type]
             node.input_types = mapping["inputs"].copy()
             node.output_types = mapping["outputs"].copy()
+
+            # Logic gates support a variable number of signal inputs.
+            if node.type == "logic":
+                desired_inputs = node.data.get("parameters", {}).get(
+                    "inputs",
+                    len(node.input_types),
+                )
+                for index in range(desired_inputs):
+                    handle = f"input-{index}"
+                    node.input_types.setdefault(handle, DataType.SIGNAL)
         else:
             # Unknown node type - use fallback
             context.warnings.append(CompilationError(
@@ -302,16 +488,20 @@ class EnhancedCodeGenerator:
             ))
             return None
 
-        # Extract handles from edge data if available
-        edge_data = edge.data or {}
-        source_handle = edge_data.get('sourceHandle', 'data-output')
-        target_handle = edge_data.get('targetHandle', 'data-input')
+        # Extract handles using enriched IR metadata
+        source_handle = edge.source_handle or self._default_handle(source_node.output_types, fallback="data-output")
+        target_handle = edge.target_handle or self._default_handle(target_node.input_types, fallback="data-input")
         
         # If edge has rule data, use its data type
-        rule = edge_data.get('rule', {})
-        if rule and 'dataType' in rule:
-            data_type_str = rule['dataType']
-            data_type = DataType(data_type_str) if data_type_str in [dt.value for dt in DataType] else DataType.UNKNOWN
+        data_type = DataType.UNKNOWN
+        rule = (edge.metadata or {}).get('rule', {})
+        candidate_type = (
+            edge.data_type
+            or rule.get('dataType')
+            or rule.get('data_type')
+        )
+        if candidate_type and candidate_type in [dt.value for dt in DataType]:
+            data_type = DataType(candidate_type)
         else:
             # Determine data type based on source output
             data_type = source_node.output_types.get(source_handle, DataType.UNKNOWN)
@@ -323,6 +513,13 @@ class EnhancedCodeGenerator:
             target_handle=target_handle,
             data_type=data_type
         )
+
+    @staticmethod
+    def _default_handle(handle_map: Dict[str, DataType], fallback: str) -> str:
+        """Return a deterministic handle when metadata is missing."""
+        if handle_map:
+            return next(iter(handle_map.keys()))
+        return fallback
 
     def _type_checking(self, context: CompilationContext) -> None:
         """Phase 3: Type checking and data flow analysis."""
@@ -454,8 +651,7 @@ class EnhancedCodeGenerator:
         """Phase 5: Apply optimization passes."""
         
         for optimization_pass in self.optimization_passes:
-            if context.optimization_level >= optimization_pass.__name__.count("_"):
-                optimization_pass(context)
+            optimization_pass(context)
 
     def _dead_code_elimination(self, context: CompilationContext) -> None:
         """Remove unreachable nodes."""
@@ -483,9 +679,8 @@ class EnhancedCodeGenerator:
 
         # Remove non-contributing nodes
         dead_nodes = set(context.nodes.keys()) - contributing_nodes
-        for node_id in dead_nodes:
-            del context.nodes[node_id]
-            context.nodes[node_id].optimizations.append("dead_code_eliminated")
+        if dead_nodes:
+            self._purge_nodes(context, dead_nodes, reason="dead_code_eliminated")
 
     def _common_subexpression_elimination(self, context: CompilationContext) -> None:
         """Eliminate common subexpressions."""
@@ -500,11 +695,20 @@ class EnhancedCodeGenerator:
                 expression_groups[signature].append(node_id)
 
         # Mark duplicates for optimization
+        duplicates: Set[str] = set()
         for signature, nodes in expression_groups.items():
             if len(nodes) > 1:
-                # Keep the first node, mark others as optimized
-                for node_id in nodes[1:]:
-                    context.nodes[node_id].optimizations.append("common_subexpression_eliminated")
+                primary = nodes[0]
+                for dup in nodes[1:]:
+                    duplicates.add(dup)
+                    # Reroute edges produced by duplicate to primary
+                    for edge in context.edges:
+                        if edge.source == dup:
+                            edge.source = primary
+                context.nodes[primary].optimizations.append("common_subexpression_primary")
+
+        if duplicates:
+            self._purge_nodes(context, duplicates, reason="common_subexpression_eliminated")
 
     def _constant_folding(self, context: CompilationContext) -> None:
         """Fold constant expressions."""
@@ -516,6 +720,7 @@ class EnhancedCodeGenerator:
                 # If all inputs are constants, mark for constant folding
                 if all(isinstance(params.get(key), (int, float)) for key in ["value", "value2"] if key in params):
                     node.optimizations.append("constant_folded")
+                    params["constantValue"] = params.get("value")
 
     def _loop_optimization(self, context: CompilationContext) -> None:
         """Optimize loops and repeated calculations."""
@@ -530,6 +735,50 @@ class EnhancedCodeGenerator:
                 if indicator in ["SMA", "EMA", "RSI", "MACD"]:
                     node.optimizations.append("vectorized")
 
+    def _purge_nodes(self, context: CompilationContext, node_ids: Set[str], reason: str) -> None:
+        """Remove nodes and all associated edges."""
+
+        for node_id in node_ids:
+            typed_node = context.nodes.get(node_id)
+            if typed_node:
+                typed_node.optimizations.append(reason)
+                del context.nodes[node_id]
+            context.incoming_edges.pop(node_id, None)
+            context.outgoing_edges.pop(node_id, None)
+
+        context.edges = [
+            edge for edge in context.edges
+            if edge.source not in node_ids and edge.target not in node_ids
+        ]
+        for edge_list in context.incoming_edges.values():
+            edge_list[:] = [
+                edge for edge in edge_list
+                if edge.source not in node_ids and edge.target not in node_ids
+            ]
+        for edge_list in context.outgoing_edges.values():
+            edge_list[:] = [
+                edge for edge in edge_list
+                if edge.source not in node_ids and edge.target not in node_ids
+            ]
+
+    def _resolve_output_mode(self, candidate: Any, fallback: OutputMode) -> OutputMode:
+        """Resolve string or enum values into a valid OutputMode."""
+
+        if isinstance(candidate, OutputMode):
+            return candidate
+        if isinstance(candidate, str):
+            normalized = candidate.upper()
+            alias_map = {
+                "BACKTEST": OutputMode.BACKTESTING,
+                "BACKTESTING": OutputMode.BACKTESTING,
+                "LIVE": OutputMode.LIVE_TRADING,
+                "LIVE_TRADING": OutputMode.LIVE_TRADING,
+                "TRAINING": OutputMode.TRAINING,
+                "RESEARCH": OutputMode.RESEARCH,
+            }
+            return alias_map.get(normalized, fallback)
+        return fallback
+
     def _generate_code(self, context: CompilationContext, config: Dict[str, Any]) -> Dict[str, str]:
         """Phase 6: Generate a standalone Python module for the workflow."""
 
@@ -541,11 +790,14 @@ class EnhancedCodeGenerator:
             key=lambda node: node.execution_order
         )
 
-        module_source = self._assemble_strategy_module(sorted_nodes, context)
+        sections = self._assemble_strategy_module(sorted_nodes, context)
+        emitter = self.emitters.get(context.target_mode, self.emitters[OutputMode.BACKTESTING])
+        module_source = emitter.render(sections)
 
         return {
             "main": module_source,
-            "type": "module"
+            "type": emitter.code_type,
+            "emitter": emitter.name
         }
 
     # ------------------------------------------------------------------
@@ -555,11 +807,11 @@ class EnhancedCodeGenerator:
         self,
         nodes: List[TypedNode],
         context: CompilationContext
-    ) -> str:
-        """Assemble the final module source from workflow nodes."""
+    ) -> ModuleSections:
+        """Collect module sections prior to final emission."""
 
         header = self._emit_module_header()
-        imports = self._emit_import_block()
+        imports = self._emit_import_block().splitlines()
 
         incoming_edges = self._build_incoming_edge_lookup(context)
         value_map: Dict[Tuple[str, str], str] = {}
@@ -594,15 +846,13 @@ class EnhancedCodeGenerator:
         action_fn, _ = self._emit_action_function(action_nodes, value_map, incoming_edges)
         run_fn = self._emit_run_function(include_analysis=bool(analysis_nodes))
 
-        sections = [header, "", imports, "", data_fn]
-        if analysis_fn:
-            sections.extend(["", analysis_fn])
-        sections.extend(["", indicator_fn, "", condition_fn])
-        sections.extend(["", logic_fn])
-        sections.extend(["", risk_fn])
-        sections.extend(["", action_fn, "", run_fn])
+        functions = [fn for fn in [data_fn, analysis_fn, indicator_fn, condition_fn, logic_fn, risk_fn, action_fn, run_fn] if fn]
 
-        return "\n".join(section.rstrip() for section in sections if section is not None)
+        return ModuleSections(
+            header=header,
+            imports=imports,
+            functions=functions,
+        )
 
     def _emit_module_header(self) -> str:
         """Return the module level docstring."""
@@ -1278,6 +1528,8 @@ class EnhancedCodeGenerator:
             requirements.update(handler.required_packages())
 
         # Add requirements based on output mode
+        if context.target_mode == OutputMode.BACKTESTING:
+            requirements.update(["requests"])
         if context.target_mode == OutputMode.TRAINING:
             requirements.update(["scikit-learn", "joblib"])
         elif context.target_mode == OutputMode.LIVE_TRADING:
@@ -1294,6 +1546,7 @@ class EnhancedCodeGenerator:
                 "compiler_version": "2.0",
                 "optimization_level": context.optimization_level,
                 "output_mode": context.target_mode.value,
+                "emitter": generated_code.get("emitter", "base"),
                 "nodes_processed": len(context.nodes),
                 "edges_processed": len(context.edges),
                 "optimizations_applied": sum(len(node.optimizations) for node in context.nodes.values())

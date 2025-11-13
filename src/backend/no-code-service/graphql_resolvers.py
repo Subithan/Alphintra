@@ -69,6 +69,8 @@ class Query:
 
         total = query.count()
 
+        query = query.order_by(NoCodeWorkflow.updated_at.desc())
+
         if filters:
             if filters.skip:
                 query = query.offset(filters.skip)
@@ -79,7 +81,7 @@ class Query:
         else:
             query = query.limit(100)
 
-        workflows = query.order_by(NoCodeWorkflow.updated_at.desc()).all()
+        workflows = query.all()
         
         # Convert to GraphQL types
         graphql_workflows = [convert_db_workflow_to_graphql(w) for w in workflows]

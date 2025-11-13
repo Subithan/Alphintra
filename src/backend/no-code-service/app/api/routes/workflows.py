@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi import Query as FastAPIQuery
@@ -25,12 +25,44 @@ from schemas_updated import (
     WorkflowUpdate,
 )
 from workflow_compiler_updated import WorkflowCompiler
+from database_strategy_handler import execute_database_strategy_mode
+from app.telemetry import telemetry_recorder
+from copy import deepcopy
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
 workflow_compiler = WorkflowCompiler()
+if settings.telemetry_file:
+    telemetry_recorder.configure(settings.telemetry_file)
+
+
+async def _run_shadow_compile(payload: Dict[str, Any], workflow_uuid: str, workflow_name: str, legacy_code: str) -> None:
+    """Execute a background compile to compare against primary path."""
+    try:
+        result = await workflow_compiler.compile_workflow(
+            payload.get("nodes", []),
+            payload.get("edges", []),
+            workflow_name,
+        )
+        telemetry_recorder.record_compilation(
+            {
+                "strategy_name": workflow_name,
+                "workflow_uuid": workflow_uuid,
+                "mode": "shadow",
+                "success": result.get("success", False),
+                "shadow_code_size": len(result.get("code") or ""),
+                "legacy_code_size": len(legacy_code or ""),
+                "diff_code_size": len(result.get("code") or "") - len(legacy_code or ""),
+            }
+        )
+    except Exception as exc:  # pragma: no cover - diagnostics only
+        logger.warning("Shadow compile failed for workflow %s: %s", workflow_uuid, exc)
+        telemetry_recorder.record(
+            "shadow_compile_error",
+            {"workflow_uuid": workflow_uuid, "strategy_name": workflow_name, "error": str(exc)},
+        )
 
 
 @router.post("", response_model=WorkflowResponse)
@@ -211,16 +243,35 @@ async def compile_workflow(
         workflow.compilation_status = "compiling"
         db.commit()
 
-        compilation_result = await workflow_compiler.compile_workflow(
-            workflow.workflow_data.get("nodes", []),
-            workflow.workflow_data.get("edges", []),
-            workflow.name,
-        )
+        workflow_payload = workflow.workflow_data or {"nodes": [], "edges": []}
+        compilation_result: Dict[str, Any]
 
-        workflow.generated_code = compilation_result.get("code", "")
-        workflow.generated_requirements = compilation_result.get("requirements", [])
-        workflow.compilation_status = "compiled" if compilation_result.get("success") else "failed"
-        workflow.compilation_errors = compilation_result.get("errors", [])
+        if settings.use_new_compiler:
+            compilation_result = await workflow_compiler.compile_workflow(
+                workflow_payload.get("nodes", []),
+                workflow_payload.get("edges", []),
+                workflow.name,
+            )
+            workflow.generated_code = compilation_result.get("code", "")
+            workflow.generated_requirements = compilation_result.get("requirements", [])
+            workflow.compilation_status = "compiled" if compilation_result.get("success") else "failed"
+            workflow.compilation_errors = compilation_result.get("errors", [])
+        else:
+            legacy_result = execute_database_strategy_mode(
+                workflow=workflow,
+                execution_config={"optimization_level": 2},
+                user_id=current_user.id,
+                db=db,
+            )
+            workflow.compilation_status = "compiled" if legacy_result.get("success") else "failed"
+            workflow.compilation_errors = legacy_result.get("details", {}).get("errors", [])
+            compilation_result = {
+                "success": legacy_result.get("success", False),
+                "errors": workflow.compilation_errors,
+                "requirements": workflow.generated_requirements or [],
+                "metadata": legacy_result.get("strategy_details", {}),
+                "validation": legacy_result.get("details", {}).get("validation", {}),
+            }
 
         db.commit()
         db.refresh(workflow)
@@ -238,6 +289,21 @@ async def compile_workflow(
         )
         db.add(compilation_record)
         db.commit()
+
+        if settings.shadow_compile_enabled:
+            payload_copy = {
+                "nodes": deepcopy(workflow_payload.get("nodes", [])),
+                "edges": deepcopy(workflow_payload.get("edges", [])),
+            }
+            payload_copy.setdefault("config", {"name": workflow.name})
+            asyncio.create_task(
+                _run_shadow_compile(
+                    payload_copy,
+                    str(workflow.uuid),
+                    workflow.name,
+                    workflow.generated_code or "",
+                )
+            )
 
         return CompilationResponse(
             workflow_id=str(workflow.uuid),

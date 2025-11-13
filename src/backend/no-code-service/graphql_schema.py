@@ -66,6 +66,7 @@ class Workflow:
     created_at: datetime
     updated_at: datetime
     published_at: Optional[datetime]
+    compiler_version: Optional[str]
 
 @strawberry.type
 class Execution:
@@ -292,7 +293,8 @@ def convert_db_workflow_to_graphql(db_workflow: NoCodeWorkflow) -> Workflow:
         last_execution_at=db_workflow.last_execution_at,
         created_at=db_workflow.created_at,
         updated_at=db_workflow.updated_at,
-        published_at=db_workflow.published_at
+        published_at=db_workflow.published_at,
+        compiler_version=getattr(db_workflow, "compiler_version", None)
     )
 
 def convert_db_execution_to_graphql(db_execution: NoCodeExecution) -> Execution:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 
 
 def _bool(value: str | None, default: bool = False) -> bool:
@@ -68,6 +68,18 @@ class Settings:
 
     prometheus_enabled: bool = field(
         default_factory=lambda: _bool(os.getenv("PROMETHEUS_ENABLED", "true"), True)
+    )
+    use_new_compiler: bool = field(
+        default_factory=lambda: _bool(os.getenv("USE_NEW_COMPILER", "true"), True)
+    )
+    shadow_compile_enabled: bool = field(
+        default_factory=lambda: _bool(os.getenv("SHADOW_COMPILE_ENABLED", "false"), False)
+    )
+    telemetry_file: Optional[str] = field(
+        default_factory=lambda: os.getenv("TELEMETRY_FILE")
+    )
+    regression_output_modes: List[str] = field(
+        default_factory=lambda: _list(os.getenv("REGRESSION_OUTPUT_MODES", "BACKTESTING,LIVE_TRADING,TRAINING"))
     )
 
 

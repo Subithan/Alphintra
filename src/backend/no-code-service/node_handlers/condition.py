@@ -17,6 +17,10 @@ class ConditionHandler(NodeHandler):
             params.get("condition", params.get("operator", "greater_than"))
         ).lower()
         default_value = params.get("value", params.get("threshold", 0))
+        confirmation_bars = int(params.get("confirmationBars", 1))
+        cooldown_bars = int(params.get("cooldownBars", 0))
+        hold_bars = int(params.get("holdBars", 0))
+        invert = bool(params.get("invertCondition", False))
 
         safe_id = self.sanitize_id(node.id)
         column_name = f"signal_{safe_id}"
@@ -52,11 +56,51 @@ class ConditionHandler(NodeHandler):
             comparison = (
                 f"(({left_expr}) < ({right_expr})) & (({left_expr}).shift(1) >= ({right_expr}).shift(1))"
             )
+        elif operation in {"between", "range"}:
+            lower = params.get("minValue", params.get("lowerBound", default_value))
+            upper = params.get("maxValue", params.get("upperBound", default_value))
+            comparison = f"({left_expr} >= {lower}) & ({left_expr} <= {upper})"
+        elif operation in {"percent_change", "pct_change"}:
+            lookback = int(params.get("lookback", 1))
+            pct_threshold = float(params.get("value", 0)) / 100
+            comparison = f"({left_expr}.pct_change(periods={lookback}).fillna(0)) > {pct_threshold}"
+        elif operation in {"slope_positive", "slope"}:
+            window = int(params.get("window", 5))
+            comparison = f"({left_expr}.diff({window}).fillna(0)) > 0"
+        elif operation in {"rolling_max_breakout", "breakout"}:
+            window = int(params.get("window", 20))
+            comparison = f"({left_expr} >= ({left_expr}.rolling(window={window}, min_periods=1).max()))"
+        elif operation in {"rolling_min_breakdown", "breakdown"}:
+            window = int(params.get("window", 20))
+            comparison = f"({left_expr} <= ({left_expr}.rolling(window={window}, min_periods=1).min()))"
+        elif operation in {"ratio_above"}:
+            ratio = params.get("ratioValue", 1)
+            comparison = f"(({left_expr}) / ({right_expr}).replace(0, pd.NA)) > {ratio}"
         else:
             comparison = f"({left_expr}) > ({right_expr})"
 
         lines = [f"# Condition ({operation}) for node {node.id}"]
         lines.append(f"{temp_var} = ({comparison}).fillna(False)")
+
+        if confirmation_bars > 1:
+            lines.append(
+                f"{temp_var} = {temp_var}.rolling(window={confirmation_bars}, min_periods={confirmation_bars}).apply(lambda x: x.all(), raw=False).fillna(False).astype(bool)"
+            )
+
+        if hold_bars > 1:
+            lines.append(
+                f"{temp_var} = {temp_var}.rolling(window={hold_bars}, min_periods=1).max().astype(bool)"
+            )
+
+        if cooldown_bars > 0:
+            lines.append(
+                f"cooldown_{safe_id} = {temp_var}.shift(1).rolling(window={cooldown_bars}, min_periods=1).any().fillna(False)"
+            )
+            lines.append(f"{temp_var} = {temp_var} & ~cooldown_{safe_id}")
+
+        if invert:
+            lines.append(f"{temp_var} = ~{temp_var}")
+
         lines.append(f"df['{column_name}'] = {temp_var}.astype(bool)")
 
         return "\n".join(lines)

@@ -1,0 +1,262 @@
+# Alphintra Platform - Architecture Summary (One-Page)
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ALPHINTRA ALGORITHMIC TRADING PLATFORM                     ║
+║                      Google Cloud Platform Architecture                       ║
+║                          Project: alphintra-472817                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              EXTERNAL LAYER                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+    
+    Users/Clients ──→ [34.172.120.224] Google Cloud Load Balancer
+                             ↓
+                      [Cloud Armor DDoS]
+                             ↓
+                             
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          SERVICE MESH LAYER (Istio)                           │
+│  Namespace: istio-system                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
+                             
+         [Istio Ingress Gateway] :80, :443, :15443
+                ↓ (JWT + mTLS validation)
+         [VirtualService gateway-external]
+                ↓ (CORS, Retry, Timeout)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                      API GATEWAY LAYER (Spring Cloud)                         │
+│  Namespace: alphintra                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃  service-gateway :8080                     ┃
+    ┃  • Rate Limiting (Redis)                   ┃
+    ┃  • JWT Validation                          ┃
+    ┃  • Request Routing                         ┃
+    ┃  • Correlation IDs                         ┃
+    ┃  • Circuit Breaker                         ┃
+    ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                      ↓ (Routes traffic to)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         MICROSERVICES LAYER (9 services)                      │
+│  Namespace: alphintra                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
+│  auth-service      │  │  trading-engine    │  │  wallet-service    │
+│  :8009             │  │  :8008             │  │  :8011             │
+│  Spring Boot       │  │  Spring Boot       │  │  Spring Boot       │
+│  • Authentication  │  │  • Order Exec      │  │  • Balance Mgmt    │
+│  • Stripe Billing  │  │  • Position Mgmt   │  │  • Transactions    │
+└────────────────────┘  └────────────────────┘  └────────────────────┘
+
+┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
+│  marketplace       │  │  ai-ml-strategy    │  │  no-code-service   │
+│  :8200             │  │  :8002             │  │  :8006             │
+│  Spring Boot       │  │  FastAPI (Python)  │  │  FastAPI (Python)  │
+│  • Strategies      │  │  • ML Models       │  │  • Visual Builder  │
+└────────────────────┘  └────────────────────┘  └────────────────────┘
+
+┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
+│  customer-support  │  │  redis             │  │  frontend-app      │
+│  :8010/8011        │  │  :6379             │  │  :3000             │
+│  Spring Boot       │  │  Redis Cache       │  │  Next.js 15        │
+│  • Support Tickets │  │  • Sessions        │  │  • Web UI          │
+└────────────────────┘  └────────────────────┘  └────────────────────┘
+
+                      ↓ (All communicate via mTLS)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            DATA & STORAGE LAYER                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │  Cloud SQL PostgreSQL 15                                    │
+    │  • Instance: alphintra-db-instance                         │
+    │  • Private IP: 10.6.124.3                                  │
+    │  • Connection: Cloud SQL Proxy sidecar                     │
+    │  • DBs: auth_db, wallet_db, trading_db, support_db        │
+    └─────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │  Artifact Registry (us-central1)                            │
+    │  • Container images: auth-service, gateway, etc.           │
+    │  • Vulnerability scanning enabled                          │
+    └─────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │  Secret Manager                                             │
+    │  • JWT secrets, DB passwords, API keys                     │
+    │  • Accessed via Workload Identity                          │
+    └─────────────────────────────────────────────────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          OBSERVABILITY STACK                                  │
+│  Namespace: observability                                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    [Prometheus] ──→ [Grafana Dashboards] ──→ [Alertmanager]
+         ↑                                             ↓
+    ServiceMonitors                            Email/Slack/PagerDuty
+    
+    [Cloud Logging] ← JSON structured logs from all services
+    
+    [Cloud Monitoring] ← Infrastructure metrics (nodes, pods, resources)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         CI/CD PIPELINE (Automated)                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Developer Push → GitHub → GitHub Actions → Cloud Build (E2_HIGHCPU_8)
+                                                  ↓
+                                    1. Cache Restore (GCS)
+                                    2. Build (Maven/Python)
+                                    3. Docker Build & Push
+                                    4. Cache Update (GCS)
+                                                  ↓
+                                    Artifact Registry
+                                                  ↓
+                            ┌───────────────────┴───────────────────┐
+                            ↓                                       ↓
+                    Dev: kubectl apply                    Prod: ArgoCD Sync
+                    (automatic on main)                   (manual promotion)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           NETWORK TOPOLOGY                                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    VPC: default (10.128.0.0/20)
+    ├── Node Subnet: 10.128.0.0/20 (us-central1)
+    ├── Pod Network: 10.32.0.0/14 (secondary range)
+    ├── Service CIDR: 34.118.224.0/20 (GKE managed)
+    └── VPC Peering: servicenetworking (Cloud SQL: 10.6.124.0/24)
+
+    External IPs:
+    • Load Balancer: 34.172.120.224
+    • NAT Gateway: 34.134.209.61 (outbound)
+    • Binance Proxy EU: 34.38.218.227 (europe-west1)
+    • Trading Egress EU: 34.78.35.4 (europe-west1)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          SECURITY ARCHITECTURE                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    Layer 1: Cloud Armor (DDoS, IP filtering)
+    Layer 2: TLS 1.3 (Let's Encrypt certs)
+    Layer 3: Istio mTLS (STRICT mode, all services)
+    Layer 4: JWT Validation (HMAC-SHA256)
+    Layer 5: Workload Identity (GCP SA ↔ K8s SA)
+    Layer 6: Private Networking (Cloud SQL private IP)
+    Layer 7: Secret Manager (encrypted at rest)
+    Layer 8: Pod Security (runAsNonRoot, read-only filesystem)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                        GKE CLUSTER CONFIGURATION                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    Cluster: alphintra-cluster
+    Location: us-central1-a (zonal - single zone)
+    Kubernetes Version: 1.33.5-gke.1080000
+    
+    Node Pools:
+    ├── default-pool: 3 × e2-medium (2 vCPU, 4 GB) - general workloads
+    └── nat-backend-pool: 2 × e2-standard-2 (2 vCPU, 8 GB) - egress traffic
+    
+    Total: 5 nodes, ~16 vCPUs, ~28 GB RAM
+
+    Namespaces:
+    ├── alphintra (main workloads - 9 services)
+    ├── istio-system (service mesh control plane)
+    ├── observability (Prometheus, Grafana)
+    ├── cert-manager (TLS certificate automation)
+    ├── default (frontend app)
+    └── kube-system (K8s system components)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         KEY METRICS & TARGETS                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    Current State (Dev):
+    • Services: 9 microservices + frontend
+    • Replicas: 1 per service
+    • Build Time: <60s (with cache)
+    • Deployment: Automatic on push to main
+    • Cost: ~$395/month
+
+    Production Targets:
+    • Replicas: 2-10 per service (HPA)
+    • Availability: 99.9% (regional GKE, Cloud SQL HA)
+    • Latency: p95 <600ms
+    • Error Rate: <1%
+    • RTO: <5 minutes
+    • RPO: <1 minute
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            TECH STACK SUMMARY                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    Infrastructure:   GKE 1.33.5, Istio (ASM 1.17.2), Terraform
+    Backend:          Spring Boot 3.2.x, FastAPI 0.11x+
+    Frontend:         Next.js 15, TypeScript, Tailwind CSS
+    Databases:        Cloud SQL PostgreSQL 15, Redis 7.x
+    Storage:          Artifact Registry, Cloud Storage, Secret Manager
+    CI/CD:            GitHub Actions, Cloud Build, ArgoCD
+    Observability:    Prometheus, Grafana, Cloud Logging, Cloud Monitoring
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         DEPLOYMENT ENVIRONMENTS                               │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    ✅ Dev:      Running (alphintra-cluster, us-central1-a)
+    ⏳ Staging:  Planned (dedicated cluster, canary deployments)
+    ⏳ Prod:     Planned (regional cluster, multi-zone HA)
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                          QUICK ACCESS COMMANDS                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+    # Set kubectl context
+    gcloud container clusters get-credentials alphintra-cluster \
+      --zone us-central1-a --project alphintra-472817
+
+    # View service status
+    kubectl get deployments -n alphintra
+
+    # View logs
+    kubectl logs -f deployment/auth-service -n alphintra
+
+    # Deploy changes
+    kubectl apply -k infra/kubernetes/environments/dev
+
+    # Port forward for local access
+    kubectl port-forward svc/service-gateway 8080:80 -n alphintra
+
+    # Check Istio config
+    istioctl proxy-status
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  📚 Full Documentation: docs/deployment/CLOUD_ARCHITECTURE.md                 ║
+║  📊 Diagrams: docs/deployment/ARCHITECTURE_DIAGRAMS.md                       ║
+║  ⚡ Quick Ref: docs/deployment/ARCHITECTURE_QUICK_REFERENCE.md               ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+                          Last Updated: November 4, 2025
+                         Maintained by: Alphintra Platform Team
+```

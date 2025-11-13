@@ -27,7 +27,11 @@ class Edge:
 
     source: str
     target: str
-    data: Dict[str, Any] = field(default_factory=dict)
+    source_handle: str = ""
+    target_handle: str = ""
+    data_type: str = "unknown"
+    transformations: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -46,15 +50,47 @@ class Workflow:
             for n in workflow.get("nodes", [])
             if n.get("id")
         }
-        edges = [
-            Edge(
-                source=e.get("source", ""), 
-                target=e.get("target", ""),
-                data=e.get("data", {})
+        edges: List[Edge] = []
+        for edge in workflow.get("edges", []):
+            source = edge.get("source", "")
+            target = edge.get("target", "")
+            if source not in nodes or target not in nodes:
+                continue
+
+            data_block = edge.get("data") or {}
+            source_handle = (
+                edge.get("sourceHandle")
+                or data_block.get("sourceHandle")
+                or data_block.get("source_handle")
+                or ""
             )
-            for e in workflow.get("edges", [])
-            if e.get("source") in nodes and e.get("target") in nodes
-        ]
+            target_handle = (
+                edge.get("targetHandle")
+                or data_block.get("targetHandle")
+                or data_block.get("target_handle")
+                or ""
+            )
+            data_type = (
+                data_block.get("dataType")
+                or data_block.get("data_type")
+                or edge.get("dataType")
+                or "unknown"
+            )
+            transformations = data_block.get("transformations") or []
+            if not isinstance(transformations, list):
+                transformations = [transformations]
+
+            edges.append(
+                Edge(
+                    source=source,
+                    target=target,
+                    source_handle=source_handle,
+                    target_handle=target_handle,
+                    data_type=data_type,
+                    transformations=transformations,
+                    metadata=data_block,
+                )
+            )
         return cls(nodes=nodes, edges=edges)
 
     # ------------------------------------------------------------------

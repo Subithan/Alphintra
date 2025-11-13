@@ -5,7 +5,6 @@ Production server for no-code service with PostgreSQL database connection
 
 from fastapi import FastAPI, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -15,10 +14,17 @@ import uuid
 from datetime import datetime
 import os
 import sys
+import logging
 
 # Import models and schemas
 from models import Base, User, NoCodeWorkflow, NoCodeComponent, NoCodeExecution, NoCodeTemplate
 from schemas_updated import WorkflowResponse, WorkflowCreate, WorkflowUpdate
+
+from app.core.jwt_utils import extract_user_id_from_token, extract_user_claims
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # Database configuration for k3d PostgreSQL with connection pooling
 # Using Kubernetes service directly instead of port forwarding
@@ -50,8 +56,6 @@ app.add_middleware(
 )
 
 # Security
-security = HTTPBearer(auto_error=False)
-
 # Dependencies
 def get_db():
     db = SessionLocal()
@@ -61,28 +65,45 @@ def get_db():
         db.close()
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: Session = Depends(get_db)
-):
-    """Get or create test user for development"""
+    request: Request,
+) -> User:
+    """Extract user information from the Authorization header without validation."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.lower().startswith("bearer "):
+        logger.warning("Missing or malformed Authorization header")
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+    token = auth_header.split(" ", 1)[1].strip()
+    logger.warning("Auth header prefix: %s...", auth_header[:20])
+    user_id = extract_user_id_from_token(token)
+    logger.warning("Decoded token user_id=%s claims=%s", user_id, extract_user_claims(token))
+    if user_id is None:
+        logger.warning("Token missing user_id: claims=%s", extract_user_claims(token))
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+    user = User()
     try:
-        # For development, create a test user if not exists
-        test_user = db.query(User).filter(User.email == "test@alphintra.com").first()
-        if not test_user:
-            test_user = User(
-                email="test@alphintra.com",
-                password_hash="test_hash",
-                first_name="Test",
-                last_name="User",
-                is_verified=True
-            )
-            db.add(test_user)
-            db.commit()
-            db.refresh(test_user)
-        return test_user
-    except Exception as e:
-        print(f"Error getting user: {e}")
-        raise HTTPException(status_code=500, detail="Database connection error")
+        user.id = int(user_id)
+    except (TypeError, ValueError):
+        user.id = None
+    user.email = (extract_user_claims(token) or {}).get("email")
+    return user
+
+@app.get("/auth/debug")
+async def auth_debug(request: Request):
+    """Return details about Authorization header to debug prod auth issues."""
+    authorization = request.headers.get("Authorization")
+    token_info = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        token_info = {
+            "user_id": extract_user_id_from_token(token),
+            "claims": extract_user_claims(token),
+        }
+    return {
+        "authorization": authorization,
+        "token_info": token_info,
+    }
 
 # Initialize database tables
 def init_database():

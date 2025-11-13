@@ -11,11 +11,15 @@ handing execution off to the enhanced compiler.
 from __future__ import annotations
 
 import re
-from collections import Counter
+import time
 from copy import deepcopy
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from enhanced_code_generator import EnhancedCodeGenerator
+from execution_planner import ExecutionPlanner
+from semantic_analyzer import SemanticAnalyzer
+from workflow_schema import WorkflowSchemaValidator
+from app.telemetry import telemetry_recorder
 
 
 class WorkflowCompiler:
@@ -24,6 +28,9 @@ class WorkflowCompiler:
     def __init__(self) -> None:
         self.code_generator = EnhancedCodeGenerator()
         self.component_registry = self._initialize_component_registry()
+        self.schema_validator = WorkflowSchemaValidator()
+        self.semantic_analyzer = SemanticAnalyzer(self.component_registry)
+        self.execution_planner = ExecutionPlanner()
 
     # ------------------------------------------------------------------
     # Registry initialisation
@@ -365,7 +372,10 @@ class WorkflowCompiler:
     ) -> Dict[str, Any]:
         """Compile a workflow into executable Python code."""
 
-        validation_result = self._validate_workflow(nodes, edges)
+        timings: Dict[str, float] = {}
+        start = time.perf_counter()
+        validation_result, normalized_nodes, normalized_edges = self._validate_workflow(nodes, edges)
+        timings["validation"] = time.perf_counter() - start
         if not validation_result["is_valid"]:
             return {
                 "success": False,
@@ -377,12 +387,14 @@ class WorkflowCompiler:
             }
 
         workflow_payload = {
-            "nodes": nodes,
-            "edges": edges,
+            "nodes": normalized_nodes,
+            "edges": normalized_edges,
             "config": {"name": strategy_name},
         }
 
+        start = time.perf_counter()
         generator_result = self.code_generator.compile_workflow(workflow_payload)
+        timings["code_generation"] = time.perf_counter() - start
         aggregated_requirements = self._aggregate_requirements(
             nodes, generator_result.get("requirements", [])
         )
@@ -396,7 +408,7 @@ class WorkflowCompiler:
 
         success = generator_result.get("success", False) and not errors
 
-        return {
+        result = {
             "success": success,
             "code": generator_result.get("code", ""),
             "code_type": generator_result.get("code_type", "unknown"),
@@ -409,136 +421,82 @@ class WorkflowCompiler:
             "optimizations_applied": metadata.get("optimizations_applied", 0),
             "validation": validation_result,
         }
+        result["metadata"]["timings"] = timings
+
+        telemetry_recorder.record_compilation(
+            {
+                "strategy_name": strategy_name,
+                "success": success,
+                "node_count": len(normalized_nodes),
+                "edge_count": len(normalized_edges),
+                "timings": timings,
+                "emitter": generator_result.get("emitter"),
+            }
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Validation helpers
     # ------------------------------------------------------------------
     def _validate_workflow(
         self, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        errors: List[str] = []
-        warnings: List[str] = []
+    ) -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[Dict[str, Any]]]:
+        schema_result = self.schema_validator.validate(nodes, edges)
+        normalized_nodes = schema_result.nodes
+        normalized_edges = schema_result.edges
 
-        if not nodes:
-            errors.append("Workflow must contain at least one node")
-            return {
+        if not schema_result.is_valid:
+            summary = {
+                "total_nodes": len(normalized_nodes),
+                "total_edges": len(normalized_edges),
+                "categories": {},
+                "node_types": [],
+            }
+            validation = {
                 "is_valid": False,
-                "errors": errors,
-                "warnings": warnings,
-                "summary": {
-                    "total_nodes": 0,
-                    "total_edges": len(edges),
-                    "categories": {},
-                    "node_types": [],
+                "errors": schema_result.errors,
+                "warnings": schema_result.warnings,
+                "summary": summary,
+                "type_map": {},
+                "execution_plan": {
+                    "ordered_nodes": [],
+                    "stages": [],
+                    "critical_path_length": 0,
                 },
             }
+            return validation, normalized_nodes, normalized_edges
 
-        node_map = {node["id"]: node for node in nodes}
-        incoming_edges: Dict[str, List[Dict[str, Any]]] = {node["id"]: [] for node in nodes}
-        outgoing_edges: Dict[str, List[Dict[str, Any]]] = {node["id"]: [] for node in nodes}
+        semantic_result = self.semantic_analyzer.analyze(normalized_nodes, normalized_edges)
+        plan_result = self.execution_planner.plan(semantic_result.nodes, semantic_result.edges)
 
-        for edge in edges:
-            src = edge.get("source")
-            dst = edge.get("target")
-            if src in outgoing_edges:
-                outgoing_edges[src].append(edge)
-            if dst in incoming_edges:
-                incoming_edges[dst].append(edge)
+        errors = schema_result.errors + semantic_result.errors + plan_result.errors
+        warnings = schema_result.warnings + semantic_result.warnings + plan_result.warnings
 
-        categories = Counter()
-        node_types_present = set()
+        summary = dict(semantic_result.summary)
+        summary["execution_stages"] = len(plan_result.stages)
+        summary["critical_path"] = plan_result.critical_path_length
 
-        for node in nodes:
-            node_type = node.get("type", "")
-            node_types_present.add(node_type)
-            component = self.component_registry.get(node_type)
-            if not component:
-                errors.append(f"Unsupported node type: {node_type}")
-                continue
-            categories[component["category"]] += 1
-
-        if categories.get("data_source", 0) + categories.get("dataset", 0) == 0:
-            errors.append("Workflow must include at least one data source or dataset")
-
-        if categories.get("action", 0) == 0:
-            warnings.append("Workflow should include at least one trading action")
-
-        if categories.get("output", 0) == 0:
-            warnings.append("Workflow should include at least one output node")
-
-        if self._has_circular_dependency(nodes, edges):
-            errors.append("Workflow contains circular dependencies")
-
-        for edge in edges:
-            source_id = edge.get("source")
-            target_id = edge.get("target")
-            edge_data = edge.get("data") or {}
-            source_handle = edge_data.get("sourceHandle")
-            target_handle = edge_data.get("targetHandle")
-
-            source_node = node_map.get(source_id)
-            target_node = node_map.get(target_id)
-
-            if not source_node:
-                errors.append(f"Edge references non-existent source node: {source_id}")
-            if not target_node:
-                errors.append(f"Edge references non-existent target node: {target_id}")
-
-            if source_node:
-                component = self.component_registry.get(source_node.get("type", ""))
-                if component:
-                    if source_handle:
-                        if not self._handle_supported(component, source_handle, "outputs"):
-                            errors.append(
-                                f"Node '{source_node['id']}' (type {source_node['type']}) "
-                                f"does not expose output handle '{source_handle}'"
-                            )
-                    else:
-                        warnings.append(
-                            f"Edge from node '{source_node['id']}' is missing a source handle"
-                        )
-
-            if target_node:
-                component = self.component_registry.get(target_node.get("type", ""))
-                if component:
-                    if target_handle:
-                        if not self._handle_supported(component, target_handle, "inputs"):
-                            errors.append(
-                                f"Node '{target_node['id']}' (type {target_node['type']}) "
-                                f"does not accept input handle '{target_handle}'"
-                            )
-                    else:
-                        warnings.append(
-                            f"Edge to node '{target_node['id']}' is missing a target handle"
-                        )
-
-        for node in nodes:
-            node_type = node.get("type", "")
-            component = self.component_registry.get(node_type)
-            if not component:
-                continue
-            if component["category"] in {"action", "output"} and not incoming_edges[node["id"]]:
-                warnings.append(
-                    f"Node '{node['id']}' of type '{node_type}' has no incoming connections"
-                )
-            if component["category"] == "data_source" and not outgoing_edges[node["id"]]:
-                warnings.append(
-                    f"Data source node '{node['id']}' is not connected to any downstream components"
-                )
-
-        summary = {
-            "total_nodes": len(nodes),
-            "total_edges": len(edges),
-            "categories": dict(categories),
-            "node_types": sorted(node_types_present),
-        }
-
-        return {
+        validation = {
             "is_valid": len(errors) == 0,
             "errors": errors,
             "warnings": warnings,
             "summary": summary,
+            "type_map": semantic_result.type_map,
+            "execution_plan": {
+                "ordered_nodes": plan_result.ordered_nodes,
+                "stages": [
+                    {
+                        "index": stage.index,
+                        "nodes": stage.nodes,
+                        "parallelizable": stage.parallelizable,
+                    }
+                    for stage in plan_result.stages
+                ],
+                "critical_path_length": plan_result.critical_path_length,
+            },
         }
+
+        return validation, semantic_result.nodes, semantic_result.edges
 
     def _handle_supported(
         self, component: Dict[str, Any], handle_name: str, direction: str

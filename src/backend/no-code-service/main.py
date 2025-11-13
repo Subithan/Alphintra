@@ -31,6 +31,7 @@ from database_strategy_handler import execute_database_strategy_mode
 from workflow_converter import WorkflowConverter
 from clients.aiml_client import AIMLClient, AIMLServiceError, AIMLServiceUnavailable
 from clients.backtest_client import BacktestClient, BacktestServiceError, BacktestServiceUnavailable
+from app.core.jwt_utils import extract_user_id_from_token, extract_user_claims
 
 settings = get_settings()
 
@@ -122,6 +123,22 @@ async def root():
         }
     }
 
+@app.get("/auth/debug")
+async def auth_debug(request: Request):
+    """Return details about the provided Authorization header for debugging."""
+    authorization = request.headers.get("Authorization")
+    token_info = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        token_info = {
+            "user_id": extract_user_id_from_token(token),
+            "claims": extract_user_claims(token),
+        }
+    return {
+        "authorization": authorization,
+        "token_info": token_info,
+    }
+
 # Initialize services
 workflow_compiler = WorkflowCompiler()
 
@@ -179,6 +196,19 @@ async def get_graphql_context(request: Request, db: Session = Depends(get_db)):
         "current_user": current_user,
         "request": request
     }
+
+@app.get("/auth/debug")
+async def auth_debug(request: Request):
+    """Debug endpoint to inspect Authorization header."""
+    auth = request.headers.get("Authorization")
+    token_info = None
+    if auth and auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1].strip()
+        token_info = {
+            "user_id": extract_user_id_from_token(token),
+            "claims": extract_user_claims(token),
+        }
+    return {"authorization": auth, "token_info": token_info}
 
 # GraphQL Router
 graphql_router = GraphQLRouter(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import List
 
 from ir import Node
@@ -25,27 +26,41 @@ class LogicHandler(NodeHandler):
         lines = [f"# Logic ({operation}) for node {node.id}"]
 
         if not signal_exprs:
-            lines.append(f"df['{column_name}'] = pd.Series(False, index=df.index)")
-            lines.append(f"df['{column_name}'] = df['{column_name}'].astype(bool)")
+            lines.append(f"df['{column_name}'] = pd.Series(False, index=df.index, dtype=bool)")
             return "\n".join(lines)
 
-        if operation == "AND":
-            combined = " & ".join(f"({expr})" for expr in signal_exprs)
-        elif operation == "OR":
-            combined = " | ".join(f"({expr})" for expr in signal_exprs)
-        elif operation == "XOR":
-            xor_expr = signal_exprs[0]
-            for expr in signal_exprs[1:]:
-                xor_expr = f"({xor_expr}) ^ ({expr})"
-            combined = xor_expr
-        elif operation == "NOT":
-            combined = f"~({signal_exprs[0]})"
+        concat_series = ", ".join(signal_exprs)
+        if concat_series:
+            lines.append(
+                f"signals_{safe_id} = pd.concat([{concat_series}], axis=1).fillna(False)"
+            )
         else:
-            combined = " | ".join(f"({expr})" for expr in signal_exprs)
+            lines.append(f"signals_{safe_id} = pd.DataFrame(columns=['placeholder'])")
 
-        lines.append(f"df['{column_name}'] = ({combined}).fillna(False)")
-        lines.append(f"df['{column_name}'] = df['{column_name}'].astype(bool)")
+        if operation == "AND":
+            combined = f"(signals_{safe_id}.all(axis=1))"
+        elif operation == "OR":
+            combined = f"(signals_{safe_id}.any(axis=1))"
+        elif operation == "XOR":
+            combined = f"(signals_{safe_id}.sum(axis=1) % 2 == 1)"
+        elif operation == "NOT":
+            combined = f"(~signals_{safe_id}.iloc[:, 0])"
+        elif operation == "MAJORITY":
+            threshold = int(params.get("threshold", math.floor(len(signal_exprs) / 2) + 1))
+            combined = f"(signals_{safe_id}.sum(axis=1) >= {threshold})"
+        elif operation == "WEIGHTED":
+            weights = params.get("weights") or [1] * len(signal_exprs)
+            weights = (weights + [weights[-1]])[:len(signal_exprs)]
+            lines.append(f"weights_{safe_id} = pd.Series({weights}, dtype='float64')")
+            combined = (
+                f"(signals_{safe_id}.mul(weights_{safe_id}, axis=1).sum(axis=1) "
+                f">= {params.get('weightThreshold', sum(weights)/2)})"
+            )
+        else:
+            min_signals = int(params.get("minSignals", 1))
+            combined = f"(signals_{safe_id}.sum(axis=1) >= {min_signals})"
 
+        lines.append(f"df['{column_name}'] = ({combined}).fillna(False).astype(bool)")
         return "\n".join(lines)
 
     def required_packages(self) -> List[str]:
