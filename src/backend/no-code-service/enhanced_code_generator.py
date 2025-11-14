@@ -18,6 +18,7 @@ descriptions into optimized, executable code.
 from __future__ import annotations
 
 import ast
+import functools
 import json
 import textwrap
 from dataclasses import dataclass, field
@@ -92,10 +93,13 @@ class BaseEmitter:
             cleaned = line.rstrip()
             if not cleaned and (not merged or merged[-1] == ""):
                 continue
-            if cleaned and cleaned not in seen:
+            if cleaned.startswith("import ") or cleaned.startswith("from "):
+                if cleaned not in seen:
+                    merged.append(cleaned)
+                    seen.add(cleaned)
+            elif cleaned:
                 merged.append(cleaned)
-                seen.add(cleaned)
-            elif not cleaned:
+            else:
                 merged.append(cleaned)
         return "\n".join(merged)
 
@@ -104,72 +108,30 @@ class BacktestEmitter(BaseEmitter):
     name = "backtesting"
 
     def required_imports(self) -> List[str]:
-        return ["import os", "import json", "import requests"]
+        return []
 
     def additional_helpers(self) -> List[str]:
-        return [
-            textwrap.dedent(
-                """
-                def send_to_backtest_service(df: pd.DataFrame) -> dict:
-                    \"\"\"Dispatch strategy output to the backtest-service.\"\"\"
-                    endpoint = os.getenv("BACKTEST_SERVICE_URL", "https://backtest-service.alphintra/api/run")
-                    payload = {
-                        "strategy_name": "generated_strategy",
-                        "rows": df.tail(500).to_dict(orient="records"),
-                    }
-                    response = requests.post(endpoint, json=payload, timeout=30)
-                    response.raise_for_status()
-                    return response.json()
-                """
-            ).strip()
-        ]
+        return []
 
 
 class LiveTradingEmitter(BaseEmitter):
     name = "live_trading"
 
     def required_imports(self) -> List[str]:
-        return ["import os", "import json", "import requests", "import websocket"]
+        return []
 
     def additional_helpers(self) -> List[str]:
-        return [
-            textwrap.dedent(
-                """
-                def publish_live_signals(df: pd.DataFrame) -> None:
-                    \"\"\"Broadcast signals to the trading-engine.\"\"\"
-                    engine_url = os.getenv("TRADING_ENGINE_URL", "https://trading-engine.alphintra/signals")
-                    payload = {"signals": df.filter(like="decision_").tail(1).to_dict(orient="records")}
-                    requests.post(engine_url, json=payload, timeout=10)
-                """
-            ).strip()
-        ]
+        return []
 
 
 class TrainingEmitter(BaseEmitter):
     name = "training"
 
     def required_imports(self) -> List[str]:
-        return ["import os", "import json", "import base64", "import io", "import requests"]
+        return []
 
     def additional_helpers(self) -> List[str]:
-        return [
-            textwrap.dedent(
-                """
-                def submit_training_payload(df: pd.DataFrame) -> dict:
-                    \"\"\"Send features to the ai-ml-strategy-service for offline training.\"\"\"
-                    csv_buffer = io.StringIO()
-                    df.to_csv(csv_buffer)
-                    payload = {
-                        "dataset": base64.b64encode(csv_buffer.getvalue().encode("utf-8")).decode("utf-8"),
-                        "metadata": {"rows": len(df)},
-                    }
-                    endpoint = os.getenv("AI_ML_SERVICE_URL", "https://ai-ml-strategy-service.alphintra/train")
-                    response = requests.post(endpoint, json=payload, timeout=60)
-                    response.raise_for_status()
-                    return response.json()
-                """
-            ).strip()
-        ]
+        return []
 
 
 class ResearchEmitter(BaseEmitter):
@@ -658,12 +620,10 @@ class EnhancedCodeGenerator:
         
         # Find nodes that don't contribute to any output
         contributing_nodes = set()
-        
-        # Start from action nodes and work backwards
-        action_nodes = [node_id for node_id, node in context.nodes.items() if node.type == "action"]
-        output_nodes = [node_id for node_id, node in context.nodes.items() if node.type == "output"]
-        
-        queue = deque(action_nodes + output_nodes)
+        root_types = {"action", "output", "risk", "riskManagement"}
+        queue = deque(
+            node_id for node_id, node in context.nodes.items() if node.type in root_types
+        )
         
         while queue:
             current = queue.popleft()
@@ -847,11 +807,13 @@ class EnhancedCodeGenerator:
         run_fn = self._emit_run_function(include_analysis=bool(analysis_nodes))
 
         functions = [fn for fn in [data_fn, analysis_fn, indicator_fn, condition_fn, logic_fn, risk_fn, action_fn, run_fn] if fn]
+        adapters = [self._emit_data_helpers()]
 
         return ModuleSections(
             header=header,
             imports=imports,
             functions=functions,
+            adapters=adapters,
         )
 
     def _emit_module_header(self) -> str:
@@ -866,15 +828,332 @@ class EnhancedCodeGenerator:
             """'''
         ).strip()
 
+    def _emit_data_helpers(self) -> str:
+        """Emit helper utilities for market data ingestion."""
+
+        return textwrap.dedent(
+            """
+            DATA_CACHE: dict[str, pd.DataFrame] = {}
+            STREAMING_LOADERS: list = []
+            CUSTOM_DATA_LOADER = None
+            DB_ENGINE = None
+
+            def register_market_data_loader(callback) -> None:
+                # Allow tests or runners to override data ingestion.
+                global CUSTOM_DATA_LOADER
+                CUSTOM_DATA_LOADER = callback
+
+            def register_streaming_loader(callback) -> None:
+                if callback and callback not in STREAMING_LOADERS:
+                    STREAMING_LOADERS.append(callback)
+
+            def _normalize_timeframe(value: str) -> str:
+                if not value:
+                    return "1H"
+                value = value.strip()
+                lower = value.lower()
+                mapping = {
+                    "min": "T",
+                    "m": "T",
+                    "h": "H",
+                    "d": "D",
+                }
+                for suffix, replacement in mapping.items():
+                    if lower.endswith(suffix):
+                        magnitude = value[: -len(suffix)] or "1"
+                        return f"{magnitude}{replacement}"
+                return value.upper()
+
+            def _ensure_datetime_index(df: pd.DataFrame) -> pd.DataFrame:
+                if not isinstance(df.index, pd.DatetimeIndex):
+                    if "timestamp" in df.columns:
+                        df["timestamp"] = pd.to_datetime(df["timestamp"])
+                        df = df.set_index("timestamp")
+                    else:
+                        inferred = pd.to_datetime(df.index, errors="coerce")
+                        if inferred.isnull().all():
+                            inferred = pd.date_range(
+                                end=pd.Timestamp.utcnow(),
+                                periods=len(df),
+                                freq="1H",
+                            )
+                        df.index = inferred
+                return df
+
+            def _normalize_price_frame(df: pd.DataFrame, timeframe: str, bars: int) -> pd.DataFrame:
+                if df is None or df.empty:
+                    return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+                df = _ensure_datetime_index(df)
+                df = df.sort_index()
+                df = df[~df.index.duplicated(keep="last")]
+                if "close" not in df.columns:
+                    first_column = df.columns[0] if len(df.columns) else "close"
+                    df["close"] = df.get("open", df.get("price", df.get(first_column, 0)))
+                for column in ["open", "high", "low", "close", "volume"]:
+                    if column not in df.columns:
+                        if column == "volume":
+                            df[column] = 0.0
+                        else:
+                            df[column] = df["close"]
+                rule = _normalize_timeframe(timeframe)
+                try:
+                    aggregated = df.resample(rule).agg(
+                        {
+                            "open": "first",
+                            "high": "max",
+                            "low": "min",
+                            "close": "last",
+                            "volume": "sum",
+                        }
+                    )
+                    if not aggregated.empty:
+                        df = aggregated
+                except Exception:
+                    pass
+                df = df.ffill().bfill()
+                if bars:
+                    df = df.tail(int(bars))
+                df.index.name = "timestamp"
+                return df
+
+            def _load_from_custom(**kwargs):
+                if CUSTOM_DATA_LOADER is None:
+                    return None
+                try:
+                    return CUSTOM_DATA_LOADER(**kwargs)
+                except Exception as exc:  # pragma: no cover - debug helper
+                    warnings.warn(f"Custom market data loader failed: {exc}")
+                    return None
+
+            def _load_from_stream(**kwargs):
+                for loader in STREAMING_LOADERS:
+                    try:
+                        data = loader(**kwargs)
+                        if data is not None:
+                            return data
+                    except Exception as exc:  # pragma: no cover - user hooks
+                        warnings.warn(f"Streaming loader error: {exc}")
+                return None
+
+            def _load_from_rest(**kwargs):
+                api_url = os.getenv("MARKET_DATA_API_URL")
+                if not api_url:
+                    return None
+                params = {
+                    "symbol": kwargs.get("symbol"),
+                    "timeframe": kwargs.get("timeframe"),
+                    "limit": kwargs.get("bars"),
+                }
+                if kwargs.get("start_at"):
+                    params["start"] = kwargs["start_at"]
+                if kwargs.get("end_at"):
+                    params["end"] = kwargs["end_at"]
+                if kwargs.get("source"):
+                    params["source"] = kwargs["source"]
+                if kwargs.get("asset_class"):
+                    params["asset_class"] = kwargs["asset_class"]
+                headers = {}
+                api_key = os.getenv("MARKET_DATA_API_KEY")
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
+                try:
+                    response = requests.get(
+                        api_url,
+                        params=params,
+                        headers=headers,
+                        timeout=float(os.getenv("MARKET_DATA_TIMEOUT", 5)),
+                    )
+                    response.raise_for_status()
+                    payload = response.json()
+                except Exception as exc:  # pragma: no cover - network code
+                    warnings.warn(f"REST market data call failed: {exc}")
+                    return None
+                records = None
+                if isinstance(payload, dict):
+                    records = payload.get("data") or payload.get("bars") or payload.get("results")
+                if records is None:
+                    records = payload
+                df = pd.DataFrame(records or [])
+                if df.empty:
+                    return None
+                if "timestamp" in df.columns:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"])
+                    df = df.set_index("timestamp")
+                return df
+
+            def _load_from_database(**kwargs):
+                db_url = os.getenv("MARKET_DATA_DB_URL")
+                if not db_url or create_engine is None or sqlalchemy_text is None:
+                    return None
+                global DB_ENGINE
+                if DB_ENGINE is None:
+                    DB_ENGINE = create_engine(db_url)
+                filters = ["symbol = :symbol", "timeframe = :timeframe"]
+                params = {
+                    "symbol": kwargs.get("symbol"),
+                    "timeframe": kwargs.get("timeframe"),
+                    "limit": int(kwargs.get("bars") or 500),
+                }
+                if kwargs.get("start_at"):
+                    filters.append("timestamp >= :start_at")
+                    params["start_at"] = kwargs["start_at"]
+                if kwargs.get("end_at"):
+                    filters.append("timestamp <= :end_at")
+                    params["end_at"] = kwargs["end_at"]
+                query = f'''
+                    SELECT timestamp, open, high, low, close, volume
+                    FROM market_data
+                    WHERE {' AND '.join(filters)}
+                    ORDER BY timestamp DESC
+                    LIMIT :limit
+                '''
+                try:
+                    with DB_ENGINE.connect() as conn:
+                        rows = conn.execute(sqlalchemy_text(query), params).fetchall()
+                except Exception as exc:  # pragma: no cover - db code
+                    warnings.warn(f"Database market data call failed: {exc}")
+                    return None
+                if not rows:
+                    return None
+                df = pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
+                df["timestamp"] = pd.to_datetime(df["timestamp"])
+                df = df.set_index("timestamp")
+                return df
+
+            def _generate_synthetic_series(symbol: str, timeframe: str, bars: int) -> pd.DataFrame:
+                bars = max(int(bars or 0), 250)
+                freq = _normalize_timeframe(timeframe)
+                digest = hashlib.sha256(f"{symbol}:{timeframe}:{bars}".encode("utf-8")).digest()
+                seed = int.from_bytes(digest[:8], "big", signed=False)
+                rng = np.random.default_rng(seed)
+                index = pd.date_range(end=pd.Timestamp.utcnow(), periods=bars, freq=freq)
+                steps = np.arange(bars)
+                base_trend = 100 + np.sin(steps / 18.0) * 4 + np.cos(steps / 7.0) * 2
+                drift = np.linspace(-1.5, 1.5, bars)
+                noise = rng.normal(0, 0.4, bars)
+                close = base_trend + drift + noise
+                open_ = close + rng.normal(0, 0.2, bars)
+                high = np.maximum(open_, close) + np.abs(rng.normal(0, 0.3, bars))
+                low = np.minimum(open_, close) - np.abs(rng.normal(0, 0.3, bars))
+                volume = 1500 + (np.sin(steps / 12.0) + 1.2) * 500 + rng.normal(0, 50, bars)
+                df = pd.DataFrame(
+                    {
+                        "open": open_,
+                        "high": high,
+                        "low": low,
+                        "close": close,
+                        "volume": volume,
+                    },
+                    index=index,
+                )
+                df.index.name = "timestamp"
+                return df
+
+            def _fetch_market_data(
+                *,
+                symbol: str,
+                timeframe: str,
+                bars: int,
+                source: str = "system",
+                asset_class: str | None = None,
+                start_at: str | None = None,
+                end_at: str | None = None,
+                live: bool | str = False,
+            ) -> pd.DataFrame:
+                bars = max(int(bars or 0), 1)
+                cache_key = f"{symbol}:{timeframe}:{bars}:{source}:{start_at}:{end_at}:{asset_class}"
+                use_cache = os.getenv("MARKET_DATA_DISABLE_CACHE", "0").lower() not in {"1", "true", "yes"}
+                if use_cache and cache_key in DATA_CACHE:
+                    return DATA_CACHE[cache_key].copy()
+
+                loader_kwargs = {
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "bars": bars,
+                    "source": source,
+                    "asset_class": asset_class,
+                    "start_at": start_at,
+                    "end_at": end_at,
+                    "live": bool(live),
+                }
+
+                loaders = [_load_from_custom, _load_from_stream, _load_from_rest, _load_from_database]
+                data_frame = None
+                for loader in loaders:
+                    if loader is None:
+                        continue
+                    candidate = loader(**loader_kwargs)
+                    if candidate is None or candidate.empty:
+                        continue
+                    data_frame = _normalize_price_frame(candidate, timeframe, bars)
+                    break
+
+                if data_frame is None:
+                    allow_synthetic = os.getenv("MARKET_DATA_ALLOW_SYNTHETIC", "true").lower() in {"1", "true", "yes"}
+                    if not allow_synthetic:
+                        raise RuntimeError("Market data unavailable and synthetic generation disabled")
+                    warnings.warn(
+                        "Falling back to synthetic market data - configure MARKET_DATA_API_URL or MARKET_DATA_DB_URL"
+                    )
+                    data_frame = _generate_synthetic_series(symbol, timeframe, bars)
+
+                if use_cache:
+                    DATA_CACHE[cache_key] = data_frame.copy()
+                return data_frame.copy()
+            """
+        ).strip()
+
     def _emit_import_block(self) -> str:
         """Emit the imports required for the lightweight module."""
 
         imports = [
             "from __future__ import annotations",
             "",
+            "import functools",
+            "import hashlib",
+            "import json",
+            "import os",
+            "import warnings",
+            "",
             "import numpy as np",
             "import pandas as pd",
+            "import requests",
         ]
+        imports.append(
+            textwrap.dedent(
+                """
+USE_PANDAS_TA = os.getenv("USE_PANDAS_TA", "0").lower() in {"1", "true", "yes"}
+if USE_PANDAS_TA:
+    try:
+        import pandas_ta as pd_ta
+    except ImportError:  # pragma: no cover - optional dependency
+        pd_ta = None
+else:  # pragma: no cover - env-controlled
+    pd_ta = None
+                """
+            ).strip()
+        )
+        imports.append(
+            textwrap.dedent(
+                """
+try:
+    import talib as ta_lib
+except ImportError:  # pragma: no cover - optional dependency
+    ta_lib = None
+                """
+            ).strip()
+        )
+        imports.append(
+            textwrap.dedent(
+                """
+try:
+    from sqlalchemy import create_engine, text as sqlalchemy_text
+except ImportError:  # pragma: no cover - optional dependency
+    create_engine = None
+    sqlalchemy_text = None
+                """
+            ).strip()
+        )
         return "\n".join(imports)
 
     def _emit_data_function(
@@ -895,39 +1174,63 @@ class EnhancedCodeGenerator:
             lines.append(self._indent_block(body))
             return "\n".join(lines), value_map
 
-        for index, node in enumerate(data_nodes):
-            params = node.data.get("parameters", {})
-            label = node.data.get("label") or params.get("label") or node.id
-            symbol = params.get("symbol", label)
-            timeframe = params.get("timeframe", "1h")
-            bars = int(params.get("bars", 250))
-            freq = timeframe.upper()
-            safe_id = self._sanitize_identifier(node.id)
-            df_name = f"df_{safe_id}"
-            rng_name = f"rng_{safe_id}"
+        primary_node = data_nodes[0]
+        params = primary_node.data.get("parameters", {})
+        symbol = params.get("symbol", primary_node.data.get("label", primary_node.id))
+        timeframe = params.get("timeframe", "1h")
+        bars = int(params.get("bars", 250))
+        source = params.get("dataSource", params.get("provider", "system"))
+        asset_class = params.get("assetClass") or params.get("asset_class")
+        start_at = (
+            params.get("startDate")
+            or params.get("fromDate")
+            or params.get("start")
+            or params.get("from")
+        )
+        end_at = (
+            params.get("endDate")
+            or params.get("toDate")
+            or params.get("end")
+            or params.get("to")
+        )
+        live_mode_hint = str(
+            params.get("mode")
+            or params.get("executionMode")
+            or params.get("sessionType")
+            or ""
+        ).lower()
+        live_toggle = params.get("live") or params.get("liveData") or params.get("paperTrading")
+        if isinstance(live_toggle, str):
+            live_toggle = live_toggle.lower() in {"true", "1", "yes", "live", "paper"}
+        else:
+            live_toggle = bool(live_toggle)
+        live_flag = live_toggle or live_mode_hint in {"live", "paper"}
 
-            body.extend([
-                f"# Data source: {symbol} ({timeframe})",
-                f"{rng_name} = np.random.default_rng({42 + index})",
-                f"index_{safe_id} = pd.date_range(end=pd.Timestamp.utcnow(), periods={bars}, freq='{freq}')",
-                f"baseline_{safe_id} = 100 + {rng_name}.normal(0, 1, {bars}).cumsum()",
-                f"{df_name} = pd.DataFrame({{",
-                f"    'open': baseline_{safe_id} * (1 + {rng_name}.normal(0, 0.002, {bars})),",
-                f"    'high': baseline_{safe_id} * (1 + np.abs({rng_name}.normal(0, 0.01, {bars}))),",
-                f"    'low': baseline_{safe_id} * (1 - np.abs({rng_name}.normal(0, 0.01, {bars}))),",
-                f"    'close': baseline_{safe_id},",
-                f"    'volume': {rng_name}.integers(1_000, 10_000, {bars}),",
-                f"}}, index=index_{safe_id})",
-                f"{df_name}.index.name = 'timestamp'",
-            ])
+        asset_class_literal = repr(asset_class) if asset_class else "None"
+        start_literal = repr(start_at) if start_at else "None"
+        end_literal = repr(end_at) if end_at else "None"
+        source_literal = repr(source) if source else "'system'"
+        live_literal = "True" if live_flag else "False"
 
-            if index == 0:
-                body.append("df = {df_name}.copy()".format(df_name=df_name))
-                value_map[(node.id, "data-output")] = "df"
-            else:
-                value_map[(node.id, "data-output")] = "df"
-
-        body.append("return df")
+        body.extend([
+            f"# Data source: {symbol} ({timeframe})",
+            (
+                "df = _fetch_market_data("
+                f"symbol='{symbol}', "
+                f"timeframe='{timeframe}', "
+                f"bars={bars}, "
+                f"source={source_literal}, "
+                f"asset_class={asset_class_literal}, "
+                f"start_at={start_literal}, "
+                f"end_at={end_literal}, "
+                f"live={live_literal}"
+                ")"
+            ),
+            "return df",
+        ])
+        value_map[(primary_node.id, "data-output")] = "df"
+        for node in data_nodes[1:]:
+            value_map[(node.id, "data-output")] = "df"
 
         lines.append(self._indent_block(body))
         return "\n".join(lines), value_map
@@ -1129,87 +1432,198 @@ class EnhancedCodeGenerator:
 
         for node in indicator_nodes:
             params = node.data.get("parameters", {})
-            indicator = params.get("indicator", "SMA").upper()
-            period = int(params.get("period", params.get("timeperiod", 14)))
+            indicator_label = params.get("indicator") or node.data.get("label") or "SMA"
+            indicator = self._normalize_indicator_name(indicator_label)
+            period = max(1, int(params.get("period", params.get("timeperiod", 14))))
             source_column = params.get("source", "close")
             safe_id = self._sanitize_identifier(node.id)
 
             data_expr = self._resolve_input_expression(
-                node.id, "data-input", value_map, incoming_edges,
-                fallback="df"
+                node.id,
+                "data-input",
+                value_map,
+                incoming_edges,
+                fallback="df['close']"
             )
-
             if data_expr == "df":
                 series_expr = f"df['{source_column}']"
             elif data_expr and data_expr.startswith("df_multi_"):
-                series_expr = f"{data_expr}['{source_column}']"
+                series_expr = (
+                    f"{data_expr}['{source_column}'] "
+                    f"if '{source_column}' in {data_expr}.columns "
+                    f"else {data_expr}.iloc[:, 0]"
+                )
             else:
-                series_expr = data_expr
+                series_expr = data_expr or f"df['{source_column}']"
 
-            body.append(f"# Indicator: {indicator} ({node.id})")
+            source_alias = f"series_{safe_id}"
+            body.append(f"# Indicator: {indicator_label} ({node.id})")
+            body.append(f"{source_alias} = {series_expr}")
+            body.extend([
+                f"if isinstance({source_alias}, pd.DataFrame):",
+                f"    if '{source_column}' in {source_alias}.columns:",
+                f"        {source_alias} = {source_alias}['{source_column}']",
+                f"    else:",
+                f"        {source_alias} = {source_alias}.iloc[:, 0]",
+                f"if not isinstance({source_alias}, pd.Series):",
+                f"    {source_alias} = pd.Series({source_alias}, index=df.index)",
+                f"{source_alias} = {source_alias}.astype(float).fillna(method='ffill').fillna(method='bfill')",
+            ])
+
+            indicator_lower = indicator.lower()
 
             if indicator == "RSI":
-                delta_name = f"delta_{safe_id}"
-                gain_name = f"gain_{safe_id}"
-                loss_name = f"loss_{safe_id}"
-                rs_name = f"rs_{safe_id}"
-                column_name = f"indicator_{safe_id}"
+                column_name = f"rsi_{safe_id}"
                 body.extend([
-                    f"{delta_name} = {series_expr}.diff()",
-                    f"{gain_name} = {delta_name}.clip(lower=0).rolling(window={period}, min_periods={period}).mean()",
-                    f"{loss_name} = (-{delta_name}.clip(upper=0)).rolling(window={period}, min_periods={period}).mean()",
-                    f"{rs_name} = {gain_name} / {loss_name}.replace(0, np.nan)",
-                    f"df['{column_name}'] = 100 - (100 / (1 + {rs_name}))",
+                    "if ta_lib is not None and hasattr(ta_lib, 'RSI'):",
+                    f"    df['{column_name}'] = pd.Series(ta_lib.RSI({source_alias}.to_numpy(), timeperiod={period}), index=df.index)",
+                    "elif pd_ta is not None and hasattr(pd_ta, 'rsi'):",
+                    f"    df['{column_name}'] = pd.Series(pd_ta.rsi({source_alias}, length={period}), index=df.index)",
+                    "else:",
+                    f"    delta_{safe_id} = {source_alias}.diff()",
+                    f"    gain_{safe_id} = delta_{safe_id}.where(delta_{safe_id} > 0, 0.0)",
+                    f"    loss_{safe_id} = (-delta_{safe_id}).where(delta_{safe_id} < 0, 0.0)",
+                    f"    avg_gain_{safe_id} = gain_{safe_id}.rolling(window={period}, min_periods=1).mean()",
+                    f"    avg_loss_{safe_id} = loss_{safe_id}.rolling(window={period}, min_periods=1).mean()",
+                    f"    rs_{safe_id} = avg_gain_{safe_id} / avg_loss_{safe_id}.replace(0, np.nan)",
+                    f"    df['{column_name}'] = 100 - (100 / (1 + rs_{safe_id}))",
                     f"df['{column_name}'] = df['{column_name}'].fillna(method='bfill').fillna(50)",
                 ])
                 value_map[(node.id, "output-1")] = f"df['{column_name}']"
-            elif indicator == "SMA":
-                column_name = f"indicator_{safe_id}"
-                body.append(f"df['{column_name}'] = {series_expr}.rolling(window={period}, min_periods=1).mean()")
+            elif indicator in {"SMA", "SIMPLE_MOVING_AVERAGE"}:
+                column_name = f"sma_{source_column}_{safe_id}"
+                body.extend([
+                    "if ta_lib is not None and hasattr(ta_lib, 'SMA'):",
+                    f"    df['{column_name}'] = pd.Series(ta_lib.SMA({source_alias}.to_numpy(), timeperiod={period}), index=df.index)",
+                    "elif pd_ta is not None and hasattr(pd_ta, 'sma'):",
+                    f"    df['{column_name}'] = pd.Series(pd_ta.sma({source_alias}, length={period}, min_periods=1), index=df.index)",
+                    "else:",
+                    f"    df['{column_name}'] = {source_alias}.rolling(window={period}, min_periods=1).mean()",
+                    f"df['{column_name}'] = df['{column_name}'].ffill().bfill()",
+                ])
                 value_map[(node.id, "output-1")] = f"df['{column_name}']"
-            elif indicator == "EMA":
-                column_name = f"indicator_{safe_id}"
-                body.append(f"df['{column_name}'] = {series_expr}.ewm(span={period}, adjust=False).mean()")
+            elif indicator in {"EMA", "EXPONENTIAL_MOVING_AVERAGE"}:
+                column_name = f"ema_{source_column}_{safe_id}"
+                body.extend([
+                    "if ta_lib is not None and hasattr(ta_lib, 'EMA'):",
+                    f"    df['{column_name}'] = pd.Series(ta_lib.EMA({source_alias}.to_numpy(), timeperiod={period}), index=df.index)",
+                    "elif pd_ta is not None and hasattr(pd_ta, 'ema'):",
+                    f"    df['{column_name}'] = pd.Series(pd_ta.ema({source_alias}, length={period}, min_periods=1), index=df.index)",
+                    "else:",
+                    f"    df['{column_name}'] = {source_alias}.ewm(span={period}, adjust=False).mean()",
+                    f"df['{column_name}'] = df['{column_name}'].ffill().bfill()",
+                ])
                 value_map[(node.id, "output-1")] = f"df['{column_name}']"
             elif indicator == "MACD":
-                fast = int(params.get("fastPeriod", 12))
-                slow = int(params.get("slowPeriod", 26))
-                signal_period = int(params.get("signalPeriod", 9))
-                macd_col = f"indicator_{safe_id}_macd"
-                signal_col = f"indicator_{safe_id}_signal"
-                hist_col = f"indicator_{safe_id}_hist"
+                fast = int(params.get("fastPeriod", params.get("fast", 12)))
+                slow = int(params.get("slowPeriod", params.get("slow", 26)))
+                signal_period = int(params.get("signalPeriod", params.get("signal", 9)))
+                macd_col = f"macd_line_{safe_id}"
+                signal_col = f"macd_signal_{safe_id}"
+                hist_col = f"macd_hist_{safe_id}"
                 body.extend([
-                    f"ema_fast_{safe_id} = {series_expr}.ewm(span={fast}, adjust=False).mean()",
-                    f"ema_slow_{safe_id} = {series_expr}.ewm(span={slow}, adjust=False).mean()",
-                    f"df['{macd_col}'] = ema_fast_{safe_id} - ema_slow_{safe_id}",
-                    f"df['{signal_col}'] = df['{macd_col}'].ewm(span={signal_period}, adjust=False).mean()",
-                    f"df['{hist_col}'] = df['{macd_col}'] - df['{signal_col}']",
+                    "if ta_lib is not None and hasattr(ta_lib, 'MACD'):",
+                    f"    macd_vals, signal_vals, hist_vals = ta_lib.MACD({source_alias}.to_numpy(), fastperiod={fast}, slowperiod={slow}, signalperiod={signal_period})",
+                    f"    df['{macd_col}'] = pd.Series(macd_vals, index=df.index)",
+                    f"    df['{signal_col}'] = pd.Series(signal_vals, index=df.index)",
+                    f"    df['{hist_col}'] = pd.Series(hist_vals, index=df.index)",
+                    "elif pd_ta is not None and hasattr(pd_ta, 'macd'):",
+                    f"    macd_df = pd_ta.macd({source_alias}, fast={fast}, slow={slow}, signal={signal_period})",
+                    f"    if isinstance(macd_df, pd.DataFrame) and macd_df.shape[1] >= 3:",
+                    f"        df['{macd_col}'] = macd_df.iloc[:, 0]",
+                    f"        df['{hist_col}'] = macd_df.iloc[:, 1]",
+                    f"        df['{signal_col}'] = macd_df.iloc[:, 2]",
+                    "    else:",
+                    f"        df['{macd_col}'] = macd_df",
+                    f"        df['{signal_col}'] = macd_df",
+                    f"        df['{hist_col}'] = macd_df * 0",
+                    "else:",
+                    f"    ema_fast_{safe_id} = {source_alias}.ewm(span={fast}, adjust=False).mean()",
+                    f"    ema_slow_{safe_id} = {source_alias}.ewm(span={slow}, adjust=False).mean()",
+                    f"    df['{macd_col}'] = ema_fast_{safe_id} - ema_slow_{safe_id}",
+                    f"    df['{signal_col}'] = df['{macd_col}'].ewm(span={signal_period}, adjust=False).mean()",
+                    f"    df['{hist_col}'] = df['{macd_col}'] - df['{signal_col}']",
                 ])
+                for col in [macd_col, signal_col, hist_col]:
+                    body.append(f"df['{col}'] = df['{col}'].ffill().bfill()")
                 value_map[(node.id, "output-1")] = f"df['{macd_col}']"
                 value_map[(node.id, "output-2")] = f"df['{signal_col}']"
                 value_map[(node.id, "output-3")] = f"df['{hist_col}']"
             elif indicator in {"BB", "BOLLINGER", "BOLLINGER_BANDS"}:
-                multiplier = float(params.get("multiplier", 2))
-                middle_col = f"indicator_{safe_id}_middle"
-                upper_col = f"indicator_{safe_id}_upper"
-                lower_col = f"indicator_{safe_id}_lower"
-                rolling_mean = f"rolling_mean_{safe_id}"
-                rolling_std = f"rolling_std_{safe_id}"
+                multiplier = float(params.get("multiplier", params.get("std", 2)))
+                middle_col = f"bollinger_mid_{safe_id}"
+                upper_col = f"bollinger_upper_{safe_id}"
+                lower_col = f"bollinger_lower_{safe_id}"
                 body.extend([
-                    f"{rolling_mean} = {series_expr}.rolling(window={period}, min_periods=1).mean()",
-                    f"{rolling_std} = {series_expr}.rolling(window={period}, min_periods=1).std().fillna(0)",
-                    f"df['{middle_col}'] = {rolling_mean}",
-                    f"df['{upper_col}'] = df['{middle_col}'] + ({multiplier} * {rolling_std})",
-                    f"df['{lower_col}'] = df['{middle_col}'] - ({multiplier} * {rolling_std})",
+                    "if ta_lib is not None and hasattr(ta_lib, 'BBANDS'):",
+                    f"    upper_band, middle_band, lower_band = ta_lib.BBANDS({source_alias}.to_numpy(), timeperiod={period}, nbdevup={multiplier}, nbdevdn={multiplier}, matype=0)",
+                    f"    df['{upper_col}'] = pd.Series(upper_band, index=df.index)",
+                    f"    df['{middle_col}'] = pd.Series(middle_band, index=df.index)",
+                    f"    df['{lower_col}'] = pd.Series(lower_band, index=df.index)",
+                    "elif pd_ta is not None and hasattr(pd_ta, 'bbands'):",
+                    f"    bb_df = pd_ta.bbands({source_alias}, length={period}, std={multiplier})",
+                    f"    if isinstance(bb_df, pd.DataFrame) and bb_df.shape[1] >= 3:",
+                    f"        df['{lower_col}'] = bb_df.iloc[:, 0]",
+                    f"        df['{middle_col}'] = bb_df.iloc[:, 1]",
+                    f"        df['{upper_col}'] = bb_df.iloc[:, 2]",
+                    "    else:",
+                    f"        df['{middle_col}'] = bb_df",
+                    f"        df['{upper_col}'] = bb_df",
+                    f"        df['{lower_col}'] = bb_df",
+                    "else:",
+                    f"    rolling_mean_{safe_id} = {source_alias}.rolling(window={period}, min_periods=1).mean()",
+                    f"    rolling_std_{safe_id} = {source_alias}.rolling(window={period}, min_periods=1).std().fillna(0)",
+                    f"    df['{middle_col}'] = rolling_mean_{safe_id}",
+                    f"    df['{upper_col}'] = df['{middle_col}'] + ({multiplier} * rolling_std_{safe_id})",
+                    f"    df['{lower_col}'] = df['{middle_col}'] - ({multiplier} * rolling_std_{safe_id})",
                 ])
+                for col in [upper_col, middle_col, lower_col]:
+                    body.append(f"df['{col}'] = df['{col}'].ffill().bfill()")
                 value_map[(node.id, "output-1")] = f"df['{middle_col}']"
                 value_map[(node.id, "output-2")] = f"df['{upper_col}']"
                 value_map[(node.id, "output-3")] = f"df['{lower_col}']"
-            else:
-                column_name = f"indicator_{safe_id}"
+            elif indicator in {"ATR", "AVERAGE_TRUE_RANGE"}:
+                column_name = f"atr_{safe_id}"
                 body.extend([
-                    f"# Fallback indicator implementation for {indicator}",
-                    f"df['{column_name}'] = {series_expr}",
+                    "if ta_lib is not None and hasattr(ta_lib, 'ATR'):",
+                    f"    df['{column_name}'] = pd.Series(ta_lib.ATR(df['high'].to_numpy(), df['low'].to_numpy(), df['close'].to_numpy(), timeperiod={period}), index=df.index)",
+                    "elif pd_ta is not None and hasattr(pd_ta, 'atr'):",
+                    f"    df['{column_name}'] = pd.Series(pd_ta.atr(high=df['high'], low=df['low'], close=df['close'], length={period}), index=df.index)",
+                    "else:",
+                    f"    high_low_{safe_id} = (df['high'] - df['low']).abs()",
+                    f"    high_close_{safe_id} = (df['high'] - df['close'].shift()).abs()",
+                    f"    low_close_{safe_id} = (df['low'] - df['close'].shift()).abs()",
+                    f"    true_range_{safe_id} = pd.concat([high_low_{safe_id}, high_close_{safe_id}, low_close_{safe_id}], axis=1).max(axis=1)",
+                    f"    df['{column_name}'] = true_range_{safe_id}.rolling(window={period}, min_periods=1).mean()",
+                    f"df['{column_name}'] = df['{column_name}'].ffill().bfill()",
+                ])
+                value_map[(node.id, "output-1")] = f"df['{column_name}']"
+            elif indicator in {"VWAP", "VOLUME_WEIGHTED_AVERAGE_PRICE"}:
+                column_name = f"vwap_{safe_id}"
+                body.extend([
+                    f"typical_price_{safe_id} = (df['high'] + df['low'] + df['close']) / 3",
+                    f"volume_{safe_id} = df['volume'].replace(0, np.nan)",
+                    f"cumulative_value_{safe_id} = (typical_price_{safe_id} * volume_{safe_id}).cumsum()",
+                    f"df['{column_name}'] = cumulative_value_{safe_id} / volume_{safe_id}.cumsum()",
+                    f"df['{column_name}'] = df['{column_name}'].ffill().bfill()",
+                ])
+                value_map[(node.id, "output-1")] = f"df['{column_name}']"
+            elif indicator in {"WMA", "WEIGHTED_MOVING_AVERAGE"}:
+                column_name = f"wma_{source_column}_{safe_id}"
+                body.extend([
+                    "if pd_ta is not None and hasattr(pd_ta, 'wma'):",
+                    f"    df['{column_name}'] = pd.Series(pd_ta.wma({source_alias}, length={period}), index=df.index)",
+                    "else:",
+                    f"    weights_{safe_id} = np.arange(1, {period} + 1)",
+                    f"    df['{column_name}'] = {source_alias}.rolling(window={period}).apply(lambda values: np.dot(values, weights_{safe_id}) / weights_{safe_id}.sum(), raw=True)",
+                    f"df['{column_name}'] = df['{column_name}'].ffill().bfill()",
+                ])
+                value_map[(node.id, "output-1")] = f"df['{column_name}']"
+            else:
+                column_name = f"indicator_{indicator_lower}_{safe_id}"
+                body.extend([
+                    f"df['{column_name}'] = {source_alias}",
+                    f"df['{column_name}'] = df['{column_name}'].ffill().bfill()",
                 ])
                 value_map[(node.id, "output-1")] = f"df['{column_name}']"
 
@@ -1246,11 +1660,25 @@ class EnhancedCodeGenerator:
 
         for node in condition_nodes:
             params = node.data.get("parameters", {})
-            operation = params.get("condition", "greater_than")
-            operator = comparison_map.get(operation, ">")
+            condition_type = (params.get("conditionType") or params.get("type") or "comparison").lower()
+            condition = (params.get("condition") or "greater_than").lower()
             default_value = params.get("value", 0)
+            secondary_value = params.get("value2", params.get("valueMax", default_value))
+            lookback = max(1, int(params.get("lookback", 1)))
+            confirmation_bars = int(params.get("confirmationBars", params.get("confirmBars", 0)))
+            cooldown_bars = int(params.get("cooldownBars", params.get("cooldown", 0)))
+            sensitivity = float(params.get("sensitivity", 0) or 0)
             safe_id = self._sanitize_identifier(node.id)
             column_name = f"signal_{safe_id}"
+
+            try:
+                default_numeric = float(default_value)
+            except (TypeError, ValueError):
+                default_numeric = 0.0
+            try:
+                secondary_numeric = float(secondary_value)
+            except (TypeError, ValueError):
+                secondary_numeric = default_numeric
 
             left_expr = self._resolve_input_expression(
                 node.id, "data-input", value_map, incoming_edges,
@@ -1258,15 +1686,126 @@ class EnhancedCodeGenerator:
             )
             right_expr = self._resolve_input_expression(
                 node.id, "value-input", value_map, incoming_edges,
-                fallback=repr(default_value)
+                fallback=repr(default_value if default_value is not None else 0)
+            )
+            aux_expr = self._resolve_input_expression(
+                node.id, "aux-input", value_map, incoming_edges,
+                fallback=None
             )
 
-            body.extend([
-                f"# Condition ({operation}) for node {node.id}",
-                f"df['{column_name}'] = ({left_expr}) {operator} ({right_expr})",
-                f"df['{column_name}'] = df['{column_name}'].fillna(False)",
-            ])
+            has_value_input = any(
+                edge.target_handle == "value-input"
+                for edge in incoming_edges.get(node.id, [])
+            )
 
+            left_alias = f"left_{safe_id}"
+            body.extend(self._coerce_series_lines(left_alias, left_expr or "df['close']", column_hint="close"))
+
+            right_alias = f"right_{safe_id}"
+            body.extend(self._coerce_series_lines(right_alias, right_expr or repr(default_numeric), column_hint="close"))
+
+            aux_alias: Optional[str] = None
+            if aux_expr is not None:
+                aux_alias = f"aux_{safe_id}"
+                body.extend(self._coerce_series_lines(aux_alias, aux_expr, column_hint="close"))
+
+            adjusted_right = right_alias
+            if sensitivity and condition in {"greater_than", "greater_than_equal", "greater_or_equal"}:
+                adj_alias = f"threshold_{safe_id}"
+                body.append(f"{adj_alias} = {right_alias} * (1 + ({sensitivity} / 100))")
+                adjusted_right = adj_alias
+            elif sensitivity and condition in {"less_than", "less_than_equal", "less_or_equal"}:
+                adj_alias = f"threshold_{safe_id}"
+                body.append(f"{adj_alias} = {right_alias} * (1 - ({sensitivity} / 100))")
+                adjusted_right = adj_alias
+
+            if condition_type == "crossover" or condition in {"cross_above", "cross_below", "cross_over", "cross_under"}:
+                target_series = aux_alias or adjusted_right
+                if condition in {"cross_below", "cross_under"}:
+                    condition_expr = (
+                        f"(({left_alias} < {target_series}) & "
+                        f"({left_alias}.shift({lookback}) >= {target_series}.shift({lookback})))"
+                    )
+                else:
+                    condition_expr = (
+                        f"(({left_alias} > {target_series}) & "
+                        f"({left_alias}.shift({lookback}) <= {target_series}.shift({lookback})))"
+                    )
+            elif condition_type in {"between", "range"} or condition == "between":
+                lower_series = aux_alias
+                upper_series = adjusted_right
+                if lower_series is None:
+                    lower_series = f"lower_{safe_id}"
+                    low_value = min(default_numeric, secondary_numeric)
+                    body.append(f"{lower_series} = pd.Series({repr(low_value)}, index=df.index)")
+                if secondary_value is not None:
+                    upper_series = f"upper_{safe_id}"
+                    high_value = max(default_numeric, secondary_numeric)
+                    body.append(f"{upper_series} = pd.Series({repr(high_value)}, index=df.index)")
+                condition_expr = f"(({left_alias} >= {lower_series}) & ({left_alias} <= {upper_series}))"
+                if condition in {"outside", "not_between"}:
+                    condition_expr = f"~{condition_expr}"
+            elif condition_type in {"percent_change", "momentum"} or condition == "percent_change":
+                pct_alias = f"percent_change_{safe_id}"
+                body.append(f"{pct_alias} = {left_alias}.pct_change(periods={lookback}).fillna(0) * 100")
+                comparator = comparison_map.get(condition, comparison_map.get("greater_than"))
+                condition_expr = f"({pct_alias}) {comparator} ({adjusted_right})"
+            elif condition_type == "trend":
+                if condition in {"falling", "bearish"}:
+                    condition_expr = f"{left_alias} < {left_alias}.shift({lookback})"
+                else:
+                    condition_expr = f"{left_alias} > {left_alias}.shift({lookback})"
+            elif (
+                not has_value_input
+                and condition_type == "comparison"
+                and condition in {"less_than", "less_than_equal", "less_or_equal"}
+                and 0 < abs(default_numeric) < 1
+            ):
+                price_alias = f"price_{safe_id}"
+                body.extend(self._coerce_series_lines(price_alias, "df['close']", column_hint="close"))
+                distance_alias = f"distance_{safe_id}"
+                tolerance_alias = f"tolerance_{safe_id}"
+                body.append(f"{distance_alias} = ({price_alias} - {left_alias}).abs()")
+                body.append(f"{tolerance_alias} = {price_alias}.abs() * {abs(default_numeric)}")
+                condition_expr = f"{distance_alias} <= {tolerance_alias}"
+            else:
+                comparator = comparison_map.get(condition, ">")
+                condition_expr = f"({left_alias}) {comparator} ({adjusted_right})"
+
+            base_series = f"condition_{safe_id}"
+            body.append(f"{base_series} = ({condition_expr}).fillna(False)")
+            current_series = base_series
+
+            if confirmation_bars > 0:
+                confirm_series = f"{base_series}_confirmed"
+                body.extend([
+                    f"{confirm_series} = {current_series}.copy()",
+                    f"for offset in range(1, {confirmation_bars} + 1):",
+                    f"    {confirm_series} &= {current_series}.shift(offset)",
+                    f"{confirm_series} = {confirm_series}.fillna(False)",
+                ])
+                current_series = confirm_series
+
+            if cooldown_bars > 0:
+                cooled_values = f"cooldown_values_{safe_id}"
+                cooldown_counter = f"cooldown_counter_{safe_id}"
+                cooled_series = f"{current_series}_cooldown"
+                body.extend([
+                    f"{cooled_values} = []",
+                    f"{cooldown_counter} = 0",
+                    f"for flag in {current_series}.fillna(False):",
+                    f"    if flag and {cooldown_counter} == 0:",
+                    f"        {cooled_values}.append(True)",
+                    f"        {cooldown_counter} = {cooldown_bars}",
+                    f"    else:",
+                    f"        {cooled_values}.append(False)",
+                    f"        if {cooldown_counter} > 0:",
+                    f"            {cooldown_counter} -= 1",
+                    f"{cooled_series} = pd.Series({cooled_values}, index=df.index)",
+                ])
+                current_series = cooled_series
+
+            body.append(f"df['{column_name}'] = {current_series}.fillna(False).astype(bool)")
             value_map[(node.id, "signal-output")] = f"df['{column_name}']"
 
         body.append("return df")
@@ -1291,36 +1830,71 @@ class EnhancedCodeGenerator:
 
         for node in logic_nodes:
             params = node.data.get("parameters", {})
-            operation = params.get("operation", "AND").upper()
+            operation = (params.get("operation") or "AND").upper()
             safe_id = self._sanitize_identifier(node.id)
             column_name = f"logic_{safe_id}"
 
             inputs = self._resolve_logic_inputs(node.id, value_map, incoming_edges)
+            expected_inputs = max(1, int(params.get("inputs", len(inputs) or 1)))
+            provided_inputs = len(inputs)
 
             if not inputs:
-                body.extend([
-                    f"# Logic node {node.id} has no inputs; defaulting to False",
-                    f"df['{column_name}'] = False",
-                ])
-            else:
-                if operation == "AND":
-                    combined_expr = " & ".join(f"({expr})" for expr in inputs)
-                elif operation == "OR":
-                    combined_expr = " | ".join(f"({expr})" for expr in inputs)
-                elif operation == "XOR":
-                    combined_expr = inputs[0]
-                    for expr in inputs[1:]:
-                        combined_expr = f"({combined_expr}) ^ ({expr})"
-                elif operation == "NOT":
-                    combined_expr = f"~({inputs[0]})"
-                else:
-                    combined_expr = " | ".join(f"({expr})" for expr in inputs)
+                body.append(
+                    f"warnings.warn(\"Logic node {node.id} has no inputs; defaulting to False\")"
+                )
+                inputs = ["pd.Series(False, index=df.index)"]
+            elif provided_inputs < expected_inputs:
+                body.append(
+                    f"warnings.warn(\"Logic node {node.id} expected {expected_inputs} inputs but received {provided_inputs}; padding with False\")"
+                )
+                inputs.extend(["pd.Series(False, index=df.index)"] * (expected_inputs - provided_inputs))
 
+            concat_inputs = ", ".join(inputs)
+
+            if operation == "AND":
+                combined_expr = " & ".join(f"({expr})" for expr in inputs)
+            elif operation == "OR":
+                combined_expr = " | ".join(f"({expr})" for expr in inputs)
+            elif operation == "XOR":
+                combined_expr = inputs[0]
+                for expr in inputs[1:]:
+                    combined_expr = f"({combined_expr}) ^ ({expr})"
+            elif operation == "NOT":
+                combined_expr = f"~({inputs[0]})"
+            elif operation == "WEIGHTED":
+                weights_param = params.get("weights") or []
+                weights: List[float] = []
+                for idx in range(len(inputs)):
+                    try:
+                        weights.append(float(weights_param[idx]))
+                    except (TypeError, ValueError, IndexError):
+                        weights.append(1.0)
+                weight_literal = ", ".join(str(weight) for weight in weights)
+                threshold = float(params.get("threshold", 0.5))
+                frame_alias = f"logic_frame_{safe_id}"
+                weights_alias = f"logic_weights_{safe_id}"
+                count_alias = f"logic_input_count_{safe_id}"
+                score_alias = f"logic_weighted_{safe_id}"
+                view_alias = f"logic_weights_view_{safe_id}"
                 body.extend([
-                    f"# Logic ({operation}) for node {node.id}",
-                    f"df['{column_name}'] = {combined_expr}",
-                    f"df['{column_name}'] = df['{column_name}'].fillna(False)",
+                    f"{frame_alias} = pd.concat([{concat_inputs}], axis=1).fillna(False).astype(int)",
+                    f"{count_alias} = {frame_alias}.shape[1]",
+                    f"{weights_alias} = np.array([{weight_literal}])",
+                    f"{view_alias} = {weights_alias}[:{count_alias}] if {count_alias} > 0 else np.array([1.0])",
+                    f"if {view_alias}.sum() == 0:",
+                    f"    {view_alias} = np.ones_like({view_alias})",
+                    f"{score_alias} = ({frame_alias}.iloc[:, :{count_alias}] * {view_alias}).sum(axis=1) / {view_alias}.sum()",
+                    f"df['{column_name}'] = ({score_alias} >= {threshold}).fillna(False)",
                 ])
+                value_map[(node.id, "output")] = f"df['{column_name}']"
+                continue
+            else:
+                combined_expr = " | ".join(f"({expr})" for expr in inputs)
+
+            body.extend([
+                f"# Logic ({operation}) for node {node.id}",
+                f"df['{column_name}'] = ({combined_expr}).fillna(False)",
+            ])
 
             value_map[(node.id, "output")] = f"df['{column_name}']"
 
@@ -1348,24 +1922,95 @@ class EnhancedCodeGenerator:
             params = node.data.get("parameters", {})
             safe_id = self._sanitize_identifier(node.id)
             column_name = f"risk_{safe_id}"
-            max_loss = float(params.get("maxLoss", 5.0))
+            risk_type = (params.get("riskType") or "position_size").lower()
+            risk_category = (params.get("riskCategory") or "position").lower()
+            lookback = max(2, int(params.get("lookback", 5)))
+
+            max_loss_value = self._coerce_float(params.get("maxLoss"))
+            portfolio_heat_value = self._coerce_float(params.get("portfolioHeat"))
+            drawdown_limit_value = self._coerce_float(params.get("drawdownLimit") or params.get("maxDrawdown"))
+            var_confidence_value = self._coerce_float(params.get("varConfidence"))
+            leverage_limit_value = self._coerce_float(params.get("leverageLimit"))
+            position_size_value = self._coerce_float(params.get("positionSize"))
 
             signal_expr = self._resolve_input_expression(
                 node.id, "signal-input", value_map, incoming_edges,
                 fallback=None
             )
 
-            pct_change_expr = "df['close'].pct_change().fillna(0).abs() * 100"
-            risk_expr = f"({pct_change_expr}) <= {max_loss}"
+            checks: List[str] = []
+
+            if max_loss_value is not None:
+                guard_alias = f"max_loss_guard_{safe_id}"
+                body.append(
+                    f"{guard_alias} = df['close'].pct_change().fillna(0).abs() * 100 <= {max_loss_value}"
+                )
+                checks.append(guard_alias)
+
+            if portfolio_heat_value is not None:
+                heat_guard = f"portfolio_heat_guard_{safe_id}"
+                body.extend([
+                    f"volatility_{safe_id} = df['close'].pct_change().rolling(window={max(lookback, 5)}, min_periods=2).std().fillna(0) * 100",
+                    f"{heat_guard} = volatility_{safe_id} <= {portfolio_heat_value}",
+                ])
+                checks.append(heat_guard)
+
+            if drawdown_limit_value is not None:
+                peak_alias = f"peak_{safe_id}"
+                drawdown_alias = f"drawdown_{safe_id}"
+                guard_alias = f"drawdown_guard_{safe_id}"
+                body.extend([
+                    f"{peak_alias} = df['close'].cummax()",
+                    f"{drawdown_alias} = ((df['close'] / {peak_alias}) - 1) * 100",
+                    f"{guard_alias} = {drawdown_alias} >= -{drawdown_limit_value}",
+                ])
+                checks.append(guard_alias)
+
+            if var_confidence_value is not None:
+                var_guard = f"var_guard_{safe_id}"
+                returns_alias = f"returns_{safe_id}"
+                std_alias = f"rolling_std_{safe_id}"
+                score_alias = f"var_score_{safe_id}"
+                var_multiplier = self._approximate_zscore(var_confidence_value)
+                var_window = max(lookback, 20)
+                var_threshold = max_loss_value if max_loss_value is not None else (portfolio_heat_value or 5.0)
+                body.extend([
+                    f"{returns_alias} = df['close'].pct_change().fillna(0)",
+                    f"{std_alias} = {returns_alias}.rolling(window={var_window}, min_periods=10).std().fillna(0)",
+                    f"{score_alias} = {std_alias} * {var_multiplier} * 100",
+                    f"{var_guard} = {score_alias} <= {var_threshold}",
+                ])
+                checks.append(var_guard)
+
+            if leverage_limit_value is not None:
+                body.append(f"df['risk_{safe_id}_leverage_limit'] = {leverage_limit_value}")
+
+            if position_size_value is not None:
+                body.append(f"df['risk_{safe_id}_allocation'] = {position_size_value}")
 
             if signal_expr:
-                risk_expr = f"({risk_expr}) & ({signal_expr})"
+                checks.append(signal_expr)
 
-            body.extend([
-                f"# Risk control for node {node.id}",
-                f"df['{column_name}'] = {risk_expr}",
-                f"df['{column_name}'] = df['{column_name}'].fillna(True)",
-            ])
+            if not checks:
+                combined_expr = "pd.Series(True, index=df.index)"
+            else:
+                combined_expr = checks[0]
+                for expr in checks[1:]:
+                    combined_expr = f"({combined_expr}) & ({expr})"
+
+            body.append(f"df['{column_name}'] = ({combined_expr}).fillna(False)")
+
+            metadata_payload = {
+                "node": node.id,
+                "risk_type": risk_type,
+                "category": risk_category,
+                "max_loss": max_loss_value,
+                "portfolio_heat": portfolio_heat_value,
+                "drawdown": drawdown_limit_value,
+                "var_confidence": var_confidence_value,
+            }
+            body.append("df.attrs.setdefault('risk_checks', [])")
+            body.append(f"df.attrs['risk_checks'].append({repr(metadata_payload)})")
 
             value_map[(node.id, "risk-output")] = f"df['{column_name}']"
 
@@ -1392,25 +2037,60 @@ class EnhancedCodeGenerator:
 
         for node in action_nodes:
             params = node.data.get("parameters", {})
-            action = params.get("action", "buy").upper()
+            action = (params.get("action") or "buy").upper()
+            action_category = params.get("actionCategory", "entry")
             safe_id = self._sanitize_identifier(node.id)
             column_name = f"decision_{safe_id}"
+            payload_column = f"payload_{safe_id}"
+            structured_column = f"structured_decision_{safe_id}"
 
             signal_expr = self._resolve_input_expression(
                 node.id, "signal-input", value_map, incoming_edges,
+                fallback=None
+            )
+            risk_expr = self._resolve_input_expression(
+                node.id, "risk-input", value_map, incoming_edges,
                 fallback=None
             )
 
             if not signal_expr:
                 signal_expr = "pd.Series(False, index=df.index)"
 
-            decision_value = "BUY" if action == "BUY" else "SELL" if action == "SELL" else action
+            trigger_expr = signal_expr
+            if risk_expr:
+                trigger_expr = f"({trigger_expr}) & ({risk_expr})"
+
+            trigger_alias = f"action_trigger_{safe_id}"
+            body.append(f"{trigger_alias} = ({trigger_expr}).fillna(False)")
+
+            quantity = params.get("quantity", 1)
+            order_type = params.get("order_type", "market")
+            position_sizing = params.get("positionSizing")
+            stop_loss = params.get("stop_loss")
+            take_profit = params.get("take_profit")
+            conditional = bool(params.get("conditional_execution"))
+
+            payload = {
+                "node_id": node.id,
+                "action": action.lower(),
+                "category": action_category,
+                "quantity": quantity,
+                "order_type": order_type,
+                "position_sizing": position_sizing,
+                "stop_loss": stop_loss,
+                "take_profit": take_profit,
+                "conditional": conditional,
+            }
+            payload_alias = f"decision_payload_{safe_id}"
+            body.append(f"{payload_alias} = {repr(payload)}")
+
             body.extend([
-                f"# Trading action for node {node.id}",
-                f"df['{column_name}'] = np.where({signal_expr}, '{decision_value}', 'HOLD')",
+                f"df['{column_name}'] = np.where({trigger_alias}, '{action}', 'HOLD')",
+                f"df['{payload_column}'] = np.where({trigger_alias}, {payload_alias}, None)",
+                f"df['{structured_column}'] = np.where({trigger_alias}, {{'signal': '{action}', 'payload': {payload_alias}}}, None)",
             ])
 
-            value_map[(node.id, "action-output")] = f"df['{column_name}']"
+            value_map[(node.id, "action-output")] = f"df['{structured_column}']"
 
         body.append("return df")
         lines.append(self._indent_block(body))
@@ -1499,6 +2179,81 @@ class EnhancedCodeGenerator:
                 safe.append("_")
         result = "".join(safe).strip("_")
         return result or "node"
+
+    def _normalize_indicator_name(self, raw_indicator: Optional[str]) -> str:
+        """Normalize indicator labels to canonical identifiers."""
+
+        normalized = (raw_indicator or "SMA")
+        normalized = normalized.replace("-", "_").replace(" ", "_").upper()
+        alias_map = {
+            "SIMPLE_MOVING_AVERAGE": "SMA",
+            "EXPONENTIAL_MOVING_AVERAGE": "EMA",
+            "RELATIVE_STRENGTH_INDEX": "RSI",
+            "BOLLINGER_BANDS": "BOLLINGER",
+            "BOLLINGER": "BOLLINGER",
+            "AVERAGE_TRUE_RANGE": "ATR",
+            "TRUE_RANGE": "ATR",
+            "VOLUME_WEIGHTED_AVERAGE_PRICE": "VWAP",
+            "VOLUME_WEIGHTED_MOVING_AVERAGE": "VWAP",
+            "WEIGHTED_MOVING_AVERAGE": "WMA",
+        }
+        return alias_map.get(normalized, normalized)
+
+    def _coerce_series_lines(
+        self,
+        alias: str,
+        expression: Optional[str],
+        *,
+        column_hint: Optional[str] = None,
+    ) -> List[str]:
+        """Return lines that coerce arbitrary expressions into pandas Series."""
+
+        preferred_column = column_hint or "close"
+        fallback = expression or (f"df['{preferred_column}']" if preferred_column else "df['close']")
+        return [
+            f"{alias} = {fallback}",
+            f"if isinstance({alias}, pd.DataFrame):",
+            f"    if '{preferred_column}' in {alias}.columns:",
+            f"        {alias} = {alias}['{preferred_column}']",
+            f"    else:",
+            f"        {alias} = {alias}.iloc[:, 0]",
+            f"if not isinstance({alias}, pd.Series):",
+            f"    {alias} = pd.Series({alias}, index=df.index)",
+            f"{alias} = {alias}.astype(float).fillna(method='ffill').fillna(method='bfill')",
+        ]
+
+    def _coerce_float(self, raw: Any, default: Optional[float] = None) -> Optional[float]:
+        """Best-effort conversion of user-provided numeric parameters."""
+
+        if raw in (None, ""):
+            return default
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return default
+
+    def _approximate_zscore(self, confidence: Optional[float]) -> float:
+        """Return an approximate z-score for the requested confidence."""
+
+        if confidence is None:
+            return 1.65
+        try:
+            level = float(confidence)
+        except (TypeError, ValueError):
+            return 1.65
+
+        lookup = [
+            (99.9, 3.29),
+            (99.5, 2.81),
+            (99.0, 2.33),
+            (97.5, 1.96),
+            (95.0, 1.65),
+            (90.0, 1.28),
+        ]
+        for threshold, score in lookup:
+            if level >= threshold:
+                return score
+        return 1.28
 
     def _validate_generated_code(self, generated_code: Dict[str, str]) -> None:
         """Phase 7: Validate generated code."""

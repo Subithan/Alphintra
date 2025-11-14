@@ -4,22 +4,15 @@ from __future__ import annotations
 
 import importlib.util
 import json
-from pathlib import Path
 import sys
+
+from tests.backend.no_code_service import SERVICE_ROOT
 
 
 def load_enhanced_code_generator():
     """Load the ``enhanced_code_generator`` module from its file path."""
 
-    project_root = Path(__file__).resolve().parents[3]
-
-    module_path = (
-        project_root
-        / "src"
-        / "backend"
-        / "no-code-service"
-        / "enhanced_code_generator.py"
-    )
+    module_path = SERVICE_ROOT / "enhanced_code_generator.py"
 
     spec = importlib.util.spec_from_file_location(
         "enhanced_code_generator", module_path
@@ -33,20 +26,14 @@ def load_enhanced_code_generator():
 
     sys.modules.setdefault(spec.name, module)
     spec.loader.exec_module(module)
-    return module, project_root
+    return module
 
 
 def test_risk_nodes_do_not_emit_unknown_type_warning(tmp_path):
-    module, project_root = load_enhanced_code_generator()
+    module = load_enhanced_code_generator()
     generator = module.EnhancedCodeGenerator()
 
-    workflow_path = (
-        project_root
-        / "src"
-        / "backend"
-        / "no-code-service"
-        / "my_test_workflow.json"
-    )
+    workflow_path = SERVICE_ROOT / "my_test_workflow.json"
 
     workflow = json.loads(workflow_path.read_text())
 

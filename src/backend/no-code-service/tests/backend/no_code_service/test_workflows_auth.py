@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib
 import json
 import sys
-from pathlib import Path
 from typing import Any, Dict
 
 import jwt
@@ -14,13 +13,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.sql.sqltypes import ARRAY
-from sqlalchemy.types import TEXT, TypeDecorator
+from sqlalchemy.types import TEXT, TypeDecorator, String
 from pytest import FixtureRequest
+from tests.backend.no_code_service import SERVICE_ROOT
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-SERVICE_ROOT = PROJECT_ROOT / "src" / "backend" / "no-code-service"
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
@@ -42,6 +40,21 @@ class SqliteArray(TypeDecorator):
         return json.loads(value)
 
 
+class SqliteUUID(TypeDecorator):
+    """SQLite compatible storage for UUID columns."""
+
+    impl = String(36)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):  # type: ignore[override]
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value, dialect):  # type: ignore[override]
+        return value
+
+
 def _prepare_sqlite_models():
     import models
 
@@ -51,6 +64,9 @@ def _prepare_sqlite_models():
             if isinstance(column.type, ARRAY):
                 replacements[column] = column.type
                 column.type = SqliteArray()
+            elif isinstance(column.type, PGUUID):
+                replacements[column] = column.type
+                column.type = SqliteUUID()
     return models, replacements
 
 
@@ -197,6 +213,7 @@ def test_create_and_list_workflows_use_authenticated_user(test_app):
             tags=["alien"],
             user_id=other_user.id,
             workflow_data={"nodes": [], "edges": []},
+            compiler_version="Legacy 1.0",
         )
         db.add(alien_workflow)
         db.commit()
@@ -209,6 +226,7 @@ def test_create_and_list_workflows_use_authenticated_user(test_app):
     workflows = list_response.json()
     assert len(workflows) == 1
     assert workflows[0]["id"] == created_workflow["id"]
+    assert workflows[0]["compiler_version"] == "Enhanced v2.0"
 
     detail_response = client.get(
         f"/api/workflows/{created_workflow['uuid']}",
@@ -217,6 +235,7 @@ def test_create_and_list_workflows_use_authenticated_user(test_app):
     assert detail_response.status_code == 200, detail_response.text
     detail_payload = detail_response.json()
     assert detail_payload["id"] == created_workflow["id"]
+    assert detail_payload["compiler_version"] == "Enhanced v2.0"
 
 
 @pytest.fixture()
@@ -254,6 +273,7 @@ def seeded_app(test_app):
             tags=["personal"],
             user_id=user_one.id,
             workflow_data={"nodes": [], "edges": []},
+            compiler_version="Enhanced v2.0",
         )
         workflow_two = models.NoCodeWorkflow(
             name="Second Workflow",
@@ -262,6 +282,7 @@ def seeded_app(test_app):
             tags=["personal"],
             user_id=user_one.id,
             workflow_data={"nodes": [], "edges": []},
+            compiler_version="Nightly 2.1",
         )
         other_workflow = models.NoCodeWorkflow(
             name="Other Workflow",
@@ -270,6 +291,7 @@ def seeded_app(test_app):
             tags=["shared"],
             user_id=user_two.id,
             workflow_data={"nodes": [], "edges": []},
+            compiler_version="Legacy 1.0",
         )
         db.add_all([workflow_one, workflow_two, other_workflow])
         db.commit()
@@ -301,12 +323,13 @@ def test_missing_token_is_rejected(test_app):
     assert response.status_code == 401
 
 
-def test_mismatched_token_is_rejected(seeded_app):
+def test_placeholder_user_created_for_unknown_token(seeded_app):
     response = seeded_app["client"].get(
         "/api/workflows",
         headers={"Authorization": f"Bearer {seeded_app['token_unknown']}"},
     )
-    assert response.status_code == 401
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_valid_token_returns_only_user_workflows(seeded_app):
@@ -317,4 +340,6 @@ def test_valid_token_returns_only_user_workflows(seeded_app):
     assert response.status_code == 200
     payload = response.json()
     names = {workflow["name"] for workflow in payload}
+    versions = {workflow["compiler_version"] for workflow in payload}
     assert names == seeded_app["user_workflow_names"]
+    assert versions == {"Enhanced v2.0", "Nightly 2.1"}

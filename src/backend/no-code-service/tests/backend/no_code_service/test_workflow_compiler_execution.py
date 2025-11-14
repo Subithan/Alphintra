@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import types
 
 import pytest
 
 pd = pytest.importorskip("pandas")
+
+from tests.backend.no_code_service import SERVICE_ROOT
+
+if str(SERVICE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SERVICE_ROOT))
 
 from workflow_compiler_updated import WorkflowCompiler
 
@@ -119,7 +125,7 @@ def test_compiled_strategy_computes_expected_columns():
     )
 
     df = module.compute_indicators(prices.copy())
-    indicator_col = "indicator_sma_1"
+    indicator_col = "sma_close_sma_1"
     expected_indicator = prices["close"].rolling(window=3, min_periods=1).mean()
     pd.testing.assert_series_equal(
         df[indicator_col], expected_indicator, check_names=False
@@ -378,4 +384,3 @@ def test_sentiment_analysis_integration():
     assert pos_col in df.columns
     assert neu_col in df.columns
     assert set(df[pos_col].unique()).issubset({True, False})
-

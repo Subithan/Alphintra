@@ -1,0 +1,149 @@
+{
+  "nodes": [
+    {
+      "id": "dataset-energy",
+      "type": "customDataset",
+      "data": {
+        "label": "Energy CSV",
+        "parameters": {
+          "fileName": "energy.csv",
+          "normalization": "zscore",
+          "missingValues": "forward_fill",
+          "ohlcMapping": {
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume"
+          }
+        }
+      }
+    },
+    {
+      "id": "multi-timeframe",
+      "type": "multiTimeframeAnalysis",
+      "data": {
+        "label": "Daily Aggregation",
+        "parameters": {
+          "primaryTimeframe": "1h",
+          "higherTimeframe": "1d"
+        }
+      }
+    },
+    {
+      "id": "macd-node",
+      "type": "technicalIndicator",
+      "data": {
+        "label": "MACD",
+        "parameters": {
+          "indicator": "MACD",
+          "fastPeriod": 12,
+          "slowPeriod": 26,
+          "signalPeriod": 9,
+          "source": "close"
+        }
+      }
+    },
+    {
+      "id": "cross-condition",
+      "type": "condition",
+      "data": {
+        "label": "MACD Cross",
+        "parameters": {
+          "conditionType": "crossover",
+          "condition": "macd_signal_cross",
+          "confirmationBars": 1
+        }
+      }
+    },
+    {
+      "id": "tp-action",
+      "type": "action",
+      "data": {
+        "label": "Take Profit Action",
+        "parameters": {
+          "actionCategory": "exit",
+          "action": "take_profit",
+          "order_type": "limit",
+          "price_offset": 1.2,
+          "quantity": 10
+        }
+      }
+    },
+    {
+      "id": "custom-risk",
+      "type": "risk",
+      "data": {
+        "label": "Portfolio Heat Guard",
+        "parameters": {
+          "riskCategory": "portfolio",
+          "riskType": "portfolio_heat",
+          "portfolioHeat": 18,
+          "maxPositions": 6
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-a1",
+      "source": "dataset-energy",
+      "target": "multi-timeframe",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "Custom Dataset" }
+      }
+    },
+    {
+      "id": "edge-a2",
+      "source": "multi-timeframe",
+      "target": "macd-node",
+      "data": {
+        "sourceHandle": "output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "Aggregated Bars" }
+      }
+    },
+    {
+      "id": "edge-a3",
+      "source": "macd-node",
+      "target": "cross-condition",
+      "data": {
+        "sourceHandle": "output-2",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "numeric", "label": "MACD Signal" }
+      }
+    },
+    {
+      "id": "edge-a4",
+      "source": "cross-condition",
+      "target": "tp-action",
+      "data": {
+        "sourceHandle": "signal-output",
+        "targetHandle": "signal-input",
+        "rule": { "dataType": "signal", "label": "Cross Trigger" }
+      }
+    },
+    {
+      "id": "edge-a5",
+      "source": "dataset-energy",
+      "target": "custom-risk",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "Dataset Feed" }
+      }
+    },
+    {
+      "id": "edge-a6",
+      "source": "tp-action",
+      "target": "custom-risk",
+      "data": {
+        "sourceHandle": "execution-output",
+        "targetHandle": "monitor-input",
+        "rule": { "dataType": "execution", "label": "Orders" }
+      }
+    }
+  ]
+}

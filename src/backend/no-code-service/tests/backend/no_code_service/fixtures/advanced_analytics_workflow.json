@@ -1,0 +1,234 @@
+{
+  "nodes": [
+    {
+      "id": "data-btc",
+      "type": "dataSource",
+      "data": {
+        "label": "BTC Data",
+        "parameters": {
+          "symbol": "BTCUSD",
+          "timeframe": "4h",
+          "assetClass": "crypto",
+          "bars": 1000
+        }
+      }
+    },
+    {
+      "id": "data-eth",
+      "type": "dataSource",
+      "data": {
+        "label": "ETH Data",
+        "parameters": {
+          "symbol": "ETHUSD",
+          "timeframe": "4h",
+          "assetClass": "crypto",
+          "bars": 1000
+        }
+      }
+    },
+    {
+      "id": "regime",
+      "type": "marketRegimeDetection",
+      "data": {
+        "label": "Regime Detector",
+        "parameters": {
+          "lookback": 50
+        }
+      }
+    },
+    {
+      "id": "correlation",
+      "type": "correlationAnalysis",
+      "data": {
+        "label": "BTC-ETH Correlation",
+        "parameters": {
+          "window": 30
+        }
+      }
+    },
+    {
+      "id": "sentiment",
+      "type": "sentimentAnalysis",
+      "data": {
+        "label": "News Sentiment",
+        "parameters": {
+          "sources": ["news", "social"],
+          "lookback": 6
+        }
+      }
+    },
+    {
+      "id": "volatility-indicator",
+      "type": "technicalIndicator",
+      "data": {
+        "label": "ATR",
+        "parameters": {
+          "indicator": "ATR",
+          "period": 14,
+          "source": "close"
+        }
+      }
+    },
+    {
+      "id": "correlation-condition",
+      "type": "condition",
+      "data": {
+        "label": "Correlation Divergence",
+        "parameters": {
+          "conditionType": "correlation",
+          "condition": "correlation_divergence",
+          "correlationThreshold": 0.6,
+          "referenceSymbol": "ETHUSD"
+        }
+      }
+    },
+    {
+      "id": "volatility-condition",
+      "type": "condition",
+      "data": {
+        "label": "Volatility Expansion",
+        "parameters": {
+          "conditionType": "volatility",
+          "condition": "volatility_expansion",
+          "volatilityMultiplier": 1.4
+        }
+      }
+    },
+    {
+      "id": "sentiment-logic",
+      "type": "logic",
+      "data": {
+        "label": "Sentiment Logic",
+        "parameters": {
+          "operation": "AND",
+          "inputs": 3
+        }
+      }
+    },
+    {
+      "id": "hedge-action",
+      "type": "action",
+      "data": {
+        "label": "Hedge Action",
+        "parameters": {
+          "actionCategory": "management",
+          "action": "hedge_position",
+          "order_type": "market",
+          "quantity": 15
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "adv-1",
+      "source": "data-btc",
+      "target": "regime",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "BTC Bars" }
+      }
+    },
+    {
+      "id": "adv-2",
+      "source": "data-btc",
+      "target": "correlation",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input-1",
+        "rule": { "dataType": "ohlcv", "label": "BTC Bars" }
+      }
+    },
+    {
+      "id": "adv-3",
+      "source": "data-eth",
+      "target": "correlation",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input-2",
+        "rule": { "dataType": "ohlcv", "label": "ETH Bars" }
+      }
+    },
+    {
+      "id": "adv-4",
+      "source": "data-btc",
+      "target": "volatility-indicator",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "ATR Input" }
+      }
+    },
+    {
+      "id": "adv-5",
+      "source": "correlation",
+      "target": "correlation-condition",
+      "data": {
+        "sourceHandle": "output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "numeric", "label": "Correlation Value" }
+      }
+    },
+    {
+      "id": "adv-6",
+      "source": "volatility-indicator",
+      "target": "volatility-condition",
+      "data": {
+        "sourceHandle": "output-1",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "numeric", "label": "ATR" }
+      }
+    },
+    {
+      "id": "adv-7",
+      "source": "correlation-condition",
+      "target": "sentiment-logic",
+      "data": {
+        "sourceHandle": "signal-output",
+        "targetHandle": "input-0",
+        "rule": { "dataType": "signal", "label": "Correlation Signal" }
+      }
+    },
+    {
+      "id": "adv-8",
+      "source": "volatility-condition",
+      "target": "sentiment-logic",
+      "data": {
+        "sourceHandle": "signal-output",
+        "targetHandle": "input-1",
+        "rule": { "dataType": "signal", "label": "Volatility Signal" }
+      }
+    },
+    {
+      "id": "adv-9",
+      "source": "sentiment",
+      "target": "sentiment-logic",
+      "data": {
+        "sourceHandle": "positive-output",
+        "targetHandle": "input-2",
+        "rule": { "dataType": "signal", "label": "Positive Sentiment" }
+      }
+    },
+    {
+      "id": "adv-10",
+      "source": "regime",
+      "target": "hedge-action",
+      "data": {
+        "sourceHandle": "trend-output",
+        "targetHandle": "signal-input",
+        "rule": { "dataType": "signal", "label": "Regime Signal" }
+      }
+    },
+    {
+      "id": "adv-11",
+      "source": "sentiment-logic",
+      "target": "hedge-action",
+      "data": {
+        "sourceHandle": "output",
+        "targetHandle": "signal-input",
+        "rule": { "dataType": "signal", "label": "Sentiment Gate" }
+      }
+    }
+  ]
+}

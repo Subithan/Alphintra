@@ -334,7 +334,7 @@ class WorkflowCompiler:
             category="analysis",
             inputs={
                 "data-input": {
-                    "type": "dataset",
+                    "type": "ohlcv",
                     "description": "Structured sentiment feed or derived features",
                 }
             },

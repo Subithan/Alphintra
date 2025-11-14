@@ -1,0 +1,208 @@
+{
+  "nodes": [
+    {
+      "id": "data-spy",
+      "type": "dataSource",
+      "data": {
+        "label": "SPY Data",
+        "parameters": {
+          "symbol": "SPY",
+          "timeframe": "1h",
+          "assetClass": "stocks",
+          "bars": 1500
+        }
+      }
+    },
+    {
+      "id": "sma-fast",
+      "type": "technicalIndicator",
+      "data": {
+        "label": "SMA Fast",
+        "parameters": {
+          "indicator": "SMA",
+          "period": 20,
+          "source": "close"
+        }
+      }
+    },
+    {
+      "id": "rsi-14",
+      "type": "technicalIndicator",
+      "data": {
+        "label": "RSI 14",
+        "parameters": {
+          "indicator": "RSI",
+          "period": 14,
+          "source": "close"
+        }
+      }
+    },
+    {
+      "id": "trend-condition",
+      "type": "condition",
+      "data": {
+        "label": "Trend Confirmation",
+        "parameters": {
+          "conditionType": "trend",
+          "condition": "rising",
+          "lookback": 5,
+          "confirmationBars": 1
+        }
+      }
+    },
+    {
+      "id": "oversold-condition",
+      "type": "condition",
+      "data": {
+        "label": "RSI Oversold",
+        "parameters": {
+          "conditionType": "comparison",
+          "condition": "less_than",
+          "value": 35
+        }
+      }
+    },
+    {
+      "id": "entry-logic",
+      "type": "logic",
+      "data": {
+        "label": "Entry Logic",
+        "parameters": {
+          "operation": "AND",
+          "inputs": 2
+        }
+      }
+    },
+    {
+      "id": "risk-guard",
+      "type": "risk",
+      "data": {
+        "label": "Risk Guard",
+        "parameters": {
+          "riskCategory": "position",
+          "riskType": "position_size",
+          "maxLoss": 2.0,
+          "portfolioHeat": 10.0
+        }
+      }
+    },
+    {
+      "id": "buy-long",
+      "type": "action",
+      "data": {
+        "label": "Buy Long",
+        "parameters": {
+          "actionCategory": "entry",
+          "action": "buy",
+          "order_type": "market",
+          "positionSizing": "percentage",
+          "quantity": 25,
+          "stop_loss": 3,
+          "take_profit": 9
+        }
+      }
+    },
+    {
+      "id": "signal-output",
+      "type": "output",
+      "data": {
+        "label": "Signal Output",
+        "parameters": {
+          "output_type": "signals"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "data-spy",
+      "target": "sma-fast",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "SPY Data" }
+      }
+    },
+    {
+      "id": "edge-2",
+      "source": "data-spy",
+      "target": "rsi-14",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "SPY Data" }
+      }
+    },
+    {
+      "id": "edge-3",
+      "source": "sma-fast",
+      "target": "trend-condition",
+      "data": {
+        "sourceHandle": "output-1",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "numeric", "label": "SMA Values" }
+      }
+    },
+    {
+      "id": "edge-4",
+      "source": "rsi-14",
+      "target": "oversold-condition",
+      "data": {
+        "sourceHandle": "output-1",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "numeric", "label": "RSI Values" }
+      }
+    },
+    {
+      "id": "edge-5",
+      "source": "trend-condition",
+      "target": "entry-logic",
+      "data": {
+        "sourceHandle": "signal-output",
+        "targetHandle": "input-0",
+        "rule": { "dataType": "signal", "label": "Trend OK" }
+      }
+    },
+    {
+      "id": "edge-6",
+      "source": "oversold-condition",
+      "target": "entry-logic",
+      "data": {
+        "sourceHandle": "signal-output",
+        "targetHandle": "input-1",
+        "rule": { "dataType": "signal", "label": "RSI Oversold" }
+      }
+    },
+    {
+      "id": "edge-7",
+      "source": "entry-logic",
+      "target": "buy-long",
+      "data": {
+        "sourceHandle": "output",
+        "targetHandle": "signal-input",
+        "rule": { "dataType": "signal", "label": "Entry Signal" }
+      }
+    },
+    {
+      "id": "edge-8",
+      "source": "data-spy",
+      "target": "risk-guard",
+      "data": {
+        "sourceHandle": "data-output",
+        "targetHandle": "data-input",
+        "rule": { "dataType": "ohlcv", "label": "Risk Data" }
+      }
+    },
+    {
+      "id": "edge-9",
+      "source": "entry-logic",
+      "target": "signal-output",
+      "data": {
+        "sourceHandle": "output",
+        "targetHandle": "signal-input",
+        "rule": { "dataType": "signal", "label": "Strategy Signal" }
+      }
+    }
+  ]
+}
